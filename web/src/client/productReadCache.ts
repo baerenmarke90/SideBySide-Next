@@ -57,6 +57,7 @@ const SHARED_SCOPE: ProductCachePrivacyScope = 'SPACE_SHARED';
 
 let activeContext: ProductCacheContext | null = null;
 let cacheMutationTail: Promise<void> = Promise.resolve();
+const invalidatedGenerations = new Set<string>();
 
 function contextsEqual(
   left: ProductCacheContext | null,
@@ -80,6 +81,16 @@ function matchesContext(
     context !== null &&
     context.accountId === accountId &&
     context.spaceId === spaceId
+  );
+}
+
+function invalidateContext(context: ProductCacheContext | null): void {
+  if (context) invalidatedGenerations.add(context.generation);
+}
+
+function isContextInvalidated(context: ProductCacheContext | null): boolean {
+  return (
+    context !== null && invalidatedGenerations.has(context.generation)
   );
 }
 
@@ -149,7 +160,7 @@ function writeCacheContextMarker(context: ProductCacheContext): void {
     localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(context));
     localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
   } catch {
-    // A failed marker write makes persistence fail closed via isLeaseCurrent().
+    // Marker mismatch makes the new generation fail closed in this runtime.
   }
 }
 
@@ -159,21 +170,21 @@ function removeCacheContextMarker(): void {
     localStorage.removeItem(CONTEXT_STORAGE_KEY);
     localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
   } catch {
-    // In-memory invalidation still prevents writes in the current runtime.
+    // Invalidated generations keep stale markers unusable in this runtime.
   }
-}
-
-function resolveCurrentContext(): ProductCacheContext | null {
-  const marker = readCacheContextMarker();
-  if (marker.available) {
-    activeContext = marker.context;
-    return marker.context;
-  }
-  return activeContext;
 }
 
 function isLeaseCurrent(lease: ProductCacheContext): boolean {
-  return contextsEqual(resolveCurrentContext(), lease);
+  if (
+    isContextInvalidated(lease) ||
+    !contextsEqual(activeContext, lease)
+  ) {
+    return false;
+  }
+
+  const marker = readCacheContextMarker();
+  if (!marker.available) return true;
+  return contextsEqual(marker.context, lease);
 }
 
 function enqueueCacheMutation<T>(operation: () => Promise<T>): Promise<T> {
@@ -306,14 +317,33 @@ function captureCacheLease(
   spaceId: string,
 ): ProductCacheContext {
   const marker = readCacheContextMarker();
-  const current = marker.available ? marker.context : activeContext;
-  if (matchesContext(current, accountId, spaceId)) {
-    activeContext = current;
-    return current;
+  const persistedContext = marker.available ? marker.context : null;
+
+  if (
+    marker.available &&
+    matchesContext(persistedContext, accountId, spaceId) &&
+    !isContextInvalidated(persistedContext)
+  ) {
+    if (!contextsEqual(activeContext, persistedContext)) {
+      invalidateContext(activeContext);
+      activeContext = persistedContext;
+    }
+    return persistedContext;
+  }
+
+  if (
+    !marker.available &&
+    matchesContext(activeContext, accountId, spaceId) &&
+    !isContextInvalidated(activeContext)
+  ) {
+    return activeContext;
   }
 
   const hadPriorContext =
-    current !== null || activeContext !== null || marker.hadMarker;
+    persistedContext !== null || activeContext !== null || marker.hadMarker;
+  invalidateContext(activeContext);
+  invalidateContext(persistedContext);
+
   const next: ProductCacheContext = {
     schemaVersion: 1,
     accountId,
@@ -331,8 +361,9 @@ function currentCacheLease(
   accountId: string,
   spaceId: string,
 ): ProductCacheContext | null {
-  const current = resolveCurrentContext();
-  return matchesContext(current, accountId, spaceId) ? current : null;
+  const current = activeContext;
+  if (!matchesContext(current, accountId, spaceId)) return null;
+  return isLeaseCurrent(current) ? current : null;
 }
 
 export function isFreshProductCacheTimestamp(
@@ -599,6 +630,9 @@ export async function deleteProductReadCacheEntry(
 }
 
 export function clearProductReadCache(): Promise<void> {
+  const marker = readCacheContextMarker();
+  invalidateContext(activeContext);
+  if (marker.available) invalidateContext(marker.context);
   activeContext = null;
   removeCacheContextMarker();
   return enqueueCacheMutation(() => cacheStorage.clear());
@@ -618,6 +652,7 @@ export function __resetProductReadCacheStateForTests(): void {
   activeContext = null;
   cacheMutationTail = Promise.resolve();
   cacheStorage = indexedDbStorage;
+  invalidatedGenerations.clear();
 }
 
 export const __PRODUCT_READ_CACHE_CONTEXT_STORAGE_KEY_FOR_TESTS =
