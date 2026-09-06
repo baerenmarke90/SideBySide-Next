@@ -18,6 +18,7 @@ from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import select
 
+from sidebyside.config import Environment, get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ForbiddenError, ServiceUnavailableError
 from sidebyside.db.session import unit_of_work
@@ -85,31 +86,22 @@ def _authority_settings() -> DeletionAuthoritySettings:
 def _configured_journal(
     authority: DeletionAuthoritySettings | None = None,
 ) -> DeletionJournal:
+    """Open and validate an already-provisioned deletion authority.
+
+    Normal runtime use must never create the authority artifact. A missing file
+    can mean that independently protected recovery state was lost, so turning it
+    into a new empty history would make an old database restore capable of
+    resurrecting a previously deleted Account.
+    """
     active_authority = authority if authority is not None else _authority_settings()
     if active_authority.instance_id is None:
         raise _authority_unavailable()
 
-    path = active_authority.journal_path
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            try:
-                journal = DeletionJournal.initialize(
-                    path,
-                    instance_id=active_authority.instance_id,
-                )
-            except DeletionJournalError:
-                # A concurrent request may have created the same journal after
-                # the existence check. Validate the resulting file before use.
-                journal = DeletionJournal(
-                    path,
-                    instance_id=active_authority.instance_id,
-                )
-        else:
-            journal = DeletionJournal(
-                path,
-                instance_id=active_authority.instance_id,
-            )
+        journal = DeletionJournal(
+            active_authority.journal_path,
+            instance_id=active_authority.instance_id,
+        )
         journal.read_all()
         return journal
     except (DeletionJournalError, OSError) as exc:
@@ -136,12 +128,19 @@ def reconcile_configured_deletions_on_startup() -> None:
                 "An Account deletion journal exists but SBS_ACCOUNT_DELETION_INSTANCE_ID "
                 "is missing. Refusing to serve traffic without reconciliation."
             )
+        if get_settings().environment is Environment.PRODUCTION:
+            raise RuntimeError(
+                "Production requires an explicitly bootstrapped Account deletion authority. "
+                "Refusing to serve traffic without SBS_ACCOUNT_DELETION_INSTANCE_ID."
+            )
         return
 
     try:
         journal = _configured_journal(authority)
     except ServiceUnavailableError as exc:
-        raise RuntimeError("The Account deletion journal could not be validated.") from exc
+        raise RuntimeError(
+            "The configured Account deletion journal is missing or could not be validated."
+        ) from exc
 
     for tombstone in journal.read_all():
         with unit_of_work() as session:
