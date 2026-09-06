@@ -11,7 +11,7 @@ from scripts.check_runtime_environment import (
     parse_container_environment,
 )
 
-INSTANCE_ID = "9e8bd148-d0f3-4568-9319-5b21a29fbdf3"
+INSTANCE_ID = "11111111-2222-4333-8444-555555555555"
 
 
 def rendered(
