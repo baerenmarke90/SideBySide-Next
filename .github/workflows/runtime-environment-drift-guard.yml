@@ -1,0 +1,83 @@
+name: Runtime Environment Drift Guard
+
+on:
+  pull_request:
+    paths:
+      - compose.yaml
+      - .env.example
+      - scripts/check_runtime_environment.py
+      - scripts/test_check_runtime_environment.py
+      - docs/ARCANE.md
+      - .github/workflows/runtime-environment-drift-guard.yml
+  push:
+    branches: [main]
+    paths:
+      - compose.yaml
+      - .env.example
+      - scripts/check_runtime_environment.py
+      - scripts/test_check_runtime_environment.py
+      - docs/ARCANE.md
+      - .github/workflows/runtime-environment-drift-guard.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime-environment:
+    name: Render and runtime drift contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Unit tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/check_runtime_environment.py \
+            scripts/test_check_runtime_environment.py
+          python3 -m unittest scripts.test_check_runtime_environment
+
+      - name: Arcane-style deletion authority render cannot drift from dotenv
+        run: |
+          set -euo pipefail
+          cp .env.example .env-runtime-guard
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-runtime-guard
+          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-runtime-guard
+
+          python3 scripts/check_runtime_environment.py \
+            --env-file .env-runtime-guard \
+            --profile self-hosted
+
+          if SBS_ACCOUNT_DELETION_INSTANCE_ID= \
+            python3 scripts/check_runtime_environment.py \
+              --env-file .env-runtime-guard \
+              --profile self-hosted; then
+            echo 'Runtime guard accepted an explicitly blank process override of the dotenv authority.'
+            exit 1
+          fi
+
+          docker compose --profile self-hosted --env-file .env-runtime-guard config --format json \
+            > /tmp/runtime-guard-compose.json
+          jq -e '
+            (.services.api.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
+            (.services.worker.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
+            (.services["demo-init"].environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
+          ' /tmp/runtime-guard-compose.json
+
+      - name: Production dotenv must carry the deletion authority
+        run: |
+          set -euo pipefail
+          cp .env.example .env-production-guard
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-production-guard
+          sed -i 's/^SBS_ENVIRONMENT=.*/SBS_ENVIRONMENT=production/' .env-production-guard
+          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=/' .env-production-guard
+
+          if python3 scripts/check_runtime_environment.py \
+            --env-file .env-production-guard \
+            --profile self-hosted; then
+            echo 'Runtime guard accepted Production without an Account-deletion authority.'
+            exit 1
+          fi
