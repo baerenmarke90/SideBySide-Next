@@ -1,0 +1,63 @@
+name: CodeQL Android diagnostic
+
+on:
+  push:
+    branches:
+      - fix/667-provider-neutral-recent-auth
+
+permissions:
+  contents: read
+
+jobs:
+  java-kotlin-sarif:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Set up JDK 17 for Android analysis
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle cache and validate wrapper
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdb8 # v6.3.0
+
+      - name: Verify pinned Gradle wrapper JAR
+        working-directory: android
+        shell: bash
+        run: |
+          printf '%s  %s\n' \
+            '497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7' \
+            'gradle/wrapper/gradle-wrapper.jar' \
+            | sha256sum --check --strict -
+
+      - name: Install Android SDK 37.1
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Build Android sources for CodeQL
+        working-directory: android
+        run: ./gradlew --no-daemon --no-build-cache --stacktrace --dependency-verification strict :app:clean :app:compileDebugKotlin
+
+      - name: Analyze without upload
+        uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        with:
+          category: /language:java-kotlin-diagnostic
+          output: ${{ github.workspace }}/codeql-results
+          upload: never
+
+      - name: Upload SARIF diagnostic
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: codeql-java-kotlin-sarif-${{ github.sha }}
+          path: codeql-results/
+          if-no-files-found: error
