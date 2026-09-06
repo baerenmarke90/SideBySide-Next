@@ -19,7 +19,7 @@ from sidebyside.api.schema import ApiModel
 from sidebyside.auth import action_tokens, passkey_abuse, rate_limit
 from sidebyside.config import get_settings
 from sidebyside.core.errors import NotFoundError
-from sidebyside.demo.service import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
+from sidebyside.demo.canonical import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
 from sidebyside.identity import service as identity_service
 from sidebyside.identity.models import AccountEmail
 

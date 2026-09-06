@@ -18,10 +18,10 @@ from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import select
 
-from sidebyside.config import Environment, get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ForbiddenError, ServiceUnavailableError
 from sidebyside.db.session import unit_of_work
+from sidebyside.demo import canonical
 from sidebyside.identity.deletion import apply_accepted_tombstone
 from sidebyside.identity.deletion_jobs import enqueue_convergence
 from sidebyside.identity.deletion_journal import DeletionJournal, DeletionJournalError
@@ -161,8 +161,10 @@ def reconcile_configured_deletions_on_startup() -> None:
 
 def _preflight(account_id: UUID) -> str | None:
     """Reject Demo self-delete and snapshot only a verified primary address."""
-    settings = get_settings()
-    if settings.environment is Environment.DEMO or settings.demo_mode:
+    # Shared demo-deployment predicate; see sidebyside.demo.canonical. This
+    # guard remains broader than the reserved-identity one on purpose: no
+    # Account in a demo deployment may delete itself, canonical or not.
+    if canonical.demo_deployment():
         raise ForbiddenError(
             "Demo Accounts are managed by the Demo environment and cannot be deleted "
             "through the self-service Account flow.",

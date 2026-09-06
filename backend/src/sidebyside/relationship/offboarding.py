@@ -16,9 +16,9 @@ from sidebyside.authorization.retention import (
     OwnerOnlyCleanupResult,
     hard_delete_owner_only_in_space,
 )
-from sidebyside.config import Environment, get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, ForbiddenError, NotFoundError
+from sidebyside.demo import canonical
 from sidebyside.identity.models import Account
 from sidebyside.relationship import service
 from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
@@ -42,8 +42,11 @@ class LeaveSpaceResult:
 
 
 def _ensure_self_exit_allowed() -> None:
-    settings = get_settings()
-    if settings.environment is Environment.DEMO or settings.demo_mode:
+    # The demo deployment predicate is shared with the other Demo guards so
+    # "this is the demo" has one definition. This guard stays deliberately
+    # broader than the reserved-identity one: every relationship in a demo
+    # deployment belongs to the demo, not only the canonical personas.
+    if canonical.demo_deployment():
         raise ForbiddenError(
             "Demo relationships are managed by the Demo environment and cannot be "
             "ended through the self-service Space flow.",

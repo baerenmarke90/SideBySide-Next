@@ -31,6 +31,13 @@ from sidebyside.demo.assets import (
     import_demo_asset,
     load_and_validate_assets,
 )
+from sidebyside.demo.canonical import (
+    ALEX_EMAIL,
+    ALEX_NAME,
+    LEA_EMAIL,
+    LEA_NAME,
+    RESERVED_IDENTITIES,
+)
 from sidebyside.demo.story import CHAPTERS, MEMORIES
 from sidebyside.engagement import service as engagement_service
 from sidebyside.gift_ideas import service as gift_idea_service
@@ -58,10 +65,6 @@ from sidebyside.relationship import service as relationship_service
 from sidebyside.relationship.models import DurationDisplayMode, Membership, MembershipStatus, Space
 from sidebyside.wishes import service as wish_service
 
-LEA_EMAIL = "demo-lea@sidebyside.invalid"
-ALEX_EMAIL = "demo-alex@sidebyside.invalid"
-LEA_NAME = "Lea Sommer"
-ALEX_NAME = "Alex Winter"
 PRIVATE_CANARY_LEA = "CANARY-PRIVATE-LEA-7421"
 PRIVATE_CANARY_ALEX = "CANARY-PRIVATE-ALEX-9134"
 
@@ -99,12 +102,21 @@ def _validate_demo_account(account: Account, *, expected_name: str, email: str) 
 
 
 def _existing_accounts(session: Session) -> tuple[Account | None, Account | None]:
+    """Resolve the reserved accounts, refusing to proceed on a drifted identity.
+
+    This stays fail-closed even though ``demo.canonical`` now prevents a
+    visitor from causing the drift. An operator or a direct database edit can
+    still produce it, and a reset that guessed which Account was meant would be
+    exactly the wrong response to that.
+    """
     lea = identity_service.find_by_email(session, LEA_EMAIL)
     alex = identity_service.find_by_email(session, ALEX_EMAIL)
     if lea is not None:
-        _validate_demo_account(lea, expected_name=LEA_NAME, email=LEA_EMAIL)
+        _validate_demo_account(lea, expected_name=RESERVED_IDENTITIES[LEA_EMAIL], email=LEA_EMAIL)
     if alex is not None:
-        _validate_demo_account(alex, expected_name=ALEX_NAME, email=ALEX_EMAIL)
+        _validate_demo_account(
+            alex, expected_name=RESERVED_IDENTITIES[ALEX_EMAIL], email=ALEX_EMAIL
+        )
     if (lea is None) != (alex is None):
         raise RuntimeError(
             "Refusing demo operation: only one reserved demo account exists. "

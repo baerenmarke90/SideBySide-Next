@@ -186,6 +186,42 @@ uv run python -m scripts.demo_space reset --reference-date 2026-08-24
 The reset refuses ambiguous/partial reserved-account state, a demo Account in another active Space,
 or unsafe media cleanup. It never accepts an arbitrary Space ID.
 
+## What a visitor may change
+
+The reset resolves the two reserved Accounts by their reserved address and then refuses to run
+unless each still carries its canonical display name. That name is therefore the one thing a
+visitor could change that the reset cannot rebuild, and a single ordinary profile edit would
+otherwise break every later reset for everybody.
+
+`sidebyside.demo.canonical` protects exactly that. In a demo deployment
+(`SBS_ENVIRONMENT=demo` or `SBS_DEMO_MODE=true`), a request that would change the Account-global
+display name of a reserved persona is refused with `403 DEMO_CANONICAL_IDENTITY_IMMUTABLE`.
+Recognition follows the reserved address rather than the current name, so the guard still applies
+to an identity that has already drifted. Setting the name to the value it already has is not a
+mutation and stays accepted.
+
+Everything the reset replaces stays editable: the Space and all of its product data, and the
+profile avatar, whose attachment lives in that Space and is purged with it. The Web UI hiding a
+control is not part of this boundary; a visitor holds an ordinary bearer token and the refusal is
+made server-side.
+
+Two Account-global operations were already blocked for every Account in a demo deployment and stay
+that way, deliberately broader than the reserved-identity guard: self-service Account deletion
+(`ACCOUNT_DELETION_DEMO_FORBIDDEN`) and Space self-offboarding
+(`SPACE_OFFBOARDING_DEMO_FORBIDDEN`). All three now share one definition of "this deployment is the
+demo".
+
+The remaining Account-global surfaces are covered by the reset contract rather than by a guard.
+Passkeys, linked non-local identities, one-time tokens, and device sessions are removed by the
+reset itself. The local seed password cannot be reached by a public visitor at all: changing it
+requires the current password, which the public demo never issues, and recovery would need a link
+delivered to a deliberately non-deliverable `.invalid` address. There is no self-service endpoint
+that changes an Account's email address.
+
+The guard does not replace the reset's own validation. An operator or a direct database edit can
+still produce a drifted identity, and the reset keeps failing closed on it rather than guessing
+which Account was meant.
+
 ## Automatic reset timer
 
 The public demo can reset itself through the existing durable PostgreSQL job queue:
