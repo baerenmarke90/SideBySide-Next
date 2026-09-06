@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select
@@ -17,7 +18,8 @@ from sidebyside.identity import service as accounts
 from sidebyside.identity.models import Account, DeviceSession
 from tests.conftest import requires_database
 
-PASSWORD = "correct horse battery staple 667!"
+PASSWORD = uuid4().hex
+WRONG_PASSWORD = uuid4().hex
 PURPOSE = recent_auth.RecentAuthenticationPurpose.ACCOUNT_DELETION
 METHOD = recent_auth.RecentAuthenticationMethod.LOCAL_PASSWORD
 
@@ -212,7 +214,7 @@ class TestRecentAuthenticationPassword:
                     session,
                     account,
                     device_session,
-                    password="definitely not the password",
+                    password=WRONG_PASSWORD,
                     purpose=PURPOSE,
                 )
         assert rejected.value.code == recent_auth.RecentAuthenticationErrorCode.PASSWORD_INVALID
