@@ -28,7 +28,7 @@ from typing import BinaryIO
 ARCHIVE_FORMAT = "sidebyside-self-hosted-backup"
 ARCHIVE_VERSION = 1
 ARCHIVE_MEMBERS = frozenset({"manifest.json", "database.dump", "media.tar"})
-ALLOWED_COMPOSE_FILES = frozenset({"compose.yaml", "compose.arcane.yaml"})
+ALLOWED_COMPOSE_FILES = frozenset({"compose.yaml"})
 WRITER_SERVICES = frozenset({"api", "worker"})
 TRANSIENT_WRITER_SERVICES = frozenset({"migrate", "demo-init"})
 VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -86,9 +86,7 @@ class ComposeTarget:
         root = Path(__file__).resolve().parents[1]
         resolved_compose = compose_file.resolve()
         if resolved_compose.parent != root or resolved_compose.name not in ALLOWED_COMPOSE_FILES:
-            raise RecoveryError(
-                "Only the repository's canonical compose.yaml or compose.arcane.yaml is supported."
-            )
+            raise RecoveryError("Only the repository's canonical compose.yaml is supported.")
         resolved_env = env_file.resolve()
         if not resolved_env.is_file():
             raise RecoveryError("The requested environment file does not exist.")
@@ -96,6 +94,8 @@ class ComposeTarget:
         command = [
             "docker",
             "compose",
+            "--profile",
+            "self-hosted",
             "--env-file",
             str(resolved_env),
             "-f",
@@ -146,6 +146,8 @@ class ComposeTarget:
             "compose",
             "--project-name",
             self.project_name,
+            "--profile",
+            "self-hosted",
             "--env-file",
             str(self.env_file),
             "-f",
@@ -690,7 +692,7 @@ def _common_arguments(parser: argparse.ArgumentParser) -> None:
         "--compose-file",
         type=Path,
         default=Path("compose.yaml"),
-        help="Canonical compose.yaml or compose.arcane.yaml from this checkout",
+        help="Canonical compose.yaml from this checkout",
     )
     parser.add_argument("--env-file", type=Path, required=True, help="Target dotenv file")
     parser.add_argument(
