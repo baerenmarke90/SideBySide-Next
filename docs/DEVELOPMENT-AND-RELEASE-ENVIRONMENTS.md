@@ -49,20 +49,24 @@ environment files. The check fails without printing secret values when it detect
 obvious reuse of project names, public origins, database URLs, cursor keys, or
 storage credentials/buckets.
 
-## 3. Supported deployment primitives
+## 3. Supported deployment primitive
 
-No new orchestrator is introduced for v1.
+No new orchestrator is introduced for v1. Every Docker Compose path uses the
+single repository-root `compose.yaml`.
 
-- Complete repository checkout: `compose.yaml`.
+- Complete Self-Hosted checkout: `compose.yaml` with profile `self-hosted`.
 - Verified release-candidate/Production deployment from a complete checkout:
-  `scripts/compose_checked.py` wrapping `compose.yaml`.
-- Arcane / remote Git workspace: `compose.arcane.yaml`.
-- Development database only for source-code work: `deploy/docker-compose.dev.yml`.
-- Persistent Development: the complete SideBySide stack, normally through
-  `compose.arcane.yaml`, with a dedicated Arcane project and the template at
-  `deploy/persistent-development.env.example`.
+  `scripts/compose_checked.py`, which wraps the same canonical manifest.
+- Arcane / remote Git workspace: the same `compose.yaml` + `self-hosted` profile,
+  with Backend/Web build contexts supplied through environment configuration.
+- Development database only for source-code work: `compose.yaml` with profile
+  `dev-db`.
+- Cloud/Managed: `compose.yaml` with profile `cloud` and immutable release-image
+  references.
+- Persistent Development: the complete `self-hosted` profile with a dedicated
+  Arcane project and `deploy/persistent-development.env.example`.
 
-Both complete-stack Compose variants keep the same services and dependency order:
+The complete Self-Hosted stack keeps one dependency order:
 
 ```text
 postgres -> migrate -> demo-init(no-op outside Demo) -> api/worker -> web
@@ -91,11 +95,12 @@ A complete-checkout release candidate or Production deployment must use
 - refuses a checkout with tracked or untracked changes;
 - optionally requires `--expected-revision` to match `HEAD` exactly;
 - injects that derived revision into backend **and** Web build arguments;
-- refuses alternate Compose files/project directories that could detach the proof
-  from the canonical checkout.
+- refuses alternate Compose files/project directories or profile overrides that
+  could detach the proof from the canonical checkout.
 
-Arcane does not use this wrapper because its remote Git build context and build
-identity are both derived from the same `SBS_SOURCE_REF`.
+Arcane does not use this wrapper because its build contexts and build identity are
+configured to the same Git revision through `SBS_BACKEND_BUILD_CONTEXT`,
+`SBS_WEB_BUILD_CONTEXT`, and `SBS_BUILD_REVISION`.
 
 ## 4. Persistent Development
 
@@ -104,27 +109,24 @@ identity are both derived from the same `SBS_SOURCE_REF`.
 Create a dedicated Arcane project, for example `sidebyside-development`, separate
 from any Production or Demo project.
 
-Use:
-
-```text
-Compose file: compose.arcane.yaml
-SBS_ENVIRONMENT=development
-SBS_SOURCE_REF=main
-```
-
-Start from `deploy/persistent-development.env.example`, then replace every secret
-placeholder with a Development-only value. Never import the Production environment
-wholesale and edit only the hostname.
-
-Development may follow `main` for ordinary integration. For release-candidate
-verification, pin Development temporarily to the exact candidate commit SHA:
+Use repository-root `compose.yaml` and start from
+`deploy/persistent-development.env.example`. The template selects:
 
 ```dotenv
-SBS_SOURCE_REF=<40-character-candidate-commit-sha>
+COMPOSE_PROFILES=self-hosted
+SBS_ENVIRONMENT=development
+SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
+SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
+SBS_BUILD_REVISION=main
 ```
 
-Rebuild/recreate the complete stack and perform the promotion gates below against
-that exact candidate.
+Replace every secret placeholder with a Development-only value. Never import the
+Production environment wholesale and edit only the hostname.
+
+Development may follow `main` for ordinary integration. For release-candidate
+verification, pin all three source identity values to the exact same candidate
+commit SHA, rebuild/recreate the complete stack, and perform the promotion gates
+below against that exact candidate.
 
 ### 4.2 Exposure policy
 
@@ -151,16 +153,16 @@ The revision policy is intentionally different by environment:
 - release-candidate Development: exact commit SHA;
 - Production: exact immutable commit SHA only.
 
-A human-readable release tag may point to the production commit, but an Arcane
-Production `SBS_SOURCE_REF` must be the resolved 40-character commit SHA. This
-avoids relying on a movable tag during deployment.
+A human-readable release tag may point to the production commit, but Arcane
+Production must pin both Git build contexts and `SBS_BUILD_REVISION` to the
+resolved 40-character commit SHA. This avoids relying on a movable tag during
+deployment.
 
-For v1, SideBySide continues to build from Git/BuildKit rather than introducing a
-container registry solely for promotion. Development and Production may rebuild
-the same immutable source; the invariant is **same verified source revision for
-all application components**, not byte-identical image layers. Versioned registry
-images remain a valid later improvement if build-once/promote-the-identical-artifact
-becomes operationally important.
+For v1, Self-Hosted/Arcane continues to support Git/BuildKit builds rather than
+introducing a container registry solely for promotion. Development and Production
+may rebuild the same immutable source; the invariant is **same verified source
+revision for all application components**, not byte-identical image layers.
+Cloud/Managed uses immutable release images through the `cloud` profile.
 
 ## 6. Deployed revision observability
 
@@ -179,10 +181,9 @@ The Web image exposes its build identity at:
 /.well-known/sidebyside-revision
 ```
 
-For Arcane, both identities are derived from `SBS_SOURCE_REF`; API, worker, and
-migrate use one backend build context while Web uses the same source ref for its
-own build context. For a verified complete checkout, `scripts/compose_checked.py`
-injects the exact clean Git `HEAD` into both builds.
+For Arcane, both identities are derived from the same pinned revision through the
+two Git build contexts plus `SBS_BUILD_REVISION`. For a verified complete checkout,
+`scripts/compose_checked.py` injects the exact clean Git `HEAD` into both builds.
 
 A release smoke check must require **both** Web and API identities to equal the
 expected candidate/Production commit. A healthy component serving the wrong
@@ -207,7 +208,7 @@ candidate commit:
 11. worker/job behavior is checked when the release changes asynchronous work;
 12. media read/write behavior is checked in Development when the release changes
     media;
-13. rollback/forward-fix implications of every new migration are known.
+13. rollback/forward-fix implications of every new migration are known;
 14. the repository recovery gate is green and Production has a fresh coordinated
     recovery point according to `SELF-HOSTED-RECOVERY.md` before migration.
 
@@ -246,8 +247,8 @@ operator test account and cleanup procedure exist.
 For a host with Compose access, additionally verify:
 
 ```bash
-docker compose ps
-docker compose logs --tail=100 migrate api worker web
+docker compose --profile self-hosted ps
+docker compose --profile self-hosted logs --tail=100 migrate api worker web
 ```
 
 `migrate` must have exited successfully; API and Web must be healthy; worker must
@@ -289,11 +290,13 @@ A tag is the human release name; `$CANDIDATE` is the deployment identity.
 
 ### 10.1 Arcane Production
 
-Configure Production with:
+Use repository-root `compose.yaml`, set `COMPOSE_PROFILES=self-hosted`, and pin:
 
 ```dotenv
 SBS_ENVIRONMENT=production
-SBS_SOURCE_REF=<CANDIDATE>
+SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#<CANDIDATE>:backend
+SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#<CANDIDATE>:web
+SBS_BUILD_REVISION=<CANDIDATE>
 ```
 
 Rebuild/recreate the complete Arcane stack and run the smoke helper with exactly
@@ -331,9 +334,9 @@ Before every Production promotion record:
 - whether application rollback is schema-compatible.
 
 If the candidate fails before an incompatible migration is committed, redeploy the
-previous known-good commit SHA and repeat smoke verification. Arcane pins the old
-SHA as `SBS_SOURCE_REF`; a complete checkout uses the same verified wrapper against
-a clean checkout at the old SHA.
+previous known-good commit SHA and repeat smoke verification. Arcane pins all three
+build identity values back to the previous SHA; a complete checkout uses the same
+verified wrapper against a clean checkout at the old SHA.
 
 If the candidate has already applied a schema change that is not backward
 compatible, do **not** blindly redeploy old code. Choose one of:
