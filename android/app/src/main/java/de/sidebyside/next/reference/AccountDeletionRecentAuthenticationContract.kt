@@ -11,6 +11,12 @@ data class AccountDeletionOidcStart(
     val state: String,
 )
 
+data class AccountDeletionOidcPending(
+    val connectionId: String,
+    val authorizationUrl: String,
+    val state: String,
+)
+
 /**
  * Platform-neutral high-risk authentication calls used by Account deletion.
  *
