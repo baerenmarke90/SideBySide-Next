@@ -39,10 +39,17 @@ def test_claim_renewal_never_exceeds_absolute_lifetime(
     with maker() as source:
         claim = upload_ownership.claim_upload(source, context, attachment_id)
 
-    near_cap = claim.expires_at - timedelta(seconds=30)
-    monkeypatch.setattr(upload_ownership, "now", lambda: near_cap)
-    with maker() as source:
-        renewed = upload_ownership.renew_upload_claim(source, claim)
+    start = claim.expires_at - upload_ownership.UPLOAD_CLAIM_MAX_LIFETIME
+    renewed = claim
+    # Each renewal happens before the current five-minute lease expires. The
+    # final renewals approach the hard cap and must never move past it.
+    for seconds in (270, 540, 810, 1080, 1350, 1620, 1770):
+        current = start + timedelta(seconds=seconds)
+        monkeypatch.setattr(upload_ownership, "now", lambda current=current: current)
+        with maker() as source:
+            renewed = upload_ownership.renew_upload_claim(source, renewed)
+        assert renewed.lease_until <= claim.expires_at
+
     assert renewed.lease_until == claim.expires_at
 
     after_cap = claim.expires_at + timedelta(seconds=1)
