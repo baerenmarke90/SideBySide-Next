@@ -16,6 +16,8 @@ ACCOUNT_DELETION_RECOVERY_RUNTIME_PATHS = (
     "backend/src/sidebyside/identity/deletion_reconcile.py",
     "backend/src/sidebyside/identity/deletion_self_service.py",
     "backend/src/sidebyside/authorization/retention.py",
+    "backend/src/sidebyside/attachments/retention.py",
+    "backend/src/sidebyside/jobs/runner.py",
 )
 
 RECOVERY_TOOLING_PATHS = (
@@ -74,6 +76,7 @@ class ChangeScopeTest(unittest.TestCase):
                 "backend_integration",
                 "self_hosted",
                 "deployment_guard",
+                "recovery",
             },
         )
 
@@ -85,10 +88,10 @@ class ChangeScopeTest(unittest.TestCase):
                     enabled={"self_hosted", "deployment_guard", "recovery"},
                 )
 
-    def test_cloud_managed_deployment_files_enable_deployment_guard(self) -> None:
+    def test_cloud_managed_deployment_files_enable_deployment_guard_and_recovery(self) -> None:
         for path in ("deploy/compose.cloud.yml", "deploy/cloud-managed.env.example"):
             with self.subTest(path=path):
-                self.assert_scope([path], enabled={"deployment_guard"})
+                self.assert_scope([path], enabled={"deployment_guard", "recovery"})
 
     def test_web_dockerfile_enables_build_and_deployment_gates(self) -> None:
         self.assert_scope(
@@ -158,6 +161,15 @@ class ChangeScopeTest(unittest.TestCase):
             ["backend/src/sidebyside/identity/preferences.py"],
             enabled={"backend", "backend_integration"},
         )
+
+    def test_unrelated_attachment_runtime_does_not_enable_recovery(self) -> None:
+        self.assert_scope(
+            ["backend/src/sidebyside/attachments/service.py"],
+            enabled={"backend", "backend_integration"},
+        )
+
+    def test_ordinary_deployment_documentation_does_not_enable_recovery(self) -> None:
+        self.assert_scope(["docs/m6/DEPLOYMENT-RELEASE.md"], enabled=set())
 
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))
