@@ -306,9 +306,11 @@ def authenticate_password(
     rate_limit.check(session, ACTION_PASSWORD, key, PASSWORD_LIMIT)
 
     identity = accounts.local_identity(session, account)
-    password_hash = identity.secret_hash if identity is not None else None
-    valid = bool(password_hash) and passwords.verify_password(password_hash, password)
-    if not valid:
+    if (
+        identity is None
+        or not identity.secret_hash
+        or not passwords.verify_password(identity.secret_hash, password)
+    ):
         rate_limit.preserve_attempt_after_rollback(session, ACTION_PASSWORD, key)
         raise UnauthenticatedError(
             "Recent authentication failed.",
