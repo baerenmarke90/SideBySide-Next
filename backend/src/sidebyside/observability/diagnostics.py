@@ -1,53 +1,56 @@
 """Privacy-safe technical diagnostics for logs and persisted failure state.
 
-Structured log traceback formatting (``formatting.py``) and the background
-job/outbox failure-persistence boundaries (``jobs.queue.fail``,
-``outbox.service.mark_failed``) both face the same problem: an *unexpected*
-exception's own text is not developer-authored. It can be a provider's error
-body, a database driver's rendering of a query, or a library echoing back
-whatever a caller passed it — any of which can already contain a token, a
-signed URL, or private content, none of which this module can enumerate in
-advance.
+Unexpected exception text is untrusted runtime data. It can contain provider
+bodies, database renderings, signed URLs, tokens, or private product content.
+The generic exception boundary therefore never treats a value as safe merely
+because it *looks* like a machine code.
 
-The contract is therefore an allowlist, not a blocklist: only a bounded,
-explicit technical code survives; anything else is reduced to the exception's
-class name alone. This is deliberately the same rule
-``engagement.push.sanitize_error_code`` already relies on for provider codes —
-one canonical pattern, not a parallel one — extended here to exception text in
-general. A blocklist of secret *patterns* (see ``redaction.scrub_message``) is
-the right tool for a human-composed log message where most of the text is
-supposed to survive; it is the wrong tool here, because it can only catch
-secret shapes someone has already thought to write a rule for, and this
-boundary specifically exists for content nobody has reviewed at all.
+A very small explicit compatibility allowlist may retain developer-authored
+codes that were already part of the application's diagnostic contract. Every
+other unexpected exception is reduced to its class name. Stable job/provider
+codes continue to use their existing explicit code paths instead of being
+recovered heuristically from ``str(exc)``.
+
+Tracebacks retain bounded structural context (file basename, line number and
+function name) but intentionally omit source-code lines. This keeps the stack
+useful without copying another text surface into logs.
 """
 
 from __future__ import annotations
 
 import re
-import traceback
+from collections import deque
+from pathlib import Path
 from types import TracebackType
 
 _TECHNICAL_CODE = re.compile(r"[A-Z0-9_-]{1,64}\Z")
 
 UNKNOWN_CODE = "UNKNOWN"
 
+# These values are developer-authored compatibility codes, not a pattern-based
+# trust decision. Do not add provider/user-derived values here.
+_EXPLICIT_SAFE_EXCEPTION_CODES: dict[str, str] = {
+    "ACCOUNT_UNAVAILABLE": "ACCOUNT_UNAVAILABLE",
+    "ACCOUNT_DELETION_CONVERGENCE_FAILED": "ACCOUNT_DELETION_CONVERGENCE_FAILED",
+}
+
 _MAX_CHAIN_DEPTH = 10
 _MAX_TRACEBACK_FRAMES = 50
 _MAX_TRACEBACK_CHARS = 20_000
+_MAX_FRAME_NAME_CHARS = 128
+_MAX_FILENAME_CHARS = 256
 
 _CAUSE_HEADER = "\nThe above exception was the direct cause of the following exception:\n\n"
 _CONTEXT_HEADER = "\nDuring handling of the above exception, another exception occurred:\n\n"
 
 
 def sanitize_error_code(value: str, *, default: str = UNKNOWN_CODE) -> str:
-    """Return `value` unchanged if it is a bounded technical code, else `default`.
+    """Normalize a value already known by its caller to be a technical code.
 
-    A technical code is developer-authored and never built from runtime data:
-    ``ACCOUNT_UNAVAILABLE``, ``PROVIDER_ERROR``. The pattern is intentionally
-    the whole contract rather than a maintained list of known-safe codes,
-    exactly as ``engagement.push`` already relied on before this module
-    existed; anything that is not a short, bounded, uppercase-alnum token is
-    treated as unreviewed content, however short or plausible it looks.
+    This helper is deliberately *not* an exception-message sanitizer. Callers
+    must already own the authority to classify ``value`` as a technical code;
+    arbitrary exception/provider prose must not be passed here as a way to
+    decide whether it is safe.
     """
     candidate = value.strip().upper()
     if _TECHNICAL_CODE.fullmatch(candidate) is None:
@@ -56,55 +59,42 @@ def sanitize_error_code(value: str, *, default: str = UNKNOWN_CODE) -> str:
 
 
 def safe_exception_summary(exc: BaseException) -> str:
-    """A bounded, privacy-safe one-line summary of `exc`.
+    """Return a bounded, privacy-safe one-line summary of ``exc``.
 
-    Always includes the exception's class name, which is written by a
-    developer and never carries runtime data. The exception's own message is
-    appended only when it already is a bounded technical code; otherwise it is
-    dropped entirely rather than pattern-matched for known secret shapes, so
-    an exception whose text happens not to look like a token or a URL is not
-    mistaken for safe. This replaces the ``f"{type(exc).__name__}: {exc}"``
-    pattern that previously persisted arbitrary exception prose into
-    ``jobs.last_error`` / ``outbox_events.last_error``.
+    The exception class name is developer-authored structural metadata. The
+    exception message is untrusted and is never returned directly. Two legacy
+    developer-authored codes are retained through an explicit constant map;
+    all other messages, including values that happen to match the technical
+    code regex, are dropped.
 
-    Never raises: a `str(exc)` that itself fails (a badly written `__str__`)
-    still yields the class name rather than propagating or falling back to
-    something unsanitized.
+    A broken ``__str__`` cannot break logging or persistence: it simply falls
+    back to the class name.
     """
     name = type(exc).__name__
     try:
-        text = str(exc).strip()
+        message = str(exc).strip()
     except Exception:
         return name
-    if not text:
-        return name
-    code = sanitize_error_code(text, default="")
-    if code:
-        return f"{name}: {code}"
+
+    safe_code = _EXPLICIT_SAFE_EXCEPTION_CODES.get(message)
+    if safe_code is not None:
+        return f"{name}: {safe_code}"
     return name
 
 
 def safe_traceback_text(
     exc_info: tuple[type[BaseException] | None, BaseException | None, TracebackType | None],
 ) -> str:
-    """Render `exc_info` the way `logging.Formatter.formatException` would,
-    except every exception's own message is replaced by
-    `safe_exception_summary` first.
+    """Render a bounded traceback without untrusted exception/source text.
 
-    Stack frames — file, line, function name, and the literal source line
-    `linecache` reads for it — are kept as-is. They are code the developers
-    wrote, not data a caller supplied, so unlike an exception's `str()` they
-    cannot carry a token or private text pasted in from elsewhere; keeping
-    them is what makes this a redaction of the message rather than a blanket
-    replacement of the whole traceback. The cause/context chain and its two
-    standard connecting sentences are preserved the same way, so a chained
-    exception still reads as one, just without either exception's own prose.
+    Cause/context relationships are preserved. Each stack retains only file
+    basename, line number, and function name; literal source-code lines are not
+    copied into the diagnostic. Exception messages are reduced through
+    :func:`safe_exception_summary`.
 
-    Bounded on three axes so a pathological exception cannot make logging
-    itself expensive: chain depth, frames rendered per traceback, and the
-    total rendered length. Never raises and never returns the unredacted
-    original: if rendering itself fails for any reason, the result is a fixed
-    placeholder string, not a fallback to `traceback.format_exception`.
+    The renderer is bounded on chain depth, frames per traceback, frame-field
+    length, and total output length. It never falls back to the stdlib's raw
+    exception formatting if sanitization fails.
     """
     try:
         _, exc_value, _ = exc_info
@@ -134,9 +124,23 @@ def _render_chain(exc: BaseException, seen: set[int], depth: int) -> list[str]:
         lines.append(_CONTEXT_HEADER)
 
     lines.append("Traceback (most recent call last):\n")
-    # Negative keeps the tail: the frames nearest the raise, which is what a
-    # truncated traceback still needs to be useful. A positive limit keeps
-    # the head (the entry point) instead, which is the wrong end to lose.
-    lines.extend(traceback.format_tb(exc.__traceback__, limit=-_MAX_TRACEBACK_FRAMES))
+    lines.extend(_render_frames(exc.__traceback__))
     lines.append(safe_exception_summary(exc) + "\n")
     return lines
+
+
+def _render_frames(tb: TracebackType | None) -> list[str]:
+    """Render only structural frame metadata, keeping the tail nearest raise."""
+    frames: deque[tuple[str, int, str]] = deque(maxlen=_MAX_TRACEBACK_FRAMES)
+    cursor = tb
+    while cursor is not None:
+        code = cursor.tb_frame.f_code
+        filename = Path(code.co_filename).name[:_MAX_FILENAME_CHARS] or "<unknown>"
+        function = code.co_name[:_MAX_FRAME_NAME_CHARS] or "<unknown>"
+        frames.append((filename, cursor.tb_lineno, function))
+        cursor = cursor.tb_next
+
+    return [
+        f'  File "{filename}", line {line_number}, in {function}\n'
+        for filename, line_number, function in frames
+    ]

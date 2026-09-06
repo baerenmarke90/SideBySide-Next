@@ -93,12 +93,9 @@ def _run_job(job_id: Any, kind: str, payload: dict[str, Any]) -> None:
                 # lease expires.
                 failed = session.get(Job, job_id)
                 if failed is not None:
-                    # An unexpected exception's own text is not
-                    # developer-authored, unlike RetryableJobError.code above:
-                    # it can be a provider body, a driver's rendering of a
-                    # query, or user content a library echoed back. Only the
-                    # class name (and a bounded technical code, if the message
-                    # happens to already be one) is safe to persist.
+                    # Unexpected exception text is untrusted runtime data. Keep
+                    # only the class name plus the tiny explicit compatibility
+                    # allowlist enforced by safe_exception_summary().
                     queue.fail(failed, safe_exception_summary(exc))
                 log.exception("job failed", extra={"job_id": str(job_id), "kind": kind})
             else:
