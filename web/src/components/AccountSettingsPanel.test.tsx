@@ -32,7 +32,7 @@ function openConsequences() {
 
 async function completePasswordStepUp() {
   fireEvent.click(screen.getByRole('button', { name: accountSettings.continueAction }));
-  await screen.findByText(accountSettings.reauthTitle);
+  await screen.findByLabelText(accountSettings.reauthPasswordLabel);
   fireEvent.change(screen.getByLabelText(accountSettings.reauthPasswordLabel), {
     target: { value: 'test-passphrase' },
   });
@@ -90,7 +90,7 @@ describe('AccountSettingsPanel', () => {
 
     openConsequences();
     fireEvent.click(screen.getByRole('button', { name: accountSettings.continueAction }));
-    await screen.findByText(accountSettings.reauthTitle);
+    await screen.findByLabelText(accountSettings.reauthPasswordLabel);
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(screen.queryByText(accountSettings.finalTitle)).toBeNull();
 
