@@ -16,7 +16,7 @@ from sidebyside.db.session import unit_of_work
 from sidebyside.jobs import queue
 from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.jobs.models import Job
-from sidebyside.observability import set_correlation_id
+from sidebyside.observability import safe_exception_summary, set_correlation_id
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +93,10 @@ def _run_job(job_id: Any, kind: str, payload: dict[str, Any]) -> None:
                 # lease expires.
                 failed = session.get(Job, job_id)
                 if failed is not None:
-                    queue.fail(failed, f"{type(exc).__name__}: {exc}")
+                    # Unexpected exception text is untrusted runtime data. Keep
+                    # only the class name plus the tiny explicit compatibility
+                    # allowlist enforced by safe_exception_summary().
+                    queue.fail(failed, safe_exception_summary(exc))
                 log.exception("job failed", extra={"job_id": str(job_id), "kind": kind})
             else:
                 queue.succeed(job)

@@ -20,6 +20,7 @@ from sidebyside.observability.context import (
     get_request_id,
     get_space_id,
 )
+from sidebyside.observability.diagnostics import safe_traceback_text
 from sidebyside.observability.redaction import RedactingFilter, scrub_data
 
 _STANDARD_LOG_RECORD_ATTRIBUTES: frozenset[str] = frozenset(
@@ -50,7 +51,42 @@ _STANDARD_LOG_RECORD_ATTRIBUTES: frozenset[str] = frozenset(
 )
 
 
-class JsonLogFormatter(logging.Formatter):
+class _SanitizingFormatter(logging.Formatter):
+    """Base for every formatter this application registers.
+
+    `logging.Formatter.format()` renders an exception by calling
+    `self.formatException(record.exc_info)`; overriding that one method here
+    is the seam where the traceback boundary applies to every formatter that
+    inherits it, JSON and console alike, instead of duplicating the override
+    (or, worse, forgetting it) in each one. `RedactingFilter` runs earlier and
+    covers `record.msg`/`record.args`; this is the other half of the same
+    contract, for content that only exists once formatting happens.
+
+    `format()` also discards any pre-existing `record.exc_text` first.
+    `exc_text` is a mutable cache on the `LogRecord` itself, filled in by
+    whichever formatter renders the exception first; the stdlib base class
+    only calls `formatException()` `if not record.exc_text`. If some other
+    handler on the same record (a second, misconfigured logging setup; a test
+    double) already populated it with the ordinary unsanitized rendering,
+    this formatter would otherwise silently reuse that cached text instead of
+    ever calling the override below. Sanitized output must always be
+    recomputed from `exc_info`, never trusted from a cache this class did not
+    itself produce.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        if record.exc_info:
+            record.exc_text = None
+        return super().format(record)
+
+    def formatException(  # noqa: N802 -- overrides logging.Formatter's own name
+        self,
+        ei: tuple[type[BaseException] | None, BaseException | None, object | None],
+    ) -> str:
+        return safe_traceback_text(ei)  # type: ignore[arg-type]
+
+
+class JsonLogFormatter(_SanitizingFormatter):
     """Formats log records as single-line JSON with context enrichment."""
 
     def format(self, record: logging.LogRecord) -> str:
@@ -97,7 +133,7 @@ class JsonLogFormatter(logging.Formatter):
         return json.dumps(entry, default=str)
 
 
-class ConsoleLogFormatter(logging.Formatter):
+class ConsoleLogFormatter(_SanitizingFormatter):
     """Human-readable text formatter for local development and test runs."""
 
     def __init__(self) -> None:
@@ -122,6 +158,38 @@ class ConsoleLogFormatter(logging.Formatter):
             record.context_tag = ""
 
         return super().format(record)
+
+
+def _neutralize_uvicorn_logging() -> None:
+    """Stop Uvicorn's own logging from bypassing the redaction boundary above.
+
+    The production entrypoint is the bare ``uvicorn`` CLI, which resolves to
+    ``Server.serve() -> Config.load()`` importing ``sidebyside.main:app`` —
+    triggering this module's ``configure_logging()`` — only *after*
+    ``Config.__init__`` has already run Uvicorn's own
+    ``logging.config.dictConfig(...)``. Left alone, that leaves two
+    independent, unredacted paths that this function's own handler above
+    never sees, because both carry ``propagate=False``:
+
+    - ``uvicorn.access`` logs the full raw request line, query string
+      included, through Uvicorn's own formatter and handler.
+      ``RequestLoggingMiddleware`` already logs a safe, path-only line for
+      every request, so Uvicorn's copy is silenced outright rather than
+      redacted: nothing here can tell a sensitive query parameter apart from
+      an ordinary one embedded inside one opaque request-line string.
+    - ``uvicorn`` and its child ``uvicorn.error`` (ASGI/protocol-level
+      failures the application's own exception handlers never see) log
+      through Uvicorn's own unredacted handler and stop there. Both are
+      pointed at the root logger's handler instead.
+    """
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.handlers = []
+    access_logger.propagate = False
+
+    for logger_name in ("uvicorn", "uvicorn.error"):
+        uvicorn_logger = logging.getLogger(logger_name)
+        uvicorn_logger.handlers = []
+        uvicorn_logger.propagate = True
 
 
 def configure_logging(settings: Settings) -> None:
@@ -162,6 +230,8 @@ def configure_logging(settings: Settings) -> None:
     handler.addFilter(RedactingFilter())
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
+
+    _neutralize_uvicorn_logging()
 
     # ``sidebyside.mail.log`` is the implementation of SBS_MAIL_TRANSPORT=log.
     # Its body is intentionally the local delivery channel for one-time auth
