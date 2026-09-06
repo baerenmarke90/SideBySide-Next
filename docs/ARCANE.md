@@ -52,6 +52,39 @@ The API exposes `SBS_BUILD_REVISION` through `X-SideBySide-Revision`; the Web
 image exposes it through `/.well-known/sidebyside-revision`. Release smoke
 requires both values to equal the expected commit.
 
+## Account-deletion authority bootstrap
+
+Arcane does not have a separate bootstrap manifest. It uses the same root
+`compose.yaml`, `self-hosted` profile, and named `deletion_journal_data` volume as
+the normal Self-Hosted path.
+
+For an Arcane project that has **never had an Account-deletion authority**, leave
+`SBS_ACCOUNT_DELETION_INSTANCE_ID` unset and run exactly one bootstrap against
+that project's `api` service before normal Production traffic is allowed:
+
+```bash
+docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
+  python -m sidebyside.identity.deletion_bootstrap \
+  --confirm-new-installation
+```
+
+The command creates the forward journal and prints the stable
+`SBS_ACCOUNT_DELETION_INSTANCE_ID`. Store that exact emitted value in the Arcane
+project environment and in the protected operator configuration backup, then
+force-recreate the affected containers. Never generate the UUID independently.
+
+The command must run with the **same Arcane project environment** that owns the
+Production volumes and remote build contexts. If Arcane keeps project variables
+outside the checked-in/project `.env`, use Arcane's one-off/exec environment (or
+otherwise supply those exact project variables) instead of running host-side
+Compose with incomplete defaults. In particular, do not let the command fall back
+to local `./backend`/`./web` contexts or a different `COMPOSE_PROJECT_NAME`.
+
+If the project already had an authority and the journal is missing/corrupt, this
+is a recovery failure, not a bootstrap opportunity. Do not clear the instance ID
+or initialize a replacement journal; follow
+`ACCOUNT-DELETION-SELF-HOSTED.md` and recover the newest protected journal.
+
 ## Runtime environment and container recreation
 
 Compose interpolation has an important precedence rule: an explicitly defined
