@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from 'react';
 import {
   attachmentDraftReducer,
   hasPendingAttachments,
@@ -105,7 +112,7 @@ export function useAttachmentDrafts({
   uploadAttachmentFn = uploadMemoryDraftAttachment,
 }: AttachmentDraftOptions) {
   const contextKey = formatAttachmentDraftContextKey(accountId, spaceId);
-  const activeContextKey = useRef(contextKey);
+  const committedContextKey = useRef(contextKey);
   const currentGeneration = useRef(1);
   const nextAttempt = useRef(0);
   const previewUrls = useRef(new Map<string, string>());
@@ -118,22 +125,18 @@ export function useAttachmentDrafts({
     items: [],
   });
 
-  if (activeContextKey.current !== contextKey) {
-    activeContextKey.current = contextKey;
-    currentGeneration.current += 1;
-    abortAndRevoke(uploads.current, previewUrls.current);
-  }
-
-  if (
-    store.contextKey !== contextKey ||
-    store.generation !== currentGeneration.current
-  ) {
-    dispatch({
-      type: 'reset_context',
-      contextKey,
-      generation: currentGeneration.current,
-    });
-  }
+  useLayoutEffect(() => {
+    if (committedContextKey.current !== contextKey) {
+      committedContextKey.current = contextKey;
+      currentGeneration.current += 1;
+      abortAndRevoke(uploads.current, previewUrls.current);
+      dispatch({
+        type: 'reset_context',
+        contextKey,
+        generation: currentGeneration.current,
+      });
+    }
+  }, [contextKey]);
 
   useEffect(() => {
     mounted.current = true;
@@ -145,7 +148,8 @@ export function useAttachmentDrafts({
 
   const isCurrentContext =
     store.contextKey === contextKey &&
-    store.generation === currentGeneration.current;
+    store.generation === currentGeneration.current &&
+    committedContextKey.current === contextKey;
   const items = isCurrentContext ? store.items : [];
 
   const startUpload = useCallback(
@@ -155,7 +159,7 @@ export function useAttachmentDrafts({
       uploads.current.set(id, controller);
       const attempt = ++nextAttempt.current;
       const uploadGeneration = currentGeneration.current;
-      const uploadContextKey = activeContextKey.current;
+      const uploadContextKey = committedContextKey.current;
 
       dispatch({
         type: 'draft_action',
@@ -167,7 +171,7 @@ export function useAttachmentDrafts({
       const isCurrentAttempt = () =>
         mounted.current &&
         uploadGeneration === currentGeneration.current &&
-        uploadContextKey === activeContextKey.current &&
+        uploadContextKey === committedContextKey.current &&
         !controller.signal.aborted;
 
       const updatePhase = (status: DraftUploadPhase) => {
@@ -231,7 +235,7 @@ export function useAttachmentDrafts({
   const addFiles = useCallback(
     (files: FileList | null) => {
       if (!files) return;
-      const currentContext = activeContextKey.current;
+      const currentContext = committedContextKey.current;
       const currentGen = currentGeneration.current;
       for (const file of Array.from(files)) {
         const id = globalThis.crypto.randomUUID();
@@ -278,7 +282,7 @@ export function useAttachmentDrafts({
       previewUrls.current.delete(id);
       dispatch({
         type: 'draft_action',
-        contextKey: activeContextKey.current,
+        contextKey: committedContextKey.current,
         generation: currentGeneration.current,
         action: { type: 'remove', id },
       });
@@ -296,7 +300,7 @@ export function useAttachmentDrafts({
     abortAndRevoke(uploads.current, previewUrls.current);
     dispatch({
       type: 'reset_context',
-      contextKey: activeContextKey.current,
+      contextKey: committedContextKey.current,
       generation: currentGeneration.current,
     });
   }, []);
