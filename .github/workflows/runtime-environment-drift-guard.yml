@@ -5,6 +5,7 @@ on:
     paths:
       - compose.yaml
       - .env.example
+      - deploy/cloud-managed.env.example
       - deploy/persistent-development.env.example
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
@@ -12,12 +13,14 @@ on:
       - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
       - docs/SELF-HOSTING.md
+      - docs/m6/CLOUD-MANAGED-ACCOUNT-DELETION-AUTHORITY.md
       - .github/workflows/runtime-environment-drift-guard.yml
   push:
     branches: [main]
     paths:
       - compose.yaml
       - .env.example
+      - deploy/cloud-managed.env.example
       - deploy/persistent-development.env.example
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
@@ -25,6 +28,7 @@ on:
       - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
       - docs/SELF-HOSTING.md
+      - docs/m6/CLOUD-MANAGED-ACCOUNT-DELETION-AUTHORITY.md
       - .github/workflows/runtime-environment-drift-guard.yml
   workflow_dispatch:
 
@@ -54,10 +58,12 @@ jobs:
           set -euo pipefail
           operator_surfaces=(
             .env.example
+            deploy/cloud-managed.env.example
             deploy/persistent-development.env.example
             docs/SELF-HOSTING.md
             docs/ACCOUNT-DELETION-SELF-HOSTED.md
             docs/ARCANE.md
+            docs/m6/CLOUD-MANAGED-ACCOUNT-DELETION-AUTHORITY.md
           )
 
           if grep -nE 'uuid\.uuid4|print\(uuid\.uuid4\(\)\)' "${operator_surfaces[@]}"; then
