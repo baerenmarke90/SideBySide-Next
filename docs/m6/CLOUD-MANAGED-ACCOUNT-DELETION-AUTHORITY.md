@@ -12,9 +12,11 @@ contract; it introduces no Cloud-only deletion semantics and no second authority
 
 ## 1. Provisioning is an explicit one-shot control-plane action
 
-For a genuinely new Production environment, provision the final shared,
-POSIX-lockable deletion-journal volume **before any normal API replica is routed
-traffic**. Run the immutable backend release image as a one-shot job with:
+For a Production environment that has **never had an Account-deletion authority**,
+provision the final shared, POSIX-lockable deletion-journal volume **before any
+normal API replica is routed traffic**. This may be a new environment or an
+existing environment crossing the explicit authority-provisioning boundary for
+the first time. Run the immutable backend release image as a one-shot job with:
 
 - the final shared deletion-journal volume mounted at
   `/var/lib/sidebyside/deletion-journal`;

@@ -15,7 +15,7 @@ mode:
 |---|---|---|
 | `SBS_ENVIRONMENT` | `development` (default) | `production` |
 | cursor signing key | local fallback | required, at least 32 characters |
-| Account deletion authority | optional until self-delete is exercised | stable instance UUID + protected forward journal required for self-service deletion |
+| Account deletion authority | optional until self-delete is exercised | stable instance UUID + protected forward journal required before API traffic is served |
 | outgoing mail | `log` allowed | `smtp` or `none`, never `log` |
 | `SBS_PUBLIC_BASE_URL` | HTTP localhost allowed | HTTPS required |
 | HTTPS/host enforcement | off | on |
@@ -137,12 +137,14 @@ silently pairing a stale Web image with a newer backend.
 
 ## Production configuration
 
-Before the first Production startup, configure at least:
+Configure the ordinary Production values first, but leave
+`SBS_ACCOUNT_DELETION_INSTANCE_ID` unset until the deletion authority has been
+provisioned by the explicit bootstrap command below:
 
 ```dotenv
 SBS_ENVIRONMENT=production
 SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
-SBS_ACCOUNT_DELETION_INSTANCE_ID=...  # python3 -c 'import uuid; print(uuid.uuid4())'
+SBS_ACCOUNT_DELETION_INSTANCE_ID=
 SBS_PUBLIC_BASE_URL=https://your-domain.example
 SBS_ALLOWED_HOSTS=["your-domain.example"]
 TRUSTED_PROXY_IPS=...             # smallest real reverse-proxy IP/CIDR
@@ -156,12 +158,35 @@ SBS_SMTP_HOST=smtp.your-domain.example
 # SBS_MAIL_TRANSPORT=none
 ```
 
+If this installation has **never had an Account-deletion authority**, create the
+stable UUID and the empty forward journal together exactly once:
+
+```bash
+docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
+  python -m sidebyside.identity.deletion_bootstrap \
+  --confirm-new-installation
+```
+
+The command prints:
+
+```dotenv
+SBS_ACCOUNT_DELETION_INSTANCE_ID=<stable-instance-uuid>
+```
+
+Store that exact emitted value in `.env` and the protected operator
+configuration backup before normal Production startup. Do not pre-generate or
+replace the UUID independently of the journal.
+
+If this installation already had an authority and its journal is now missing,
+corrupt, or unavailable, **do not run bootstrap**. Recover the newest protected
+journal and its matching stable instance ID as described in
+`ACCOUNT-DELETION-SELF-HOSTED.md`.
+
 Production refuses unsafe configuration such as a missing cursor signing key, a
 plaintext public base URL, or `SBS_MAIL_TRANSPORT=log`. These are secure-default
-startup failures and must not be bypassed. Self-service Account deletion also
-fails closed before irreversible acceptance until a valid stable
-`SBS_ACCOUNT_DELETION_INSTANCE_ID` and matching protected journal authority are
-available.
+startup failures and must not be bypassed. Production also refuses to serve
+normal API traffic until the configured Account-deletion authority is present,
+readable, and matches `SBS_ACCOUNT_DELETION_INSTANCE_ID`.
 
 The exact source revision must first pass the persistent Development gates in
 `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`. For complete-checkout Production,
@@ -180,9 +205,11 @@ separate private `deletion_journal_data` volume mounted at:
 ```
 
 The stable instance UUID in `SBS_ACCOUNT_DELETION_INSTANCE_ID` belongs to the
-operator configuration backup. Generate it once per normal installation and keep
-it unchanged across upgrades and restores. Do not reuse the Production UUID for a
-Development or Demo project.
+operator configuration backup. It is emitted by the one-time
+`sidebyside.identity.deletion_bootstrap` command when that command creates the
+matching forward journal. Keep both authority artifacts unchanged across
+application upgrades and database/media restores. Do not reuse the Production
+UUID or journal for a Development or Demo project.
 
 The forward journal must not be rolled back together with PostgreSQL or media.
 Protect the newest validated journal independently and retain it until every
@@ -194,7 +221,8 @@ Treat `docker compose down -v` as destructive to this safety state. Recreating a
 API container is safe because named volumes persist; deleting/changing the Compose
 project or journal volume requires an explicit migration/recovery decision.
 
-The full operator contract, including post-restore replay, is in
+The full operator contract, including bootstrap, upgrades that first introduce
+the authority, and post-restore replay, is in
 [`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
 
 ## Operation without a mail server

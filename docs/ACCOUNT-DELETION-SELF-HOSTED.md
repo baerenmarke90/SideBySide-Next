@@ -12,8 +12,12 @@ Account, its credentials, sessions, or `OWNER_ONLY` data.
 ## 1. Bootstrap the authority exactly once
 
 A normal Self-Hosted installation needs one stable deletion-authority UUID and
-one matching forward journal. They are created together by an explicit
-first-install step, **before the API is started for the first time**.
+one matching forward journal. They are created together by an explicit one-time
+provisioning step whenever the installation has **never had a deletion authority
+before**. This includes a new installation and an existing installation upgrading
+from a release that did not yet require explicit deletion-authority provisioning.
+Production normal traffic must remain stopped until that provisioning step is
+complete.
 
 Do not pre-generate `SBS_ACCOUNT_DELETION_INSTANCE_ID`. Leave it unset and run:
 
@@ -22,6 +26,18 @@ docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
   python -m sidebyside.identity.deletion_bootstrap \
   --confirm-new-installation
 ```
+
+The `--confirm-new-installation` flag confirms that **no prior Account-deletion
+authority exists for this installation**. It does not require the PostgreSQL
+installation itself to be empty or newly created.
+
+Arcane uses the same repository-root `compose.yaml` and `self-hosted` profile; it
+does not have a separate Arcane Compose manifest. Run the same `api` one-off
+against the actual Arcane project environment so it uses that project's
+`COMPOSE_PROJECT_NAME`, remote build contexts, and `deletion_journal_data` volume.
+If those values are managed by Arcane rather than the project's `.env`, use
+Arcane's one-off/exec environment instead of running a host-side Compose command
+that would silently fall back to different defaults.
 
 The command creates the empty journal in the mounted `deletion_journal_data`
 volume and prints exactly one new value:
@@ -38,9 +54,10 @@ credential, hostname, or another secret.
 
 The bootstrap command refuses to run when an instance ID is already configured or
 when a journal already exists. This is the control-plane distinction between a
-brand-new installation and an established deletion authority. If an established
-instance loses its journal, **do not unset the instance ID and do not bootstrap a
-replacement**. Recover the newest independently protected journal instead.
+never-provisioned deletion authority and an established deletion authority. If an
+established instance loses its journal, **do not unset the instance ID and do not
+bootstrap a replacement**. Recover the newest independently protected journal
+instead.
 
 The UUID is not a credential, but it is part of the recovery identity and belongs
 in the protected operator configuration backup. A journal from another instance
