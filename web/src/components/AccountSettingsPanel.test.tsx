@@ -26,12 +26,16 @@ function renderPanel(demoMode = false, onDeletionAccepted = vi.fn()) {
 }
 
 function openConsequences() {
-  fireEvent.click(screen.getByRole('button', { name: accountSettings.deleteAction }));
+  fireEvent.click(
+    screen.getByRole('button', { name: accountSettings.deleteAction }),
+  );
   expect(screen.getByText(accountSettings.consequencesTitle)).toBeDefined();
 }
 
 async function completePasswordStepUp() {
-  fireEvent.click(screen.getByRole('button', { name: accountSettings.continueAction }));
+  fireEvent.click(
+    screen.getByRole('button', { name: accountSettings.continueAction }),
+  );
   await screen.findByLabelText(accountSettings.reauthPasswordLabel);
   fireEvent.change(screen.getByLabelText(accountSettings.reauthPasswordLabel), {
     target: { value: 'test-passphrase' },
@@ -89,16 +93,23 @@ describe('AccountSettingsPanel', () => {
     const accepted = renderPanel(false);
 
     openConsequences();
-    fireEvent.click(screen.getByRole('button', { name: accountSettings.continueAction }));
+    fireEvent.click(
+      screen.getByRole('button', { name: accountSettings.continueAction }),
+    );
     await screen.findByLabelText(accountSettings.reauthPasswordLabel);
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(screen.queryByText(accountSettings.finalTitle)).toBeNull();
 
-    fireEvent.change(screen.getByLabelText(accountSettings.reauthPasswordLabel), {
-      target: { value: 'test-passphrase' },
-    });
+    fireEvent.change(
+      screen.getByLabelText(accountSettings.reauthPasswordLabel),
+      {
+        target: { value: 'test-passphrase' },
+      },
+    );
     fireEvent.click(
-      screen.getByRole('button', { name: accountSettings.reauthPasswordAction }),
+      screen.getByRole('button', {
+        name: accountSettings.reauthPasswordAction,
+      }),
     );
     await screen.findByText(accountSettings.finalTitle);
     expect(recentAuthentication.authenticateRecentPassword).toHaveBeenCalled();
@@ -107,7 +118,9 @@ describe('AccountSettingsPanel', () => {
     fireEvent.change(screen.getByLabelText(accountSettings.confirmLabel), {
       target: { value: accountSettings.confirmPhrase },
     });
-    fireEvent.click(screen.getByRole('button', { name: accountSettings.submitAction }));
+    fireEvent.click(
+      screen.getByRole('button', { name: accountSettings.submitAction }),
+    );
 
     await waitFor(() => {
       expect(deleteSpy).toHaveBeenCalledWith({
@@ -133,7 +146,9 @@ describe('AccountSettingsPanel', () => {
     renderPanel();
 
     openConsequences();
-    fireEvent.click(screen.getByRole('button', { name: accountSettings.continueAction }));
+    fireEvent.click(
+      screen.getByRole('button', { name: accountSettings.continueAction }),
+    );
     await screen.findByText(accountSettings.reauthUnavailableTitle);
 
     expect(screen.queryByText(accountSettings.finalTitle)).toBeNull();
@@ -152,7 +167,9 @@ describe('AccountSettingsPanel', () => {
     fireEvent.change(screen.getByLabelText(accountSettings.confirmLabel), {
       target: { value: accountSettings.confirmPhrase },
     });
-    fireEvent.click(screen.getByRole('button', { name: accountSettings.submitAction }));
+    fireEvent.click(
+      screen.getByRole('button', { name: accountSettings.submitAction }),
+    );
 
     await waitFor(() => {
       expect(accepted).not.toHaveBeenCalled();
