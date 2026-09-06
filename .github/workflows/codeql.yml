@@ -6,6 +6,7 @@ on:
   pull_request:
   schedule:
     - cron: '23 4 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,8 +16,141 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: CodeQL Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      run_analysis: ${{ steps.matrix.outputs.run_analysis }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Select CodeQL languages
+        id: matrix
+        env:
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          full_matrix='{"include":[{"language":"python","build-mode":"none"},{"language":"javascript-typescript","build-mode":"none"},{"language":"java-kotlin","build-mode":"manual"}]}'
+
+          # Pull requests keep the complete merge-protection analysis. Scheduled
+          # and manual runs also scan every language as the periodic safety net.
+          if [ "$GITHUB_EVENT_NAME" != "push" ]; then
+            echo "matrix=$full_matrix" >> "$GITHUB_OUTPUT"
+            echo "run_analysis=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="$PUSH_BASE_SHA"
+          head_sha="$PUSH_HEAD_SHA"
+          if [ -z "$base_sha" ] || [ -z "$head_sha" ] \
+            || [[ "$base_sha" =~ ^0+$ ]] \
+            || ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null \
+            || ! git cat-file -e "${head_sha}^{commit}" 2>/dev/null; then
+            echo "Push range is unavailable; running all CodeQL languages."
+            echo "matrix=$full_matrix" >> "$GITHUB_OUTPUT"
+            echo "run_analysis=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only --no-renames "$base_sha" "$head_sha" > /tmp/codeql-changed-files.txt
+          echo "Changed files:"
+          cat /tmp/codeql-changed-files.txt
+
+          matrix=$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          changed = [
+              line.strip().replace("\\", "/")
+              for line in Path("/tmp/codeql-changed-files.txt").read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+
+          all_languages = ("python", "javascript-typescript", "java-kotlin")
+          selected: set[str] = set()
+          fail_closed = False
+
+          safe_exact = {
+              ".env.example",
+              ".gitleaksignore",
+              ".gitignore",
+              "AGENTS.md",
+              "CLA.md",
+              "COMMERCIAL-LICENSE.md",
+              "CONTRIBUTING.md",
+              "LICENSE",
+              "PROVENANCE.md",
+              "README.md",
+              "TRADEMARKS.md",
+              "compose.arcane.yaml",
+              "compose.yaml",
+          }
+          safe_prefixes = (
+              ".github/ISSUE_TEMPLATE/",
+              ".github/PULL_REQUEST_TEMPLATE/",
+              ".github/workflows/",
+              "deploy/",
+              "docs/",
+              "specification/",
+          )
+
+          for path in changed:
+              if path == ".github/workflows/codeql.yml" or path.startswith(".github/codeql/"):
+                  fail_closed = True
+                  break
+              if path.startswith("backend/") or path.startswith("scripts/") or path.startswith("tools/"):
+                  selected.add("python")
+                  continue
+              if path.startswith("web/"):
+                  selected.add("javascript-typescript")
+                  continue
+              if path.startswith("android/"):
+                  selected.add("java-kotlin")
+                  continue
+              if path in safe_exact or path.startswith(safe_prefixes):
+                  continue
+              # New repository surfaces are intentionally fail-closed so a new
+              # source tree cannot silently bypass CodeQL after merge.
+              fail_closed = True
+              break
+
+          if fail_closed:
+              selected = set(all_languages)
+
+          include = []
+          for language in all_languages:
+              if language not in selected:
+                  continue
+              include.append(
+                  {
+                      "language": language,
+                      "build-mode": "manual" if language == "java-kotlin" else "none",
+                  }
+              )
+
+          print(json.dumps({"include": include}, separators=(",", ":")))
+          PY
+          )
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$matrix" = '{"include":[]}' ]; then
+            echo "run_analysis=false" >> "$GITHUB_OUTPUT"
+            echo "No CodeQL-owned source surface changed on main."
+          else
+            echo "run_analysis=true" >> "$GITHUB_OUTPUT"
+          fi
+
   analyze:
     name: CodeQL (${{ matrix.language }})
+    needs: changes
+    if: needs.changes.outputs.run_analysis == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,14 +158,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - language: python
-            build-mode: none
-          - language: javascript-typescript
-            build-mode: none
-          - language: java-kotlin
-            build-mode: manual
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
 
     steps:
       - name: Checkout
