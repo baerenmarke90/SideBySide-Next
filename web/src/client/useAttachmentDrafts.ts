@@ -4,6 +4,7 @@ import {
   hasPendingAttachments,
   readyAttachmentIds,
   type AttachmentDraft,
+  type AttachmentDraftAction,
 } from './attachmentDraftState';
 import {
   uploadMemoryDraftAttachment,
@@ -11,11 +12,21 @@ import {
 } from './memoryAttachmentDraft';
 import type { ReferenceApis } from './referenceFlow';
 
-interface AttachmentDraftOptions {
+export interface AttachmentDraftOptions {
   apis: ReferenceApis;
   apiBaseUrl: string;
   accessToken: string;
   spaceId: string;
+  accountId: string;
+  fetchApi?: typeof fetch;
+  uploadAttachmentFn?: typeof uploadMemoryDraftAttachment;
+}
+
+export function formatAttachmentDraftContextKey(
+  accountId: string,
+  spaceId: string,
+): string {
+  return `${accountId}:${spaceId}`;
 }
 
 function errorMessage(error: unknown): string {
@@ -24,30 +35,118 @@ function errorMessage(error: unknown): string {
     : String(error);
 }
 
+interface AttachmentDraftStore {
+  contextKey: string;
+  generation: number;
+  items: AttachmentDraft[];
+}
+
+type AttachmentDraftStoreAction =
+  | { type: 'reset_context'; contextKey: string; generation: number }
+  | {
+      type: 'draft_action';
+      contextKey: string;
+      generation: number;
+      action: AttachmentDraftAction;
+    };
+
+function attachmentDraftStoreReducer(
+  state: AttachmentDraftStore,
+  action: AttachmentDraftStoreAction,
+): AttachmentDraftStore {
+  if (action.type === 'reset_context') {
+    return {
+      contextKey: action.contextKey,
+      generation: action.generation,
+      items: [],
+    };
+  }
+  if (
+    action.contextKey !== state.contextKey ||
+    action.generation !== state.generation
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    items: attachmentDraftReducer(state.items, action.action),
+  };
+}
+
+function abortAndRevoke(
+  uploads: Map<string, AbortController>,
+  previewUrls: Map<string, string>,
+): void {
+  for (const controller of uploads.values()) {
+    try {
+      controller.abort();
+    } catch {
+      // ignore
+    }
+  }
+  uploads.clear();
+  for (const previewUrl of previewUrls.values()) {
+    try {
+      URL.revokeObjectURL(previewUrl);
+    } catch {
+      // ignore
+    }
+  }
+  previewUrls.clear();
+}
+
 export function useAttachmentDrafts({
   apis,
   apiBaseUrl,
   accessToken,
   spaceId,
+  accountId,
+  fetchApi = fetch,
+  uploadAttachmentFn = uploadMemoryDraftAttachment,
 }: AttachmentDraftOptions) {
-  const [items, dispatch] = useReducer(attachmentDraftReducer, []);
+  const contextKey = formatAttachmentDraftContextKey(accountId, spaceId);
+  const activeContextKey = useRef(contextKey);
+  const currentGeneration = useRef(1);
   const nextAttempt = useRef(0);
   const previewUrls = useRef(new Map<string, string>());
   const uploads = useRef(new Map<string, AbortController>());
   const mounted = useRef(true);
 
+  const [store, dispatch] = useReducer(attachmentDraftStoreReducer, {
+    contextKey,
+    generation: currentGeneration.current,
+    items: [],
+  });
+
+  if (activeContextKey.current !== contextKey) {
+    activeContextKey.current = contextKey;
+    currentGeneration.current += 1;
+    abortAndRevoke(uploads.current, previewUrls.current);
+  }
+
+  if (
+    store.contextKey !== contextKey ||
+    store.generation !== currentGeneration.current
+  ) {
+    dispatch({
+      type: 'reset_context',
+      contextKey,
+      generation: currentGeneration.current,
+    });
+  }
+
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      for (const controller of uploads.current.values()) controller.abort();
-      uploads.current.clear();
-      for (const previewUrl of previewUrls.current.values()) {
-        URL.revokeObjectURL(previewUrl);
-      }
-      previewUrls.current.clear();
+      abortAndRevoke(uploads.current, previewUrls.current);
     };
   }, []);
+
+  const isCurrentContext =
+    store.contextKey === contextKey &&
+    store.generation === currentGeneration.current;
+  const items = isCurrentContext ? store.items : [];
 
   const startUpload = useCallback(
     (id: string, file: File) => {
@@ -55,57 +154,103 @@ export function useAttachmentDrafts({
       const controller = new AbortController();
       uploads.current.set(id, controller);
       const attempt = ++nextAttempt.current;
-      dispatch({ type: 'start', id, attempt });
+      const uploadGeneration = currentGeneration.current;
+      const uploadContextKey = activeContextKey.current;
+
+      dispatch({
+        type: 'draft_action',
+        contextKey: uploadContextKey,
+        generation: uploadGeneration,
+        action: { type: 'start', id, attempt },
+      });
+
+      const isCurrentAttempt = () =>
+        mounted.current &&
+        uploadGeneration === currentGeneration.current &&
+        uploadContextKey === activeContextKey.current &&
+        !controller.signal.aborted;
 
       const updatePhase = (status: DraftUploadPhase) => {
-        if (!mounted.current || controller.signal.aborted) return;
-        dispatch({ type: 'phase', id, attempt, status });
+        if (!isCurrentAttempt()) return;
+        dispatch({
+          type: 'draft_action',
+          contextKey: uploadContextKey,
+          generation: uploadGeneration,
+          action: { type: 'phase', id, attempt, status },
+        });
       };
       const updateProgress = (progress: number) => {
-        if (!mounted.current || controller.signal.aborted) return;
-        dispatch({ type: 'progress', id, attempt, progress });
+        if (!isCurrentAttempt()) return;
+        dispatch({
+          type: 'draft_action',
+          contextKey: uploadContextKey,
+          generation: uploadGeneration,
+          action: { type: 'progress', id, attempt, progress },
+        });
       };
 
-      void uploadMemoryDraftAttachment(
+      void uploadAttachmentFn(
         apis,
         apiBaseUrl,
         accessToken,
         spaceId,
         file,
         updatePhase,
-        fetch,
+        fetchApi,
         { signal: controller.signal, onProgress: updateProgress },
       )
         .then(({ attachmentId }) => {
           uploads.current.delete(id);
-          if (!mounted.current || controller.signal.aborted) return;
-          dispatch({ type: 'ready', id, attempt, attachmentId });
+          if (!isCurrentAttempt()) return;
+          dispatch({
+            type: 'draft_action',
+            contextKey: uploadContextKey,
+            generation: uploadGeneration,
+            action: { type: 'ready', id, attempt, attachmentId },
+          });
         })
         .catch((error: unknown) => {
           uploads.current.delete(id);
-          if (!mounted.current || controller.signal.aborted) return;
-          dispatch({ type: 'failed', id, attempt, error: errorMessage(error) });
+          if (!isCurrentAttempt()) return;
+          dispatch({
+            type: 'draft_action',
+            contextKey: uploadContextKey,
+            generation: uploadGeneration,
+            action: {
+              type: 'failed',
+              id,
+              attempt,
+              error: errorMessage(error),
+            },
+          });
         });
     },
-    [accessToken, apiBaseUrl, apis, spaceId],
+    [accessToken, apiBaseUrl, apis, fetchApi, spaceId, uploadAttachmentFn],
   );
 
   const addFiles = useCallback(
     (files: FileList | null) => {
       if (!files) return;
+      const currentContext = activeContextKey.current;
+      const currentGen = currentGeneration.current;
       for (const file of Array.from(files)) {
         const id = globalThis.crypto.randomUUID();
         const previewUrl = URL.createObjectURL(file);
         previewUrls.current.set(id, previewUrl);
         dispatch({
-          type: 'add',
-          draft: {
-            id,
-            file,
-            previewUrl,
-            status: 'uploading',
-            attempt: 0,
-            progress: 0,
+          type: 'draft_action',
+          contextKey: currentContext,
+          generation: currentGen,
+          action: {
+            type: 'add',
+            draft: {
+              id,
+              file,
+              previewUrl,
+              status: 'uploading',
+              attempt: 0,
+              progress: 0,
+            },
           },
         });
         startUpload(id, file);
@@ -123,9 +268,20 @@ export function useAttachmentDrafts({
     (id: string) => {
       cancel(id);
       const previewUrl = previewUrls.current.get(id);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrl) {
+        try {
+          URL.revokeObjectURL(previewUrl);
+        } catch {
+          // ignore
+        }
+      }
       previewUrls.current.delete(id);
-      dispatch({ type: 'remove', id });
+      dispatch({
+        type: 'draft_action',
+        contextKey: activeContextKey.current,
+        generation: currentGeneration.current,
+        action: { type: 'remove', id },
+      });
     },
     [cancel],
   );
@@ -136,13 +292,13 @@ export function useAttachmentDrafts({
   );
 
   const clear = useCallback(() => {
-    for (const controller of uploads.current.values()) controller.abort();
-    uploads.current.clear();
-    for (const previewUrl of previewUrls.current.values()) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    previewUrls.current.clear();
-    dispatch({ type: 'clear' });
+    currentGeneration.current += 1;
+    abortAndRevoke(uploads.current, previewUrls.current);
+    dispatch({
+      type: 'reset_context',
+      contextKey: activeContextKey.current,
+      generation: currentGeneration.current,
+    });
   }, []);
 
   const readyIds = useMemo(() => readyAttachmentIds(items), [items]);
@@ -157,5 +313,7 @@ export function useAttachmentDrafts({
     clear,
     readyIds,
     hasPending,
+    contextKey,
+    generation: currentGeneration.current,
   };
 }
