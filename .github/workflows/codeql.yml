@@ -89,7 +89,6 @@ jobs:
               "PROVENANCE.md",
               "README.md",
               "TRADEMARKS.md",
-              "compose.arcane.yaml",
               "compose.yaml",
           }
           safe_prefixes = (
