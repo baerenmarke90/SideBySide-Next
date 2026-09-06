@@ -154,7 +154,7 @@ def start(
         "scope": configured.scopes,
         "state": state,
         "nonce": nonce,
-        "code_challenge": oidc._challenge(verifier),  # noqa: SLF001
+        "code_challenge": oidc._challenge(verifier),
         "code_challenge_method": "S256",
         "prompt": "login",
         "max_age": "0",
@@ -190,13 +190,13 @@ def complete(
         raise _invalid_state()
 
     discovery = oidc.discover(configured)
-    response = oidc._exchange_code(  # noqa: SLF001
+    response = oidc._exchange_code(
         configured,
         discovery,
         code=code,
         request=cast(Any, request),
     )
-    claims = oidc._verified_claims(  # noqa: SLF001
+    claims = oidc._verified_claims(
         configured,
         discovery,
         id_token=str(response.get("id_token", "")),

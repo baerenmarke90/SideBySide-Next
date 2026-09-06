@@ -67,7 +67,7 @@ def _consume_row(
         .all()
     )
     if len(rows) != 1:
-        raise passkeys._invalid()  # noqa: SLF001
+        raise passkeys._invalid()
     row = rows[0]
     row.consumed_at = current_time
     session.flush()
@@ -159,7 +159,7 @@ def finish(
 ) -> recent_auth.RecentAuthenticationResult:
     """Verify a step-up assertion without creating a new SideBySide session."""
     recent_auth.ensure_context(account, device_session)
-    challenge = passkeys._challenge_from_client_data(credential)  # noqa: SLF001
+    challenge = passkeys._challenge_from_client_data(credential)
     expected_challenge = _consume_challenge(
         session,
         account,
@@ -171,9 +171,9 @@ def finish(
     try:
         raw_id = base64url_to_bytes(str(credential["rawId"]))
     except (KeyError, TypeError, ValueError) as error:
-        raise passkeys._invalid() from error  # noqa: SLF001
+        raise passkeys._invalid() from error
 
-    stored, locked_account = passkeys._lock_account_credential(  # noqa: SLF001
+    stored, locked_account = passkeys._lock_account_credential(
         session,
         account.id,
         raw_id,
@@ -191,7 +191,7 @@ def finish(
         )
     except (InvalidAuthenticationResponse, KeyError, ValueError) as error:
         log.info("passkey recent authentication rejected")
-        raise passkeys._invalid() from error  # noqa: SLF001
+        raise passkeys._invalid() from error
 
     stored.sign_count = verified.new_sign_count
     stored.last_used_at = now()
