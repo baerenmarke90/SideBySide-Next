@@ -18,6 +18,7 @@ from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.auth import cloud, local, oidc, passkey_abuse, passkeys, sessions
 from sidebyside.auth.local import SignedIn
+from sidebyside.auth.policy import AuthPolicy
 from sidebyside.config import get_settings
 from sidebyside.mail import MailSender, sender
 
@@ -155,12 +156,13 @@ def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn | passkeys.SignedIn)
     status_code=status.HTTP_201_CREATED,
     responses=problem_responses(403, 409, 422, 429),
 )
-def register(body: RegisterRequest, session: DbSession) -> SessionView:
+def register(body: RegisterRequest, session: DbSession, policy: AuthPolicy) -> SessionView:
     """Create an account.
 
     The first account requires the one-time bootstrap proof. Every later
     registration requires a valid invitation.
     """
+    policy.ensure_local_password_allowed()
     configured = get_settings().bootstrap_token
     return _view(
         local.register(
@@ -182,9 +184,10 @@ def register(body: RegisterRequest, session: DbSession) -> SessionView:
 @router.post(
     "/auth/sign-in",
     response_model=SessionView,
-    responses=problem_responses(401, 422, 429),
+    responses=problem_responses(401, 403, 422, 429),
 )
-def sign_in(body: SignInRequest, session: DbSession) -> SessionView:
+def sign_in(body: SignInRequest, session: DbSession, policy: AuthPolicy) -> SessionView:
+    policy.ensure_local_password_allowed()
     return _view(
         local.sign_in(
             session,
@@ -224,16 +227,17 @@ def sign_out(device_session: CurrentSession) -> None:
 @router.post(
     "/auth/password",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=problem_responses(401, 422),
+    responses=problem_responses(401, 403, 422),
 )
 def change_password(
-    body: ChangePasswordRequest, account: CurrentAccount, session: DbSession
+    body: ChangePasswordRequest, account: CurrentAccount, session: DbSession, policy: AuthPolicy
 ) -> None:
     """Change the password and revoke every session.
 
     This includes the current session. A password change often follows a
     suspected compromise, in which case no device should remain authenticated.
     """
+    policy.ensure_local_password_allowed()
     local.change_password(session, account, current=body.current_password, new=body.new_password)
 
 
@@ -311,10 +315,13 @@ def confirm_email(body: TokenOnlyRequest, session: DbSession) -> Response:
     "/auth/recovery/request",
     status_code=status.HTTP_202_ACCEPTED,
     response_class=Response,
-    responses=problem_responses(422, 429, 503),
+    responses=problem_responses(403, 422, 429, 503),
 )
-def request_recovery(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
+def request_recovery(
+    body: EmailRequest, session: DbSession, mail: Mail, policy: AuthPolicy
+) -> Response:
     """Request a password reset while always returning the same response."""
+    policy.ensure_local_password_allowed()
     cloud.request_recovery(session, email=body.email, mail=mail)
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -323,10 +330,13 @@ def request_recovery(body: EmailRequest, session: DbSession, mail: Mail) -> Resp
     "/auth/recovery/consume",
     response_model=SessionView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(422),
+    responses=problem_responses(403, 422),
 )
-def consume_recovery(body: RecoveryConsumeRequest, session: DbSession) -> SessionView:
+def consume_recovery(
+    body: RecoveryConsumeRequest, session: DbSession, policy: AuthPolicy
+) -> SessionView:
     """Set a new password and terminate all previous sessions."""
+    policy.ensure_local_password_allowed()
     return _view(
         cloud.consume_recovery(
             session,

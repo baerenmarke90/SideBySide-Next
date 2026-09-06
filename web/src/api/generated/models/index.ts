@@ -16,6 +16,7 @@ export * from './AttachmentDetail';
 export * from './AttachmentReadRequest';
 export * from './AttachmentSummary';
 export * from './AttachmentUploadCreate';
+export * from './AuthCapabilities';
 export * from './AuthorSummary';
 export * from './ChangePasswordRequest';
 export * from './ChapterContent';

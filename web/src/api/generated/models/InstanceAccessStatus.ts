@@ -13,12 +13,26 @@
  */
 
 import { mapValues } from '../runtime';
+import type { AuthCapabilities } from './AuthCapabilities';
+import {
+    AuthCapabilitiesFromJSON,
+    AuthCapabilitiesFromJSONTyped,
+    AuthCapabilitiesToJSON,
+    AuthCapabilitiesToJSONTyped,
+} from './AuthCapabilities';
+
 /**
  * 
  * @export
  * @interface InstanceAccessStatus
  */
 export interface InstanceAccessStatus {
+    /**
+     * 
+     * @type {AuthCapabilities}
+     * @memberof InstanceAccessStatus
+     */
+    auth?: AuthCapabilities;
     /**
      * 
      * @type {boolean}
@@ -70,6 +84,7 @@ export function InstanceAccessStatusFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
         
+        'auth': json['auth'] == null ? undefined : AuthCapabilitiesFromJSON(json['auth']),
         'maintenanceMode': json['maintenanceMode'],
         'registrationAvailable': json['registrationAvailable'],
         'registrationUnavailableReason': json['registrationUnavailableReason'],
@@ -87,6 +102,7 @@ export function InstanceAccessStatusToJSONTyped(value?: InstanceAccessStatus | n
 
     return {
         
+        'auth': AuthCapabilitiesToJSON(value['auth']),
         'maintenanceMode': value['maintenanceMode'],
         'registrationAvailable': value['registrationAvailable'],
         'registrationUnavailableReason': value['registrationUnavailableReason'],

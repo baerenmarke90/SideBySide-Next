@@ -23,27 +23,34 @@
 
 package sidebyside.api.models
 
-import sidebyside.api.models.AuthCapabilities
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Current account capabilities used only for client presentation.
+ * Authoritative authentication capabilities for this instance.  Reused across the backend auth router, service layers, and capability projections to clients.
  *
- * @param serverAdmin 
- * @param auth 
+ * @param localPassword 
+ * @param magicLink 
+ * @param oidc 
+ * @param passkey 
  */
 @Serializable
 
-data class AccountCapabilitiesView (
+data class AuthCapabilities (
 
-    @SerialName(value = "serverAdmin")
-    val serverAdmin: kotlin.Boolean,
+    @SerialName(value = "localPassword")
+    val localPassword: kotlin.Boolean,
 
-    @SerialName(value = "auth")
-    val auth: AuthCapabilities? = null
+    @SerialName(value = "magicLink")
+    val magicLink: kotlin.Boolean,
+
+    @SerialName(value = "oidc")
+    val oidc: kotlin.Boolean,
+
+    @SerialName(value = "passkey")
+    val passkey: kotlin.Boolean
 
 ) {
 

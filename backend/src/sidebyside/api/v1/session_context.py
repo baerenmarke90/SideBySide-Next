@@ -10,11 +10,13 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter
+from pydantic import Field
 from sqlalchemy import select
 
 from sidebyside.api.deps import CurrentAccount, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.auth.policy import AuthCapabilities, AuthPolicy, resolve_auth_capabilities
 from sidebyside.authorization.server_admin import is_server_admin
 from sidebyside.relationship.models import Membership, MembershipStatus
 
@@ -33,6 +35,7 @@ class AccountCapabilitiesView(ApiModel):
     """Current account capabilities used only for client presentation."""
 
     server_admin: bool
+    auth: AuthCapabilities = Field(default_factory=resolve_auth_capabilities)
 
 
 @router.get(
@@ -43,9 +46,13 @@ class AccountCapabilitiesView(ApiModel):
 def get_account_capabilities(
     account: CurrentAccount,
     session: DbSession,
+    auth_policy: AuthPolicy,
 ) -> AccountCapabilitiesView:
     """Return presentation capabilities without replacing endpoint authorization."""
-    return AccountCapabilitiesView(server_admin=is_server_admin(session, account))
+    return AccountCapabilitiesView(
+        server_admin=is_server_admin(session, account),
+        auth=auth_policy,
+    )
 
 
 @router.get(

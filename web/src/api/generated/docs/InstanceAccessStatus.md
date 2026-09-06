@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`auth` | [AuthCapabilities](AuthCapabilities.md)
 `maintenanceMode` | boolean
 `registrationAvailable` | boolean
 `registrationUnavailableReason` | string
@@ -17,6 +18,7 @@ import type { InstanceAccessStatus } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "auth": null,
   "maintenanceMode": null,
   "registrationAvailable": null,
   "registrationUnavailableReason": null,

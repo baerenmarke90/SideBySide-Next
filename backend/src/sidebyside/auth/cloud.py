@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import action_tokens, passwords, rate_limit, sessions
+from sidebyside.auth.policy import resolve_auth_capabilities
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.config import get_settings
 from sidebyside.core.clock import now
@@ -195,6 +196,7 @@ def request_recovery(session: Session, *, email: str, mail: MailSender) -> None:
     that signs in exclusively through an external provider must not silently
     gain an additional authentication method here.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     address = accounts.normalize_email(email)
     rate_limit.check(session, ACTION_RECOVERY, address, rate_limit.MAGIC_LINK)
     rate_limit.record_attempt(session, ACTION_RECOVERY, address)
@@ -237,6 +239,7 @@ def consume_recovery(
     session is therefore revoked and exactly one new session begins on the
     current device.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     passwords.validate(new_password)
 
     model = action_tokens.consume_account_recovery(session, token)

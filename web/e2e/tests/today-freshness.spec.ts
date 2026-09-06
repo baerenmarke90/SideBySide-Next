@@ -36,6 +36,21 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
         body: JSON.stringify(body),
       });
 
+    if (method === 'GET' && pathname === '/api/v1/instance/status') {
+      await fulfillJson({
+        maintenanceMode: false,
+        registrationAvailable: true,
+        registrationUnavailableReason: null,
+        auth: {
+          localPassword: true,
+          passkey: true,
+          magicLink: true,
+          oidc: false,
+        },
+      });
+      return;
+    }
+
     if (method === 'POST' && pathname === '/api/v1/auth/sign-in') {
       await fulfillJson({
         account: { displayName: 'Anna', id: ACCOUNT_ID },

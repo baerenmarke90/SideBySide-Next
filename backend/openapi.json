@@ -17,6 +17,9 @@
       "AccountCapabilitiesView": {
         "description": "Current account capabilities used only for client presentation.",
         "properties": {
+          "auth": {
+            "$ref": "#/components/schemas/AuthCapabilities"
+          },
           "serverAdmin": {
             "title": "Serveradmin",
             "type": "boolean"
@@ -562,6 +565,35 @@
           "expectedSize"
         ],
         "title": "AttachmentUploadCreate",
+        "type": "object"
+      },
+      "AuthCapabilities": {
+        "description": "Authoritative authentication capabilities for this instance.\n\nReused across the backend auth router, service layers, and capability\nprojections to clients.",
+        "properties": {
+          "localPassword": {
+            "title": "Localpassword",
+            "type": "boolean"
+          },
+          "magicLink": {
+            "title": "Magiclink",
+            "type": "boolean"
+          },
+          "oidc": {
+            "title": "Oidc",
+            "type": "boolean"
+          },
+          "passkey": {
+            "title": "Passkey",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "localPassword",
+          "passkey",
+          "magicLink",
+          "oidc"
+        ],
+        "title": "AuthCapabilities",
         "type": "object"
       },
       "AuthorSummary": {
@@ -2293,6 +2325,9 @@
       },
       "InstanceAccessStatus": {
         "properties": {
+          "auth": {
+            "$ref": "#/components/schemas/AuthCapabilities"
+          },
           "maintenanceMode": {
             "title": "Maintenancemode",
             "type": "boolean"
@@ -8657,6 +8692,16 @@
             },
             "description": "Authentication is missing, invalid, or the session has expired."
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8699,6 +8744,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -8733,6 +8788,16 @@
         "responses": {
           "202": {
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
           },
           "422": {
             "content": {
@@ -8937,6 +9002,16 @@
               }
             },
             "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
           },
           "422": {
             "content": {
