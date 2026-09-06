@@ -40,16 +40,20 @@ SAFE_DOC_EXACT = (
 SELF_HOSTED_COMPOSE_FILES = ("compose.yaml", "compose.arcane.yaml")
 
 # Account-deletion recovery authority is intentionally classified by semantic
-# module namespace rather than an exact-file allowlist. ``deletion.py`` is the
-# historical root module; every ``deletion_*`` module participates in, or may
-# extend, the forward-only deletion/convergence boundary and must fail closed
-# into Backup/Restore/Upgrade evidence when changed.
+# module namespace plus a small exact set of orchestration/retention owners
+# outside that namespace. ``deletion.py`` is the historical root module; every
+# ``deletion_*`` module participates in, or may extend, the forward-only
+# deletion/convergence boundary and must fail closed into Backup/Restore/Upgrade
+# evidence when changed.
 ACCOUNT_DELETION_RECOVERY_PREFIXES = (
     "backend/src/sidebyside/identity/deletion_",
 )
 ACCOUNT_DELETION_RECOVERY_EXACT = (
     "backend/src/sidebyside/identity/deletion.py",
     "backend/src/sidebyside/authorization/retention.py",
+    "backend/src/sidebyside/attachments/retention.py",
+    "backend/src/sidebyside/jobs/runner.py",
+    "backend/src/sidebyside/main.py",
 )
 
 # Recovery scripts are grouped by their stable semantic stems so additions to
@@ -66,6 +70,8 @@ RECOVERY_CONTRACT_EXACT = (
     ".github/workflows/self-hosted-recovery.yml",
     ".env.example",
     *SELF_HOSTED_COMPOSE_FILES,
+    "deploy/compose.cloud.yml",
+    "deploy/cloud-managed.env.example",
     "docs/SELF-HOSTED-RECOVERY.md",
     "docs/SELF-HOSTING.md",
     "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
