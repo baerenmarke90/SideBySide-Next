@@ -128,12 +128,18 @@ necessarily expose the same authentication methods. The target is a
 | Managed/Cloud | Passkey, Magic Link, and later managed providers such as Google and Apple |
 | Self-Hosted | local password, Passkey, and freely configurable OIDC; Magic Link only when mail delivery is deliberately configured |
 
-The `SBS_DEPLOYMENT` configuration value already exists. **The route/provider
-policy above is not yet fully enforced by the current runtime router.** Until
-that productization hardening is implemented, a client must not treat the
-deployment mode as a security boundary. Enablement must ultimately be enforced
-in the backend; UI visibility is only a representation of the same server
-decision. GitHub issue **#710** owns this runtime gap.
+The `SBS_DEPLOYMENT` configuration value governs deployment mode enforcement.
+**The route/provider policy above is strictly enforced server-authoritatively by
+the runtime router and domain services.** On Managed/Cloud (`SBS_DEPLOYMENT=cloud`),
+local password registration, sign-in, recovery, and password changes are rejected
+with HTTP 403 `AUTH_METHOD_DISABLED` prior to credential checks or user lookup,
+ensuring privacy without account enumeration. Pre-existing local identities from
+restored databases are likewise rejected. Magic Link is available when mail
+transport is configured (`SBS_MAIL_TRANSPORT != none`), and OIDC is enabled when
+one or more OIDC connections are configured. Capability projections (`/api/v1/instance/status`
+and `/api/v1/auth/capabilities`) reflect this policy to official clients, but
+the server remains authoritative. This enforces the security boundary tracked by
+Issue **#710**.
 
 For OIDC, the external account is identified exclusively by `(issuer,
 subject)`. A freely configurable `connection_id` selects the adapter; Pocket ID

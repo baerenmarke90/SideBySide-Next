@@ -98,7 +98,8 @@ async function issueCurrentInvitation() {
   return screen.findByLabelText(partnerConnection.linkLabel);
 }
 
-function storageContents(storage: Storage): string {
+function storageContents(storage?: Storage | null): string {
+  if (!storage) return '';
   const entries: string[] = [];
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
@@ -110,8 +111,8 @@ function storageContents(storage: Storage): string {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-  window.localStorage.clear();
-  window.sessionStorage.clear();
+  window.localStorage?.clear?.();
+  window.sessionStorage?.clear?.();
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
     value: originalClipboard,

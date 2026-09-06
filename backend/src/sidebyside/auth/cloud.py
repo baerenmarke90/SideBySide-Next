@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import action_tokens, passwords, rate_limit, sessions
+from sidebyside.auth.policy import resolve_auth_capabilities
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.config import get_settings
 from sidebyside.core.clock import now
@@ -78,6 +79,7 @@ def request_magic_link(session: Session, *, email: str, mail: MailSender) -> Non
 
     The response never reveals whether mail was created.
     """
+    resolve_auth_capabilities().ensure_magic_link_allowed()
     address = accounts.normalize_email(email)
     rate_limit.check(session, ACTION_MAGIC_LINK, address, rate_limit.MAGIC_LINK)
     rate_limit.record_attempt(session, ACTION_MAGIC_LINK, address)
@@ -118,6 +120,7 @@ def consume_magic_link(
     becomes verified. A separate verification step would create another place
     where that fact could be forgotten.
     """
+    resolve_auth_capabilities().ensure_magic_link_allowed()
     model = action_tokens.consume_magic_link(session, token)
     email_record = session.get(AccountEmail, model.account_email_id)
     account = session.get(Account, email_record.account_id) if email_record is not None else None
@@ -195,6 +198,7 @@ def request_recovery(session: Session, *, email: str, mail: MailSender) -> None:
     that signs in exclusively through an external provider must not silently
     gain an additional authentication method here.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     address = accounts.normalize_email(email)
     rate_limit.check(session, ACTION_RECOVERY, address, rate_limit.MAGIC_LINK)
     rate_limit.record_attempt(session, ACTION_RECOVERY, address)
@@ -237,6 +241,7 @@ def consume_recovery(
     session is therefore revoked and exactly one new session begins on the
     current device.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     passwords.validate(new_password)
 
     model = action_tokens.consume_account_recovery(session, token)

@@ -1,8 +1,9 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
+import type { AuthCapabilities } from '../api/generated/models/AuthCapabilities';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { SensitiveEntryToken } from '../client/entryToken';
 import {
-  loadRegistrationAvailability,
+  loadInstanceAccessStatus,
   type RegistrationAvailability,
 } from '../client/instanceStatus';
 import {
@@ -49,6 +50,10 @@ export function IdentityEntry({
     entryToken?.kind === 'recovery' ? entryToken.token : null;
   const [registrationAvailability, setRegistrationAvailability] =
     useState<RegistrationUiState>('checking');
+  const [authCapabilities, setAuthCapabilities] =
+    useState<AuthCapabilities | null>(null);
+  const localPasswordEnabled = authCapabilities?.localPassword ?? true;
+  const magicLinkEnabled = authCapabilities?.magicLink ?? true;
   const [mode, setMode] = useState<EntryMode>('signIn');
   const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [magicLinkRequested, setMagicLinkRequested] = useState(false);
@@ -79,26 +84,38 @@ export function IdentityEntry({
   }
 
   useEffect(() => {
-    if (!invitationToken) {
-      setRegistrationAvailability('available');
-      return;
-    }
-
     let cancelled = false;
     setRegistrationAvailability('checking');
-    void loadRegistrationAvailability(apiBaseUrl).then((availability) => {
-      if (!cancelled) setRegistrationAvailability(availability);
+    void loadInstanceAccessStatus(apiBaseUrl).then((result) => {
+      if (cancelled) return;
+      setRegistrationAvailability(result.availability);
+      setAuthCapabilities(result.auth);
+      if (result.auth && !result.auth.localPassword && result.auth.magicLink) {
+        setMode((currentMode) =>
+          currentMode === 'signIn' ||
+          currentMode === 'recoveryRequest' ||
+          currentMode === 'register'
+            ? 'magicLinkRequest'
+            : currentMode,
+        );
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, invitationToken]);
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     if (mode === 'register' && registrationAvailability !== 'available') {
       setMode('signIn');
     }
   }, [mode, registrationAvailability]);
+
+  useEffect(() => {
+    if (!localPasswordEnabled && mode !== 'magicLinkRequest') {
+      setMode('magicLinkRequest');
+    }
+  }, [localPasswordEnabled, mode]);
 
   useEffect(() => {
     if (!entryToken || processedEntryToken.current === entryToken.token) return;
@@ -136,6 +153,9 @@ export function IdentityEntry({
   }, [apiBaseUrl, entryToken, onSession]);
 
   function switchMode(nextMode: EntryMode) {
+    if (!localPasswordEnabled && nextMode !== 'magicLinkRequest') {
+      return;
+    }
     setActiveError(null);
     setValidationError(null);
     setMode(nextMode);
@@ -439,12 +459,14 @@ export function IdentityEntry({
                   </button>
                 </form>
               )}
-              <BackToSignIn
-                onClick={() => {
-                  setMagicLinkRequested(false);
-                  switchMode('signIn');
-                }}
-              />
+              {localPasswordEnabled ? (
+                <BackToSignIn
+                  onClick={() => {
+                    setMagicLinkRequested(false);
+                    switchMode('signIn');
+                  }}
+                />
+              ) : null}
             </>
           ) : (
             <>
@@ -505,7 +527,8 @@ export function IdentityEntry({
                     : t('login.submit')}
                 </button>
                 {invitationToken ? (
-                  registrationAvailability === 'available' ? (
+                  registrationAvailability === 'available' &&
+                  localPasswordEnabled ? (
                     <button
                       type="button"
                       className="secondary"
@@ -514,7 +537,7 @@ export function IdentityEntry({
                       {t('identity.createAccount')}
                     </button>
                   ) : null
-                ) : (
+                ) : magicLinkEnabled ? (
                   <button
                     type="button"
                     className="secondary"
@@ -522,14 +545,16 @@ export function IdentityEntry({
                   >
                     {t('identity.useMagicLink')}
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="tertiary"
-                  onClick={() => switchMode('recoveryRequest')}
-                >
-                  {t('identity.forgotPassword')}
-                </button>
+                ) : null}
+                {localPasswordEnabled ? (
+                  <button
+                    type="button"
+                    className="tertiary"
+                    onClick={() => switchMode('recoveryRequest')}
+                  >
+                    {t('identity.forgotPassword')}
+                  </button>
+                ) : null}
               </form>
             </>
           )}

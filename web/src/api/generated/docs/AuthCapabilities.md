@@ -1,25 +1,29 @@
 
-# AccountCapabilitiesView
+# AuthCapabilities
 
-Current account capabilities used only for client presentation.
+Authoritative authentication capabilities for this instance.  Reused across the backend auth router, service layers, and capability projections to clients.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`auth` | [AuthCapabilities](AuthCapabilities.md)
-`serverAdmin` | boolean
+`localPassword` | boolean
+`magicLink` | boolean
+`oidc` | boolean
+`passkey` | boolean
 
 ## Example
 
 ```typescript
-import type { AccountCapabilitiesView } from ''
+import type { AuthCapabilities } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "auth": null,
-  "serverAdmin": null,
-} satisfies AccountCapabilitiesView
+  "localPassword": null,
+  "magicLink": null,
+  "oidc": null,
+  "passkey": null,
+} satisfies AuthCapabilities
 
 console.log(example)
 
@@ -28,7 +32,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as AccountCapabilitiesView
+const exampleParsed = JSON.parse(exampleJSON) as AuthCapabilities
 console.log(exampleParsed)
 ```
 

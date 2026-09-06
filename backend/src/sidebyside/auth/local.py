@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.administration import service as administration
 from sidebyside.auth import bootstrap, passwords, rate_limit, sessions
+from sidebyside.auth.policy import resolve_auth_capabilities
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.core.errors import ErrorCode, UnauthenticatedError, ValidationError
 from sidebyside.identity import service as accounts
@@ -63,6 +64,7 @@ def register(
     The first account requires the one-time bootstrap proof and receives its
     own space. Every later account joins through an invitation.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     passwords.validate(password)
 
     bootstrap_state = None
@@ -112,6 +114,7 @@ def sign_in(
     Unknown address and wrong password produce the same response. Distinguishing
     them would reveal which addresses are registered and enable enumeration.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     address = accounts.normalize_email(email)
     failed = UnauthenticatedError(
         "Email address or password is incorrect.", AuthErrorCode.INVALID_CREDENTIALS
@@ -153,6 +156,7 @@ def change_password(session: Session, account: Account, *, current: str, new: st
     All other sessions are revoked. Password changes often follow suspected
     compromise, so another device must not remain signed in afterward.
     """
+    resolve_auth_capabilities().ensure_local_password_allowed()
     identity = accounts.local_identity(session, account)
     if identity is None or not identity.secret_hash:
         raise ValidationError("This account has no password sign-in.", ErrorCode.VALIDATION_FAILED)

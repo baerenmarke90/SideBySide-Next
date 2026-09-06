@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter
+from pydantic import Field
 
 from sidebyside.administration import service as administration
 from sidebyside.api.deps import DbSession
 from sidebyside.api.schema import ApiModel
+from sidebyside.auth.policy import AuthCapabilities, AuthPolicy, resolve_auth_capabilities
 
 router = APIRouter(tags=["instance"])
 
@@ -22,10 +24,14 @@ class InstanceAccessStatus(ApiModel):
     maintenance_mode: bool
     registration_available: bool
     registration_unavailable_reason: Literal["maintenance", "administrator"] | None
+    auth: AuthCapabilities = Field(default_factory=resolve_auth_capabilities)
 
 
 @router.get("/instance/status", response_model=InstanceAccessStatus)
-def instance_status(session: DbSession) -> InstanceAccessStatus:
+def instance_status(
+    session: DbSession,
+    auth_policy: AuthPolicy,
+) -> InstanceAccessStatus:
     """Return the minimum public state required by login/onboarding clients."""
     state = administration.get_access_state(session)
     reason: Literal["maintenance", "administrator"] | None = None
@@ -38,4 +44,5 @@ def instance_status(session: DbSession) -> InstanceAccessStatus:
         maintenance_mode=state.maintenance_mode,
         registration_available=state.effective_registration_enabled,
         registration_unavailable_reason=reason,
+        auth=auth_policy,
     )

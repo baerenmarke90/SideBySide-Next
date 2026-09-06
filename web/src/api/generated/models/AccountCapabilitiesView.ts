@@ -13,12 +13,26 @@
  */
 
 import { mapValues } from '../runtime';
+import type { AuthCapabilities } from './AuthCapabilities';
+import {
+    AuthCapabilitiesFromJSON,
+    AuthCapabilitiesFromJSONTyped,
+    AuthCapabilitiesToJSON,
+    AuthCapabilitiesToJSONTyped,
+} from './AuthCapabilities';
+
 /**
  * Current account capabilities used only for client presentation.
  * @export
  * @interface AccountCapabilitiesView
  */
 export interface AccountCapabilitiesView {
+    /**
+     * 
+     * @type {AuthCapabilities}
+     * @memberof AccountCapabilitiesView
+     */
+    auth?: AuthCapabilities;
     /**
      * 
      * @type {boolean}
@@ -45,6 +59,7 @@ export function AccountCapabilitiesViewFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
+        'auth': json['auth'] == null ? undefined : AuthCapabilitiesFromJSON(json['auth']),
         'serverAdmin': json['serverAdmin'],
     };
 }
@@ -60,6 +75,7 @@ export function AccountCapabilitiesViewToJSONTyped(value?: AccountCapabilitiesVi
 
     return {
         
+        'auth': AuthCapabilitiesToJSON(value['auth']),
         'serverAdmin': value['serverAdmin'],
     };
 }

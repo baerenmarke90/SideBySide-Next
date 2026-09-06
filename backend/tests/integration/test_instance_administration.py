@@ -55,6 +55,12 @@ def test_public_instance_status_defaults_to_available(client) -> None:  # type: 
         "maintenanceMode": False,
         "registrationAvailable": True,
         "registrationUnavailableReason": None,
+        "auth": {
+            "localPassword": True,
+            "passkey": True,
+            "magicLink": True,
+            "oidc": False,
+        },
     }
 
 

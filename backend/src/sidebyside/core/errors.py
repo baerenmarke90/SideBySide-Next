@@ -103,6 +103,18 @@ class ServiceUnavailableError(DomainError):
     title = "Service unavailable"
 
 
+class AuthMethodDisabledError(ForbiddenError):
+    def __init__(
+        self,
+        detail: str = "This authentication method is not supported on this deployment.",
+        code: str | None = None,
+    ) -> None:
+        super().__init__(
+            detail=detail,
+            code=ErrorCode.AUTH_METHOD_DISABLED if code is None else code,
+        )
+
+
 class PremiumEntitlementRequiredError(ForbiddenError):
     def __init__(self, capability: str) -> None:
         super().__init__(
@@ -122,6 +134,7 @@ class ErrorCode:
     VALIDATION_FAILED = "VALIDATION_FAILED"
     MALFORMED_ID = "MALFORMED_ID"
     AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
+    AUTH_METHOD_DISABLED = "AUTH_METHOD_DISABLED"
     VERSION_CONFLICT = "VERSION_CONFLICT"
     RESOURCE_VERSION_CONFLICT = "RESOURCE_VERSION_CONFLICT"
     INVALID_CURSOR = "INVALID_CURSOR"

@@ -23,6 +23,7 @@
 
 package sidebyside.api.models
 
+import sidebyside.api.models.AuthCapabilities
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -34,6 +35,7 @@ import kotlinx.serialization.Contextual
  * @param maintenanceMode 
  * @param registrationAvailable 
  * @param registrationUnavailableReason 
+ * @param auth 
  */
 @Serializable
 
@@ -46,7 +48,10 @@ data class InstanceAccessStatus (
     val registrationAvailable: kotlin.Boolean,
 
     @SerialName(value = "registrationUnavailableReason")
-    val registrationUnavailableReason: InstanceAccessStatus.RegistrationUnavailableReason?
+    val registrationUnavailableReason: InstanceAccessStatus.RegistrationUnavailableReason?,
+
+    @SerialName(value = "auth")
+    val auth: AuthCapabilities? = null
 
 ) {
 
