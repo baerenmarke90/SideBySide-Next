@@ -89,9 +89,7 @@ function invalidateContext(context: ProductCacheContext | null): void {
 }
 
 function isContextInvalidated(context: ProductCacheContext | null): boolean {
-  return (
-    context !== null && invalidatedGenerations.has(context.generation)
-  );
+  return context !== null && invalidatedGenerations.has(context.generation);
 }
 
 function createCacheGeneration(): string {
@@ -175,10 +173,7 @@ function removeCacheContextMarker(): void {
 }
 
 function isLeaseCurrent(lease: ProductCacheContext): boolean {
-  if (
-    isContextInvalidated(lease) ||
-    !contextsEqual(activeContext, lease)
-  ) {
+  if (isContextInvalidated(lease) || !contextsEqual(activeContext, lease)) {
     return false;
   }
 
