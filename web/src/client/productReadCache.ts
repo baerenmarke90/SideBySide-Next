@@ -1,5 +1,6 @@
 import {
   type ClientProblemError,
+  type ClientProblemKind,
   normalizeClientError,
 } from './problemDetails';
 
@@ -99,6 +100,67 @@ let persistedMarkerUntrusted = false;
  * behind that a later generation change would recognize as work to redo.
  */
 let persistedRowsAwaitingPurge = false;
+
+/** Per-resource revocation stamps, independent of the Account/Space lease.
+ *
+ * The lease guards against a stale Account/Space context repersisting; it says
+ * nothing about a single resource whose visibility changed mid-flight within
+ * the *same* still-current lease. A read that began while a HeartMoment was
+ * SHARED can resolve after that resource was made PRIVATE, still carrying the
+ * old SHARED payload — the lease alone cannot catch that, so each resource
+ * gets its own monotonic stamp. A write is only persisted if the stamp is
+ * unchanged from when its read started.
+ */
+const resourceRevocationStamps = new Map<string, number>();
+let nextResourceRevocationStamp = 1;
+
+function resourceIdentityKey(
+  accountId: string,
+  spaceId: string,
+  kind: ProductCacheKind,
+  resourceId: string,
+): string {
+  return `${accountId}:${spaceId}:${kind}:${resourceId}`;
+}
+
+function currentResourceRevocationStamp(
+  accountId: string,
+  spaceId: string,
+  kind: ProductCacheKind,
+  resourceId: string,
+): number {
+  return (
+    resourceRevocationStamps.get(
+      resourceIdentityKey(accountId, spaceId, kind, resourceId),
+    ) ?? 0
+  );
+}
+
+function bumpResourceRevocationStamp(
+  accountId: string,
+  spaceId: string,
+  kind: ProductCacheKind,
+  resourceId: string,
+): void {
+  resourceRevocationStamps.set(
+    resourceIdentityKey(accountId, spaceId, kind, resourceId),
+    nextResourceRevocationStamp++,
+  );
+}
+
+/** Whether a client error is an authoritative "you may not have this"
+ * response rather than a transport/server failure.
+ *
+ * These are exactly the responses `mayUseOfflineProductCache` refuses to fall
+ * back on. A resource that just failed this way must not remain readable from
+ * a stale cached snapshot either, so its entry is evicted before the caller
+ * sees the denial.
+ */
+function isAuthoritativeDenial(kind: ClientProblemKind): boolean {
+  return (
+    kind === 'unauthorized' || kind === 'permission' || kind === 'notFound'
+  );
+}
 
 function contextsEqual(
   left: ProductCacheContext | null,
@@ -708,12 +770,24 @@ export async function loadProductWithReadCache<T>({
 }): Promise<ProductReadResult<T>> {
   const lease = captureCacheLease(accountId, spaceId);
   const key = cacheKey(lease, SHARED_SCOPE, kind, resourceId);
+  const revocationStampAtStart = currentResourceRevocationStamp(
+    accountId,
+    spaceId,
+    kind,
+    resourceId,
+  );
 
   let value: T;
   try {
     value = await load();
   } catch (error) {
     const normalized = await normalizeClientError(error);
+    if (isAuthoritativeDenial(normalized.kind)) {
+      // An authoritative denial revokes the resource before it is returned to
+      // the caller, so a later offline/server-error fallback cannot resurrect
+      // a snapshot already known to be unauthorized or absent.
+      await deleteProductReadCacheEntry(accountId, spaceId, kind, resourceId);
+    }
     if (!mayUseOfflineProductCache(normalized) || !isLeaseCurrent(lease)) {
       throw normalized;
     }
@@ -739,13 +813,25 @@ export async function loadProductWithReadCache<T>({
   }
 
   const refreshedAt = new Date();
-  await saveProductReadCacheEntryForLease(lease, {
+  const revocationStampAtCompletion = currentResourceRevocationStamp(
+    accountId,
+    spaceId,
     kind,
     resourceId,
-    value,
-    serialize,
-    refreshedAt,
-  });
+  );
+  if (revocationStampAtCompletion === revocationStampAtStart) {
+    // A stamp change means this resource was revoked (mutated to a
+    // non-shared visibility, or authoritatively denied) after this read
+    // began. The response in hand is now stale privacy state and must not
+    // repersist it, no matter what visibility it still claims.
+    await saveProductReadCacheEntryForLease(lease, {
+      kind,
+      resourceId,
+      value,
+      serialize,
+      refreshedAt,
+    });
+  }
   if (isLeaseCurrent(lease)) {
     emitCacheEvent(PRODUCT_CACHE_NETWORK_EVENT, refreshedAt.toISOString());
   }
@@ -758,6 +844,10 @@ export async function deleteProductReadCacheEntry(
   kind: ProductCacheKind,
   resourceId: string,
 ): Promise<void> {
+  // Revoked before the row lookup, and unconditionally: a read that started
+  // before this call must never repersist afterward, even if there is no
+  // current lease (nothing to physically delete) or the row is already gone.
+  bumpResourceRevocationStamp(accountId, spaceId, kind, resourceId);
   const lease = currentCacheLease(accountId, spaceId);
   if (!lease) return;
   await deleteRecordByKey(
@@ -823,6 +913,8 @@ export function __resetProductReadCacheStateForTests(): void {
   invalidatedGenerations.clear();
   persistedMarkerUntrusted = false;
   persistedRowsAwaitingPurge = false;
+  resourceRevocationStamps.clear();
+  nextResourceRevocationStamp = 1;
 }
 
 export const __PRODUCT_READ_CACHE_CONTEXT_STORAGE_KEY_FOR_TESTS =

@@ -1,5 +1,5 @@
-import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { HeartEmotion } from '../api/generated/models/HeartEmotion';
@@ -9,19 +9,19 @@ import {
   HeartMomentDetailToJSON,
 } from '../api/generated/models/HeartMomentDetail';
 import type { HeartMomentUpdate } from '../api/generated/models/HeartMomentUpdate';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import { invalidateDashboard } from '../client/dashboardQueries';
+import { normalizeClientError } from '../client/problemDetails';
 import {
   deleteProductReadCacheEntry,
   loadProductWithReadCache,
 } from '../client/productReadCache';
-import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
 import {
   appRoutePath,
   heartMomentDetailPath,
   heartMomentEditPath,
 } from '../client/routes';
-import { invalidateDashboard } from '../client/dashboardQueries';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import {
   formatAttachmentDraftContextKey,
   useAttachmentDrafts,
@@ -259,6 +259,16 @@ export function HeartMomentProductPage({
         queryClient.setQueryData(queryKey, context.previous);
     },
     onSuccess: async (heartMoment) => {
+      // Revoke the persistent snapshot synchronously, before any refetch:
+      // the privacy transition must not depend on a follow-up GET succeeding,
+      // and a shared HeartMoment that just became PRIVATE must not remain
+      // available as a stale IndexedDB record if that refetch never lands.
+      await deleteProductReadCacheEntry(
+        currentAccountId,
+        spaceId,
+        'heartMoment',
+        heartMoment.id,
+      );
       queryClient.setQueryData(queryKey, {
         value: heartMoment,
         source: 'network',
