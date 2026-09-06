@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.auth import passwords, rate_limit
 from sidebyside.auth.policy import AuthCapabilities
+from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
 from sidebyside.config import get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ForbiddenError, UnauthenticatedError
@@ -32,7 +33,6 @@ from sidebyside.identity.models import (
     AuthIdentity,
     AuthProvider,
     DeviceSession,
-    RecentAuthenticationGrant,
     WebAuthnCredential,
 )
 
@@ -112,15 +112,7 @@ def _lock_live_session(
     account: Account,
     device_session: DeviceSession,
 ) -> None:
-    """Order grant issuance against concurrent revocation/replacement.
-
-    Credential verification can take time or involve an external provider. A
-    session that was live when the request started may therefore have been
-    revoked before verification finishes. The database predicate is evaluated
-    before the row lock is granted, so whichever transition wins is observed
-    deterministically: a committed revocation prevents a grant; a later
-    revocation invalidates a just-issued grant before it can authorize use.
-    """
+    """Order grant issuance against concurrent revocation/replacement."""
     current_time = now()
     live_id = session.execute(
         select(DeviceSession.id)
