@@ -18,11 +18,14 @@ from sidebyside.observability import (
     RedactingFilter,
     RequestIdMiddleware,
     bind_actor_context,
+    configure_logging,
     get_account_id,
     get_correlation_id,
     get_request_id,
     get_space_id,
     reset_context,
+    safe_exception_summary,
+    sanitize_error_code,
     scrub_data,
     scrub_headers,
     scrub_message,
@@ -362,3 +365,261 @@ class TestMiddlewares:
 
         assert captured_request_id != "invalid id with spaces and <script>"
         assert len(captured_request_id) > 10
+
+
+SECRET_BEARER_TOKEN = "super-secret-token"
+SECRET_SIGNED_URL_VALUE = "SECRET123"
+PRIVATE_CONTENT_CANARY = "KANARIENPRIVATEINHALT"
+SECRET_PASSWORD_VALUE = "very-secret"
+
+
+def _canary_message() -> str:
+    return (
+        f"Bearer {SECRET_BEARER_TOKEN} "
+        f"https://storage.example/object?X-Amz-Signature={SECRET_SIGNED_URL_VALUE} "
+        f"private relationship text: {PRIVATE_CONTENT_CANARY} "
+        f"password={SECRET_PASSWORD_VALUE}"
+    )
+
+
+def _assert_no_canaries(text: str) -> None:
+    assert SECRET_BEARER_TOKEN not in text
+    assert SECRET_SIGNED_URL_VALUE not in text
+    assert PRIVATE_CONTENT_CANARY not in text
+    assert SECRET_PASSWORD_VALUE not in text
+
+
+class _ListHandler(logging.Handler):
+    """Captures formatted output instead of writing anywhere, for assertions."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(self.format(record))
+
+
+def _log_exception_with_formatter(formatter: logging.Formatter, message: str) -> str:
+    """Exercise the real production path: a filtered, formatted `log.exception(...)` call.
+
+    Mirrors `configure_logging()`'s own handler wiring (`RedactingFilter` plus
+    one of the two registered formatters) rather than constructing a
+    `LogRecord` by hand, so this proves the actual formatter output, not just
+    the underlying `scrub_message`/`safe_traceback_text` helpers in isolation.
+    """
+    logger = logging.getLogger("sidebyside.test.exception_redaction")
+    logger.setLevel(logging.ERROR)
+    logger.propagate = False
+    handler = _ListHandler()
+    handler.addFilter(RedactingFilter())
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    try:
+        try:
+            raise RuntimeError(message)
+        except RuntimeError:
+            logger.exception("job failed", extra={"job_id": "job-1", "kind": "demo"})
+    finally:
+        logger.removeHandler(handler)
+    assert handler.records, "log.exception(...) did not produce a record"
+    return handler.records[0]
+
+
+class TestExceptionTracebackRedaction:
+    """#680: `record.exc_info` is formatted after `RedactingFilter` has already
+    run, so a secret embedded only in an exception's message — never in the
+    plain log message text — previously reached both the JSON and console
+    sinks unredacted.
+    """
+
+    def test_json_log_exception_never_leaks_canaries_from_the_traceback(self) -> None:
+        formatted = _log_exception_with_formatter(JsonLogFormatter(), _canary_message())
+        _assert_no_canaries(formatted)
+
+        data = json.loads(formatted)
+        assert data["message"] == "job failed"
+        assert "RuntimeError" in data["exception"]
+
+    def test_console_log_exception_never_leaks_canaries_from_the_traceback(self) -> None:
+        formatted = _log_exception_with_formatter(ConsoleLogFormatter(), _canary_message())
+        _assert_no_canaries(formatted)
+        assert "RuntimeError" in formatted
+        assert "job failed" in formatted
+
+    def test_retains_safe_stack_frame_information(self) -> None:
+        """Not a blanket `[REDACTED]` traceback: file/line/function context survives."""
+        formatted = _log_exception_with_formatter(JsonLogFormatter(), _canary_message())
+        data = json.loads(formatted)
+        assert "Traceback (most recent call last):" in data["exception"]
+        assert "test_observability.py" in data["exception"]
+        assert "_log_exception_with_formatter" in data["exception"]
+
+    def test_chained_exception_omits_both_causes_own_message(self) -> None:
+        logger = logging.getLogger("sidebyside.test.chained_exception_redaction")
+        logger.setLevel(logging.ERROR)
+        logger.propagate = False
+        handler = _ListHandler()
+        handler.addFilter(RedactingFilter())
+        handler.setFormatter(JsonLogFormatter())
+        logger.addHandler(handler)
+        try:
+            try:
+                try:
+                    raise ValueError(f"password={SECRET_PASSWORD_VALUE}")
+                except ValueError as cause:
+                    raise RuntimeError(f"Bearer {SECRET_BEARER_TOKEN}") from cause
+            except RuntimeError:
+                logger.exception("job failed")
+        finally:
+            logger.removeHandler(handler)
+
+        formatted = handler.records[0]
+        assert SECRET_PASSWORD_VALUE not in formatted
+        assert SECRET_BEARER_TOKEN not in formatted
+        data = json.loads(formatted)
+        assert "ValueError" in data["exception"]
+        assert "RuntimeError" in data["exception"]
+        assert "direct cause" in data["exception"]
+
+    def test_exception_message_that_is_itself_a_safe_code_survives(self) -> None:
+        """Retryable/stable technical errors keep a useful diagnostic code."""
+        formatted = _log_exception_with_formatter(JsonLogFormatter(), "ACCOUNT_UNAVAILABLE")
+        data = json.loads(formatted)
+        assert "ACCOUNT_UNAVAILABLE" in data["exception"]
+
+    def test_str_raising_on_the_exception_does_not_crash_or_leak(self) -> None:
+        class ExplodingError(Exception):
+            def __str__(self) -> str:  # pragma: no cover - exercised via format
+                raise RuntimeError(f"str raised with {SECRET_BEARER_TOKEN}")
+
+        logger = logging.getLogger("sidebyside.test.pathological_exception")
+        logger.setLevel(logging.ERROR)
+        logger.propagate = False
+        handler = _ListHandler()
+        handler.addFilter(RedactingFilter())
+        handler.setFormatter(JsonLogFormatter())
+        logger.addHandler(handler)
+        try:
+            try:
+                raise ExplodingError()
+            except ExplodingError:
+                logger.exception("job failed")
+        finally:
+            logger.removeHandler(handler)
+
+        formatted = handler.records[0]
+        assert SECRET_BEARER_TOKEN not in formatted
+        data = json.loads(formatted)
+        assert "ExplodingError" in data["exception"]
+
+
+class TestSafeExceptionSummary:
+    def test_class_name_always_present(self) -> None:
+        assert safe_exception_summary(ValueError("not a bounded code")) == "ValueError"
+
+    def test_arbitrary_prose_is_dropped_entirely(self) -> None:
+        summary = safe_exception_summary(RuntimeError(_canary_message()))
+        _assert_no_canaries(summary)
+        assert summary == "RuntimeError"
+
+    def test_bounded_technical_code_is_retained(self) -> None:
+        summary = safe_exception_summary(RuntimeError("ACCOUNT_DELETION_CONVERGENCE_FAILED"))
+        assert summary == "RuntimeError: ACCOUNT_DELETION_CONVERGENCE_FAILED"
+
+    def test_empty_message_is_just_the_class_name(self) -> None:
+        assert safe_exception_summary(RuntimeError()) == "RuntimeError"
+
+    def test_str_failure_falls_back_to_the_class_name_only(self) -> None:
+        class ExplodingError(Exception):
+            def __str__(self) -> str:
+                raise RuntimeError("boom")
+
+        assert safe_exception_summary(ExplodingError()) == "ExplodingError"
+
+
+class TestSanitizeErrorCode:
+    def test_bounded_code_survives(self) -> None:
+        assert sanitize_error_code("provider_timeout") == "PROVIDER_TIMEOUT"
+
+    def test_free_text_is_replaced(self) -> None:
+        assert sanitize_error_code("Connection refused by upstream") == "UNKNOWN"
+
+    def test_custom_default_is_honored(self) -> None:
+        assert sanitize_error_code("not a code!", default="FALLBACK") == "FALLBACK"
+
+
+class TestUvicornLoggingBoundary:
+    """#680: production starts via the bare `uvicorn` CLI, which runs its own
+    `logging.config.dictConfig(...)` (inside `Config.__init__`) before this
+    application's `configure_logging()` ever runs (`Config.load()`, which
+    imports `sidebyside.main:app`, happens later in `Server.serve()`). Left
+    alone, `uvicorn`/`uvicorn.access`/`uvicorn.error` each carry their own
+    unredacted handler with `propagate=False`, bypassing this module's
+    redaction boundary entirely.
+    """
+
+    def _production_settings(self) -> Settings:
+        return Settings(
+            environment=Environment.PRODUCTION,
+            allowed_hosts=["app.example"],
+            cursor_signing_key="a" * 32,
+            public_base_url="https://app.example",
+            mail_transport="smtp",
+        )
+
+    def _simulate_uvicorn_then_app_startup(self) -> None:
+        import logging.config
+
+        import uvicorn.config as uvicorn_config
+
+        logging.config.dictConfig(uvicorn_config.LOGGING_CONFIG)
+        configure_logging(self._production_settings())
+
+    def teardown_method(self) -> None:
+        for name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+            logger = logging.getLogger(name)
+            logger.handlers = []
+            logger.propagate = True
+        for handler in list(logging.getLogger().handlers):
+            logging.getLogger().removeHandler(handler)
+
+    def test_uvicorn_access_log_is_silenced_not_merely_unredacted(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        self._simulate_uvicorn_then_app_startup()
+
+        logging.getLogger("uvicorn.access").info(
+            '%s - "%s" %d',
+            "127.0.0.1:12345",
+            f"GET /api/v1/thing?token={SECRET_BEARER_TOKEN} HTTP/1.1",
+            200,
+        )
+
+        output = capsys.readouterr().out
+        assert SECRET_BEARER_TOKEN not in output
+        # Silenced, not merely redacted-into-safety: nothing from this call
+        # reaches the sink at all, since a raw request-line string cannot be
+        # safely told apart from an ordinary query parameter after the fact.
+        assert "GET /api/v1/thing" not in output
+
+    def test_uvicorn_error_exception_reaches_the_redacted_sink(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        self._simulate_uvicorn_then_app_startup()
+
+        try:
+            raise RuntimeError(f"Bearer {SECRET_BEARER_TOKEN}")
+        except RuntimeError:
+            logging.getLogger("uvicorn.error").exception("Exception in ASGI application")
+
+        output = capsys.readouterr().out
+        assert SECRET_BEARER_TOKEN not in output
+        # It must actually reach a sink (not also silently dropped): this is
+        # the application's own redacted handler, proven by its JSON shape.
+        assert "RuntimeError" in output
+        assert "Exception in ASGI application" in output
+
+    def test_uvicorn_startup_banner_reaches_the_redacted_sink(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        self._simulate_uvicorn_then_app_startup()
+
+        logging.getLogger("uvicorn").info("Uvicorn running on http://0.0.0.0:8000")
+
+        output = capsys.readouterr().out
+        assert "Uvicorn running" in output

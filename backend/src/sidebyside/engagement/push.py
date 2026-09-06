@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import UUID
@@ -23,12 +22,13 @@ from sidebyside.identity import effects as account_effects
 from sidebyside.jobs import queue
 from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.jobs.worker import registry
+from sidebyside.observability import sanitize_error_code as _sanitize_technical_code
 
 JOB_KIND = "push-delivery"
 GENERIC_PRESENTATION_KEY = "notification.generic"
 ACCOUNT_UNAVAILABLE_CODE = "ACCOUNT_UNAVAILABLE"
+PROVIDER_ERROR_CODE = "PROVIDER_ERROR"
 MAX_PUSH_ATTEMPTS = 5
-_TECHNICAL_CODE = re.compile(r"[A-Z0-9_-]{1,64}\Z")
 _TERMINAL_DELIVERY_STATUSES = {
     PushDeliveryStatus.SUCCEEDED.value,
     PushDeliveryStatus.FAILED.value,
@@ -266,7 +266,7 @@ def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
             raise RetryableJobError(exc.code) from exc
         return
     except Exception as exc:
-        code = "PROVIDER_ERROR"
+        code = PROVIDER_ERROR_CODE
         _record_failure(delivery, code)
         if delivery.attempts < MAX_PUSH_ATTEMPTS:
             raise RetryableJobError(code) from exc
@@ -279,11 +279,13 @@ def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
 
 
 def sanitize_error_code(value: str) -> str:
-    """Persist only explicit machine codes, never transformed provider prose."""
-    candidate = value.strip().upper()
-    if _TECHNICAL_CODE.fullmatch(candidate) is None:
-        return "PROVIDER_ERROR"
-    return candidate
+    """Persist only explicit machine codes, never transformed provider prose.
+
+    Delegates to the shared `observability.diagnostics` primitive, which uses
+    the exact pattern this module defined first; `PROVIDER_ERROR_CODE` is this
+    module's own choice of fallback, not part of that shared contract.
+    """
+    return _sanitize_technical_code(value, default=PROVIDER_ERROR_CODE)
 
 
 def bounded_identifier(value: str | None) -> str | None:

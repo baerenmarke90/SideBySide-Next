@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sidebyside.core.clock import now
 from sidebyside.core.ids import new_id
 from sidebyside.jobs.models import Job, JobStatus
-from sidebyside.observability import get_correlation_id
+from sidebyside.observability import get_correlation_id, scrub_message
 
 DEFAULT_LEASE = timedelta(minutes=5)
 
@@ -106,7 +106,11 @@ def fail(job: Job, error: str, *, backoff: timedelta | None = None) -> None:
     are exhausted, retain the job as FAILED rather than silently discarding
     it.
     """
-    job.last_error = error[:2000]
+    # Callers are expected to pass an already-safe summary (a stable code, a
+    # static developer-authored sentence, or `safe_exception_summary`); this
+    # is a second, cheap layer that also catches a bearer/password pattern a
+    # future call site passes by mistake, not the primary defense.
+    job.last_error = scrub_message(error)[:2000]
     job.locked_until = None
     job.locked_by = None
 
