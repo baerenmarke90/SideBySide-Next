@@ -5,9 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import ClassVar
+from uuid import UUID
 
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, Integer, SmallInteger, String
 from sqlalchemy import text as sql_text
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sidebyside.authorization import PrivateResourceMixin, ResourceAbsence
@@ -104,6 +106,13 @@ class Attachment(
     # Last server-observed upload activity, used by M2-D12 UPLOADING retention.
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Cross-process authority for a server-stream upload. The token is opaque
+    # and internal. The renewable lease bounds idle time; the absolute expiry
+    # prevents continuous trickle activity from extending retention forever.
+    upload_claim_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
+    upload_lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    upload_claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     crypto_version: Mapped[int] = mapped_column(
         SmallInteger,
         nullable=False,
@@ -130,6 +139,14 @@ class Attachment(
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
         CheckConstraint("declared_size >= 0", name="declared_size_is_non_negative"),
         CheckConstraint("size IS NULL OR size >= 0", name="size_is_non_negative"),
+        CheckConstraint(
+            "((upload_claim_id IS NULL AND upload_lease_until IS NULL "
+            "AND upload_claim_expires_at IS NULL) OR "
+            "(upload_claim_id IS NOT NULL AND upload_lease_until IS NOT NULL "
+            "AND upload_claim_expires_at IS NOT NULL "
+            "AND upload_lease_until <= upload_claim_expires_at))",
+            name="upload_claim_is_consistent",
+        ),
         # READY without readyAt would have no binding window and would never be
         # collected by cleanup.
         CheckConstraint(

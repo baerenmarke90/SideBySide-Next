@@ -14,7 +14,7 @@ from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.attachments import service
+from sidebyside.attachments import service, upload_ownership
 from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
 from sidebyside.core.clock import now
 from sidebyside.media import create_signed_upload, get_media_store
@@ -219,17 +219,25 @@ async def upload_attachment_content(
     unbounded RAM buffering. Streaming therefore aborts at the first limit
     violation instead of measuring only after the full body is read.
     """
-    attachment, rule = service.open_upload(session, authorization, attachment_id)
+    claim = upload_ownership.claim_upload(session, authorization, attachment_id)
+    try:
+        chunks: list[bytes] = []
+        bytes_read = 0
+        async for chunk in request.stream():
+            bytes_read += len(chunk)
+            if bytes_read > claim.rule.max_size:
+                raise service.too_large()
+            chunks.append(chunk)
+            if upload_ownership.should_renew(claim):
+                claim = upload_ownership.renew_upload_claim(session, claim)
 
-    chunks: list[bytes] = []
-    bytes_read = 0
-    async for chunk in request.stream():
-        bytes_read += len(chunk)
-        if bytes_read > rule.max_size:
-            raise service.too_large()
-        chunks.append(chunk)
+        upload_ownership.complete_upload(session, claim, b"".join(chunks))
+    except BaseException:
+        # Token matching makes this safe even if another request reclaimed an
+        # expired generation while this one was unwinding.
+        upload_ownership.release_upload_claim(session, claim)
+        raise
 
-    service.complete_upload(session, attachment, rule, b"".join(chunks))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -247,7 +255,7 @@ def finalize_attachment_upload(
     attachment_id: Annotated[str, Path(alias="attachmentId")],
 ) -> AttachmentDetail:
     del body
-    attachment = service.finalize_upload(session, authorization, attachment_id)
+    attachment = upload_ownership.finalize_upload(session, authorization, attachment_id)
     return _detail(attachment)
 
 

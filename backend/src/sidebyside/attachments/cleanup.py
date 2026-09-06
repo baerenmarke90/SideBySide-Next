@@ -16,11 +16,12 @@ from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import service
+from sidebyside.attachments import service, upload_ownership
 from sidebyside.attachments.models import Attachment, AttachmentStatus
+from sidebyside.core.clock import now
 from sidebyside.jobs import queue
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
@@ -75,33 +76,46 @@ def schedule_next(session: Session, *, delay: timedelta | None = None) -> Job | 
 
 
 def _expire_stale_uploads(session: Session) -> int:
-    """Discard started and failed uploads after 24 hours.
+    """Discard inactive PENDING/UPLOADING/FAILED uploads after 24 hours.
 
-    UPLOADING uses the last server-observed activity. Other states use creation
-    time because an upload that never transferred bytes has no later activity.
+    The candidate row itself is the authority shared with upload ownership.
+    ``SKIP LOCKED`` means a provider write/finalize that already owns the row
+    wins without making cleanup wait. If cleanup locks first, a later upload
+    claim waits and then observes deletion instead of writing a provider blob.
+
+    UPLOADING uses the last successfully committed server-observed transfer.
+    FAILED uses ``failed_at`` when present; PENDING uses creation time. A live
+    claim temporarily suppresses expiry but does not reset those clocks, so an
+    abandoned claim becomes eligible again as soon as its bounded lease ends.
     """
+    cutoff = now() - UPLOAD_RETENTION
     candidates = session.execute(
-        select(Attachment).where(
-            Attachment.status.in_(
-                [
-                    AttachmentStatus.PENDING.value,
-                    AttachmentStatus.UPLOADING.value,
-                    AttachmentStatus.FAILED.value,
-                ]
+        select(Attachment)
+        .where(
+            or_(
+                and_(
+                    Attachment.status == AttachmentStatus.PENDING.value,
+                    Attachment.created_at < cutoff,
+                ),
+                and_(
+                    Attachment.status == AttachmentStatus.UPLOADING.value,
+                    func.coalesce(Attachment.uploaded_at, Attachment.created_at) < cutoff,
+                ),
+                and_(
+                    Attachment.status == AttachmentStatus.FAILED.value,
+                    func.coalesce(Attachment.failed_at, Attachment.created_at) < cutoff,
+                ),
             )
         )
+        .with_for_update(skip_locked=True)
     ).scalars()
 
     affected = 0
     for attachment in candidates:
-        reference = attachment.created_at
-        if attachment.status == AttachmentStatus.UPLOADING.value and attachment.uploaded_at:
-            reference = attachment.uploaded_at
-        elif attachment.status == AttachmentStatus.FAILED.value and attachment.failed_at:
-            reference = attachment.failed_at
-        if service.expired(reference, UPLOAD_RETENTION):
-            service.mark_for_deletion(session, attachment)
-            affected += 1
+        if upload_ownership.active_upload_claim(attachment):
+            continue
+        service.mark_for_deletion(session, attachment)
+        affected += 1
     return affected
 
 
