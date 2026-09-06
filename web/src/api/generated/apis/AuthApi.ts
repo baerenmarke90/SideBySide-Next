@@ -29,6 +29,11 @@ import {
     AccountViewToJSON,
 } from '../models/AccountView';
 import {
+    type CapabilitiesView,
+    CapabilitiesViewFromJSON,
+    CapabilitiesViewToJSON,
+} from '../models/CapabilitiesView';
+import {
     type ChangePasswordRequest,
     ChangePasswordRequestFromJSON,
     ChangePasswordRequestToJSON,
@@ -43,11 +48,6 @@ import {
     MagicLinkConsumeRequestFromJSON,
     MagicLinkConsumeRequestToJSON,
 } from '../models/MagicLinkConsumeRequest';
-import {
-    type OidcCallbackRequest,
-    OidcCallbackRequestFromJSON,
-    OidcCallbackRequestToJSON,
-} from '../models/OidcCallbackRequest';
 import {
     type OidcStartRequest,
     OidcStartRequestFromJSON,
@@ -64,6 +64,11 @@ import {
     PasskeyAuthenticationRequestToJSON,
 } from '../models/PasskeyAuthenticationRequest';
 import {
+    type PasskeyFinishRequest,
+    PasskeyFinishRequestFromJSON,
+    PasskeyFinishRequestToJSON,
+} from '../models/PasskeyFinishRequest';
+import {
     type PasskeyRegistrationRequest,
     PasskeyRegistrationRequestFromJSON,
     PasskeyRegistrationRequestToJSON,
@@ -74,10 +79,20 @@ import {
     PasskeyViewToJSON,
 } from '../models/PasskeyView';
 import {
+    type PasswordRequest,
+    PasswordRequestFromJSON,
+    PasswordRequestToJSON,
+} from '../models/PasswordRequest';
+import {
     type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
+import {
+    type RecentAuthenticationView,
+    RecentAuthenticationViewFromJSON,
+    RecentAuthenticationViewToJSON,
+} from '../models/RecentAuthenticationView';
 import {
     type RecoveryConsumeRequest,
     RecoveryConsumeRequestFromJSON,
@@ -98,6 +113,16 @@ import {
     SessionViewFromJSON,
     SessionViewToJSON,
 } from '../models/SessionView';
+import {
+    type SidebysideApiV1AuthOidcCallbackRequest,
+    SidebysideApiV1AuthOidcCallbackRequestFromJSON,
+    SidebysideApiV1AuthOidcCallbackRequestToJSON,
+} from '../models/SidebysideApiV1AuthOidcCallbackRequest';
+import {
+    type SidebysideApiV1RecentAuthenticationOidcCallbackRequest,
+    SidebysideApiV1RecentAuthenticationOidcCallbackRequestFromJSON,
+    SidebysideApiV1RecentAuthenticationOidcCallbackRequestToJSON,
+} from '../models/SidebysideApiV1RecentAuthenticationOidcCallbackRequest';
 import {
     type SignInRequest,
     SignInRequestFromJSON,
@@ -120,7 +145,12 @@ export interface ChangePasswordApiV1AuthPasswordPostRequest {
 
 export interface CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest {
     connectionId: string;
-    oidcCallbackRequest: OidcCallbackRequest;
+    sidebysideApiV1AuthOidcCallbackRequest: SidebysideApiV1AuthOidcCallbackRequest;
+}
+
+export interface CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest {
+    connectionId: string;
+    sidebysideApiV1RecentAuthenticationOidcCallbackRequest: SidebysideApiV1RecentAuthenticationOidcCallbackRequest;
 }
 
 export interface ConfirmEmailApiV1AuthEmailVerificationConfirmPostRequest {
@@ -135,6 +165,10 @@ export interface ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest {
     recoveryConsumeRequest: RecoveryConsumeRequest;
 }
 
+export interface FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest {
+    passkeyFinishRequest: PasskeyFinishRequest;
+}
+
 export interface FinishPasskeyAuthenticationApiV1AuthPasskeysAuthenticationFinishPostRequest {
     passkeyAuthenticationRequest: PasskeyAuthenticationRequest;
 }
@@ -145,6 +179,10 @@ export interface FinishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPos
 
 export interface LinkOidcApiV1AuthOidcConnectionIdLinkPostRequest {
     connectionId: string;
+}
+
+export interface PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest {
+    passwordRequest: PasswordRequest;
 }
 
 export interface RefreshApiV1AuthRefreshPostRequest {
@@ -172,10 +210,51 @@ export interface StartOidcApiV1AuthOidcConnectionIdStartPostRequest {
     oidcStartRequest?: OidcStartRequest | null;
 }
 
+export interface StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest {
+    connectionId: string;
+}
+
 /**
  * 
  */
 export class AuthApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet without sending the request
+     */
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Capabilities
+     */
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CapabilitiesView>> {
+        const requestOptions = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CapabilitiesViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Capabilities
+     */
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CapabilitiesView> {
+        const response = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for changePasswordApiV1AuthPasswordPost without sending the request
@@ -236,10 +315,10 @@ export class AuthApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['oidcCallbackRequest'] == null) {
+        if (requestParameters['sidebysideApiV1AuthOidcCallbackRequest'] == null) {
             throw new runtime.RequiredError(
-                'oidcCallbackRequest',
-                'Required parameter "oidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthOidcConnectionIdCallbackPost().'
+                'sidebysideApiV1AuthOidcCallbackRequest',
+                'Required parameter "sidebysideApiV1AuthOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthOidcConnectionIdCallbackPost().'
             );
         }
 
@@ -258,7 +337,7 @@ export class AuthApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: OidcCallbackRequestToJSON(requestParameters['oidcCallbackRequest']),
+            body: SidebysideApiV1AuthOidcCallbackRequestToJSON(requestParameters['sidebysideApiV1AuthOidcCallbackRequest']),
         };
     }
 
@@ -279,6 +358,61 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async completeOidcApiV1AuthOidcConnectionIdCallbackPost(requestParameters: CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
         const response = await this.completeOidcApiV1AuthOidcConnectionIdCallbackPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost without sending the request
+     */
+    async completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequestOpts(requestParameters: CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['connectionId'] == null) {
+            throw new runtime.RequiredError(
+                'connectionId',
+                'Required parameter "connectionId" was null or undefined when calling completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost().'
+            );
+        }
+
+        if (requestParameters['sidebysideApiV1RecentAuthenticationOidcCallbackRequest'] == null) {
+            throw new runtime.RequiredError(
+                'sidebysideApiV1RecentAuthenticationOidcCallbackRequest',
+                'Required parameter "sidebysideApiV1RecentAuthenticationOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/callback`;
+        urlPath = urlPath.replace('{connectionId}', encodeURIComponent(String(requestParameters['connectionId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SidebysideApiV1RecentAuthenticationOidcCallbackRequestToJSON(requestParameters['sidebysideApiV1RecentAuthenticationOidcCallbackRequest']),
+        };
+    }
+
+    /**
+     * Complete Oidc
+     */
+    async completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRaw(requestParameters: CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecentAuthenticationView>> {
+        const requestOptions = await this.completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecentAuthenticationViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Complete Oidc
+     */
+    async completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(requestParameters: CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecentAuthenticationView> {
+        const response = await this.completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -423,6 +557,53 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async consumeRecoveryApiV1AuthRecoveryConsumePost(requestParameters: ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
         const response = await this.consumeRecoveryApiV1AuthRecoveryConsumePostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost without sending the request
+     */
+    async finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequestOpts(requestParameters: FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['passkeyFinishRequest'] == null) {
+            throw new runtime.RequiredError(
+                'passkeyFinishRequest',
+                'Required parameter "passkeyFinishRequest" was null or undefined when calling finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion/passkeys/finish`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PasskeyFinishRequestToJSON(requestParameters['passkeyFinishRequest']),
+        };
+    }
+
+    /**
+     * Finish Passkey
+     */
+    async finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRaw(requestParameters: FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecentAuthenticationView>> {
+        const requestOptions = await this.finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecentAuthenticationViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Finish Passkey
+     */
+    async finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost(requestParameters: FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecentAuthenticationView> {
+        const response = await this.finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -679,6 +860,53 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async meApiV1AuthMeGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountView> {
         const response = await this.meApiV1AuthMeGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost without sending the request
+     */
+    async passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequestOpts(requestParameters: PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['passwordRequest'] == null) {
+            throw new runtime.RequiredError(
+                'passwordRequest',
+                'Required parameter "passwordRequest" was null or undefined when calling passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion/password`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PasswordRequestToJSON(requestParameters['passwordRequest']),
+        };
+    }
+
+    /**
+     * Password
+     */
+    async passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRaw(requestParameters: PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RecentAuthenticationView>> {
+        const requestOptions = await this.passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RecentAuthenticationViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Password
+     */
+    async passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost(requestParameters: PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecentAuthenticationView> {
+        const response = await this.passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1044,6 +1272,88 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async startOidcApiV1AuthOidcConnectionIdStartPost(requestParameters: StartOidcApiV1AuthOidcConnectionIdStartPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OidcStartView> {
         const response = await this.startOidcApiV1AuthOidcConnectionIdStartPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost without sending the request
+     */
+    async startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequestOpts(requestParameters: StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['connectionId'] == null) {
+            throw new runtime.RequiredError(
+                'connectionId',
+                'Required parameter "connectionId" was null or undefined when calling startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/start`;
+        urlPath = urlPath.replace('{connectionId}', encodeURIComponent(String(requestParameters['connectionId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Start Oidc
+     */
+    async startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRaw(requestParameters: StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OidcStartView>> {
+        const requestOptions = await this.startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OidcStartViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Start Oidc
+     */
+    async startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(requestParameters: StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OidcStartView> {
+        const response = await this.startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost without sending the request
+     */
+    async startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPostRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/auth/recent-authentication/account-deletion/passkeys/start`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Start Passkey
+     */
+    async startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: any | null; }>> {
+        const requestOptions = await this.startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPostRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse<any>(response);
+    }
+
+    /**
+     * Start Passkey
+     */
+    async startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: any | null; }> {
+        const response = await this.startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPostRaw(initOverrides);
         return await response.value();
     }
 

@@ -31,26 +31,14 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
- * @param code 
- * @param state 
- * @param deviceName 
- * @param platform 
+ * @param credential 
  */
 @Serializable
 
-data class OidcCallbackRequest (
+data class PasskeyFinishRequest (
 
-    @SerialName(value = "code")
-    val code: kotlin.String,
-
-    @SerialName(value = "state")
-    val state: kotlin.String,
-
-    @SerialName(value = "deviceName")
-    val deviceName: kotlin.String? = "",
-
-    @SerialName(value = "platform")
-    val platform: kotlin.String? = ""
+    @Contextual @SerialName(value = "credential")
+    val credential: kotlin.collections.Map<kotlin.String, kotlinx.serialization.json.JsonElement>
 
 ) {
 

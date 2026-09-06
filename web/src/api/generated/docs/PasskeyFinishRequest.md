@@ -1,28 +1,22 @@
 
-# OidcCallbackRequest
+# PasskeyFinishRequest
 
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`code` | string
-`deviceName` | string
-`platform` | string
-`state` | string
+`credential` | { [key: string]: any; }
 
 ## Example
 
 ```typescript
-import type { OidcCallbackRequest } from ''
+import type { PasskeyFinishRequest } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "code": null,
-  "deviceName": null,
-  "platform": null,
-  "state": null,
-} satisfies OidcCallbackRequest
+  "credential": null,
+} satisfies PasskeyFinishRequest
 
 console.log(example)
 
@@ -31,7 +25,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as OidcCallbackRequest
+const exampleParsed = JSON.parse(exampleJSON) as PasskeyFinishRequest
 console.log(exampleParsed)
 ```
 
