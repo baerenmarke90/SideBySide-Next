@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, renderHook } from '@testing-library/react';
+import React from 'react';
+import { act, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReferenceApis } from './referenceFlow';
 import {
@@ -563,5 +564,261 @@ describe('useAttachmentDrafts context and generation binding (#700)', () => {
     expect(formatAttachmentDraftContextKey('acc-2', 'space-b')).toBe(
       'acc-2:space-b',
     );
+  });
+});
+
+describe('useAttachmentDrafts React commit lifecycle and speculative render safety (#739)', () => {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  let revokeObjectURLSpy: ReturnType<typeof vi.fn>;
+  let urlCounter = 0;
+
+  beforeEach(() => {
+    urlCounter = 0;
+    revokeObjectURLSpy = vi.fn();
+    URL.createObjectURL = vi.fn(
+      (_blob: Blob) => `blob:mock-url-${++urlCounter}`,
+    );
+    URL.revokeObjectURL = revokeObjectURLSpy;
+  });
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+    vi.restoreAllMocks();
+  });
+
+  it('Test A & B: pure render-time visibility masks old drafts before commit, and commit-time effect executes abort and URL revocation', () => {
+    const uploadDeferred = deferred<{ attachmentId: string }>();
+    let capturedSignal: AbortSignal | undefined;
+
+    const uploadFn = vi.fn(
+      async (
+        _apis: ReferenceApis,
+        _apiBaseUrl: string,
+        _accessToken: string,
+        _spaceId: string,
+        _file: File,
+        _onPhase?: (phase: 'uploading' | 'validating') => void,
+        _fetchApi?: typeof fetch,
+        options?: { signal?: AbortSignal },
+      ) => {
+        capturedSignal = options?.signal;
+        return uploadDeferred.promise;
+      },
+    );
+
+    const initialProps: AttachmentDraftOptions = {
+      apis: mockApis,
+      apiBaseUrl: 'https://api.example.com',
+      accessToken: 'token-a',
+      accountId: 'account-1',
+      spaceId: 'space-a',
+      uploadAttachmentFn: uploadFn,
+    };
+
+    let hookResult!: ReturnType<typeof useAttachmentDrafts>;
+    let renderPhaseItemsInB: unknown[] | null = null;
+    let renderPhaseReadyIdsInB: string[] | null = null;
+    let renderPhaseAbortedInB: boolean | undefined;
+    let renderPhaseRevokeCountInB = -1;
+
+    function InspectorApp({ props }: { props: AttachmentDraftOptions }) {
+      hookResult = useAttachmentDrafts(props);
+      if (props.spaceId === 'space-b' && renderPhaseItemsInB === null) {
+        // Inspect directly during the initial render phase of Space B before commit / useLayoutEffect
+        renderPhaseItemsInB = hookResult.items;
+        renderPhaseReadyIdsInB = hookResult.readyIds;
+        renderPhaseAbortedInB = capturedSignal?.aborted;
+        renderPhaseRevokeCountInB = revokeObjectURLSpy.mock.calls.length;
+      }
+      return <div data-testid="count">{hookResult.items.length}</div>;
+    }
+
+    const { rerender } = render(<InspectorApp props={initialProps} />);
+
+    // Add a file in Space A
+    const file = createMockFile('test-a.jpg');
+    act(() => {
+      hookResult.addFiles(createMockFileList(file));
+    });
+
+    expect(hookResult.items).toHaveLength(1);
+    expect(hookResult.items[0]?.status).toBe('uploading');
+    expect(capturedSignal?.aborted).toBe(false);
+    expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+
+    // Now rerender with Space B
+    act(() => {
+      rerender(
+        <InspectorApp
+          props={{
+            ...initialProps,
+            spaceId: 'space-b',
+          }}
+        />,
+      );
+    });
+
+    // 1. Render-time Privacy Invariant:
+    // During the render phase of Space B, drafts were masked to empty
+    expect(renderPhaseItemsInB).toEqual([]);
+    expect(renderPhaseReadyIdsInB).toEqual([]);
+
+    // 2. Render-time Purity Invariant:
+    // During the render phase of Space B, the upload in Space A was NOT aborted
+    // and Object URLs were NOT revoked!
+    expect(renderPhaseAbortedInB).toBe(false);
+    expect(renderPhaseRevokeCountInB).toBe(0);
+
+    // 3. Commit-time Invariant:
+    // Once committed to Space B, the layout effect ran:
+    expect(hookResult.contextKey).toBe('account-1:space-b');
+    expect(hookResult.items).toHaveLength(0);
+    expect(hookResult.readyIds).toEqual([]);
+    expect(hookResult.hasPending).toBe(false);
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(revokeObjectURLSpy).toHaveBeenCalled();
+  });
+
+  it('Test F: React StrictMode preserves drafts during token refresh and cleans up safely on context change', async () => {
+    const uploadDeferred = deferred<{ attachmentId: string }>();
+    let capturedSignal: AbortSignal | undefined;
+
+    const uploadFn = vi.fn(
+      async (
+        _apis: ReferenceApis,
+        _apiBaseUrl: string,
+        _accessToken: string,
+        _spaceId: string,
+        _file: File,
+        _onPhase?: (phase: 'uploading' | 'validating') => void,
+        _fetchApi?: typeof fetch,
+        options?: { signal?: AbortSignal },
+      ) => {
+        capturedSignal = options?.signal;
+        return uploadDeferred.promise;
+      },
+    );
+
+    const initialProps: AttachmentDraftOptions = {
+      apis: mockApis,
+      apiBaseUrl: 'https://api.example.com',
+      accessToken: 'token-strict-1',
+      accountId: 'account-1',
+      spaceId: 'space-1',
+      uploadAttachmentFn: uploadFn,
+    };
+
+    const { result, rerender } = renderHook(
+      (props: AttachmentDraftOptions) => useAttachmentDrafts(props),
+      {
+        initialProps,
+        wrapper: ({ children }) => (
+          <React.StrictMode>{children}</React.StrictMode>
+        ),
+      },
+    );
+
+    // Initial state
+    expect(result.current.contextKey).toBe('account-1:space-1');
+    expect(result.current.generation).toBe(1);
+
+    // Add file in Space 1
+    act(() => {
+      result.current.addFiles(
+        createMockFileList(createMockFile('strict-test.jpg')),
+      );
+    });
+
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.items[0]?.status).toBe('uploading');
+    expect(capturedSignal?.aborted).toBe(false);
+
+    // Token refresh under StrictMode
+    act(() => {
+      rerender({
+        ...initialProps,
+        accessToken: 'token-strict-2',
+      });
+    });
+
+    // Draft is preserved under StrictMode token refresh
+    expect(result.current.contextKey).toBe('account-1:space-1');
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.items[0]?.status).toBe('uploading');
+    expect(capturedSignal?.aborted).toBe(false);
+
+    // Context transition under StrictMode
+    act(() => {
+      rerender({
+        ...initialProps,
+        spaceId: 'space-2',
+      });
+    });
+
+    // Space 2 is empty, Space 1 upload aborted, URL revoked
+    expect(result.current.contextKey).toBe('account-1:space-2');
+    expect(result.current.items).toHaveLength(0);
+    expect(result.current.generation).toBe(2);
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(revokeObjectURLSpy).toHaveBeenCalled();
+  });
+
+  it('Test D: A -> B -> A transition under StrictMode increments generation and permanently rejects visit 1 callbacks', async () => {
+    const uploadDeferred = deferred<{ attachmentId: string }>();
+    const uploadFn = vi.fn(async () => uploadDeferred.promise);
+
+    const initialProps: AttachmentDraftOptions = {
+      apis: mockApis,
+      apiBaseUrl: 'https://api.example.com',
+      accessToken: 'token-1',
+      accountId: 'account-1',
+      spaceId: 'space-a',
+      uploadAttachmentFn: uploadFn,
+    };
+
+    const { result, rerender } = renderHook(
+      (props: AttachmentDraftOptions) => useAttachmentDrafts(props),
+      {
+        initialProps,
+        wrapper: ({ children }) => (
+          <React.StrictMode>{children}</React.StrictMode>
+        ),
+      },
+    );
+
+    act(() => {
+      result.current.addFiles(
+        createMockFileList(createMockFile('visit1-strict.jpg')),
+      );
+    });
+
+    expect(result.current.generation).toBe(1);
+    expect(result.current.items).toHaveLength(1);
+
+    // Switch to space-b
+    act(() => {
+      rerender({ ...initialProps, spaceId: 'space-b' });
+    });
+    expect(result.current.generation).toBe(2);
+    expect(result.current.items).toHaveLength(0);
+
+    // Switch back to space-a
+    act(() => {
+      rerender({ ...initialProps, spaceId: 'space-a' });
+    });
+    expect(result.current.generation).toBe(3);
+    expect(result.current.items).toHaveLength(0);
+
+    // Resolve upload from visit 1 (generation 1)
+    await act(async () => {
+      uploadDeferred.resolve({ attachmentId: 'stale-strict-visit-1-id' });
+      await uploadDeferred.promise;
+    });
+
+    // Generation 3 rejects generation 1 completion
+    expect(result.current.items).toHaveLength(0);
+    expect(result.current.readyIds).toEqual([]);
   });
 });
