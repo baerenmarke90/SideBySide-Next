@@ -254,17 +254,14 @@ def me(account: CurrentAccount) -> AccountView:
     "/auth/magic-link/request",
     status_code=status.HTTP_202_ACCEPTED,
     response_class=Response,
-    responses=problem_responses(403, 422, 429, 503),
+    responses=problem_responses(422, 429, 503),
 )
-def request_magic_link(
-    body: EmailRequest, session: DbSession, mail: Mail, policy: AuthPolicy
-) -> Response:
+def request_magic_link(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
     """Request a passwordless sign-in link.
 
     The response is identical whether or not the address exists. Otherwise
     this endpoint would become an account directory.
     """
-    policy.ensure_magic_link_allowed()
     cloud.request_magic_link(session, email=body.email, mail=mail)
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -273,12 +270,9 @@ def request_magic_link(
     "/auth/magic-link/consume",
     response_model=SessionView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(403, 422),
+    responses=problem_responses(422),
 )
-def consume_magic_link(
-    body: MagicLinkConsumeRequest, session: DbSession, policy: AuthPolicy
-) -> SessionView:
-    policy.ensure_magic_link_allowed()
+def consume_magic_link(body: MagicLinkConsumeRequest, session: DbSession) -> SessionView:
     return _view(
         cloud.consume_magic_link(
             session,
@@ -358,12 +352,11 @@ def consume_recovery(
     "/auth/oidc/{connectionId}/start",
     response_model=OidcStartView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(403, 422, 429),
+    responses=problem_responses(422, 429),
 )
 def start_oidc(
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
-    policy: AuthPolicy,
     body: OidcStartRequest | None = None,
 ) -> OidcStartView:
     """Begin authentication through an external identity provider.
@@ -372,7 +365,6 @@ def start_oidc(
     receives only the authorization URL and state. Any invitation remains
     bound server-side and is never forwarded to the provider.
     """
-    policy.ensure_oidc_allowed()
     started = oidc.start(
         session,
         connection_id,
@@ -385,16 +377,14 @@ def start_oidc(
     "/auth/oidc/{connectionId}/link",
     response_model=OidcStartView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 422, 429),
+    responses=problem_responses(401, 422, 429),
 )
 def link_oidc(
     account: CurrentAccount,
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
-    policy: AuthPolicy,
 ) -> OidcStartView:
     """Link an external identity to the authenticated account."""
-    policy.ensure_oidc_allowed()
     started = oidc.start(session, connection_id, account_id=account.id)
     return OidcStartView(authorization_url=started.authorization_url, state=started.state)
 
@@ -403,16 +393,14 @@ def link_oidc(
     "/auth/oidc/{connectionId}/callback",
     response_model=SessionView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 409, 422),
+    responses=problem_responses(401, 409, 422),
 )
 def complete_oidc(
     body: OidcCallbackRequest,
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
-    policy: AuthPolicy,
 ) -> SessionView:
     """Complete the callback from the external identity provider."""
-    policy.ensure_oidc_allowed()
     return _view(
         oidc.complete(
             session,
@@ -428,17 +416,14 @@ def complete_oidc(
 @router.post(
     "/auth/passkeys/registration/start",
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403),
+    responses=problem_responses(401),
 )
-def start_passkey_registration(
-    account: CurrentAccount, session: DbSession, policy: AuthPolicy
-) -> dict[str, Any]:
+def start_passkey_registration(account: CurrentAccount, session: DbSession) -> dict[str, Any]:
     """Begin passkey registration for an existing authenticated account.
 
     A passkey is an additional access method for an account that already
     exists, so registration starts only from an authenticated session.
     """
-    policy.ensure_passkey_allowed()
     return passkeys.start_registration(session, account)
 
 
@@ -446,15 +431,11 @@ def start_passkey_registration(
     "/auth/passkeys/registration/finish",
     response_model=PasskeyView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 422),
+    responses=problem_responses(401, 422),
 )
 def finish_passkey_registration(
-    body: PasskeyRegistrationRequest,
-    account: CurrentAccount,
-    session: DbSession,
-    policy: AuthPolicy,
+    body: PasskeyRegistrationRequest, account: CurrentAccount, session: DbSession
 ) -> PasskeyView:
-    policy.ensure_passkey_allowed()
     passkey = passkeys.finish_registration(
         session, account, credential=body.credential, name=body.name
     )
@@ -464,18 +445,15 @@ def finish_passkey_registration(
 @router.post(
     "/auth/passkeys/authentication/start",
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(403, 422, 429),
+    responses=problem_responses(422, 429),
 )
-def start_passkey_authentication(
-    request: Request, session: DbSession, policy: AuthPolicy
-) -> dict[str, Any]:
+def start_passkey_authentication(request: Request, session: DbSession) -> dict[str, Any]:
     """Begin passkey authentication without binding it to an account.
 
     The authenticator selects which discoverable credential to offer. An
     endpoint that returned credentials for a given address would be an account
     directory.
     """
-    policy.ensure_passkey_allowed()
     client_host = request.client.host if request.client is not None else None
     passkey_abuse.reserve_authentication_start(session, client_host)
     return passkeys.start_authentication(session)
@@ -485,12 +463,11 @@ def start_passkey_authentication(
     "/auth/passkeys/authentication/finish",
     response_model=SessionView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 422),
+    responses=problem_responses(401, 422),
 )
 def finish_passkey_authentication(
-    body: PasskeyAuthenticationRequest, session: DbSession, policy: AuthPolicy
+    body: PasskeyAuthenticationRequest, session: DbSession
 ) -> SessionView:
-    policy.ensure_passkey_allowed()
     return _view(
         passkeys.finish_authentication(
             session,

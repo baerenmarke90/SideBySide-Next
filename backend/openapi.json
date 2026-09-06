@@ -8139,16 +8139,6 @@
             },
             "description": "Successful Response"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
-          },
           "422": {
             "content": {
               "application/json": {
@@ -8183,16 +8173,6 @@
         "responses": {
           "202": {
             "description": "Successful Response"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
           },
           "422": {
             "content": {
@@ -8344,16 +8324,6 @@
             },
             "description": "Authentication is missing, invalid, or the session has expired."
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
-          },
           "409": {
             "content": {
               "application/json": {
@@ -8416,16 +8386,6 @@
               }
             },
             "description": "Authentication is missing, invalid, or the session has expired."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
           },
           "422": {
             "content": {
@@ -8497,16 +8457,6 @@
             },
             "description": "Successful Response"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
-          },
           "422": {
             "content": {
               "application/json": {
@@ -8568,16 +8518,6 @@
             },
             "description": "Authentication is missing, invalid, or the session has expired."
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
-          },
           "422": {
             "content": {
               "application/json": {
@@ -8611,16 +8551,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
           },
           "422": {
             "content": {
@@ -8683,16 +8613,6 @@
             },
             "description": "Authentication is missing, invalid, or the session has expired."
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
-          },
           "422": {
             "content": {
               "application/json": {
@@ -8736,16 +8656,6 @@
               }
             },
             "description": "Authentication is missing, invalid, or the session has expired."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "The caller is authenticated but is not authorized for this operation."
           }
         },
         "summary": "Start Passkey Registration",

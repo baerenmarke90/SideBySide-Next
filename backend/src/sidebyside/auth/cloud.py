@@ -79,7 +79,6 @@ def request_magic_link(session: Session, *, email: str, mail: MailSender) -> Non
 
     The response never reveals whether mail was created.
     """
-    resolve_auth_capabilities().ensure_magic_link_allowed()
     address = accounts.normalize_email(email)
     rate_limit.check(session, ACTION_MAGIC_LINK, address, rate_limit.MAGIC_LINK)
     rate_limit.record_attempt(session, ACTION_MAGIC_LINK, address)
@@ -120,7 +119,6 @@ def consume_magic_link(
     becomes verified. A separate verification step would create another place
     where that fact could be forgotten.
     """
-    resolve_auth_capabilities().ensure_magic_link_allowed()
     model = action_tokens.consume_magic_link(session, token)
     email_record = session.get(AccountEmail, model.account_email_id)
     account = session.get(Account, email_record.account_id) if email_record is not None else None
