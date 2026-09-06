@@ -14,7 +14,7 @@ All URIs are relative to *http://localhost*
 
 Delete the authenticated Account
 
-Accept deletion for the authenticated Account only.  No Account identifier is accepted from the client, so this route cannot be repurposed into a cross-account deletion primitive. Once the external tombstone and fail-closed state commit, cleanup continues through the existing worker even if the client disconnects.
+Accept deletion only after confirmation and recent authentication.  The confirmation literal prevents accidental UI activation; it is not an authentication factor. A separate server-side recent-authentication grant must therefore authorize this exact Account, DeviceSession, and deletion purpose before the existing irreversible deletion pipeline is entered.  No Account identifier or recent-auth proof is accepted from the client, so neither cross-account deletion nor client-forged step-up state is possible. Once the external tombstone and fail-closed state commit, cleanup continues through the existing worker even if the client disconnects.
 
 ### Example
 

@@ -60,6 +60,11 @@ class RecentAuthenticationMethod(StrEnum):
     OIDC = "OIDC"
 
 
+class RecentAuthenticationClient(StrEnum):
+    WEB = "web"
+    ANDROID = "android"
+
+
 class RecentAuthenticationErrorCode:
     REQUIRED = "RECENT_AUTHENTICATION_REQUIRED"
     SESSION_INVALID = "RECENT_AUTHENTICATION_SESSION_INVALID"
@@ -140,6 +145,8 @@ def capabilities(
     account: Account,
     device_session: DeviceSession,
     policy: AuthCapabilities,
+    *,
+    client: RecentAuthenticationClient = RecentAuthenticationClient.WEB,
 ) -> RecentAuthenticationCapabilities:
     """Return only methods that can actually step up this Account now."""
     ensure_context(account, device_session)
@@ -168,7 +175,12 @@ def capabilities(
             is not None
         )
 
-    configured_ids = {connection.id for connection in get_settings().oidc_connections}
+    configured_ids = {
+        connection.id
+        for connection in get_settings().oidc_connections
+        if client != RecentAuthenticationClient.ANDROID
+        or connection.android_redirect_uri is not None
+    }
     oidc_connections: tuple[str, ...] = ()
     if policy.oidc and configured_ids:
         linked = session.execute(

@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Path, Request, status
+from fastapi import APIRouter, Path, Query, Request, status
 
 from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
@@ -73,8 +73,11 @@ def capabilities(
     device_session: CurrentSession,
     session: DbSession,
     policy: AuthPolicy,
+    client: Annotated[
+        recent_auth.RecentAuthenticationClient, Query()
+    ] = recent_auth.RecentAuthenticationClient.WEB,
 ) -> CapabilitiesView:
-    available = recent_auth.capabilities(session, account, device_session, policy)
+    available = recent_auth.capabilities(session, account, device_session, policy, client=client)
     return CapabilitiesView(
         local_password=available.local_password,
         passkey=available.passkey,
@@ -166,6 +169,9 @@ def start_oidc(
     session: DbSession,
     policy: AuthPolicy,
     connection_id: Annotated[str, Path(alias="connectionId")],
+    client: Annotated[
+        recent_auth.RecentAuthenticationClient, Query()
+    ] = recent_auth.RecentAuthenticationClient.WEB,
 ) -> OidcStartView:
     policy.ensure_oidc_allowed()
     started = recent_oidc.start(
@@ -174,6 +180,7 @@ def start_oidc(
         account,
         device_session,
         purpose=PURPOSE,
+        client=client,
     )
     return OidcStartView(
         authorization_url=started.authorization_url,

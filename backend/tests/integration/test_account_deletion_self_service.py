@@ -138,10 +138,7 @@ class TestSelfServiceAccountDeletion:
             assert account is not None and account.disabled_at is not None
             assert device_session is not None and device_session.revoked_at is not None
             assert deletion is not None
-            assert (
-                deletion.confirmation_mail_status
-                == DeletionConfirmationMailStatus.SENT.value
-            )
+            assert deletion.confirmation_mail_status == DeletionConfirmationMailStatus.SENT.value
             assert (
                 session.execute(
                     select(func.count())
@@ -277,9 +274,7 @@ class TestSelfServiceAccountDeletion:
         account_id, device_session_id, token = _account_with_session(maker)
         journal_path = tmp_path / "must-not-exist.journal"
         base = get_settings()
-        demo_settings = base.model_copy(
-            update={"environment": Environment.DEMO, "demo_mode": True}
-        )
+        demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
         monkeypatch.setattr(
             deletion_self_service.canonical,
             "get_settings",
@@ -298,10 +293,7 @@ class TestSelfServiceAccountDeletion:
         )
 
         assert response.status_code == 403
-        assert (
-            response.json()["code"]
-            == deletion_self_service.SelfDeletionErrorCode.DEMO_ACCOUNT
-        )
+        assert response.json()["code"] == deletion_self_service.SelfDeletionErrorCode.DEMO_ACCOUNT
         assert not journal_path.exists()
         with maker() as session:
             account = session.get(Account, account_id)

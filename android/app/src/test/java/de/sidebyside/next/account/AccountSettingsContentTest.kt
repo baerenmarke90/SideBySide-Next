@@ -11,9 +11,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.reference.AccountDeletionRecentAuthenticationCapabilities
 import de.sidebyside.next.reference.R
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -62,14 +67,35 @@ class AccountSettingsContentTest {
     }
 
     @Test
-    fun exactTypedConfirmationUnlocksTheFinalDestructiveAction() {
+    fun recentAuthenticationPrecedesExactTypedConfirmationAndDeletion() {
         var deletes = 0
-        render(onDeleteAccount = { deletes += 1 })
+        var passwordAttempts = 0
+        render(
+            onDeleteAccount = { deletes += 1 },
+            onRecentAuthenticationPassword = {
+                passwordAttempts += 1
+                true
+            },
+        )
 
         deletionAction().performClick()
         composeRule
             .onNodeWithText(context.getString(R.string.account_delete_continue))
             .performClick()
+
+        composeRule
+            .onNodeWithText(context.getString(R.string.account_delete_reauth_title))
+            .assertExists()
+        composeRule
+            .onNodeWithText(context.getString(R.string.account_delete_confirm_action))
+            .assertDoesNotExist()
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("secret")
+        composeRule
+            .onNodeWithText(context.getString(R.string.account_delete_reauth_password_action))
+            .performClick()
+        composeRule.waitForIdle()
+        assertEquals(1, passwordAttempts)
 
         val finalAction = composeRule.onNodeWithText(
             context.getString(R.string.account_delete_confirm_action),
@@ -96,13 +122,31 @@ class AccountSettingsContentTest {
         demoMode: Boolean = false,
         onOpenDataExport: () -> Unit = {},
         onDeleteAccount: () -> Unit = {},
+        onRecentAuthenticationPassword: (String) -> Boolean = { true },
     ) {
         composeRule.setContent {
+            var recentAuthenticationComplete by remember { mutableStateOf(false) }
             SideBySideTheme {
                 AccountSettingsContent(
                     demoMode = demoMode,
                     busy = false,
                     problem = null,
+                    recentAuthenticationCapabilities =
+                        AccountDeletionRecentAuthenticationCapabilities(
+                            localPassword = true,
+                            passkey = false,
+                            oidcConnections = emptyList(),
+                        ),
+                    recentAuthenticationBusy = false,
+                    recentAuthenticationProblem = null,
+                    recentAuthenticationComplete = recentAuthenticationComplete,
+                    onLoadRecentAuthentication = {},
+                    onRecentAuthenticationPassword = { password ->
+                        recentAuthenticationComplete = onRecentAuthenticationPassword(password)
+                    },
+                    onRecentAuthenticationPasskey = {},
+                    onRecentAuthenticationOidc = {},
+                    onResetRecentAuthentication = { recentAuthenticationComplete = false },
                     onOpenDataExport = onOpenDataExport,
                     onDeleteAccount = onDeleteAccount,
                 )

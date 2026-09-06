@@ -83,9 +83,7 @@ class VirtualAuthenticator:
         user_verified: bool = True,
     ) -> bytes:
         rp_hash = hashlib.sha256((rp_id or self.rp_id).encode("utf-8")).digest()
-        data = rp_hash + bytes(
-            [self._flags(attested=attested, user_verified=user_verified)]
-        )
+        data = rp_hash + bytes([self._flags(attested=attested, user_verified=user_verified)])
         data += struct.pack(">I", self.sign_count)
         if attested:
             cose_key = self._cose_key()

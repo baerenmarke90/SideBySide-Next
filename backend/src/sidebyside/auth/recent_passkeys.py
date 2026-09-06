@@ -141,8 +141,7 @@ def start(
         rp_id=get_settings().relying_party_id,
         challenge=challenge,
         allow_credentials=[
-            PublicKeyCredentialDescriptor(id=credential.credential_id)
-            for credential in credentials
+            PublicKeyCredentialDescriptor(id=credential.credential_id) for credential in credentials
         ],
         user_verification=UserVerificationRequirement.REQUIRED,
     )
@@ -173,11 +172,10 @@ def finish(
     except (KeyError, TypeError, ValueError) as error:
         raise passkeys._invalid() from error
 
-    stored, locked_account = passkeys._lock_account_credential(
-        session,
-        account.id,
-        raw_id,
-    )
+    stored, locked_account = passkeys._lock_authentication_credential(session, raw_id)
+    if locked_account.id != account.id:
+        raise passkeys._invalid()
+
     settings = get_settings()
     try:
         verified = webauthn.verify_authentication_response(
@@ -195,9 +193,7 @@ def finish(
 
     stored.sign_count = verified.new_sign_count
     stored.last_used_at = now()
-    stored.backup_state = bool(
-        getattr(verified, "credential_backed_up", stored.backup_state)
-    )
+    stored.backup_state = bool(getattr(verified, "credential_backed_up", stored.backup_state))
     session.flush()
     return recent_auth.issue_grant(
         session,

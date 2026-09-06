@@ -170,9 +170,7 @@ def _fresh_auth_time() -> int:
 
 
 def _grant_count(session: Session) -> int:
-    return session.execute(
-        select(func.count()).select_from(RecentAuthenticationGrant)
-    ).scalar_one()
+    return session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
 
 
 def test_start_requests_active_reauthentication_and_binds_current_session(
