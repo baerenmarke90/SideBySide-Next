@@ -8,9 +8,10 @@ from typing import Literal
 from fastapi import APIRouter, status
 from pydantic import ConfigDict
 
-from sidebyside.api.deps import CurrentAccount
+from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.auth import recent_auth
 from sidebyside.identity.deletion_models import AccountDeletionStatus
 from sidebyside.identity.deletion_self_service import accept_self_deletion
 
@@ -42,15 +43,28 @@ class AccountDeletionAccepted(ApiModel):
 def delete_own_account(
     payload: AccountDeletionRequest,
     account: CurrentAccount,
+    device_session: CurrentSession,
+    session: DbSession,
 ) -> AccountDeletionAccepted:
-    """Accept deletion for the authenticated Account only.
+    """Accept deletion only after confirmation and recent authentication.
 
-    No Account identifier is accepted from the client, so this route cannot be
-    repurposed into a cross-account deletion primitive. Once the external
-    tombstone and fail-closed state commit, cleanup continues through the
-    existing worker even if the client disconnects.
+    The confirmation literal prevents accidental UI activation; it is not an
+    authentication factor. A separate server-side recent-authentication grant
+    must therefore authorize this exact Account, DeviceSession, and deletion
+    purpose before the existing irreversible deletion pipeline is entered.
+
+    No Account identifier or recent-auth proof is accepted from the client, so
+    neither cross-account deletion nor client-forged step-up state is possible.
+    Once the external tombstone and fail-closed state commit, cleanup continues
+    through the existing worker even if the client disconnects.
     """
     del payload  # Pydantic already enforced the exact confirmation literal.
+    recent_auth.require_grant(
+        session,
+        account,
+        device_session,
+        purpose=recent_auth.RecentAuthenticationPurpose.ACCOUNT_DELETION,
+    )
     result = accept_self_deletion(account.id)
     return AccountDeletionAccepted(
         accepted_at=result.accepted_at,

@@ -215,9 +215,10 @@ class WebAuthnChallenge(IdMixin, Base):
     with the value in `clientDataJSON`. It is not a secret; its purpose is
     one-time use, enforced by consuming it here.
 
-    `account_id` is set during registration, which starts from an existing
-    authenticated session, and is empty for authentication with a
-    discoverable passkey where only the response identifies the account.
+    Registration binds to an Account. Username-less normal authentication does
+    not know an Account up front. A STEP_UP challenge is stricter: it is bound
+    to the already-authenticated Account, its exact DeviceSession, and the
+    high-risk purpose that requested the ceremony.
     """
 
     __tablename__ = "webauthn_challenges"
@@ -228,6 +229,11 @@ class WebAuthnChallenge(IdMixin, Base):
         postgresql.UUID(as_uuid=True),
         ForeignKey("accounts.id", ondelete="CASCADE"),
     )
+    device_session_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("device_sessions.id", ondelete="CASCADE"),
+    )
+    step_up_purpose: Mapped[str | None] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
@@ -235,7 +241,16 @@ class WebAuthnChallenge(IdMixin, Base):
     )
 
     __table_args__ = (
-        CheckConstraint("purpose IN ('REGISTRATION', 'AUTHENTICATION')", name="purpose_is_known"),
+        CheckConstraint(
+            "purpose IN ('REGISTRATION', 'AUTHENTICATION', 'STEP_UP')",
+            name="purpose_is_known",
+        ),
+        CheckConstraint(
+            "(purpose = 'STEP_UP' AND account_id IS NOT NULL AND device_session_id IS NOT NULL "
+            "AND step_up_purpose IS NOT NULL) OR (purpose <> 'STEP_UP' AND device_session_id IS NULL "
+            "AND step_up_purpose IS NULL)",
+            name="step_up_binding_is_complete",
+        ),
         Index("ix_webauthn_challenges_expires_at", "expires_at"),
     )
 
@@ -334,6 +349,10 @@ class OidcAuthRequest(IdMixin, Base):
     present or compare them itself. They are not authentication proofs but
     bindings, and they live for minutes before the maintenance job removes
     them.
+
+    A recent-authentication request additionally binds the flow to the current
+    Account, exact DeviceSession, and high-risk purpose. It therefore cannot
+    be completed into a different session or reused as an ordinary sign-in.
     """
 
     __tablename__ = "oidc_auth_requests"
@@ -344,12 +363,19 @@ class OidcAuthRequest(IdMixin, Base):
     code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
     redirect_uri: Mapped[str] = mapped_column(String(512), nullable=False)
 
-    # Set when an already authenticated account wants to link an external
-    # identity to itself.
+    # Set for identity linking and for recent-authentication flows.
     account_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
         ForeignKey("accounts.id", ondelete="CASCADE"),
     )
+
+    # Set only for recent authentication. The presence of these fields makes
+    # the flow distinct from ordinary sign-in and identity linking.
+    device_session_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("device_sessions.id", ondelete="CASCADE"),
+    )
+    step_up_purpose: Mapped[str | None] = mapped_column(String(64))
 
     # Set when an account that does not yet exist is to be onboarded through
     # OIDC via an invitation. Like all bearer proofs, stored only as a hash.
@@ -363,6 +389,11 @@ class OidcAuthRequest(IdMixin, Base):
 
     __table_args__ = (
         UniqueConstraint("state_hash", name="uq_oidc_auth_requests_state_hash"),
+        CheckConstraint(
+            "(device_session_id IS NULL AND step_up_purpose IS NULL) OR "
+            "(device_session_id IS NOT NULL AND account_id IS NOT NULL AND step_up_purpose IS NOT NULL)",
+            name="oidc_step_up_binding_is_complete",
+        ),
         Index("ix_oidc_auth_requests_expires_at", "expires_at"),
     )
 
@@ -421,6 +452,52 @@ class DeviceSession(IdMixin, Base):
         UniqueConstraint("refresh_token_hash", name="uq_device_sessions_refresh_token_hash"),
         Index("ix_device_sessions_access_token_hash", "access_token_hash"),
         Index("ix_device_sessions_account_id", "account_id"),
+    )
+
+
+class RecentAuthenticationGrant(IdMixin, Base):
+    """Short-lived step-up authority bound to one current session and purpose.
+
+    This row is not a bearer token. Its identity comes entirely from the
+    already-authenticated request context, so there is no proof secret for a
+    client to leak or replay across sessions. Deleting the DeviceSession also
+    cascades the grant.
+    """
+
+    __tablename__ = "recent_authentication_grants"
+
+    account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    device_session_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("device_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    purpose: Mapped[str] = mapped_column(String(64), nullable=False)
+    method: Mapped[str] = mapped_column(String(32), nullable=False)
+    achieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id",
+            "device_session_id",
+            "purpose",
+            name="uq_recent_authentication_grants_context",
+        ),
+        CheckConstraint(
+            "method IN ('LOCAL_PASSWORD', 'PASSKEY', 'OIDC')",
+            name="recent_authentication_method_is_known",
+        ),
+        CheckConstraint(
+            "expires_at > achieved_at",
+            name="recent_authentication_expiry_after_achievement",
+        ),
+        Index("ix_recent_authentication_grants_expires_at", "expires_at"),
+        Index("ix_recent_authentication_grants_device_session_id", "device_session_id"),
     )
 
 
