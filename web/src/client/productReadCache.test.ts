@@ -202,11 +202,17 @@ describe('M5 Web S6 persistent read cache policy', () => {
     const spaceA = deferred<MemoryPayload>();
     const spaceB = deferred<MemoryPayload>();
 
-    const readA = loadMemory('account-1', 'space-a', 'memory-a', () =>
-      spaceA.promise,
+    const readA = loadMemory(
+      'account-1',
+      'space-a',
+      'memory-a',
+      () => spaceA.promise,
     );
-    const readB = loadMemory('account-1', 'space-b', 'memory-b', () =>
-      spaceB.promise,
+    const readB = loadMemory(
+      'account-1',
+      'space-b',
+      'memory-b',
+      () => spaceB.promise,
     );
 
     await __waitForProductReadCacheMutationsForTests();
@@ -237,15 +243,18 @@ describe('M5 Web S6 persistent read cache policy', () => {
       }),
     ).rejects.toMatchObject({ kind: 'offline' });
     await __waitForProductReadCacheMutationsForTests();
-    expect(storedRecords(storage).some((record) => record.spaceId === 'space-a')).toBe(
-      false,
-    );
+    expect(
+      storedRecords(storage).some((record) => record.spaceId === 'space-a'),
+    ).toBe(false);
   });
 
   it('keeps a logout or Account transition from being repopulated by an old read', async () => {
     const accountA = deferred<MemoryPayload>();
-    const readA = loadMemory('account-a', 'space-a', 'memory-a', () =>
-      accountA.promise,
+    const readA = loadMemory(
+      'account-a',
+      'space-a',
+      'memory-a',
+      () => accountA.promise,
     );
 
     const clear = clearProductReadCache();
@@ -271,11 +280,17 @@ describe('M5 Web S6 persistent read cache policy', () => {
     const spaceA = deferred<MemoryPayload>();
     const spaceB = deferred<MemoryPayload>();
 
-    const readA = loadMemory('account-1', 'space-a', 'memory-a', () =>
-      spaceA.promise,
+    const readA = loadMemory(
+      'account-1',
+      'space-a',
+      'memory-a',
+      () => spaceA.promise,
     );
-    const readB = loadMemory('account-1', 'space-b', 'memory-b', () =>
-      spaceB.promise,
+    const readB = loadMemory(
+      'account-1',
+      'space-b',
+      'memory-b',
+      () => spaceB.promise,
     );
     await __waitForProductReadCacheMutationsForTests();
 
@@ -301,8 +316,11 @@ describe('M5 Web S6 persistent read cache policy', () => {
     expect(storage.records.size).toBe(1);
 
     const pending = deferred<MemoryPayload>();
-    const oldRead = loadMemory('account-1', 'space-a', 'pending', () =>
-      pending.promise,
+    const oldRead = loadMemory(
+      'account-1',
+      'space-a',
+      'pending',
+      () => pending.promise,
     );
 
     const clear = clearProductReadCache();
@@ -325,8 +343,11 @@ describe('M5 Web S6 persistent read cache policy', () => {
     expect(oldGeneration).toBeTruthy();
 
     const pending = deferred<MemoryPayload>();
-    const oldRead = loadMemory('account-a', 'space-a', 'late', () =>
-      pending.promise,
+    const oldRead = loadMemory(
+      'account-a',
+      'space-a',
+      'late',
+      () => pending.promise,
     );
 
     storage.failNextClear = true;
