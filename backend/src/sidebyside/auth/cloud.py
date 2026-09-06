@@ -27,8 +27,6 @@ from sidebyside.identity import service as accounts
 from sidebyside.identity.models import (
     Account,
     AccountEmail,
-    AccountRecoveryToken,
-    MagicLinkToken,
 )
 from sidebyside.mail import MailMessage, MailSender, MailTransportError
 
@@ -75,22 +73,6 @@ def _primary_email(session: Session, address: str) -> AccountEmail | None:
     ).scalar_one_or_none()
 
 
-def _revoke_open(
-    session: Session, tokens: list[MagicLinkToken] | list[AccountRecoveryToken]
-) -> None:
-    """Revoke older open tokens for the same flow.
-
-    Only the most recently requested link should remain valid. Otherwise valid
-    authentication proofs accumulate in mailboxes outside the application,
-    including after an address changes hands.
-    """
-    current_time = now()
-    for token in tokens:
-        if token.is_open(current_time):
-            token.revoked_at = current_time
-    session.flush()
-
-
 def request_magic_link(session: Session, *, email: str, mail: MailSender) -> None:
     """Request a passwordless sign-in link.
 
@@ -107,15 +89,9 @@ def request_magic_link(session: Session, *, email: str, mail: MailSender) -> Non
     if account is None or not account.is_active:
         return
 
-    open_tokens = list(
-        session.execute(
-            select(MagicLinkToken).where(MagicLinkToken.account_email_id == email_record.id)
-        )
-        .scalars()
-        .all()
-    )
-    _revoke_open(session, open_tokens)
-
+    # Supersession of older open links happens inside the issuing function,
+    # under the subject lock that also covers reading them. Revoking here would
+    # be the unserialized version of the same step.
     _, issued = action_tokens.issue_magic_link(session, email_record.id)
     _deliver(
         mail,
@@ -229,15 +205,6 @@ def request_recovery(session: Session, *, email: str, mail: MailSender) -> None:
         return
     if accounts.local_identity(session, account) is None:
         return
-
-    open_tokens = list(
-        session.execute(
-            select(AccountRecoveryToken).where(AccountRecoveryToken.account_id == account.id)
-        )
-        .scalars()
-        .all()
-    )
-    _revoke_open(session, open_tokens)
 
     _, issued = action_tokens.issue_account_recovery(session, account.id)
     _deliver(

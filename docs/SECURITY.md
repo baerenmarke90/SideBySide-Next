@@ -297,15 +297,45 @@ because the endpoints are rate limited; equalizing it would require deliberately
 delaying delivery.
 
 **Normative invariant — only the most recently requested link is valid.** A new
-request must invalidate older still-open links for the same flow so valid
-authentication proofs do not accumulate in a mailbox.
+request invalidates every older still-open link for the same flow, so valid
+authentication proofs do not accumulate in a mailbox. All three flows enforce
+this, including Email verification, where repeating the request is enough to
+accumulate proofs without any concurrency at all.
 
-**Current runtime gap:** this supersession rule is not yet atomic or complete.
-Concurrent Magic-Link or Recovery requests can each establish a still-open
-successor, and repeated Email-Verification requests do not currently revoke
-older open verification proofs. Individual tokens remain hashed, expiring and
-single-use, but requesting a replacement must not be treated as proof that all
-older links became invalid until GitHub issue **#712** is fixed.
+The rule is about the relationship between generations, so it is enforced by
+serializing the subject rather than by hoping two requests do not overlap.
+Issuing takes a PostgreSQL advisory transaction lock on `(flow, subject)`
+before it reads the open predecessors it is about to supersede, and consuming
+takes the same lock, in the same order, before it locks the token row. The
+subjects are the `AccountEmail` for Magic Link and Email verification and the
+Account for Recovery.
+
+The lock is deliberately not a row lock on the Account or AccountEmail: that
+would also block unrelated work on the Account for as long as the request runs,
+including the mail delivery that follows. It is also not the rate-limit
+advisory lock, which is reserved and released inside its own short security
+transaction before token work begins and therefore does not span
+revoke-then-issue. The token tables cannot express the rule either: only
+`token_hash` is unique, and a partial unique index cannot represent "open",
+because expiry depends on the current time.
+
+**Consuming and reissuing have a defined order, not a lucky one.** Both take
+the generation lock first, so whichever wins decides. A reissue that commits
+first has already revoked the older proof, so redeeming it fails with the
+ordinary `ACTION_TOKEN_INVALID` response. A redemption that commits first
+leaves a consumed token that the reissue no longer treats as an open
+predecessor. Neither order reopens a superseded or consumed proof, and neither
+leaves two open generations.
+
+**A delivery failure changes nothing about the generation.** The authoritative
+generation is established before the message is handed to the transport, and a
+transport failure is logged without content and without changing the response.
+It neither reactivates the predecessor nor creates a second open generation;
+the recipient simply requests a new link, which supersedes this one in turn.
+
+Operator-issued recovery proofs go through the same issuing function, so a
+ServerAdmin proof and a recovery link the Account holder requests at the same
+moment still leave exactly one live generation.
 
 **Redeeming a Magic Link verifies the address.** Opening the link from the
 mailbox proves possession; a second verification path would create another
@@ -567,6 +597,7 @@ test is created.
 | Successful rotations are themselves limited | `test_sessions.py::TestRotationsflut` |
 | Passkey finishes consume the exact ceremony challenge rather than a global newest challenge | `test_passkey_challenge_binding.py` |
 | WebAuthn sign-counter verification serializes per credential under the Account-first lock order | `test_passkey_counter_concurrency.py` |
+| Each action-token flow keeps at most one live generation per subject under concurrent requests, repeated requests, and consume-versus-reissue | `test_action_token_generation.py` |
 | Two concurrent invitation acceptances cannot grow a Space beyond two partners | `test_invitations.py::TestRace` |
 | Concurrent bootstrap creates exactly one initial owner | `test_auth_flows.py::test_paralleler_bootstrap_hat_exactly_a_owner` |
 | Security-relevant integration tests actually run in CI and are not silently skipped | CI step **Integration tests actually ran** |
