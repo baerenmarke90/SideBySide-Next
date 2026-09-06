@@ -48,8 +48,7 @@ def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUI
     path = authority.journal_path
     if path.exists():
         raise DeletionBootstrapError(
-            "An Account deletion journal already exists. Refusing to replace or "
-            "reinitialize it."
+            "An Account deletion journal already exists. Refusing to replace or reinitialize it."
         )
 
     instance_id = uuid4()
