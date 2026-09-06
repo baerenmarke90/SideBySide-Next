@@ -1,9 +1,10 @@
-"""Explicit first-install provisioning for the Account-deletion authority.
+"""Explicit provisioning for a previously unprovisioned Account-deletion authority.
 
 Normal API startup is deliberately not allowed to create this artifact. This
-module is the one operator-invoked path for a genuinely new installation: it
-creates the empty forward journal and returns the stable instance identifier
-that must then be stored in protected configuration.
+module is the one operator-invoked path for an installation that has never had
+an Account-deletion authority: it creates the empty forward journal and returns
+the stable instance identifier that must then be stored in protected
+configuration.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ class DeletionBootstrapError(RuntimeError):
 
 
 def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUID:
-    """Create the first journal only for an explicitly confirmed new instance.
+    """Create the first journal only for an explicitly unprovisioned authority.
 
     A configured instance identifier means this installation has already crossed
     the bootstrap boundary. If its journal is now missing, the only safe action
@@ -67,8 +68,9 @@ def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUI
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Provision the Account-deletion forward journal for a brand-new installation. "
-            "Never use this command to replace a lost journal on an established instance."
+            "Provision the Account-deletion forward journal for an installation that has "
+            "never had an Account-deletion authority. Never use this command to replace "
+            "a lost journal on an established authority."
         )
     )
     parser.add_argument(
