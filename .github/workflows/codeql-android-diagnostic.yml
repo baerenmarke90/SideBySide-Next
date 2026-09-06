@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  security-events: read
 
 jobs:
   java-kotlin-sarif:
@@ -52,6 +53,18 @@ jobs:
           category: /language:java-kotlin-diagnostic
           output: ${{ github.workspace }}/codeql-results
           upload: never
+
+      - name: Report blocking CodeQL alerts for this PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "/repos/${GITHUB_REPOSITORY}/code-scanning/alerts?pr=${PR_NUMBER}&state=open&severity=high&tool_name=CodeQL&per_page=100" \
+            --jq '.[] | {number, rule: .rule.id, severity: .rule.security_severity_level, path: .most_recent_instance.location.path, start_line: .most_recent_instance.location.start_line, message: .most_recent_instance.message.text, ref: .most_recent_instance.ref, commit_sha: .most_recent_instance.commit_sha}'
 
       - name: Upload SARIF diagnostic
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
