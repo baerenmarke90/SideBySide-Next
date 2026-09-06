@@ -107,10 +107,11 @@ class Attachment(
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Cross-process authority for a server-stream upload. The token is opaque
-    # and internal. It is committed before request-body transfer, while the
-    # bounded lease lets an abandoned request become cleanup-eligible again.
+    # and internal. The renewable lease bounds idle time; the absolute expiry
+    # prevents continuous trickle activity from extending retention forever.
     upload_claim_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     upload_lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    upload_claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     crypto_version: Mapped[int] = mapped_column(
         SmallInteger,
@@ -139,8 +140,12 @@ class Attachment(
         CheckConstraint("declared_size >= 0", name="declared_size_is_non_negative"),
         CheckConstraint("size IS NULL OR size >= 0", name="size_is_non_negative"),
         CheckConstraint(
-            "(upload_claim_id IS NULL) = (upload_lease_until IS NULL)",
-            name="upload_claim_is_paired",
+            "((upload_claim_id IS NULL AND upload_lease_until IS NULL "
+            "AND upload_claim_expires_at IS NULL) OR "
+            "(upload_claim_id IS NOT NULL AND upload_lease_until IS NOT NULL "
+            "AND upload_claim_expires_at IS NOT NULL "
+            "AND upload_lease_until <= upload_claim_expires_at))",
+            name="upload_claim_is_consistent",
         ),
         # READY without readyAt would have no binding window and would never be
         # collected by cleanup.

@@ -35,6 +35,9 @@ UPLOAD_LEASE = timedelta(minutes=5)
 UPLOAD_LEASE_RENEW_MARGIN = timedelta(minutes=1)
 """Renew active transfer authority before the bounded lease becomes tight."""
 
+UPLOAD_CLAIM_MAX_LIFETIME = timedelta(minutes=30)
+"""Hard ceiling for one claim generation, even with continuous activity."""
+
 _OPEN_UPLOAD_STATES = {
     AttachmentStatus.PENDING.value,
     AttachmentStatus.UPLOADING.value,
@@ -48,6 +51,7 @@ class UploadClaim:
     token: UUID
     rule: MediaRule
     lease_until: datetime
+    expires_at: datetime
 
 
 @contextmanager
@@ -79,13 +83,21 @@ def _short_transaction(source: Session) -> Iterator[Session]:
         source.expire_all()
 
 
-def active_upload_claim(attachment: Attachment, *, current_time: datetime | None = None) -> bool:
+def active_upload_claim(
+    attachment: Attachment,
+    *,
+    current_time: datetime | None = None,
+) -> bool:
     """Return whether cleanup must treat this row as actively owned."""
+    current = current_time or now()
     lease_until = attachment.upload_lease_until
+    expires_at = attachment.upload_claim_expires_at
     return (
         attachment.upload_claim_id is not None
         and lease_until is not None
-        and lease_until > (current_time or now())
+        and expires_at is not None
+        and lease_until > current
+        and expires_at > current
     )
 
 
@@ -103,6 +115,8 @@ def _require_matching_claim(attachment: Attachment, claim: UploadClaim) -> None:
         raise _claim_conflict()
     if attachment.upload_claim_id != claim.token:
         raise _claim_conflict()
+    if attachment.upload_claim_expires_at != claim.expires_at:
+        raise _claim_conflict()
     if not active_upload_claim(attachment):
         raise _claim_conflict()
 
@@ -114,9 +128,9 @@ def claim_upload(
 ) -> UploadClaim:
     """Commit exclusive upload authority before any request body is consumed.
 
-    A stale claim may be replaced only after its lease expires. Claiming does
-    not touch ``created_at`` or ``uploaded_at``: an abandoned retry therefore
-    resumes the existing 24-hour retention clock once its lease expires.
+    A stale claim may be replaced only after its lease or absolute lifetime
+    expires. Claiming does not touch ``created_at`` or ``uploaded_at``: an
+    abandoned retry therefore resumes the existing 24-hour retention clock.
     """
     with _short_transaction(source) as session:
         attachment, rule = service.open_upload(session, context, attachment_id)
@@ -132,10 +146,13 @@ def claim_upload(
         if active_upload_claim(locked):
             raise _claim_conflict()
 
+        current = now()
         token = uuid4()
-        lease_until = now() + UPLOAD_LEASE
+        expires_at = current + UPLOAD_CLAIM_MAX_LIFETIME
+        lease_until = min(current + UPLOAD_LEASE, expires_at)
         locked.upload_claim_id = token
         locked.upload_lease_until = lease_until
+        locked.upload_claim_expires_at = expires_at
         session.flush()
 
         return UploadClaim(
@@ -144,15 +161,17 @@ def claim_upload(
             token=token,
             rule=rule,
             lease_until=lease_until,
+            expires_at=expires_at,
         )
 
 
 def should_renew(claim: UploadClaim) -> bool:
-    return claim.lease_until - now() <= UPLOAD_LEASE_RENEW_MARGIN
+    current = now()
+    return current < claim.expires_at and claim.lease_until - current <= UPLOAD_LEASE_RENEW_MARGIN
 
 
 def renew_upload_claim(source: Session, claim: UploadClaim) -> UploadClaim:
-    """Extend a still-authoritative claim after observed streaming activity."""
+    """Extend observed activity without exceeding the generation hard cap."""
     with _short_transaction(source) as session:
         attachment = session.execute(
             select(Attachment).where(Attachment.id == claim.attachment_id).with_for_update()
@@ -161,7 +180,11 @@ def renew_upload_claim(source: Session, claim: UploadClaim) -> UploadClaim:
             raise Attachment.privacy_absence.error()
         _require_matching_claim(attachment, claim)
 
-        lease_until = now() + UPLOAD_LEASE
+        current = now()
+        expires_at = attachment.upload_claim_expires_at
+        if expires_at is None or current >= expires_at:
+            raise _claim_conflict()
+        lease_until = min(current + UPLOAD_LEASE, expires_at)
         attachment.upload_lease_until = lease_until
         session.flush()
         return replace(claim, lease_until=lease_until)
@@ -177,6 +200,7 @@ def release_upload_claim(source: Session, claim: UploadClaim) -> None:
             return
         attachment.upload_claim_id = None
         attachment.upload_lease_until = None
+        attachment.upload_claim_expires_at = None
         session.flush()
 
 
@@ -204,6 +228,7 @@ def complete_upload(source: Session, claim: UploadClaim, data: bytes) -> None:
         service.complete_upload(session, attachment, claim.rule, data)
         attachment.upload_claim_id = None
         attachment.upload_lease_until = None
+        attachment.upload_claim_expires_at = None
         session.flush()
 
 

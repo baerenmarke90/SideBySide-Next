@@ -26,14 +26,23 @@ def upgrade() -> None:
         "attachments",
         sa.Column("upload_lease_until", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_check_constraint(
-        "upload_claim_is_paired",
+    op.add_column(
         "attachments",
-        "(upload_claim_id IS NULL) = (upload_lease_until IS NULL)",
+        sa.Column("upload_claim_expires_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_check_constraint(
+        "upload_claim_is_consistent",
+        "attachments",
+        "((upload_claim_id IS NULL AND upload_lease_until IS NULL "
+        "AND upload_claim_expires_at IS NULL) OR "
+        "(upload_claim_id IS NOT NULL AND upload_lease_until IS NOT NULL "
+        "AND upload_claim_expires_at IS NOT NULL "
+        "AND upload_lease_until <= upload_claim_expires_at))",
     )
 
 
 def downgrade() -> None:
-    op.drop_constraint("upload_claim_is_paired", "attachments", type_="check")
+    op.drop_constraint("upload_claim_is_consistent", "attachments", type_="check")
+    op.drop_column("attachments", "upload_claim_expires_at")
     op.drop_column("attachments", "upload_lease_until")
     op.drop_column("attachments", "upload_claim_id")
