@@ -2,14 +2,15 @@
 
 Unexpected exception text is untrusted runtime data. It can contain provider
 bodies, database renderings, signed URLs, tokens, or private product content.
-The generic exception boundary therefore never treats a value as safe merely
-because it *looks* like a machine code.
+The generic exception boundary therefore never emits arbitrary exception text
+and never treats a value as safe merely because it *looks* like a machine code.
 
-A very small explicit compatibility allowlist may retain developer-authored
-codes that were already part of the application's diagnostic contract. Every
-other unexpected exception is reduced to its class name. Stable job/provider
-codes continue to use their existing explicit code paths instead of being
-recovered heuristically from ``str(exc)``.
+A very small compatibility shim may recognize developer-authored constants
+that were already part of the application's diagnostic contract, but the
+returned summary is always a static literal. No value derived from
+``str(exc)`` or from arbitrary exception arguments is copied into logs or
+persistent diagnostics. Stable job/provider codes continue to use their
+existing explicit typed paths.
 
 Tracebacks retain bounded structural context (file basename, line number and
 function name) but intentionally omit source-code lines. This keeps the stack
@@ -26,13 +27,6 @@ from types import TracebackType
 _TECHNICAL_CODE = re.compile(r"[A-Z0-9_-]{1,64}\Z")
 
 UNKNOWN_CODE = "UNKNOWN"
-
-# These values are developer-authored compatibility codes, not a pattern-based
-# trust decision. Do not add provider/user-derived values here.
-_EXPLICIT_SAFE_EXCEPTION_CODES: dict[str, str] = {
-    "ACCOUNT_UNAVAILABLE": "ACCOUNT_UNAVAILABLE",
-    "ACCOUNT_DELETION_CONVERGENCE_FAILED": "ACCOUNT_DELETION_CONVERGENCE_FAILED",
-}
 
 _MAX_CHAIN_DEPTH = 10
 _MAX_TRACEBACK_FRAMES = 50
@@ -61,24 +55,27 @@ def sanitize_error_code(value: str, *, default: str = UNKNOWN_CODE) -> str:
 def safe_exception_summary(exc: BaseException) -> str:
     """Return a bounded, privacy-safe one-line summary of ``exc``.
 
-    The exception class name is developer-authored structural metadata. The
-    exception message is untrusted and is never returned directly. Two legacy
-    developer-authored codes are retained through an explicit constant map;
-    all other messages, including values that happen to match the technical
-    code regex, are dropped.
+    The exception class name is developer-authored structural metadata.
+    Arbitrary exception messages are never rendered or copied. Two legacy
+    RuntimeError codes that pre-date this generic boundary are recognized only
+    to preserve their existing diagnostic contract; even there the output is a
+    static literal rather than data read back from the exception.
 
-    A broken ``__str__`` cannot break logging or persistence: it simply falls
-    back to the class name.
+    Generic controlled retry/provider codes should continue to use their
+    existing typed code paths rather than relying on this compatibility shim.
     """
     name = type(exc).__name__
-    try:
-        message = str(exc).strip()
-    except Exception:
-        return name
 
-    safe_code = _EXPLICIT_SAFE_EXCEPTION_CODES.get(message)
-    if safe_code is not None:
-        return f"{name}: {safe_code}"
+    # Do not call str(exc): exception text is untrusted runtime data. The exact
+    # built-in RuntimeError + one plain-string argument shape prevents custom
+    # equality/formatting hooks from participating in this compatibility path,
+    # and the emitted value is a static literal rather than the argument.
+    if type(exc) is RuntimeError and len(exc.args) == 1 and type(exc.args[0]) is str:
+        if exc.args[0] == "ACCOUNT_UNAVAILABLE":
+            return "RuntimeError: ACCOUNT_UNAVAILABLE"
+        if exc.args[0] == "ACCOUNT_DELETION_CONVERGENCE_FAILED":
+            return "RuntimeError: ACCOUNT_DELETION_CONVERGENCE_FAILED"
+
     return name
 
 
