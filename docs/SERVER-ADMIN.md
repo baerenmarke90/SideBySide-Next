@@ -43,10 +43,9 @@ workflow so the new configuration is loaded.
 
 ## Deployment plumbing
 
-The setting is passed through both supported Self-Hosted Compose paths:
-
-- `compose.yaml` for a complete repository checkout;
-- `compose.arcane.yaml` for the remote-source Arcane workflow.
+ServerAdmin uses the single repository-root `compose.yaml` deployment contract.
+Complete checkouts and Arcane both use the `self-hosted` profile; Arcane changes
+only the Backend/Web build contexts through environment configuration.
 
 `.env.example` and `deploy/persistent-development.env.example` both document the
 setting. Development, Demo, and Production installations manage their own
