@@ -760,6 +760,15 @@
     <string name="account_delete_export_first">Vorher Daten exportieren</string>
     <string name="account_delete_cancel">Abbrechen</string>
     <string name="account_delete_continue">Weiter</string>
+    <string name="account_delete_reauth_title">Identität bestätigen</string>
+    <string name="account_delete_reauth_intro">Bestätige deine Identität erneut. Welche Methode verfügbar ist, entscheidet der Server für dieses Konto und diese Sitzung.</string>
+    <string name="account_delete_reauth_loading">Verfügbare Anmeldemethoden werden geladen …</string>
+    <string name="account_delete_reauth_password_label">Aktuelles Passwort</string>
+    <string name="account_delete_reauth_password_action">Mit Passwort bestätigen</string>
+    <string name="account_delete_reauth_passkey_action">Mit Passkey bestätigen</string>
+    <string name="account_delete_reauth_oidc_action">Mit %1$s erneut anmelden</string>
+    <string name="account_delete_reauth_unavailable">Für dieses Konto ist auf Android aktuell keine Methode zur erneuten Identitätsbestätigung verfügbar. Die Kontolöschung bleibt gesperrt.</string>
+    <string name="account_delete_reauth_pending">Identität wird bestätigt …</string>
     <string name="account_delete_confirmation_title">Kontolöschung bestätigen</string>
     <string name="account_delete_confirmation_intro">Diese Aktion kann nach der Annahme durch den Server nicht rückgängig gemacht werden.</string>
     <string name="account_delete_confirmation_instruction">Gib %1$s ein, um dein Konto endgültig zur Löschung freizugeben.</string>

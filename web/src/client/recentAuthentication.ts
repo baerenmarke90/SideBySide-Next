@@ -1,0 +1,231 @@
+import { AuthApi } from '../api/generated/apis/AuthApi';
+import type { CapabilitiesView } from '../api/generated/models/CapabilitiesView';
+import type { RecentAuthenticationView } from '../api/generated/models/RecentAuthenticationView';
+import { Configuration } from '../api/generated/runtime';
+import { normalizeClientError } from './problemDetails';
+
+const OIDC_POPUP_POLL_MS = 200;
+const OIDC_POPUP_TIMEOUT_MS = 2 * 60 * 1000;
+
+function api(apiBaseUrl: string, accessToken: string): AuthApi {
+  return new AuthApi(
+    new Configuration({
+      basePath: apiBaseUrl,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+  );
+}
+
+function decodeBase64Url(value: string): ArrayBuffer {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  const raw = window.atob(padded);
+  const bytes = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index += 1) {
+    bytes[index] = raw.charCodeAt(index);
+  }
+  return bytes.buffer;
+}
+
+function encodeBase64Url(value: ArrayBuffer): string {
+  const bytes = new Uint8Array(value);
+  let raw = '';
+  for (const byte of bytes) raw += String.fromCharCode(byte);
+  return window
+    .btoa(raw)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function requestOptionsFromJson(
+  value: Record<string, unknown>,
+): PublicKeyCredentialRequestOptions {
+  const allowCredentials = Array.isArray(value.allowCredentials)
+    ? value.allowCredentials.map((item) => {
+        const descriptor = item as Record<string, unknown>;
+        return {
+          id: decodeBase64Url(String(descriptor.id)),
+          type: 'public-key' as const,
+          transports: Array.isArray(descriptor.transports)
+            ? (descriptor.transports as AuthenticatorTransport[])
+            : undefined,
+        };
+      })
+    : undefined;
+
+  return {
+    challenge: decodeBase64Url(String(value.challenge)),
+    timeout: typeof value.timeout === 'number' ? value.timeout : undefined,
+    rpId: typeof value.rpId === 'string' ? value.rpId : undefined,
+    allowCredentials,
+    userVerification:
+      typeof value.userVerification === 'string'
+        ? (value.userVerification as UserVerificationRequirement)
+        : undefined,
+    extensions:
+      value.extensions && typeof value.extensions === 'object'
+        ? (value.extensions as AuthenticationExtensionsClientInputs)
+        : undefined,
+  };
+}
+
+function assertionToJson(
+  credential: PublicKeyCredential,
+): Record<string, unknown> {
+  if (!(credential.response instanceof AuthenticatorAssertionResponse)) {
+    throw new Error('The authenticator did not return a WebAuthn assertion.');
+  }
+  const response = credential.response;
+  return {
+    id: credential.id,
+    rawId: encodeBase64Url(credential.rawId),
+    type: credential.type,
+    response: {
+      clientDataJSON: encodeBase64Url(response.clientDataJSON),
+      authenticatorData: encodeBase64Url(response.authenticatorData),
+      signature: encodeBase64Url(response.signature),
+      userHandle: response.userHandle
+        ? encodeBase64Url(response.userHandle)
+        : null,
+    },
+    clientExtensionResults: credential.getClientExtensionResults(),
+    authenticatorAttachment: credential.authenticatorAttachment,
+  };
+}
+
+async function normalize<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    throw await normalizeClientError(error);
+  }
+}
+
+export async function loadRecentAuthenticationCapabilities(
+  apiBaseUrl: string,
+  accessToken: string,
+): Promise<CapabilitiesView> {
+  return normalize(() =>
+    api(
+      apiBaseUrl,
+      accessToken,
+    ).capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(),
+  );
+}
+
+export async function authenticateRecentPassword(
+  apiBaseUrl: string,
+  accessToken: string,
+  password: string,
+): Promise<RecentAuthenticationView> {
+  return normalize(() =>
+    api(
+      apiBaseUrl,
+      accessToken,
+    ).passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost({
+      passwordRequest: { password },
+    }),
+  );
+}
+
+export async function authenticateRecentPasskey(
+  apiBaseUrl: string,
+  accessToken: string,
+): Promise<RecentAuthenticationView> {
+  if (!window.PublicKeyCredential || !navigator.credentials) {
+    throw new Error('WebAuthn is not available in this browser.');
+  }
+
+  return normalize(async () => {
+    const authApi = api(apiBaseUrl, accessToken);
+    const options =
+      await authApi.startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost();
+    const result = await navigator.credentials.get({
+      publicKey: requestOptionsFromJson(options),
+    });
+    if (!(result instanceof PublicKeyCredential)) {
+      throw new Error('Passkey authentication was cancelled or unavailable.');
+    }
+    return authApi.finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost(
+      {
+        passkeyFinishRequest: { credential: assertionToJson(result) },
+      },
+    );
+  });
+}
+
+function waitForOidcCallback(
+  popup: Window,
+  expectedState: string,
+): Promise<{ code: string; state: string }> {
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      if (popup.closed) {
+        window.clearInterval(timer);
+        reject(new Error('OIDC reauthentication was cancelled.'));
+        return;
+      }
+      if (Date.now() - startedAt > OIDC_POPUP_TIMEOUT_MS) {
+        popup.close();
+        window.clearInterval(timer);
+        reject(new Error('OIDC reauthentication timed out.'));
+        return;
+      }
+
+      try {
+        const callback = new URL(popup.location.href);
+        const state = callback.searchParams.get('state');
+        if (state !== expectedState) return;
+
+        const providerError = callback.searchParams.get('error');
+        if (providerError) {
+          popup.close();
+          window.clearInterval(timer);
+          reject(new Error('The identity provider rejected reauthentication.'));
+          return;
+        }
+
+        const code = callback.searchParams.get('code');
+        if (!code) return;
+        popup.close();
+        window.clearInterval(timer);
+        resolve({ code, state });
+      } catch {
+        // Cross-origin reads fail while the popup is at the identity provider.
+        // Once it reaches the configured SideBySide redirect URI the URL is
+        // same-origin again and can be consumed without exposing provider data.
+      }
+    }, OIDC_POPUP_POLL_MS);
+  });
+}
+
+export async function authenticateRecentOidc(
+  apiBaseUrl: string,
+  accessToken: string,
+  connectionId: string,
+): Promise<RecentAuthenticationView> {
+  return normalize(async () => {
+    const authApi = api(apiBaseUrl, accessToken);
+    const started =
+      await authApi.startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(
+        { connectionId },
+      );
+    const popup = window.open(
+      started.authorizationUrl,
+      'sidebyside-recent-authentication',
+      'popup,width=520,height=720',
+    );
+    if (!popup) {
+      throw new Error('The browser blocked the reauthentication window.');
+    }
+    const callback = await waitForOidcCallback(popup, started.state);
+    return authApi.completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(
+      {
+        connectionId,
+        sidebysideApiV1RecentAuthenticationOidcCallbackRequest: callback,
+      },
+    );
+  });
+}

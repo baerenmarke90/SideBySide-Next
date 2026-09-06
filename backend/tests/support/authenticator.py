@@ -75,9 +75,15 @@ class VirtualAuthenticator:
             flags |= FLAG_ATTESTED_DATA
         return flags
 
-    def _auth_data(self, *, attested: bool, rp_id: str | None = None) -> bytes:
+    def _auth_data(
+        self,
+        *,
+        attested: bool,
+        rp_id: str | None = None,
+        user_verified: bool = True,
+    ) -> bytes:
         rp_hash = hashlib.sha256((rp_id or self.rp_id).encode("utf-8")).digest()
-        data = rp_hash + bytes([self._flags(attested=attested, user_verified=True)])
+        data = rp_hash + bytes([self._flags(attested=attested, user_verified=user_verified)])
         data += struct.pack(">I", self.sign_count)
         if attested:
             cose_key = self._cose_key()
@@ -140,13 +146,18 @@ class VirtualAuthenticator:
         rp_id: str | None = None,
         increment_counter: bool = True,
         sign_with: ec.EllipticCurvePrivateKey | None = None,
+        user_verified: bool = True,
     ) -> dict[str, Any]:
         if increment_counter:
             self.sign_count += 1
         client_data = self._client_data(
             ceremony_type="webauthn.get", challenge=options["challenge"], origin=origin
         )
-        auth_data = self._auth_data(attested=False, rp_id=rp_id)
+        auth_data = self._auth_data(
+            attested=False,
+            rp_id=rp_id,
+            user_verified=user_verified,
+        )
         signature = (sign_with or self.private_key).sign(
             auth_data + hashlib.sha256(client_data).digest(),
             ec.ECDSA(hashes.SHA256()),

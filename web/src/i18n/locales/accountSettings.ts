@@ -24,9 +24,22 @@ export default {
   exportBefore: 'Vorher Daten exportieren',
   continueAction: 'Weiter',
   cancelAction: 'Abbrechen',
+  reauthEyebrow: 'Sicherheitsprüfung',
+  reauthTitle: 'Identität bestätigen',
+  reauthIntro:
+    'Bestätige deine Identität erneut. Welche Methode verfügbar ist, entscheidet der Server anhand deines aktuellen Kontos und dieser Sitzung.',
+  reauthLoading: 'Verfügbare Anmeldemethoden werden geladen …',
+  reauthPasswordLabel: 'Aktuelles Passwort',
+  reauthPasswordAction: 'Mit Passwort bestätigen',
+  reauthPasskeyAction: 'Mit Passkey bestätigen',
+  reauthOidcAction: 'Mit {{provider}} erneut anmelden',
+  reauthUnavailableTitle: 'Keine Bestätigungsmethode verfügbar',
+  reauthUnavailableBody:
+    'Für dieses Konto ist aktuell keine Methode zur erneuten Identitätsbestätigung verfügbar. Die Kontolöschung bleibt gesperrt.',
+  reauthPending: 'Identität wird bestätigt …',
   finalTitle: 'Kontolöschung bestätigen',
   finalIntro:
-    'Diese Aktion kann nach der Annahme durch den Server nicht rückgängig gemacht werden.',
+    'Deine Identität wurde bestätigt. Diese Aktion kann nach der Annahme durch den Server nicht rückgängig gemacht werden.',
   confirmInstruction:
     'Gib {{phrase}} ein, um dein Konto endgültig zur Löschung freizugeben.',
   confirmLabel: 'Bestätigung',

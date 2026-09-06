@@ -207,6 +207,12 @@ data class ReferenceUiState(
     val spaceOffboardingProblem: UiProblem? = null,
     val accountDeletionBusy: Boolean = false,
     val accountDeletionProblem: UiProblem? = null,
+    val accountDeletionRecentAuthenticationCapabilities: AccountDeletionRecentAuthenticationCapabilities? = null,
+    val accountDeletionRecentAuthenticationBusy: Boolean = false,
+    val accountDeletionRecentAuthenticationProblem: UiProblem? = null,
+    val accountDeletionRecentAuthenticationComplete: Boolean = false,
+    val accountDeletionPasskeyRequest: String? = null,
+    val accountDeletionOidcPending: AccountDeletionOidcPending? = null,
     val busy: Boolean = false,
     val status: UiMessage? = null,
     /**
@@ -5209,6 +5215,223 @@ class ReferenceViewModel(
     private fun clearProductReadCache() {
         val cache = productReadCache ?: return
         viewModelScope.launch { cache.clearAll() }
+    }
+
+    fun resetAccountDeletionRecentAuthentication() {
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationCapabilities = null,
+                accountDeletionRecentAuthenticationBusy = false,
+                accountDeletionRecentAuthenticationProblem = null,
+                accountDeletionRecentAuthenticationComplete = false,
+                accountDeletionPasskeyRequest = null,
+                accountDeletionOidcPending = null,
+            )
+        }
+    }
+
+    fun loadAccountDeletionRecentAuthentication() {
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+                accountDeletionRecentAuthenticationComplete = false,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.accountDeletionRecentAuthenticationCapabilities(currentSession.tokens.accessToken)
+            }.onSuccess { capabilities ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationCapabilities = capabilities,
+                        accountDeletionRecentAuthenticationBusy = false,
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun authenticateAccountDeletionPassword(password: String) {
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.accountDeletionRecentAuthenticationPassword(currentSession.tokens.accessToken, password)
+            }.onSuccess {
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationBusy = false,
+                        accountDeletionRecentAuthenticationComplete = true,
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun startAccountDeletionPasskey() {
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+                accountDeletionPasskeyRequest = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.startAccountDeletionRecentAuthenticationPasskey(currentSession.tokens.accessToken)
+            }.onSuccess { requestJson ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationBusy = false,
+                        accountDeletionPasskeyRequest = requestJson,
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun finishAccountDeletionPasskey(authenticationResponseJson: String) {
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+                accountDeletionPasskeyRequest = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.finishAccountDeletionRecentAuthenticationPasskey(
+                    currentSession.tokens.accessToken,
+                    authenticationResponseJson,
+                )
+            }.onSuccess {
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationBusy = false,
+                        accountDeletionRecentAuthenticationComplete = true,
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun startAccountDeletionOidc(connectionId: String) {
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+                accountDeletionOidcPending = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.startAccountDeletionRecentAuthenticationOidc(
+                    currentSession.tokens.accessToken,
+                    connectionId,
+                )
+            }.onSuccess { started ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationBusy = false,
+                        accountDeletionOidcPending = AccountDeletionOidcPending(
+                            connectionId = connectionId,
+                            authorizationUrl = started.authorizationUrl,
+                            state = started.state,
+                        ),
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun finishAccountDeletionOidc(code: String, state: String) {
+        val pending = _uiState.value.accountDeletionOidcPending ?: return
+        if (pending.state != state) {
+            failAccountDeletionRecentAuthentication(IllegalArgumentException("OIDC state mismatch"))
+            return
+        }
+        val api = contract as? AccountDeletionRecentAuthenticationContract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = true,
+                accountDeletionRecentAuthenticationProblem = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                api.finishAccountDeletionRecentAuthenticationOidc(
+                    currentSession.tokens.accessToken,
+                    pending.connectionId,
+                    code,
+                    state,
+                )
+            }.onSuccess {
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        accountDeletionRecentAuthenticationBusy = false,
+                        accountDeletionRecentAuthenticationComplete = true,
+                        accountDeletionOidcPending = null,
+                    )
+                }
+            }.onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                failAccountDeletionRecentAuthentication(throwable)
+            }
+        }
+    }
+
+    fun failAccountDeletionRecentAuthentication(throwable: Throwable) {
+        mutate {
+            it.copy(
+                accountDeletionRecentAuthenticationBusy = false,
+                accountDeletionRecentAuthenticationProblem = problemFor(throwable),
+                accountDeletionPasskeyRequest = null,
+                accountDeletionOidcPending = null,
+            )
+        }
     }
 
     fun deleteOwnAccount() {

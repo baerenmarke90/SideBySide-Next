@@ -16,49 +16,49 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface OidcCallbackRequest
+ * @interface SidebysideApiV1AuthOidcCallbackRequest
  */
-export interface OidcCallbackRequest {
+export interface SidebysideApiV1AuthOidcCallbackRequest {
     /**
      * 
      * @type {string}
-     * @memberof OidcCallbackRequest
+     * @memberof SidebysideApiV1AuthOidcCallbackRequest
      */
     code: string;
     /**
      * 
      * @type {string}
-     * @memberof OidcCallbackRequest
+     * @memberof SidebysideApiV1AuthOidcCallbackRequest
      */
     deviceName?: string;
     /**
      * 
      * @type {string}
-     * @memberof OidcCallbackRequest
+     * @memberof SidebysideApiV1AuthOidcCallbackRequest
      */
     platform?: string;
     /**
      * 
      * @type {string}
-     * @memberof OidcCallbackRequest
+     * @memberof SidebysideApiV1AuthOidcCallbackRequest
      */
     state: string;
 }
 
 /**
- * Check if a given object implements the OidcCallbackRequest interface.
+ * Check if a given object implements the SidebysideApiV1AuthOidcCallbackRequest interface.
  */
-export function instanceOfOidcCallbackRequest(value: object): value is OidcCallbackRequest {
+export function instanceOfSidebysideApiV1AuthOidcCallbackRequest(value: object): value is SidebysideApiV1AuthOidcCallbackRequest {
     if (!('code' in value) || value['code'] === undefined) return false;
     if (!('state' in value) || value['state'] === undefined) return false;
     return true;
 }
 
-export function OidcCallbackRequestFromJSON(json: any): OidcCallbackRequest {
-    return OidcCallbackRequestFromJSONTyped(json, false);
+export function SidebysideApiV1AuthOidcCallbackRequestFromJSON(json: any): SidebysideApiV1AuthOidcCallbackRequest {
+    return SidebysideApiV1AuthOidcCallbackRequestFromJSONTyped(json, false);
 }
 
-export function OidcCallbackRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean): OidcCallbackRequest {
+export function SidebysideApiV1AuthOidcCallbackRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean): SidebysideApiV1AuthOidcCallbackRequest {
     if (json == null) {
         return json;
     }
@@ -71,11 +71,11 @@ export function OidcCallbackRequestFromJSONTyped(json: any, ignoreDiscriminator:
     };
 }
 
-export function OidcCallbackRequestToJSON(json: any): OidcCallbackRequest {
-    return OidcCallbackRequestToJSONTyped(json, false);
+export function SidebysideApiV1AuthOidcCallbackRequestToJSON(json: any): SidebysideApiV1AuthOidcCallbackRequest {
+    return SidebysideApiV1AuthOidcCallbackRequestToJSONTyped(json, false);
 }
 
-export function OidcCallbackRequestToJSONTyped(value?: OidcCallbackRequest | null, ignoreDiscriminator: boolean = false): any {
+export function SidebysideApiV1AuthOidcCallbackRequestToJSONTyped(value?: SidebysideApiV1AuthOidcCallbackRequest | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

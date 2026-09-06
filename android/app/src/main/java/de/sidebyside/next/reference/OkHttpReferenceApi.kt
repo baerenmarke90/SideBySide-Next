@@ -10,8 +10,11 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -170,7 +173,7 @@ class OkHttpReferenceApi(
      * ways to reach the network.
      */
     private val connectivityTracker: ConnectivityTracker? = null,
-) : ReferenceContract {
+) : ReferenceContract, AccountDeletionRecentAuthenticationContract {
     private val baseUrl = apiBaseUrl.trimEnd('/')
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
     private val zipMediaType = "application/zip".toMediaType()
@@ -243,6 +246,104 @@ class OkHttpReferenceApi(
                 .build(),
             SpaceMembershipExitView.serializer(),
         )
+
+    override suspend fun accountDeletionRecentAuthenticationCapabilities(
+        accessToken: String,
+    ): AccountDeletionRecentAuthenticationCapabilities {
+        val payload = executeJson(
+            authenticatedRequest(
+                "$baseUrl/api/v1/auth/recent-authentication/account-deletion?client=android",
+                accessToken,
+            ).get().build(),
+            JsonObject.serializer(),
+        )
+        return AccountDeletionRecentAuthenticationCapabilities(
+            localPassword = payload["localPassword"]?.jsonPrimitive?.content == "true",
+            passkey = payload["passkey"]?.jsonPrimitive?.content == "true",
+            oidcConnections = payload["oidcConnections"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                .orEmpty(),
+        )
+    }
+
+    override suspend fun accountDeletionRecentAuthenticationPassword(
+        accessToken: String,
+        password: String,
+    ) {
+        val body = buildJsonObject { put("password", JsonPrimitive(password)) }
+        executeEmpty(
+            authenticatedRequest(
+                "$baseUrl/api/v1/auth/recent-authentication/account-deletion/password",
+                accessToken,
+            ).post(body.toString().toRequestBody(jsonMediaType)).build(),
+        )
+    }
+
+    override suspend fun startAccountDeletionRecentAuthenticationPasskey(
+        accessToken: String,
+    ): String = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/auth/recent-authentication/account-deletion/passkeys/start",
+            accessToken,
+        ).post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        JsonObject.serializer(),
+    ).toString()
+
+    override suspend fun finishAccountDeletionRecentAuthenticationPasskey(
+        accessToken: String,
+        authenticationResponseJson: String,
+    ) {
+        val credential = SideBySideJson.parseToJsonElement(authenticationResponseJson)
+        val body = buildJsonObject { put("credential", credential) }
+        executeEmpty(
+            authenticatedRequest(
+                "$baseUrl/api/v1/auth/recent-authentication/account-deletion/passkeys/finish",
+                accessToken,
+            ).post(body.toString().toRequestBody(jsonMediaType)).build(),
+        )
+    }
+
+    override suspend fun startAccountDeletionRecentAuthenticationOidc(
+        accessToken: String,
+        connectionId: String,
+    ): AccountDeletionOidcStart {
+        val encodedConnection = java.net.URLEncoder
+            .encode(connectionId, Charsets.UTF_8.name())
+            .replace("+", "%20")
+        val payload = executeJson(
+            authenticatedRequest(
+                "$baseUrl/api/v1/auth/recent-authentication/account-deletion/oidc/$encodedConnection/start?client=android",
+                accessToken,
+            ).post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+            JsonObject.serializer(),
+        )
+        return AccountDeletionOidcStart(
+            authorizationUrl = payload.getValue("authorizationUrl").jsonPrimitive.content,
+            state = payload.getValue("state").jsonPrimitive.content,
+        )
+    }
+
+    override suspend fun finishAccountDeletionRecentAuthenticationOidc(
+        accessToken: String,
+        connectionId: String,
+        code: String,
+        state: String,
+    ) {
+        val encodedConnection = java.net.URLEncoder
+            .encode(connectionId, Charsets.UTF_8.name())
+            .replace("+", "%20")
+        val body = buildJsonObject {
+            put("code", JsonPrimitive(code))
+            put("state", JsonPrimitive(state))
+        }
+        executeEmpty(
+            authenticatedRequest(
+                "$baseUrl/api/v1/auth/recent-authentication/account-deletion/oidc/$encodedConnection/callback",
+                accessToken,
+            ).post(body.toString().toRequestBody(jsonMediaType)).build(),
+        )
+    }
 
     override suspend fun deleteOwnAccount(
         accessToken: String,

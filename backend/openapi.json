@@ -620,6 +620,37 @@
         "title": "AuthorSummary",
         "type": "object"
       },
+      "CapabilitiesView": {
+        "properties": {
+          "expiresInSeconds": {
+            "title": "Expiresinseconds",
+            "type": "integer"
+          },
+          "localPassword": {
+            "title": "Localpassword",
+            "type": "boolean"
+          },
+          "oidcConnections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Oidcconnections",
+            "type": "array"
+          },
+          "passkey": {
+            "title": "Passkey",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "localPassword",
+          "passkey",
+          "oidcConnections",
+          "expiresInSeconds"
+        ],
+        "title": "CapabilitiesView",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "properties": {
           "currentPassword": {
@@ -3214,34 +3245,6 @@
         "title": "NotificationsReadAllResult",
         "type": "object"
       },
-      "OidcCallbackRequest": {
-        "properties": {
-          "code": {
-            "title": "Code",
-            "type": "string"
-          },
-          "deviceName": {
-            "default": "",
-            "title": "Devicename",
-            "type": "string"
-          },
-          "platform": {
-            "default": "",
-            "title": "Platform",
-            "type": "string"
-          },
-          "state": {
-            "title": "State",
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "state"
-        ],
-        "title": "OidcCallbackRequest",
-        "type": "object"
-      },
       "OidcStartRequest": {
         "properties": {
           "invitationToken": {
@@ -3404,6 +3407,20 @@
         "title": "PasskeyAuthenticationRequest",
         "type": "object"
       },
+      "PasskeyFinishRequest": {
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "title": "Credential",
+            "type": "object"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "title": "PasskeyFinishRequest",
+        "type": "object"
+      },
       "PasskeyRegistrationRequest": {
         "properties": {
           "credential": {
@@ -3446,6 +3463,19 @@
           "createdAt"
         ],
         "title": "PasskeyView",
+        "type": "object"
+      },
+      "PasswordRequest": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "PasswordRequest",
         "type": "object"
       },
       "PersonRelationship": {
@@ -4623,6 +4653,44 @@
           "database"
         ],
         "title": "Readiness",
+        "type": "object"
+      },
+      "RecentAuthenticationClient": {
+        "enum": [
+          "web",
+          "android"
+        ],
+        "title": "RecentAuthenticationClient",
+        "type": "string"
+      },
+      "RecentAuthenticationView": {
+        "properties": {
+          "achievedAt": {
+            "format": "date-time",
+            "title": "Achievedat",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose",
+          "method",
+          "achievedAt",
+          "expiresAt"
+        ],
+        "title": "RecentAuthenticationView",
         "type": "object"
       },
       "RecoveryConsumeRequest": {
@@ -7921,6 +7989,52 @@
         },
         "title": "WishUpdate",
         "type": "object"
+      },
+      "sidebyside__api__v1__auth__OidcCallbackRequest": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "deviceName": {
+            "default": "",
+            "title": "Devicename",
+            "type": "string"
+          },
+          "platform": {
+            "default": "",
+            "title": "Platform",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ],
+        "title": "OidcCallbackRequest",
+        "type": "object"
+      },
+      "sidebyside__api__v1__recent_authentication__OidcCallbackRequest": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ],
+        "title": "OidcCallbackRequest",
+        "type": "object"
       }
     }
   },
@@ -7933,7 +8047,7 @@
   "paths": {
     "/api/v1/account/deletion": {
       "post": {
-        "description": "Accept deletion for the authenticated Account only.\n\nNo Account identifier is accepted from the client, so this route cannot be\nrepurposed into a cross-account deletion primitive. Once the external\ntombstone and fail-closed state commit, cleanup continues through the\nexisting worker even if the client disconnects.",
+        "description": "Accept deletion only after confirmation and recent authentication.\n\nThe confirmation literal prevents accidental UI activation; it is not an\nauthentication factor. A separate server-side recent-authentication grant\nmust therefore authorize this exact Account, DeviceSession, and deletion\npurpose before the existing irreversible deletion pipeline is entered.\n\nNo Account identifier or recent-auth proof is accepted from the client, so\nneither cross-account deletion nor client-forged step-up state is possible.\nOnce the external tombstone and fail-closed state commit, cleanup continues\nthrough the existing worker even if the client disconnects.",
         "operationId": "delete_own_account_api_v1_account_deletion_post",
         "requestBody": {
           "content": {
@@ -8297,7 +8411,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OidcCallbackRequest"
+                "$ref": "#/components/schemas/sidebyside__api__v1__auth__OidcCallbackRequest"
               }
             }
           },
@@ -8714,6 +8828,396 @@
           }
         },
         "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion": {
+      "get": {
+        "operationId": "capabilities_api_v1_auth_recent_authentication_account_deletion_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "client",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RecentAuthenticationClient",
+              "default": "web"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/callback": {
+      "post": {
+        "operationId": "complete_oidc_api_v1_auth_recent_authentication_account_deletion_oidc__connectionId__callback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectionId",
+            "required": true,
+            "schema": {
+              "title": "Connectionid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sidebyside__api__v1__recent_authentication__OidcCallbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentAuthenticationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Complete Oidc",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/start": {
+      "post": {
+        "operationId": "start_oidc_api_v1_auth_recent_authentication_account_deletion_oidc__connectionId__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connectionId",
+            "required": true,
+            "schema": {
+              "title": "Connectionid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "client",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RecentAuthenticationClient",
+              "default": "web"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcStartView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          }
+        },
+        "summary": "Start Oidc",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion/passkeys/finish": {
+      "post": {
+        "operationId": "finish_passkey_api_v1_auth_recent_authentication_account_deletion_passkeys_finish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyFinishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentAuthenticationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Finish Passkey",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion/passkeys/start": {
+      "post": {
+        "operationId": "start_passkey_api_v1_auth_recent_authentication_account_deletion_passkeys_start_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Passkey Api V1 Auth Recent Authentication Account Deletion Passkeys Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          }
+        },
+        "summary": "Start Passkey",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recent-authentication/account-deletion/password": {
+      "post": {
+        "operationId": "password_api_v1_auth_recent_authentication_account_deletion_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentAuthenticationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          }
+        },
+        "summary": "Password",
         "tags": [
           "auth"
         ]

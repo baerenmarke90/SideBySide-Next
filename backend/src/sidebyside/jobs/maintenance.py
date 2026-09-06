@@ -20,7 +20,15 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import oidc, passkeys, rate_limit, sessions
+from sidebyside.auth import (
+    oidc,
+    passkeys,
+    rate_limit,
+    recent_auth,
+    recent_oidc,
+    recent_passkeys,
+    sessions,
+)
 from sidebyside.jobs import queue
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
@@ -44,7 +52,7 @@ Without it, two workers starting concurrently could both inspect the queue,
 both find nothing, and both enqueue a job. The lock lasts until the end of
 the transaction and needs no dedicated table.
 
-A duplicate run would still be harmless because both prune functions are
+A duplicate run would still be harmless because all prune functions are
 idempotent. The lock merely keeps the queue tidy.
 """
 
@@ -95,23 +103,16 @@ def schedule_next(session: Session, *, delay: timedelta | None = None) -> Job | 
 
 
 def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
-    """Prune expired security state and schedule the next run.
-
-    Retention periods remain defined where the data originates:
-    `sessions.REPLAY_HISTORY_RETENTION`, the default in `rate_limit.prune()`,
-    and the lifetime of an initiated OIDC authentication request. This job
-    makes no retention decisions; it merely makes sure those decisions are
-    actually applied.
-
-    Active token families retain their complete history because that history
-    *is* replay detection, and `prune_replay_history` does not touch it.
-    """
+    """Prune expired security state and schedule the next run."""
     del payload
 
     replay_history = sessions.prune_replay_history(session)
     rate_limits = rate_limit.prune(session)
     oidc_requests = oidc.prune_auth_requests(session)
     ceremonies = passkeys.prune_challenges(session)
+    recent_grants = recent_auth.prune_grants(session)
+    recent_oidc_requests = recent_oidc.prune_requests(session)
+    recent_passkey_challenges = recent_passkeys.prune_challenges(session)
 
     log.info(
         "security retention completed",
@@ -120,6 +121,9 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
             "rate_limit_events_removed": rate_limits,
             "oidc_auth_requests_removed": oidc_requests,
             "webauthn_challenges_removed": ceremonies,
+            "recent_authentication_grants_removed": recent_grants,
+            "recent_authentication_oidc_requests_removed": recent_oidc_requests,
+            "recent_authentication_passkey_challenges_removed": recent_passkey_challenges,
         },
     )
 

@@ -4,17 +4,21 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet**](AuthApi.md#capabilitiesapiv1authrecentauthenticationaccountdeletionget) | **GET** /api/v1/auth/recent-authentication/account-deletion | Capabilities |
 | [**changePasswordApiV1AuthPasswordPost**](AuthApi.md#changepasswordapiv1authpasswordpost) | **POST** /api/v1/auth/password | Change Password |
 | [**completeOidcApiV1AuthOidcConnectionIdCallbackPost**](AuthApi.md#completeoidcapiv1authoidcconnectionidcallbackpost) | **POST** /api/v1/auth/oidc/{connectionId}/callback | Complete Oidc |
+| [**completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost**](AuthApi.md#completeoidcapiv1authrecentauthenticationaccountdeletionoidcconnectionidcallbackpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/callback | Complete Oidc |
 | [**confirmEmailApiV1AuthEmailVerificationConfirmPost**](AuthApi.md#confirmemailapiv1authemailverificationconfirmpost) | **POST** /api/v1/auth/email/verification/confirm | Confirm Email |
 | [**consumeMagicLinkApiV1AuthMagicLinkConsumePost**](AuthApi.md#consumemagiclinkapiv1authmagiclinkconsumepost) | **POST** /api/v1/auth/magic-link/consume | Consume Magic Link |
 | [**consumeRecoveryApiV1AuthRecoveryConsumePost**](AuthApi.md#consumerecoveryapiv1authrecoveryconsumepost) | **POST** /api/v1/auth/recovery/consume | Consume Recovery |
+| [**finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost**](AuthApi.md#finishpasskeyapiv1authrecentauthenticationaccountdeletionpasskeysfinishpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/passkeys/finish | Finish Passkey |
 | [**finishPasskeyAuthenticationApiV1AuthPasskeysAuthenticationFinishPost**](AuthApi.md#finishpasskeyauthenticationapiv1authpasskeysauthenticationfinishpost) | **POST** /api/v1/auth/passkeys/authentication/finish | Finish Passkey Authentication |
 | [**finishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPost**](AuthApi.md#finishpasskeyregistrationapiv1authpasskeysregistrationfinishpost) | **POST** /api/v1/auth/passkeys/registration/finish | Finish Passkey Registration |
 | [**getAccountCapabilitiesApiV1AuthCapabilitiesGet**](AuthApi.md#getaccountcapabilitiesapiv1authcapabilitiesget) | **GET** /api/v1/auth/capabilities | Get Account Capabilities |
 | [**linkOidcApiV1AuthOidcConnectionIdLinkPost**](AuthApi.md#linkoidcapiv1authoidcconnectionidlinkpost) | **POST** /api/v1/auth/oidc/{connectionId}/link | Link Oidc |
 | [**listAccountMembershipsApiV1AuthMembershipsGet**](AuthApi.md#listaccountmembershipsapiv1authmembershipsget) | **GET** /api/v1/auth/memberships | List Account Memberships |
 | [**meApiV1AuthMeGet**](AuthApi.md#meapiv1authmeget) | **GET** /api/v1/auth/me | Me |
+| [**passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost**](AuthApi.md#passwordapiv1authrecentauthenticationaccountdeletionpasswordpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/password | Password |
 | [**refreshApiV1AuthRefreshPost**](AuthApi.md#refreshapiv1authrefreshpost) | **POST** /api/v1/auth/refresh | Refresh |
 | [**registerApiV1AuthRegisterPost**](AuthApi.md#registerapiv1authregisterpost) | **POST** /api/v1/auth/register | Register |
 | [**requestEmailVerificationApiV1AuthEmailVerificationRequestPost**](AuthApi.md#requestemailverificationapiv1authemailverificationrequestpost) | **POST** /api/v1/auth/email/verification/request | Request Email Verification |
@@ -23,9 +27,78 @@ All URIs are relative to *http://localhost*
 | [**signInApiV1AuthSignInPost**](AuthApi.md#signinapiv1authsigninpost) | **POST** /api/v1/auth/sign-in | Sign In |
 | [**signOutApiV1AuthSignOutPost**](AuthApi.md#signoutapiv1authsignoutpost) | **POST** /api/v1/auth/sign-out | Sign Out |
 | [**startOidcApiV1AuthOidcConnectionIdStartPost**](AuthApi.md#startoidcapiv1authoidcconnectionidstartpost) | **POST** /api/v1/auth/oidc/{connectionId}/start | Start Oidc |
+| [**startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost**](AuthApi.md#startoidcapiv1authrecentauthenticationaccountdeletionoidcconnectionidstartpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/oidc/{connectionId}/start | Start Oidc |
+| [**startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost**](AuthApi.md#startpasskeyapiv1authrecentauthenticationaccountdeletionpasskeysstartpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/passkeys/start | Start Passkey |
 | [**startPasskeyAuthenticationApiV1AuthPasskeysAuthenticationStartPost**](AuthApi.md#startpasskeyauthenticationapiv1authpasskeysauthenticationstartpost) | **POST** /api/v1/auth/passkeys/authentication/start | Start Passkey Authentication |
 | [**startPasskeyRegistrationApiV1AuthPasskeysRegistrationStartPost**](AuthApi.md#startpasskeyregistrationapiv1authpasskeysregistrationstartpost) | **POST** /api/v1/auth/passkeys/registration/start | Start Passkey Registration |
 
+
+
+## capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet
+
+> CapabilitiesView capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(client)
+
+Capabilities
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // RecentAuthenticationClient (optional)
+    client: ...,
+  } satisfies CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest;
+
+  try {
+    const data = await api.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **client** | `RecentAuthenticationClient` |  | [Optional] [Defaults to `undefined`] [Enum: web, android] |
+
+### Return type
+
+[**CapabilitiesView**](CapabilitiesView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## changePasswordApiV1AuthPasswordPost
@@ -100,7 +173,7 @@ No authorization required
 
 ## completeOidcApiV1AuthOidcConnectionIdCallbackPost
 
-> SessionView completeOidcApiV1AuthOidcConnectionIdCallbackPost(connectionId, oidcCallbackRequest)
+> SessionView completeOidcApiV1AuthOidcConnectionIdCallbackPost(connectionId, sidebysideApiV1AuthOidcCallbackRequest)
 
 Complete Oidc
 
@@ -122,8 +195,8 @@ async function example() {
   const body = {
     // string
     connectionId: connectionId_example,
-    // OidcCallbackRequest
-    oidcCallbackRequest: ...,
+    // SidebysideApiV1AuthOidcCallbackRequest
+    sidebysideApiV1AuthOidcCallbackRequest: ...,
   } satisfies CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest;
 
   try {
@@ -144,7 +217,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **connectionId** | `string` |  | [Defaults to `undefined`] |
-| **oidcCallbackRequest** | [OidcCallbackRequest](OidcCallbackRequest.md) |  | |
+| **sidebysideApiV1AuthOidcCallbackRequest** | [SidebysideApiV1AuthOidcCallbackRequest](SidebysideApiV1AuthOidcCallbackRequest.md) |  | |
 
 ### Return type
 
@@ -166,6 +239,77 @@ No authorization required
 | **201** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost
+
+> RecentAuthenticationView completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(connectionId, sidebysideApiV1RecentAuthenticationOidcCallbackRequest)
+
+Complete Oidc
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // string
+    connectionId: connectionId_example,
+    // SidebysideApiV1RecentAuthenticationOidcCallbackRequest
+    sidebysideApiV1RecentAuthenticationOidcCallbackRequest: ...,
+  } satisfies CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest;
+
+  try {
+    const data = await api.completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **connectionId** | `string` |  | [Defaults to `undefined`] |
+| **sidebysideApiV1RecentAuthenticationOidcCallbackRequest** | [SidebysideApiV1RecentAuthenticationOidcCallbackRequest](SidebysideApiV1RecentAuthenticationOidcCallbackRequest.md) |  | |
+
+### Return type
+
+[**RecentAuthenticationView**](RecentAuthenticationView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -368,6 +512,74 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost
+
+> RecentAuthenticationView finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost(passkeyFinishRequest)
+
+Finish Passkey
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // PasskeyFinishRequest
+    passkeyFinishRequest: ...,
+  } satisfies FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest;
+
+  try {
+    const data = await api.finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **passkeyFinishRequest** | [PasskeyFinishRequest](PasskeyFinishRequest.md) |  | |
+
+### Return type
+
+[**RecentAuthenticationView**](RecentAuthenticationView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
 
@@ -752,6 +964,74 @@ No authorization required
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost
+
+> RecentAuthenticationView passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost(passwordRequest)
+
+Password
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // PasswordRequest
+    passwordRequest: ...,
+  } satisfies PasswordApiV1AuthRecentAuthenticationAccountDeletionPasswordPostRequest;
+
+  try {
+    const data = await api.passwordApiV1AuthRecentAuthenticationAccountDeletionPasswordPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **passwordRequest** | [PasswordRequest](PasswordRequest.md) |  | |
+
+### Return type
+
+[**RecentAuthenticationView**](RecentAuthenticationView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1293,6 +1573,139 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost
+
+> OidcStartView startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(connectionId, client)
+
+Start Oidc
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // string
+    connectionId: connectionId_example,
+    // RecentAuthenticationClient (optional)
+    client: ...,
+  } satisfies StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest;
+
+  try {
+    const data = await api.startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **connectionId** | `string` |  | [Defaults to `undefined`] |
+| **client** | `RecentAuthenticationClient` |  | [Optional] [Defaults to `undefined`] [Enum: web, android] |
+
+### Return type
+
+[**OidcStartView**](OidcStartView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost
+
+> { [key: string]: any | null; } startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost()
+
+Start Passkey
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { StartPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  try {
+    const data = await api.startPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysStartPost();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+**{ [key: string]: any | null; }**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
 | **429** | Too many attempts occurred within the allowed time window. |  -  |
 

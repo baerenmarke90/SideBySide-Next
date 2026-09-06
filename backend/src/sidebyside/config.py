@@ -86,6 +86,9 @@ class OidcConnection(BaseModel):
     client_id: str = Field(min_length=1, max_length=256)
     client_secret: SecretStr | None = None
     redirect_uri: str = Field(min_length=1, max_length=512)
+    # Optional native-app callback registered with the provider. The client may
+    # select only this preconfigured URI; it can never supply an arbitrary redirect.
+    android_redirect_uri: str | None = Field(default=None, min_length=1, max_length=512)
     scopes: str = "openid email profile"
 
     @field_validator("issuer")

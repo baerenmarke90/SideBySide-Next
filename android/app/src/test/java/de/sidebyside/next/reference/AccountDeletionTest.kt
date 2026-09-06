@@ -63,6 +63,28 @@ class AccountDeletionTest {
         }
 
     @Test
+    fun recentAuthenticationUsesTheCurrentSessionAndUnlocksOnlyAfterSuccess() =
+        runTest(dispatcher) {
+            val api = DeletionApi()
+            val model = model(api)
+
+            model.signIn("someone@example.test", "secret")
+            advanceUntilIdle()
+
+            model.loadAccountDeletionRecentAuthentication()
+            advanceUntilIdle()
+            assertTrue(model.uiState.value.accountDeletionRecentAuthenticationCapabilities?.localPassword == true)
+            assertEquals(listOf("access"), api.recentAuthenticationCapabilityTokens)
+            assertFalse(model.uiState.value.accountDeletionRecentAuthenticationComplete)
+
+            model.authenticateAccountDeletionPassword("fresh-secret")
+            advanceUntilIdle()
+
+            assertEquals(listOf("access" to "fresh-secret"), api.recentAuthenticationPasswords)
+            assertTrue(model.uiState.value.accountDeletionRecentAuthenticationComplete)
+        }
+
+    @Test
     fun rejectedDeletionKeepsTheSessionAndSurfacesTheProblem() = runTest(dispatcher) {
         val api = DeletionApi(
             deletionFailure = ReferenceApiException(
@@ -93,9 +115,11 @@ class AccountDeletionTest {
 
 private class DeletionApi(
     private val deletionFailure: Throwable? = null,
-) : FakeReferenceContract() {
+) : FakeReferenceContract(), AccountDeletionRecentAuthenticationContract {
     val deletionTokens = mutableListOf<String>()
     val deletionRequests = mutableListOf<AccountDeletionRequest>()
+    val recentAuthenticationCapabilityTokens = mutableListOf<String>()
+    val recentAuthenticationPasswords = mutableListOf<Pair<String, String>>()
 
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
         account = AccountView(displayName = "Someone", id = UUID.randomUUID()),
@@ -115,6 +139,45 @@ private class DeletionApi(
         accessToken: String,
         cursor: String?,
     ): StoryPage = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
+
+    override suspend fun accountDeletionRecentAuthenticationCapabilities(
+        accessToken: String,
+    ): AccountDeletionRecentAuthenticationCapabilities {
+        recentAuthenticationCapabilityTokens += accessToken
+        return AccountDeletionRecentAuthenticationCapabilities(
+            localPassword = true,
+            passkey = false,
+            oidcConnections = emptyList(),
+        )
+    }
+
+    override suspend fun accountDeletionRecentAuthenticationPassword(
+        accessToken: String,
+        password: String,
+    ) {
+        recentAuthenticationPasswords += accessToken to password
+    }
+
+    override suspend fun startAccountDeletionRecentAuthenticationPasskey(
+        accessToken: String,
+    ): String = error("not used")
+
+    override suspend fun finishAccountDeletionRecentAuthenticationPasskey(
+        accessToken: String,
+        authenticationResponseJson: String,
+    ) = error("not used")
+
+    override suspend fun startAccountDeletionRecentAuthenticationOidc(
+        accessToken: String,
+        connectionId: String,
+    ): AccountDeletionOidcStart = error("not used")
+
+    override suspend fun finishAccountDeletionRecentAuthenticationOidc(
+        accessToken: String,
+        connectionId: String,
+        code: String,
+        state: String,
+    ) = error("not used")
 
     override suspend fun deleteOwnAccount(
         accessToken: String,

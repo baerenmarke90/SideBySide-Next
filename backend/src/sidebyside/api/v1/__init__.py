@@ -35,6 +35,7 @@ from sidebyside.api.v1 import (
     private_area,
     private_collections,
     profiles,
+    recent_authentication,
     reminders,
     rules,
     search,
@@ -53,6 +54,7 @@ router = APIRouter()
 # reachable while maintenance is active. Every normal product route below is
 # protected by one server-side dependency instead of client-side assumptions.
 router.include_router(auth.router)
+router.include_router(recent_authentication.router)
 router.include_router(health.router)
 router.include_router(instance.router)
 router.include_router(server_admin.router)

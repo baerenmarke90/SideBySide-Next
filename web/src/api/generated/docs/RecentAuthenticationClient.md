@@ -1,28 +1,20 @@
 
-# OidcCallbackRequest
+# RecentAuthenticationClient
 
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`code` | string
-`deviceName` | string
-`platform` | string
-`state` | string
 
 ## Example
 
 ```typescript
-import type { OidcCallbackRequest } from ''
+import type { RecentAuthenticationClient } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "code": null,
-  "deviceName": null,
-  "platform": null,
-  "state": null,
-} satisfies OidcCallbackRequest
+} satisfies RecentAuthenticationClient
 
 console.log(example)
 
@@ -31,7 +23,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as OidcCallbackRequest
+const exampleParsed = JSON.parse(exampleJSON) as RecentAuthenticationClient
 console.log(exampleParsed)
 ```
 

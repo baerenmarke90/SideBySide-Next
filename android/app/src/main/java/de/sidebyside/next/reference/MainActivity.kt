@@ -1,6 +1,8 @@
 package de.sidebyside.next.reference
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -9,6 +11,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPublicKeyCredentialOption
+import androidx.credentials.PublicKeyCredential
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -92,18 +98,35 @@ import sidebyside.api.models.EngagementTarget
 import sidebyside.api.models.ProfileVisibility
 
 class MainActivity : ComponentActivity() {
+    private val oidcCallback = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Declared rather than inherited: targetSdk 36 draws edge to edge
         // anyway, and stating it keeps the behaviour explicit for the shell
         // that consumes the insets.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        oidcCallback.value = intent?.data?.takeIf(::isRecentAuthenticationOidcCallback)
         setContent {
             SideBySideTheme {
-                ReferenceFlowRoute()
+                ReferenceFlowRoute(
+                    oidcCallback = oidcCallback.value,
+                    onOidcCallbackConsumed = { oidcCallback.value = null },
+                )
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        oidcCallback.value = intent.data?.takeIf(::isRecentAuthenticationOidcCallback)
+    }
+
+    private fun isRecentAuthenticationOidcCallback(uri: Uri): Boolean =
+        uri.scheme == "de.sidebyside.app" &&
+            uri.host == "recent-authentication" &&
+            uri.path == "/oidc"
 }
 
 /**
@@ -133,11 +156,14 @@ private fun referenceViewModelFactory(context: Context): ViewModelProvider.Facto
 
 @Composable
 private fun ReferenceFlowRoute(
+    oidcCallback: Uri? = null,
+    onOidcCallbackConsumed: () -> Unit = {},
     referenceViewModel: ReferenceViewModel = viewModel(factory = referenceViewModelFactory(LocalContext.current)),
 ) {
     val state by referenceViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val credentialManager = remember(context) { CredentialManager.create(context) }
     var imageSelectionEpoch by remember { mutableStateOf<Long?>(null) }
     var profileAvatarSelectionEpoch by remember { mutableStateOf<Long?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
@@ -177,6 +203,46 @@ private fun ReferenceFlowRoute(
                     }
             }
         }
+    }
+
+    LaunchedEffect(state.accountDeletionPasskeyRequest) {
+        val requestJson = state.accountDeletionPasskeyRequest ?: return@LaunchedEffect
+        runCatching {
+            val result = credentialManager.getCredential(
+                context = context,
+                request = GetCredentialRequest(
+                    credentialOptions = listOf(
+                        GetPublicKeyCredentialOption(requestJson = requestJson),
+                    ),
+                ),
+            )
+            val credential = result.credential as? PublicKeyCredential
+                ?: error("Credential Manager returned a non-passkey credential")
+            credential.authenticationResponseJson
+        }.onSuccess(referenceViewModel::finishAccountDeletionPasskey)
+            .onFailure(referenceViewModel::failAccountDeletionRecentAuthentication)
+    }
+
+    LaunchedEffect(state.accountDeletionOidcPending?.authorizationUrl) {
+        state.accountDeletionOidcPending?.authorizationUrl?.let { authorizationUrl ->
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authorizationUrl)))
+            }.onFailure(referenceViewModel::failAccountDeletionRecentAuthentication)
+        }
+    }
+
+    LaunchedEffect(oidcCallback) {
+        val callback = oidcCallback ?: return@LaunchedEffect
+        val code = callback.getQueryParameter("code")
+        val stateParameter = callback.getQueryParameter("state")
+        if (code != null && stateParameter != null) {
+            referenceViewModel.finishAccountDeletionOidc(code, stateParameter)
+        } else {
+            referenceViewModel.failAccountDeletionRecentAuthentication(
+                IllegalArgumentException("OIDC recent authentication did not return code and state"),
+            )
+        }
+        onOidcCallbackConsumed()
     }
 
     val signOut = {
@@ -1154,6 +1220,16 @@ private fun DemoShell(
                                 demoMode = state.demoMode,
                                 busy = state.accountDeletionBusy,
                                 problem = state.accountDeletionProblem,
+                                recentAuthenticationCapabilities =
+                                    state.accountDeletionRecentAuthenticationCapabilities,
+                                recentAuthenticationBusy = state.accountDeletionRecentAuthenticationBusy,
+                                recentAuthenticationProblem = state.accountDeletionRecentAuthenticationProblem,
+                                recentAuthenticationComplete = state.accountDeletionRecentAuthenticationComplete,
+                                onLoadRecentAuthentication = viewModel::loadAccountDeletionRecentAuthentication,
+                                onRecentAuthenticationPassword = viewModel::authenticateAccountDeletionPassword,
+                                onRecentAuthenticationPasskey = viewModel::startAccountDeletionPasskey,
+                                onRecentAuthenticationOidc = viewModel::startAccountDeletionOidc,
+                                onResetRecentAuthentication = viewModel::resetAccountDeletionRecentAuthentication,
                                 onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
                                 onDeleteAccount = viewModel::deleteOwnAccount,
                             )

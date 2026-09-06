@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from sidebyside.auth import sessions
+from sidebyside.auth import recent_auth, sessions
 from sidebyside.config import Environment, get_settings
 from sidebyside.core.clock import now
 from sidebyside.identity import deletion_jobs, deletion_self_service
@@ -38,7 +38,11 @@ class UnavailableMailSender(MailSender):
         raise MailUnavailableError()
 
 
-def _account_with_session(maker):  # type: ignore[no-untyped-def]
+def _account_with_session(
+    maker,  # type: ignore[no-untyped-def]
+    *,
+    grant_recent_authentication: bool = True,
+):
     with maker() as session:
         account = Account(display_name="Delete Me")
         session.add(account)
@@ -52,6 +56,14 @@ def _account_with_session(maker):  # type: ignore[no-untyped-def]
             )
         )
         device_session, tokens = sessions.start_session(session, account)
+        if grant_recent_authentication:
+            recent_auth.issue_grant(
+                session,
+                account,
+                device_session,
+                purpose=recent_auth.RecentAuthenticationPurpose.ACCOUNT_DELETION,
+                method=recent_auth.RecentAuthenticationMethod.LOCAL_PASSWORD,
+            )
         account_id = account.id
         device_session_id = device_session.id
         session.commit()
@@ -60,6 +72,38 @@ def _account_with_session(maker):  # type: ignore[no-untyped-def]
 
 @requires_database
 class TestSelfServiceAccountDeletion:
+    def test_valid_session_without_recent_authentication_is_rejected(
+        self,
+        production_client,
+        monkeypatch,  # type: ignore[no-untyped-def]
+    ) -> None:
+        client, maker = production_client
+        account_id, device_session_id, token = _account_with_session(
+            maker,
+            grant_recent_authentication=False,
+        )
+
+        def forbidden_authority() -> DeletionJournal:
+            raise AssertionError(
+                "Recent-auth rejection must happen before deletion authority access"
+            )
+
+        monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
+        response = client.post(
+            "/api/v1/account/deletion",
+            headers=auth(token),
+            json={"confirmation": "DELETE_ACCOUNT"},
+        )
+
+        assert response.status_code == 403
+        assert response.json()["code"] == recent_auth.RecentAuthenticationErrorCode.REQUIRED
+        with maker() as session:
+            account = session.get(Account, account_id)
+            device_session = session.get(DeviceSession, device_session_id)
+            assert account is not None and account.disabled_at is None
+            assert device_session is not None and device_session.revoked_at is None
+            assert session.get(AccountDeletion, account_id) is None
+
     def test_acceptance_is_fail_closed_and_worker_completes_without_client(
         self,
         production_client,
@@ -68,7 +112,10 @@ class TestSelfServiceAccountDeletion:
     ) -> None:
         client, maker = production_client
         account_id, device_session_id, token = _account_with_session(maker)
-        journal = DeletionJournal.initialize(tmp_path / "deletions.journal", instance_id=uuid4())
+        journal = DeletionJournal.initialize(
+            tmp_path / "deletions.journal",
+            instance_id=uuid4(),
+        )
         mail = RecordingMailSender()
         monkeypatch.setattr(deletion_self_service, "_configured_journal", lambda: journal)
         monkeypatch.setattr(deletion_self_service, "configured_mail_sender", lambda: mail)
@@ -104,8 +151,6 @@ class TestSelfServiceAccountDeletion:
                 == 1
             )
 
-        # The client is no longer involved. The normal PostgreSQL worker owns
-        # the remaining idempotent Core -> Media -> Async -> COMPLETED path.
         deletion_jobs.register_handlers()
         assert run_once("deletion-test-worker", limit=1) == 1
 
@@ -138,7 +183,10 @@ class TestSelfServiceAccountDeletion:
     ) -> None:
         client, maker = production_client
         account_id, device_session_id, token = _account_with_session(maker)
-        journal = DeletionJournal.initialize(tmp_path / "deletions.journal", instance_id=uuid4())
+        journal = DeletionJournal.initialize(
+            tmp_path / "deletions.journal",
+            instance_id=uuid4(),
+        )
         monkeypatch.setattr(deletion_self_service, "_configured_journal", lambda: journal)
         monkeypatch.setattr(
             deletion_self_service,
@@ -227,12 +275,14 @@ class TestSelfServiceAccountDeletion:
         journal_path = tmp_path / "must-not-exist.journal"
         base = get_settings()
         demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
-        # The Demo-deployment predicate is shared by every Demo guard and
-        # lives in sidebyside.demo.canonical, so patch it there.
-        monkeypatch.setattr(deletion_self_service.canonical, "get_settings", lambda: demo_settings)
+        monkeypatch.setattr(
+            deletion_self_service.canonical,
+            "get_settings",
+            lambda: demo_settings,
+        )
 
         def forbidden_authority() -> DeletionJournal:
-            raise AssertionError("Demo rejection must happen before deletion authority access")
+            raise AssertionError("Demo rejection must precede deletion authority access")
 
         monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
 
@@ -269,7 +319,7 @@ class TestSelfServiceAccountDeletion:
         _, _, token = _account_with_session(maker)
 
         def forbidden_authority() -> DeletionJournal:
-            raise AssertionError("Validation must happen before deletion authority access")
+            raise AssertionError("Validation must precede deletion authority access")
 
         monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
         response = client.post(
