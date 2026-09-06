@@ -17,9 +17,12 @@ Public demo entry proofs are the one deliberate exception. They share the
 magic-link table and its consume path, because redemption is identical
 either way, but ``issue_demo_entry_proof`` is a second authority domain on
 that same subject column: it never supersedes and is never superseded by an
-emailed magic link for the same address. See ``MagicLinkToken.is_demo_entry``
-and ``issue_demo_entry_proof`` for why, and ``issue_magic_link`` for how the
-emailed-link domain excludes demo rows from what it treats as open.
+emailed magic link for the same address. Demo proofs additionally take the
+canonical-demo auth authority lock so issuance and redemption are ordered
+against the periodic reset without reusing magic-link supersession semantics.
+See ``MagicLinkToken.is_demo_entry`` and ``issue_demo_entry_proof`` for why,
+and ``issue_magic_link`` for how the emailed-link domain excludes demo rows
+from what it treats as open.
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ from uuid import UUID
 from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
+from sidebyside.auth.demo_authority import lock_demo_auth_authority
 from sidebyside.auth.tokens import generate_token, hash_token
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ValidationError
@@ -181,14 +185,14 @@ def issue_demo_entry_proof(
     demo deliberately lets independent visitors hold separate, simultaneously
     valid proofs for the same shared canonical persona, so one visitor
     requesting entry must not revoke another visitor's still-unconsumed
-    proof. Nothing here reads "open predecessors" or takes the generation
-    lock, because there is no revoke decision to serialize; each call is an
-    independent insert. Redemption still goes through the ordinary
-    ``consume_magic_link``, which is one-time and replay-safe regardless of
-    which of the two domains issued the row, and the demo reset's bulk
-    deletion of this account's ``MagicLinkToken`` rows still invalidates any
-    outstanding proof issued here exactly as it does for emailed links.
+    proof. There is still no read of "open predecessors" and no generation
+    lock. Instead, the separate canonical-demo auth authority lock orders this
+    independent insert against reset. If issuance owns that lock first, reset
+    follows it and deletes the committed proof; if reset owns it first, the
+    issuance is unambiguously post-reset. The lock never turns one demo proof
+    into the predecessor of another.
     """
+    lock_demo_auth_authority(session)
     issued_at = now()
     token = generate_token(ACTION_TOKEN_BYTES)
     model = MagicLinkToken(
@@ -278,6 +282,27 @@ def _consume[TokenModel: OneTimeTokenMixin](
     return model
 
 
+def _lock_demo_magic_link_authority(session: Session, token: str) -> None:
+    """Take the reset authority lock before a demo proof's generation lock.
+
+    The first lookup only classifies an immutable token row; it does not decide
+    whether redemption succeeds. Reset may delete the row between that lookup
+    and acquiring the authority lock. ``_consume`` therefore performs the
+    authoritative lookup again afterwards and rejects a token that reset won.
+
+    This extra outer lock applies only to rows explicitly marked as public-demo
+    entry proofs. Ordinary magic links keep their existing generation-lock
+    behavior and latest-generation-only policy unchanged.
+    """
+    if not token:
+        return
+    is_demo_entry = session.execute(
+        select(MagicLinkToken.is_demo_entry).where(MagicLinkToken.token_hash == hash_token(token))
+    ).scalar_one_or_none()
+    if is_demo_entry is True:
+        lock_demo_auth_authority(session)
+
+
 def consume_email_verification(session: Session, token: str) -> EmailVerificationToken:
     return _consume(
         session,
@@ -289,6 +314,7 @@ def consume_email_verification(session: Session, token: str) -> EmailVerificatio
 
 
 def consume_magic_link(session: Session, token: str) -> MagicLinkToken:
+    _lock_demo_magic_link_authority(session, token)
     return _consume(
         session,
         MagicLinkToken,
