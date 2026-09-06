@@ -45,7 +45,7 @@ transient failure after authorization does not force the user to repeat their
 credential ceremony immediately. It is not reusable for a different purpose.
 """
 
-ACTION_PASSWORD = "recent_auth_password"
+ACTION_LOCAL_CREDENTIAL = "recent_auth_local_credential"
 PASSWORD_LIMIT = rate_limit.SIGN_IN
 GRANT_LOCK = "recent_auth_grant"
 
@@ -303,7 +303,7 @@ def authenticate_password(
     """Verify the existing local credential and issue a session-bound grant."""
     ensure_context(account, device_session)
     key = f"{account.id}:{device_session.id}"
-    rate_limit.check(session, ACTION_PASSWORD, key, PASSWORD_LIMIT)
+    rate_limit.check(session, ACTION_LOCAL_CREDENTIAL, key, PASSWORD_LIMIT)
 
     identity = accounts.local_identity(session, account)
     if (
@@ -311,13 +311,13 @@ def authenticate_password(
         or not identity.secret_hash
         or not passwords.verify_password(identity.secret_hash, password)
     ):
-        rate_limit.preserve_attempt_after_rollback(session, ACTION_PASSWORD, key)
+        rate_limit.preserve_attempt_after_rollback(session, ACTION_LOCAL_CREDENTIAL, key)
         raise UnauthenticatedError(
             "Recent authentication failed.",
             RecentAuthenticationErrorCode.PASSWORD_INVALID,
         )
 
-    rate_limit.clear(session, ACTION_PASSWORD, key)
+    rate_limit.clear(session, ACTION_LOCAL_CREDENTIAL, key)
     identity.last_used_at = now()
     return issue_grant(
         session,
