@@ -200,7 +200,9 @@ function openCacheDatabase(): Promise<IDBDatabase | null> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
     request.onerror = () =>
-      reject(request.error ?? new Error('Failed to open the product read cache'));
+      reject(
+        request.error ?? new Error('Failed to open the product read cache'),
+      );
     request.onupgradeneeded = (event) => {
       const database = request.result;
       if (
