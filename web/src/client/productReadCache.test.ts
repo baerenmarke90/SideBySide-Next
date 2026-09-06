@@ -395,7 +395,9 @@ describe('M5 Web S6 persistent read cache policy', () => {
 
     browserStorage.failRemoves = true;
     await clearProductReadCache();
-    expect(contextMarker()?.generation).toBe(oldGeneration);
+    // A marker that resists removal is overwritten instead, so it can no
+    // longer name the invalidated generation to a later start.
+    expect(contextMarker()?.generation).toBeUndefined();
     expect(storage.records.size).toBe(0);
 
     pending.resolve({ id: 'late', label: 'late' });
@@ -442,7 +444,9 @@ describe('M5 Web S6 persistent read cache policy', () => {
       () => spaceB.promise,
     );
     await __waitForProductReadCacheMutationsForTests();
-    expect(contextMarker()?.generation).toBe(oldGeneration);
+    // The marker could not be claimed for Space B, so it is neutralized rather
+    // than left naming the generation this switch just invalidated.
+    expect(contextMarker()?.generation).not.toBe(oldGeneration);
 
     spaceA.resolve({ id: 'late-a', label: 'stale A' });
     spaceB.resolve({ id: 'memory-b', label: 'B without marker' });

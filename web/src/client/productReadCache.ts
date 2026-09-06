@@ -42,6 +42,14 @@ export interface ProductReadCacheStorage {
   write(record: unknown): Promise<void>;
   remove(key: string): Promise<void>;
   clear(): Promise<void>;
+  /** Discard the whole store when `clear` cannot complete.
+   *
+   * Optional because it exists for exactly one reason: a wipe that has to
+   * survive a broken store needs a second, independent mechanism. Dropping the
+   * database does not go through a readwrite transaction, so it can still
+   * succeed after that transaction aborted.
+   */
+  destroy?(): Promise<void>;
 }
 
 export const PRODUCT_CACHE_FALLBACK_EVENT = 'sidebyside:read-cache-fallback';
@@ -55,9 +63,42 @@ const CONTEXT_STORAGE_KEY = 'sidebyside-web-read-cache-context-v3';
 const LEGACY_CONTEXT_STORAGE_KEY = 'sidebyside-web-read-cache-context-v2';
 const SHARED_SCOPE: ProductCachePrivacyScope = 'SPACE_SHARED';
 
+/** A marker value that parses but can never be adopted as a context.
+ *
+ * Overwriting is the fallback for a marker that cannot be removed. The two
+ * operations fail for different reasons often enough to be worth trying both:
+ * a quota failure rejects growth rather than replacement, and a marker that
+ * can be replaced by this value is as dead as a removed one.
+ */
+const CONTEXT_TOMBSTONE = JSON.stringify({
+  schemaVersion: 1,
+  invalidated: true,
+});
+
 let activeContext: ProductCacheContext | null = null;
 let cacheMutationTail: Promise<void> = Promise.resolve();
 const invalidatedGenerations = new Set<string>();
+
+/** Whether the persisted marker may still name a generation this runtime
+ * invalidated but could not neutralize on disk.
+ *
+ * `invalidatedGenerations` only protects the current runtime; it is gone after
+ * a reload. Everything that has to survive a reload is therefore expressed on
+ * disk instead, and this flag covers the one case that cannot be: the marker
+ * could not even be read while invalidating, so it was impossible to learn
+ * which generation to invalidate. Until the pointer is provably ours again,
+ * no persisted context is adopted.
+ */
+let persistedMarkerUntrusted = false;
+
+/** Whether rows survived a wipe and are still owed a deletion.
+ *
+ * They are already unreachable, because the generation that keyed them can
+ * never be named again. What is left is retention rather than access, and it
+ * would otherwise linger untouched: a clean marker removal leaves nothing
+ * behind that a later generation change would recognize as work to redo.
+ */
+let persistedRowsAwaitingPurge = false;
 
 function contextsEqual(
   left: ProductCacheContext | null,
@@ -152,24 +193,68 @@ function readCacheContextMarker(): {
   }
 }
 
-function writeCacheContextMarker(context: ProductCacheContext): void {
-  if (typeof localStorage === 'undefined') return;
+/** Whether the persisted marker was *observed* to name nothing adoptable.
+ *
+ * Deliberately not satisfied by a marker that cannot be read. Unreadable only
+ * describes right now, and browser storage that refuses reads during a wipe
+ * can answer them again a moment later, still holding the pointer this wipe
+ * was supposed to destroy. Safety here has to be observed, not inferred from
+ * an absent observation.
+ */
+function markerIsProvablyUnusable(): boolean {
+  const marker = readCacheContextMarker();
+  return marker.available && marker.context === null;
+}
+
+/** Point the persisted marker at `context`, or report that it points at
+ * nothing adoptable.
+ *
+ * Returns whether the on-disk pointer is now safe, meaning it either names
+ * this generation or cannot name any generation. A `false` result is the one
+ * case that must not be ignored: the pointer still names something older.
+ */
+function writeCacheContextMarker(context: ProductCacheContext): boolean {
+  if (typeof localStorage === 'undefined') return true;
   try {
     localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(context));
     localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
   } catch {
-    // Marker mismatch makes the new generation fail closed in this runtime.
+    // Verified below rather than assumed, in either direction.
   }
+
+  const marker = readCacheContextMarker();
+  return marker.available && contextsEqual(marker.context, context);
 }
 
-function removeCacheContextMarker(): void {
-  if (typeof localStorage === 'undefined') return;
+/** Make the persisted marker unable to name any generation, and verify it.
+ *
+ * This is what makes an invalidation durable. Every row key begins with its
+ * generation, so a pointer that can no longer name that generation leaves the
+ * rows unreachable for good, even when they physically survive. Removal is
+ * tried first; a marker that resists removal is overwritten with a value that
+ * `isCacheContext` rejects.
+ *
+ * Returns whether the pointer is provably unusable. `false` means no
+ * `localStorage` mutation succeeded while reads still work, so the invalidation
+ * could not be recorded on disk at all.
+ */
+function neutralizeCacheContextMarker(): boolean {
+  if (typeof localStorage === 'undefined') return true;
+
   try {
     localStorage.removeItem(CONTEXT_STORAGE_KEY);
     localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
   } catch {
-    // Invalidated generations keep stale markers unusable in this runtime.
+    // Removal is not the only way to make the pointer unusable.
   }
+  if (markerIsProvablyUnusable()) return true;
+
+  try {
+    localStorage.setItem(CONTEXT_STORAGE_KEY, CONTEXT_TOMBSTONE);
+  } catch {
+    // Nothing durable is left to try; the caller has to stay fail closed.
+  }
+  return markerIsProvablyUnusable();
 }
 
 function isLeaseCurrent(lease: ProductCacheContext): boolean {
@@ -294,17 +379,63 @@ async function readCacheStoreRecord(key: string): Promise<unknown> {
   });
 }
 
+function deleteCacheDatabase(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DATABASE_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(
+        request.error ?? new Error('Failed to drop the product read cache'),
+      );
+    // Another tab holding the database open would delay this indefinitely.
+    // Waiting would turn a wipe into a hang, so it counts as a failure and the
+    // caller keeps the generation unreachable instead.
+    request.onblocked = () =>
+      reject(new Error('Dropping the product read cache is blocked'));
+  });
+}
+
 const indexedDbStorage: ProductReadCacheStorage = {
   read: readCacheStoreRecord,
   write: (record) => mutateCacheStore((store) => store.put(record)),
   remove: (key) => mutateCacheStore((store) => store.delete(key)),
   clear: () => mutateCacheStore((store) => store.clear()),
+  destroy: deleteCacheDatabase,
 };
 
 let cacheStorage: ProductReadCacheStorage = indexedDbStorage;
 
+/** Destroy every persisted row, escalating past a store that cannot clear.
+ *
+ * The original failure is what surfaces if the escalation fails too: the
+ * caller is told that the physical rows survived, not how many ways there were
+ * to try.
+ */
+async function purgeCacheStore(): Promise<void> {
+  try {
+    await cacheStorage.clear();
+    persistedRowsAwaitingPurge = false;
+    return;
+  } catch (error) {
+    const destroy = cacheStorage.destroy;
+    if (destroy) {
+      try {
+        await destroy.call(cacheStorage);
+        persistedRowsAwaitingPurge = false;
+        return;
+      } catch {
+        // The original failure is the honest one to report.
+      }
+    }
+    persistedRowsAwaitingPurge = true;
+    throw error;
+  }
+}
+
 function scheduleContextStoreClear(): void {
-  void enqueueCacheMutation(() => cacheStorage.clear()).catch(() => undefined);
+  void enqueueCacheMutation(purgeCacheStore).catch(() => undefined);
 }
 
 function captureCacheLease(
@@ -315,6 +446,7 @@ function captureCacheLease(
   const persistedContext = marker.available ? marker.context : null;
 
   if (
+    !persistedMarkerUntrusted &&
     marker.available &&
     matchesContext(persistedContext, accountId, spaceId) &&
     !isContextInvalidated(persistedContext)
@@ -335,7 +467,10 @@ function captureCacheLease(
   }
 
   const hadPriorContext =
-    persistedContext !== null || activeContext !== null || marker.hadMarker;
+    persistedContext !== null ||
+    activeContext !== null ||
+    marker.hadMarker ||
+    persistedRowsAwaitingPurge;
   invalidateContext(activeContext);
   invalidateContext(persistedContext);
 
@@ -346,7 +481,14 @@ function captureCacheLease(
     generation: createCacheGeneration(),
   };
   activeContext = next;
-  writeCacheContextMarker(next);
+
+  // A marker that cannot be claimed still names the generation this call just
+  // invalidated, and it would outlive the runtime that knows better. Making it
+  // unusable is what keeps the predecessor unreachable after a reload; the new
+  // generation then fails closed here rather than caching against a pointer it
+  // does not own.
+  persistedMarkerUntrusted =
+    !writeCacheContextMarker(next) && !neutralizeCacheContextMarker();
 
   if (hadPriorContext) scheduleContextStoreClear();
   return next;
@@ -624,13 +766,44 @@ export async function deleteProductReadCacheEntry(
   );
 }
 
+/** Invalidate everything this browser persisted, durably.
+ *
+ * The wipe is durable as soon as one of two independent things holds: the
+ * persisted marker can no longer name the invalidated generation, or the rows
+ * are gone. Either one is enough, because a row is only ever read through a
+ * key that begins with the generation the marker names. That is why this does
+ * not depend on both effects landing, which is what made a partially failed
+ * cleanup survivable across a reload.
+ *
+ * The returned promise still rejects when the physical rows survive. Callers
+ * are told the truth — a rejection means "unreachable, not yet deleted", never
+ * "wiped" — and the retention debt is retried on the next generation change.
+ *
+ * The one state that cannot be made durable is a `localStorage` that answers
+ * reads but refuses every mutation while the store refuses both clearing and
+ * being dropped. Nothing can be recorded then; this runtime stays fail closed
+ * through `invalidatedGenerations` and `persistedMarkerUntrusted`, and a reload
+ * in that state would trust the stale marker again.
+ */
 export function clearProductReadCache(): Promise<void> {
   const marker = readCacheContextMarker();
   invalidateContext(activeContext);
   if (marker.available) invalidateContext(marker.context);
   activeContext = null;
-  removeCacheContextMarker();
-  return enqueueCacheMutation(() => cacheStorage.clear());
+  persistedMarkerUntrusted = !neutralizeCacheContextMarker();
+  return enqueueCacheMutation(purgeCacheStore);
+}
+
+/** Start a wipe from a lifecycle that cannot await it.
+ *
+ * Logout, Account and Space changes invalidate synchronously and navigate on;
+ * they have nothing to do with a rejected promise. The failure is not
+ * discarded, it is just already recorded where it matters: the invalidation
+ * above is durable before this returns, and the surviving rows are retried
+ * when the next generation is established.
+ */
+export function clearProductReadCacheInBackground(): void {
+  void clearProductReadCache().catch(() => undefined);
 }
 
 export function __setProductReadCacheStorageForTests(
@@ -648,6 +821,8 @@ export function __resetProductReadCacheStateForTests(): void {
   cacheMutationTail = Promise.resolve();
   cacheStorage = indexedDbStorage;
   invalidatedGenerations.clear();
+  persistedMarkerUntrusted = false;
+  persistedRowsAwaitingPurge = false;
 }
 
 export const __PRODUCT_READ_CACHE_CONTEXT_STORAGE_KEY_FOR_TESTS =
