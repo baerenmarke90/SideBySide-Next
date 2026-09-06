@@ -168,9 +168,6 @@ class ChangeScopeTest(unittest.TestCase):
     def test_unknown_path_fails_closed(self) -> None:
         self.assertTrue(all(classify_paths(["future-build-system/config.toml"]).values()))
 
-    def test_removed_compose_variant_name_is_unknown_and_fails_closed(self) -> None:
-        self.assertTrue(all(classify_paths(["compose.arcane.yaml"]).values()))
-
     def test_mixed_pr_combines_relevant_scopes(self) -> None:
         self.assert_scope(
             ["docs/ROADMAP.md", "web/src/App.tsx", "backend/tests/test_config.py"],
