@@ -71,7 +71,7 @@ fun AccountSettingsContent(
 ) {
     var dialogStep by rememberSaveable { mutableIntStateOf(DialogStepNone) }
     var confirmation by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     val operationBusy = busy || recentAuthenticationBusy
 
     LaunchedEffect(recentAuthenticationComplete, dialogStep) {
