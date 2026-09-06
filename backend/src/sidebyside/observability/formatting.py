@@ -13,7 +13,7 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-from sidebyside.config import LogFormat, Settings
+from sidebyside.config import LogFormat, MailTransport, Settings
 from sidebyside.observability.context import (
     get_account_id,
     get_correlation_id,
@@ -125,7 +125,16 @@ class ConsoleLogFormatter(logging.Formatter):
 
 
 def configure_logging(settings: Settings) -> None:
-    """Configure the root logger with the desired format and redaction filter."""
+    """Configure log sinks, with one explicit local mail-delivery exception.
+
+    Normal application records always pass through ``RedactingFilter``. The
+    development ``LOG`` mail adapter is different: its message body is itself
+    the configured delivery medium, so its one-time authentication link must
+    remain usable. Only that adapter's module logger receives an unredacted,
+    non-propagating handler, and only while ``MailTransport.LOG`` is active in a
+    non-public runtime. SMTP, disabled mail, Production, and Demo all fall back
+    to the ordinary redacted root sink.
+    """
     root_logger = logging.getLogger()
 
     try:
@@ -143,13 +152,30 @@ def configure_logging(settings: Settings) -> None:
     for handler in list(root_logger.handlers):
         root_logger.removeHandler(handler)
 
+    if settings.effective_log_format == LogFormat.JSON:
+        formatter: logging.Formatter = JsonLogFormatter()
+    else:
+        formatter = ConsoleLogFormatter()
+
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(level)
     handler.addFilter(RedactingFilter())
-
-    if settings.effective_log_format == LogFormat.JSON:
-        handler.setFormatter(JsonLogFormatter())
-    else:
-        handler.setFormatter(ConsoleLogFormatter())
-
+    handler.setFormatter(formatter)
     root_logger.addHandler(handler)
+
+    # ``sidebyside.mail.log`` is the implementation of SBS_MAIL_TRANSPORT=log.
+    # Its body is intentionally the local delivery channel for one-time auth
+    # links. Keep the bypass attached to this exact logger instead of teaching
+    # the global redaction filter how to skip records.
+    mail_delivery_logger = logging.getLogger("sidebyside.mail.log")
+    for mail_handler in list(mail_delivery_logger.handlers):
+        mail_delivery_logger.removeHandler(mail_handler)
+    mail_delivery_logger.setLevel(logging.NOTSET)
+    mail_delivery_logger.propagate = True
+
+    if settings.mail_transport is MailTransport.LOG and not settings.is_production:
+        mail_handler = logging.StreamHandler(sys.stdout)
+        mail_handler.setLevel(level)
+        mail_handler.setFormatter(formatter)
+        mail_delivery_logger.addHandler(mail_handler)
+        mail_delivery_logger.propagate = False
