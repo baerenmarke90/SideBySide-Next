@@ -56,8 +56,7 @@ function requestOptionsFromJson(
 
   return {
     challenge: decodeBase64Url(String(value.challenge)),
-    timeout:
-      typeof value.timeout === 'number' ? value.timeout : undefined,
+    timeout: typeof value.timeout === 'number' ? value.timeout : undefined,
     rpId: typeof value.rpId === 'string' ? value.rpId : undefined,
     allowCredentials,
     userVerification:
@@ -71,7 +70,9 @@ function requestOptionsFromJson(
   };
 }
 
-function assertionToJson(credential: PublicKeyCredential): Record<string, unknown> {
+function assertionToJson(
+  credential: PublicKeyCredential,
+): Record<string, unknown> {
   if (!(credential.response instanceof AuthenticatorAssertionResponse)) {
     throw new Error('The authenticator did not return a WebAuthn assertion.');
   }
