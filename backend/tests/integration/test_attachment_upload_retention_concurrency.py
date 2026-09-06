@@ -20,7 +20,13 @@ from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaTyp
 from sidebyside.authorization import AuthorizationContext
 from sidebyside.core.clock import now
 from sidebyside.core.errors import DomainError
-from sidebyside.media import MediaStore, SignedUpload, StoredObject, build_storage_key
+from sidebyside.media import (
+    ByteSource,
+    MediaStore,
+    SignedUpload,
+    StoredObject,
+    build_storage_key,
+)
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -47,7 +53,12 @@ class ControlledStore(MediaStore):
         self.allow_exists = Event()
         self.allow_exists.set()
 
-    def put(self, storage_key: str, data, content_type: str) -> StoredObject:  # type: ignore[no-untyped-def]
+    def put(
+        self,
+        storage_key: str,
+        data: ByteSource,
+        content_type: str,
+    ) -> StoredObject:
         payload = data.read()
         with self._lock:
             self.put_calls += 1
@@ -242,13 +253,13 @@ def test_provider_write_with_db_finalize_failure_keeps_cleanup_anchor(
     with maker() as source:
         claim = upload_ownership.claim_upload(source, setup.context, setup.attachment_id)
 
-    original_flush = service._flush
+    def fail_flush(_session: Session) -> None:
+        raise RuntimeError("boom")
+
     with monkeypatch.context() as patch:
-        patch.setattr(service, "_flush", lambda session: (_ for _ in ()).throw(RuntimeError("boom")))
+        patch.setattr(service, "_flush", fail_flush)
         with maker() as source, pytest.raises(RuntimeError, match="boom"):
             upload_ownership.complete_upload(source, claim, b"abc")
-
-    monkeypatch.setattr(service, "_flush", original_flush)
 
     assert store.objects[setup.storage_key] == b"abc"
     with maker() as session:
