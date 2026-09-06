@@ -208,13 +208,16 @@ async def upload_attachment_content(
 ) -> Response:
     """Receive bytes through the server stream (M2-D13, local adapter).
 
-    Ownership is committed before body transfer so cleanup in another process
-    can see that this otherwise-stale upload is active. The claim is renewable
-    only after observed stream activity and expires after bounded silence.
+    Two operations intentionally happen in this order.
 
-    No Attachment row lock spans the request body. Once the body is complete,
-    provider mutation and DB finalization run under the authoritative row lock,
-    which serializes them with retention, Account deletion and Space cleanup.
+    Authorization happens before reading. Otherwise an arbitrary sender could
+    determine how much data the server accepts before upload authorization is
+    known.
+
+    Reading is also bounded. ``await request.body()`` would buffer the entire
+    body regardless of size, while the media pipeline explicitly forbids
+    unbounded RAM buffering. Streaming therefore aborts at the first limit
+    violation instead of measuring only after the full body is read.
     """
     claim = upload_ownership.claim_upload(session, authorization, attachment_id)
     try:
