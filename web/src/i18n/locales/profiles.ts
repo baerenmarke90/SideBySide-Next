@@ -1,8 +1,8 @@
 const profiles = {
   eyebrow: 'Profil',
-  title: 'Dein Profil und Partner',
+  title: 'Du und dein Partner',
   intro:
-    'Dein persönliches Profil, deine freigegebenen Vorlieben und das Profil deines Partners.',
+    'Deine Identität, freigegebenen Vorlieben und das Profil deines Partners – klar getrennt von privaten Notizen.',
   settingsRailAria: 'Konto und Beziehung',
   accountTitle: 'Mein Konto',
   accountName: 'Anzeigename',
@@ -12,7 +12,7 @@ const profiles = {
   relationshipStartLabel: 'Zusammen seit',
   relationshipDurationLabel: 'Gemeinsame Zeit anzeigen',
   relationshipDurationHelp:
-    'Zeigt eure gemeinsame Zeit auf „Wir“ und an passenden Stellen in SideBySide.',
+    'Zeigt eure gemeinsame Zeit auf „Wir“ und an passenden Stellen in eimir.',
   relationshipModeLabel: 'Beziehungsdauer anzeigen als',
   relationshipModeYearsMonths: 'Jahre und Monate',
   relationshipModeDays: 'Tage',
