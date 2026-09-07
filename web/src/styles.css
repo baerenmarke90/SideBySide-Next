@@ -714,48 +714,6 @@ code {
   box-shadow: 0 0 0 5px var(--color-brand-surface);
 }
 
-.story-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 1.85rem;
-  display: grid;
-  gap: 0.8rem;
-  border-left: 1px solid var(--color-border-subtle);
-}
-
-.story-card {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-large);
-  padding: 1rem 1.1rem;
-  background: var(--color-surface);
-  transition:
-    transform 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.story-card:hover {
-  border-color: var(--color-border);
-  box-shadow: var(--shadow-soft);
-  transform: translateY(-1px);
-}
-
-.story-card-heart-moment {
-  background: linear-gradient(
-    135deg,
-    var(--color-surface) 60%,
-    var(--color-private-surface-soft)
-  );
-}
-
-.story-card-milestone {
-  background: linear-gradient(
-    135deg,
-    var(--color-surface) 60%,
-    var(--color-discovery-surface-soft)
-  );
-}
-
 .story-card-meta {
   display: flex;
   align-items: center;

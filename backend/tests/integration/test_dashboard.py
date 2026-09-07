@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -153,6 +153,7 @@ def test_dashboard_is_shared_only_and_private_no_store(
         "keepsake",
         "upcoming",
         "recentShared",
+        "thinkingOfYouAvailableAt",
     }
 
 
@@ -261,9 +262,7 @@ def test_keepsake_survives_recent_shared_crowded_by_non_memory_items(
     assert body["keepsake"]["previewAttachmentId"] == str(attachment.id)
 
 
-def test_keepsake_is_space_isolated(
-    client, session: Session, couple, monkeypatch
-) -> None:  # type: ignore[no-untyped-def]
+def test_keepsake_is_space_isolated(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """Memory is always SPACE_SHARED (no private variant), so the only
     isolation the Keepsake needs to prove is tenant/Space isolation: a photo
     memory in a foreign Space must never become this Space's Keepsake, even
@@ -560,3 +559,37 @@ def test_recognition_fields_are_bounded(client, session: Session, couple, monkey
     item = next(entry for entry in response.json()["recentShared"] if entry["id"] == str(memory.id))
     assert item["titleOrText"] == "x" * dashboard_service.MAX_RECOGNITION_TEXT
     assert "Body stays out" not in response.text
+
+
+def test_thinking_of_you_available_at_reflects_server_authoritative_cooldown(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Issue #790/#791: the client must be able to reconcile the Thinking-of-
+    you control's cooldown state from the Dashboard read model alone (e.g. on
+    page load), rather than a local timer or a failed send.
+    """
+    current = {"value": FIXED_NOW}
+    monkeypatch.setattr(dashboard_service.clock, "now", lambda: current["value"])
+
+    before_send = _dashboard(client, couple)
+    assert before_send.status_code == 200
+    assert before_send.json()["thinkingOfYouAvailableAt"] is None
+
+    sent = client.post(
+        f"/api/v1/spaces/{couple['space'].id}/thinking-of-you",
+        json={"clientRequestId": str(new_id())},
+        headers=auth(couple["token_a"]),
+    )
+    assert sent.status_code == 202
+
+    during_cooldown = _dashboard(client, couple)
+    assert during_cooldown.status_code == 200
+    raw_available_at = during_cooldown.json()["thinkingOfYouAvailableAt"]
+    assert raw_available_at is not None
+    parsed_available_at = datetime.fromisoformat(raw_available_at.replace("Z", "+00:00"))
+    assert parsed_available_at == current["value"] + timedelta(minutes=30)
+
+    current["value"] = current["value"] + timedelta(minutes=30, seconds=1)
+    after_cooldown = _dashboard(client, couple)
+    assert after_cooldown.status_code == 200
+    assert after_cooldown.json()["thinkingOfYouAvailableAt"] is None

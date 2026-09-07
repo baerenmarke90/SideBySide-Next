@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import type { M4ProductApis } from '../client/m4Product';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
+import type { M4ProductApis } from '../client/m4Product';
 import { i18n } from '../i18n';
 import m5s5 from '../i18n/locales/m5s5';
+import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
 function renderTodayPage(dashboardData: unknown): string {
@@ -61,6 +62,45 @@ describe('TodayPage', () => {
     expect(html).toContain('Park Picnic');
     expect(html).toContain('Morning Smile');
     expect(html).toContain('today-card-badges');
+  });
+
+  it('reflects the server-authoritative Thinking-of-you cooldown from the Dashboard on load (regression #790/#791)', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [],
+      retrospective: null,
+      thinkingOfYouAvailableAt: new Date(Date.now() + 29 * 60_000),
+    });
+
+    const expectedLabel = relationshipComponents.thinkingOfYouCooldown.replace(
+      '{{minutes}}',
+      '29',
+    );
+    expect(html).toContain('state-cooldown');
+    expect(html).toContain(expectedLabel);
+    expect(html).toContain('disabled=""');
+  });
+
+  it('does not show a cooldown when Dashboard.thinkingOfYouAvailableAt is null', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [],
+      retrospective: null,
+      thinkingOfYouAvailableAt: null,
+    });
+
+    expect(html).not.toContain('state-cooldown');
+    expect(html).toContain('today-hero-action');
   });
 
   it('renders welcoming new-space experience when there are no items yet, without hiding the couple presence hero', () => {

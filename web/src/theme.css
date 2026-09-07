@@ -94,6 +94,7 @@
   --color-technical: #9ccbff;
   --color-technical-surface: #24384d;
   --color-discovery: #ffd68a;
+  --color-discovery-surface: #463818;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -154,6 +155,7 @@
     --color-technical: #9ccbff;
     --color-technical-surface: #24384d;
     --color-discovery: #ffd68a;
+    --color-discovery-surface: #463818;
   }
 }
 

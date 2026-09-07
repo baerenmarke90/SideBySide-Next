@@ -347,6 +347,12 @@
   gap: var(--space-4);
 }
 
+/* Mobile-only funnel toggle (#790/#791): hidden on desktop, where the
+   controls stay directly visible per the existing behavior below. */
+.story-filter-toggle {
+  display: none;
+}
+
 .story-filter-group {
   display: flex;
   flex-direction: column;
@@ -469,9 +475,50 @@
 }
 
 @media (max-width: 600px) {
+  .story-filter-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    align-self: flex-start;
+    height: 2.5rem;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-raised, var(--color-surface));
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .story-filter-toggle:hover {
+    border-color: var(--color-brand);
+  }
+
+  .story-filter-toggle:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  .story-filter-toggle-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--color-brand);
+  }
+
+  /* Default mobile state: the filter panel is collapsed behind the toggle
+     above and only appears once the React-driven "story-filter-bar-open"
+     class is applied. */
   .story-filter-bar {
+    display: none;
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .story-filter-bar.story-filter-bar-open {
+    display: flex;
   }
 
   .story-filter-group {
@@ -714,6 +761,24 @@
    note or milestone marker without any min-height rule forcing dead space.
    Mobile always renders a single column (see useTapestryColumnCount), which
    is also DOM order, so tab order matches the plain chronological list. */
+/* Newest-first month bands (#790/#791): the greedy column balancer runs
+   per band instead of across the whole grid, so desktop chronology reads
+   as "newest month first, newest item first within it" without the viewer
+   needing to reverse-engineer a global column-balancing order. */
+.momente-tapestry-bands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.momente-band-heading {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
 .momente-tapestry {
   display: flex;
   align-items: flex-start;
@@ -902,29 +967,39 @@
   color: var(--color-text-secondary);
 }
 
-/* Milestones & Chapters archive entries: quiet rows, not feature-nav cards */
+/* Milestones & Chapters archive entries (#790/#791): compact editorial
+   tiles woven into the surrounding archive — not stacked table-like rows
+   with a repeated full-width horizontal separator as the main visual
+   device. Each entry reuses the tapestry item's own card conventions
+   (border/shadow/radius) so it reads as part of the same archive, not a
+   generic standalone SaaS feature card. */
 .momente-archive-links {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
 }
 
 .momente-archive-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-medium);
+  min-height: 44px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
   color: inherit;
   text-decoration: none;
-  transition: background var(--motion-fast);
-}
-
-.momente-archive-links > *:last-child {
-  border-bottom: none;
+  transition:
+    transform var(--motion-duration-medium) ease,
+    box-shadow var(--motion-duration-medium) ease,
+    border-color var(--motion-duration-medium) ease;
 }
 
 .momente-archive-link:hover {
-  background: var(--color-surface-panel);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--color-border);
 }
 
 .momente-archive-link:focus-visible {

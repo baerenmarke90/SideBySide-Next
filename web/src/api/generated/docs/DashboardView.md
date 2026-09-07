@@ -11,6 +11,7 @@ Name | Type
 `relationshipDuration` | [DashboardRelationshipDuration](DashboardRelationshipDuration.md)
 `retrospective` | [DashboardItem](DashboardItem.md)
 `space` | [DashboardSpaceSummary](DashboardSpaceSummary.md)
+`thinkingOfYouAvailableAt` | Date
 `upcoming` | [Array&lt;DashboardItem&gt;](DashboardItem.md)
 
 ## Example
@@ -25,6 +26,7 @@ const example = {
   "relationshipDuration": null,
   "retrospective": null,
   "space": null,
+  "thinkingOfYouAvailableAt": null,
   "upcoming": null,
 } satisfies DashboardView
 

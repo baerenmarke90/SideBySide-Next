@@ -109,7 +109,13 @@ def _is_api_v1_path(path: str) -> bool:
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def _domain(_: Request, exc: DomainError) -> JSONResponse:
-        return problem(exc.status, exc.type, exc.title, exc.detail, exc.code)
+        response = problem(exc.status, exc.type, exc.title, exc.detail, exc.code)
+        if exc.retry_after_seconds is not None:
+            # Standard HTTP signal (RFC 9110 §10.2.3), not a body-shape change:
+            # a defensive fallback for a client that still raced past its own
+            # server-authoritative cooldown state.
+            response.headers["Retry-After"] = str(exc.retry_after_seconds)
+        return response
 
     @app.exception_handler(RequestValidationError)
     async def _request_validation(_: Request, exc: RequestValidationError) -> JSONResponse:

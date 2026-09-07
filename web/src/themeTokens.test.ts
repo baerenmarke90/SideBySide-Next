@@ -40,6 +40,18 @@ function darkThemeBlock(css: string): string {
   return match[1];
 }
 
+function darkPreferenceFallbackBlock(css: string): string {
+  const match = css.match(
+    /@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme\]\)\s*\{([^}]*)\}/,
+  );
+  if (!match) {
+    throw new Error(
+      'CSS block is missing: @media (prefers-color-scheme: dark) :root:not([data-theme])',
+    );
+  }
+  return match[1];
+}
+
 function cssVariable(block: string, name: string): string {
   const match = block.match(new RegExp(`--${name}:\\s*([^;]+);`));
   if (!match) throw new Error(`CSS variable is missing: --${name}`);
@@ -234,6 +246,37 @@ describe('design token authority and drift enforcement', () => {
     expect(normalizeHex(cssVariable(darkTheme, 'color-on-accent'))).toBe(
       normalizeHex(tokensJson.color.scheme.dark.onAccent.$value),
     );
+  });
+
+  it('enforces zero drift for discovery + discoverySurface in light styles.css and dark theme.css (issue #771/#790)', () => {
+    // Both roles must be mapped together in every runtime path; a fix that
+    // only maps one of the two silently reintroduces the drift (e.g. a
+    // dark-mode "discovery" text color rendered on a still-light-mode
+    // "discoverySurface" background, as in VisibilityBadge/PartnerAvatarPair).
+    expect(normalizeHex(cssVariable(lightStyles, 'color-discovery'))).toBe(
+      normalizeHex(tokensJson.color.semantic.discovery.$value),
+    );
+    expect(
+      normalizeHex(cssVariable(lightStyles, 'color-discovery-surface')),
+    ).toBe(normalizeHex(tokensJson.color.semantic.discoverySurface.$value));
+
+    expect(normalizeHex(cssVariable(darkTheme, 'color-discovery'))).toBe(
+      normalizeHex(tokensJson.color.scheme.dark.discovery.$value),
+    );
+    expect(
+      normalizeHex(cssVariable(darkTheme, 'color-discovery-surface')),
+    ).toBe(normalizeHex(tokensJson.color.scheme.dark.discoverySurface.$value));
+  });
+
+  it('keeps the prefers-color-scheme dark fallback in sync with the explicit dark theme for discovery + discoverySurface', () => {
+    const darkFallback = darkPreferenceFallbackBlock(themeCss);
+
+    expect(normalizeHex(cssVariable(darkFallback, 'color-discovery'))).toBe(
+      normalizeHex(cssVariable(darkTheme, 'color-discovery')),
+    );
+    expect(
+      normalizeHex(cssVariable(darkFallback, 'color-discovery-surface')),
+    ).toBe(normalizeHex(cssVariable(darkTheme, 'color-discovery-surface')));
   });
 
   it('exports canonical brand name eimir.', () => {

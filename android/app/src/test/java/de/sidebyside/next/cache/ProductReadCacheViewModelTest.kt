@@ -810,6 +810,7 @@ private class TodayApi : FakeReferenceContract() {
             relationshipDuration = null,
             retrospective = null,
             space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
+            thinkingOfYouAvailableAt = null,
             upcoming = emptyList(),
         )
     }

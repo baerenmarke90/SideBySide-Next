@@ -110,6 +110,24 @@
   }
 }
 
+/* State: Cooldown (server-authoritative, no animation) */
+.thinking-of-you-btn.state-cooldown {
+  background: var(--color-surface-subtle, var(--color-surface));
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.thinking-of-you-btn.state-cooldown:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.thinking-of-you-btn.state-cooldown .heart-icon {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thinking-of-you-btn.state-sending .heart-icon,
   .thinking-of-you-btn:hover:not(:disabled) .heart-icon,

@@ -328,6 +328,7 @@ class TodayScreenSemanticsTest {
             relationshipDuration = duration,
             retrospective = retrospective,
             space = DashboardSpaceSummary(partner = partner, spaceId = UUID.randomUUID()),
+            thinkingOfYouAvailableAt = null,
             upcoming = upcoming,
         )
     }

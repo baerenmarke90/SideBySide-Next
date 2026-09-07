@@ -1,21 +1,25 @@
-import { useRef } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { DashboardItemType } from '../api/generated/models/DashboardItemType';
 import type { DashboardRelationshipDuration } from '../api/generated/models/DashboardRelationshipDuration';
+import type { DashboardView } from '../api/generated/models/DashboardView';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
-import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
-import {
-  type M4ProductApis,
-  dashboardItemPath,
-  engagementTargetPath,
-} from '../client/m4Product';
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
-import { normalizeClientError } from '../client/problemDetails';
+import {
+  dashboardItemPath,
+  engagementTargetPath,
+  type M4ProductApis,
+} from '../client/m4Product';
+import {
+  ClientProblemError,
+  normalizeClientError,
+} from '../client/problemDetails';
 import { ACTIVITY_ROUTE } from '../client/routes';
 import { postSnackbar } from '../client/snackbar';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
@@ -356,7 +360,10 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
 
   const cardInner = (
     <div className="recent-shared-card sbs-motion-lift">
-      <div className="recent-shared-icon" aria-hidden="true">
+      <div
+        className={`recent-shared-icon today-kind-${item.type.toLowerCase()}`}
+        aria-hidden="true"
+      >
         <RecentItemTypeIcon type={item.type} />
       </div>
       <div className="recent-shared-copy">
@@ -492,16 +499,27 @@ function VisualMemoryCard({
   }
   return <div className={shellClass}>{inner}</div>;
 }
+const THINKING_OF_YOU_COOLDOWN_CODE = 'THINKING_OF_YOU_COOLDOWN';
+
 function ThinkingOfYouHero({
   apis,
   spaceId,
   partnerName,
+  thinkingOfYouAvailableAt,
 }: {
   apis: M4ProductApis;
   spaceId: string;
   partnerName?: string;
+  thinkingOfYouAvailableAt: Date | null;
 }) {
   const clientRequestIdRef = useRef<string>('');
+  const queryClient = useQueryClient();
+  // A locally-known cooldown, only ever set from a server response (the
+  // 429's Retry-After header) so the button reflects reality immediately
+  // even before the next Dashboard refetch lands.
+  const [localCooldownUntil, setLocalCooldownUntil] = useState<Date | null>(
+    null,
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -511,10 +529,34 @@ function ThinkingOfYouHero({
           thinkingOfYouCreate: { clientRequestId: clientRequestIdRef.current },
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (accepted) => {
       postSnackbar('m5s5.dashboard.thinkingOfYouSent');
+      setLocalCooldownUntil(null);
+      queryClient.setQueryData<DashboardView>(
+        dashboardQueryKey(spaceId),
+        (old) =>
+          old
+            ? {
+                ...old,
+                thinkingOfYouAvailableAt: accepted.thinkingOfYouAvailableAt,
+              }
+            : old,
+      );
     },
-    onError: () => {
+    onError: (error) => {
+      if (
+        error instanceof ClientProblemError &&
+        error.code === THINKING_OF_YOU_COOLDOWN_CODE
+      ) {
+        const minutes = error.retryAfterSeconds
+          ? Math.max(1, Math.ceil(error.retryAfterSeconds / 60))
+          : 30;
+        setLocalCooldownUntil(new Date(Date.now() + minutes * 60_000));
+        postSnackbar('m5s5.dashboard.thinkingOfYouCooldownBlocked', {
+          minutes,
+        });
+        return;
+      }
       postSnackbar('m5s5.common.error');
     },
   });
@@ -530,6 +572,7 @@ function ThinkingOfYouHero({
       partnerName={partnerName}
       disabled={mutation.isPending}
       onSend={handleSend}
+      cooldownUntil={thinkingOfYouAvailableAt ?? localCooldownUntil}
     />
   );
 }
@@ -719,6 +762,9 @@ export function TodayPage({
                   apis={apis}
                   spaceId={spaceId}
                   partnerName={partner?.displayName}
+                  thinkingOfYouAvailableAt={
+                    dashboardQuery.data.thinkingOfYouAvailableAt
+                  }
                 />
               </div>
             }

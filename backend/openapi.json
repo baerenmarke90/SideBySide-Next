@@ -1527,6 +1527,18 @@
           "space": {
             "$ref": "#/components/schemas/DashboardSpaceSummary"
           },
+          "thinkingOfYouAvailableAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinkingofyouavailableat"
+          },
           "upcoming": {
             "items": {
               "$ref": "#/components/schemas/DashboardItem"
@@ -1541,7 +1553,8 @@
           "retrospective",
           "keepsake",
           "upcoming",
-          "recentShared"
+          "recentShared",
+          "thinkingOfYouAvailableAt"
         ],
         "title": "DashboardView",
         "type": "object"
@@ -7492,10 +7505,16 @@
             "format": "uuid",
             "title": "Clientrequestid",
             "type": "string"
+          },
+          "thinkingOfYouAvailableAt": {
+            "format": "date-time",
+            "title": "Thinkingofyouavailableat",
+            "type": "string"
           }
         },
         "required": [
-          "clientRequestId"
+          "clientRequestId",
+          "thinkingOfYouAvailableAt"
         ],
         "title": "ThinkingOfYouAccepted",
         "type": "object"

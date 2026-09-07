@@ -1,7 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { firstNameFromDisplayName } from '../client/personalName';
 import relationshipComponents from '../i18n/locales/relationshipComponents';
 import './ThinkingOfYouButton.css';
+
+const COOLDOWN_TICK_MS = 30_000;
+/** Brief post-send confirmation before the persistent cooldown display takes over. */
+const CONFIRMATION_MS = 2500;
 
 export interface ThinkingOfYouButtonProps {
   partnerName?: string;
@@ -9,6 +13,18 @@ export interface ThinkingOfYouButtonProps {
   variant?: 'compact' | 'full';
   disabled?: boolean;
   className?: string;
+  /**
+   * Server-authoritative instant this control becomes available again, or
+   * `null`/`undefined` when available now. The caller owns this state (e.g.
+   * from `Dashboard.thinkingOfYouAvailableAt`, reconciled after a successful
+   * send) — the button itself never invents or persists cooldown timing.
+   */
+  cooldownUntil?: Date | null;
+}
+
+function remainingMinutes(cooldownUntil: Date, now: number): number {
+  const remainingMs = cooldownUntil.getTime() - now;
+  return Math.max(1, Math.ceil(remainingMs / 60_000));
 }
 
 export function ThinkingOfYouButton({
@@ -17,11 +33,24 @@ export function ThinkingOfYouButton({
   variant = 'full',
   disabled = false,
   className = '',
+  cooldownUntil = null,
 }: ThinkingOfYouButtonProps) {
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [now, setNow] = useState(() => Date.now());
+
+  const isCoolingDown = cooldownUntil != null && cooldownUntil.getTime() > now;
+
+  // Keep the remaining-minutes display fresh, and let expiry restore the
+  // normal action on its own without a page reload.
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), COOLDOWN_TICK_MS);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
 
   const handleClick = useCallback(async () => {
-    if (state !== 'idle' || disabled) return;
+    if (state !== 'idle' || disabled || isCoolingDown) return;
     setState('sending');
     try {
       if (onSend) {
@@ -30,11 +59,11 @@ export function ThinkingOfYouButton({
       setState('sent');
       setTimeout(() => {
         setState('idle');
-      }, 2500);
+      }, CONFIRMATION_MS);
     } catch {
       setState('idle');
     }
-  }, [state, disabled, onSend]);
+  }, [state, disabled, isCoolingDown, onSend]);
 
   const personalPartnerName = partnerName
     ? firstNameFromDisplayName(partnerName, '')
@@ -46,25 +75,47 @@ export function ThinkingOfYouButton({
       )
     : relationshipComponents.thinkingOfYouAction;
 
+  const cooldownLabel =
+    cooldownUntil && isCoolingDown
+      ? relationshipComponents.thinkingOfYouCooldown.replace(
+          '{{minutes}}',
+          String(remainingMinutes(cooldownUntil, now)),
+        )
+      : '';
+
+  const visualState =
+    state === 'sending'
+      ? 'sending'
+      : state === 'sent'
+        ? 'sent'
+        : isCoolingDown
+          ? 'cooldown'
+          : 'idle';
+
   const currentAccessibleName =
-    state === 'sent'
+    visualState === 'sent'
       ? relationshipComponents.thinkingOfYouSent
-      : state === 'sending'
+      : visualState === 'sending'
         ? relationshipComponents.thinkingOfYouSending
-        : targetLabel;
+        : visualState === 'cooldown'
+          ? cooldownLabel
+          : targetLabel;
+
+  const isDisabled = disabled || state === 'sending' || isCoolingDown;
 
   return (
     <button
       type="button"
-      className={`thinking-of-you-btn thinking-of-you-${variant} state-${state} ${className}`}
+      className={`thinking-of-you-btn thinking-of-you-${variant} state-${visualState} ${className}`}
       onClick={handleClick}
-      disabled={disabled || state === 'sending'}
+      disabled={isDisabled}
       aria-busy={state === 'sending' ? true : undefined}
       aria-label={currentAccessibleName}
+      aria-live="polite"
       title={currentAccessibleName}
     >
       <span className="thinking-of-you-icon-wrapper" aria-hidden="true">
-        {state === 'sent' ? (
+        {visualState === 'sent' ? (
           <svg
             aria-hidden="true"
             className="thinking-of-you-icon sent-icon"
@@ -95,11 +146,13 @@ export function ThinkingOfYouButton({
 
       {variant === 'full' && (
         <span className="thinking-of-you-label" aria-hidden="true">
-          {state === 'sent'
+          {visualState === 'sent'
             ? relationshipComponents.thinkingOfYouSent
-            : state === 'sending'
+            : visualState === 'sending'
               ? relationshipComponents.thinkingOfYouSending
-              : relationshipComponents.thinkingOfYouAction}
+              : visualState === 'cooldown'
+                ? cooldownLabel
+                : relationshipComponents.thinkingOfYouAction}
         </span>
       )}
     </button>

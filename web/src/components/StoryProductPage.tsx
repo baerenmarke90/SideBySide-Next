@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import type { TFunction } from 'i18next';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
+import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
+import type { MemoryAttachmentEntry } from '../api/generated/models/MemoryAttachmentEntry';
+import type { StoryItem } from '../api/generated/models/StoryItem';
 import {
   StoryKind,
   type StoryKind as StoryKindValue,
@@ -10,41 +15,38 @@ import {
   StoryPageFromJSON,
   StoryPageToJSON,
 } from '../api/generated/models/StoryPage';
+import { normalizeClientError } from '../client/problemDetails';
 import {
   loadProductWithReadCache,
-  saveProductReadCacheEntry,
   type ProductReadResult,
+  saveProductReadCacheEntry,
 } from '../client/productReadCache';
-import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
-import {
-  aggregateStoryPages,
-  parseStoryFilters,
-  selectFeaturedStoryItem,
-  storyCacheResourceId,
-  storyFiltersToSearch,
-  storyRequest,
-  type StoryFilters,
-} from '../client/storyProduct';
-
 import {
   heartMomentDetailPath,
   memoryDetailPath,
   milestoneDetailPath,
   STORY_CHAPTERS_ROUTE,
 } from '../client/routes';
+import {
+  aggregateStoryPages,
+  parseStoryFilters,
+  type StoryFilters,
+  selectFeaturedStoryItem,
+  storyCacheResourceId,
+  storyFiltersToSearch,
+  storyRequest,
+} from '../client/storyProduct';
 import { resolvedLocale, useTranslation } from '../i18n';
-import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
-import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
-import type { StoryItem } from '../api/generated/models/StoryItem';
-import { AuthorAvatar } from './PersonIdentity';
 import { MemoryPreview } from './MemoryPreview';
 import { PageHeader } from './PageHeader';
+import { AuthorAvatar } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
 import { StoryList } from './StoryList';
 import {
   distributeIntoTapestryColumns,
   formatStoryDate,
+  groupStoryItems,
   resolveStoryKindLabel,
   storyItemKey,
   storyItemPresentation,
@@ -68,6 +70,91 @@ function isStoryKind(value: string | null): value is StoryKindValue {
   return (
     value !== null && Object.values(StoryKind).includes(value as StoryKindValue)
   );
+}
+
+interface TapestryEntry {
+  key: string;
+  role: ReturnType<typeof tapestryItemRole>;
+  presentation: ReturnType<typeof storyItemPresentation>;
+  firstAttachment: MemoryAttachmentEntry | undefined;
+  path: string;
+  memoryId: string;
+  author: AuthorSummary;
+  dateTime: string;
+  dateLabel: string;
+}
+
+function buildTapestryEntry(
+  item: StoryItem,
+  t: TFunction,
+  locale: string,
+): TapestryEntry {
+  const role = tapestryItemRole(item);
+  const presentation = storyItemPresentation(item, t);
+  const firstAttachment =
+    item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
+  const path =
+    item.kind === 'MEMORY'
+      ? memoryDetailPath(item.memory.id)
+      : item.kind === 'HEART_MOMENT'
+        ? heartMomentDetailPath(item.heartMoment.id)
+        : milestoneDetailPath(item.milestone.id);
+  const memoryId = item.kind === 'MEMORY' ? item.memory.id : '';
+  const author = storyItemAuthor(item);
+  const dateTime = item.effectiveDate.toISOString().slice(0, 10);
+  const dateLabel = formatStoryDate(item.effectiveDate, locale);
+  return {
+    key: storyItemKey(item),
+    role,
+    presentation,
+    firstAttachment,
+    path,
+    memoryId,
+    author,
+    dateTime,
+    dateLabel,
+  };
+}
+
+interface TapestryBand {
+  key: string;
+  label: string;
+  columns: TapestryEntry[][];
+}
+
+const TAPESTRY_ITEM_LIMIT = 12;
+
+/**
+ * Newest-first month bands, each internally column-balanced (#790/#791):
+ * chronology reads as "newest month first, newest item first within a
+ * month" without requiring the viewer to reverse-engineer a column-balancing
+ * algorithm across the whole grid. Items are sorted defensively by
+ * `effectiveDate` rather than trusting incoming array order, since Discover
+ * can be reached with a non-default Timeline `order` filter still applied
+ * via the `tab` URL param.
+ */
+function buildTapestryBands(
+  items: StoryItem[],
+  t: TFunction,
+  locale: string,
+  columnCount: number,
+): TapestryBand[] {
+  const newestFirst = [...items].sort(
+    (a, b) => b.effectiveDate.getTime() - a.effectiveDate.getTime(),
+  );
+  const groups = groupStoryItems(
+    newestFirst.slice(0, TAPESTRY_ITEM_LIMIT),
+    locale,
+  );
+  return groups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    columns: distributeIntoTapestryColumns(
+      group.items.map((item) => buildTapestryEntry(item, t, locale)),
+      columnCount,
+      (entry) => tapestryRoleWeight(entry.role),
+    ),
+  }));
 }
 
 const TAPESTRY_TABLET_QUERY = '(min-width: 640px)';
@@ -121,6 +208,10 @@ export function StoryProductPage({
   const location = useLocation();
   const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Mobile-only: the filter panel starts collapsed behind a funnel button
+  // (#790/#791). Desktop keeps the controls directly visible via CSS,
+  // independent of this state.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const filters = useMemo(
     () => parseStoryFilters(searchParams),
     [searchParams],
@@ -256,45 +347,9 @@ export function StoryProductPage({
   const featuredItem = useMemo(() => selectFeaturedStoryItem(items), [items]);
 
   const tapestryColumnCount = useTapestryColumnCount();
-  const tapestryEntries = useMemo(
-    () =>
-      items.slice(0, 12).map((item) => {
-        const role = tapestryItemRole(item);
-        const presentation = storyItemPresentation(item, t);
-        const firstAttachment =
-          item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
-        const path =
-          item.kind === 'MEMORY'
-            ? memoryDetailPath(item.memory.id)
-            : item.kind === 'HEART_MOMENT'
-              ? heartMomentDetailPath(item.heartMoment.id)
-              : milestoneDetailPath(item.milestone.id);
-        const memoryId = item.kind === 'MEMORY' ? item.memory.id : '';
-        const author = storyItemAuthor(item);
-        const dateTime = item.effectiveDate.toISOString().slice(0, 10);
-        const dateLabel = formatStoryDate(item.effectiveDate, locale);
-        return {
-          key: storyItemKey(item),
-          role,
-          presentation,
-          firstAttachment,
-          path,
-          memoryId,
-          author,
-          dateTime,
-          dateLabel,
-        };
-      }),
-    [items, t, locale],
-  );
-  const tapestryColumns = useMemo(
-    () =>
-      distributeIntoTapestryColumns(
-        tapestryEntries,
-        tapestryColumnCount,
-        (entry) => tapestryRoleWeight(entry.role),
-      ),
-    [tapestryEntries, tapestryColumnCount],
+  const tapestryBands = useMemo(
+    () => buildTapestryBands(items, t, locale, tapestryColumnCount),
+    [items, t, locale, tapestryColumnCount],
   );
 
   const uniqueYears = useMemo(() => {
@@ -527,116 +582,140 @@ export function StoryProductPage({
                 {t('story.streamAll')}
               </button>
             </div>
-            <div className="momente-tapestry">
-              {tapestryColumns
-                .filter((column) => column.length > 0)
-                .map((column) => (
-                  <div className="momente-tapestry-column" key={column[0].key}>
-                    {column.map((entry) => {
-                      const { role, presentation, path, dateTime, dateLabel } =
-                        entry;
-
-                      if (role === 'milestone') {
-                        return (
-                          <Link
-                            key={entry.key}
-                            to={path}
-                            className="momente-tapestry-item momente-tapestry-milestone"
-                            aria-label={presentation.title}
-                          >
-                            <span
-                              className="momente-tapestry-milestone-icon"
-                              aria-hidden="true"
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                width="16"
-                                height="16"
-                                fill="currentColor"
-                                aria-hidden="true"
-                              >
-                                <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
-                              </svg>
-                            </span>
-                            <span className="momente-tapestry-milestone-copy">
-                              <span className="momente-tapestry-milestone-title">
-                                {presentation.title}
-                              </span>
-                              <time
-                                className="momente-tapestry-milestone-date"
-                                dateTime={dateTime}
-                              >
-                                {dateLabel}
-                              </time>
-                            </span>
-                          </Link>
-                        );
-                      }
-
-                      return (
-                        <Link
-                          key={entry.key}
-                          to={path}
-                          className={`momente-tapestry-item momente-tapestry-${role}`}
-                          aria-label={presentation.title}
+            <div className="momente-tapestry-bands">
+              {tapestryBands.map((band) => (
+                <section
+                  className="momente-tapestry-band"
+                  key={band.key}
+                  aria-labelledby={`momente-band-${band.key}`}
+                >
+                  <h4
+                    id={`momente-band-${band.key}`}
+                    className="momente-band-heading"
+                  >
+                    {band.label}
+                  </h4>
+                  <div className="momente-tapestry">
+                    {band.columns
+                      .filter((column) => column.length > 0)
+                      .map((column) => (
+                        <div
+                          className="momente-tapestry-column"
+                          key={column[0].key}
                         >
-                          {role === 'media' && entry.firstAttachment ? (
-                            <div className="momente-tapestry-media-frame">
-                              <MemoryPreview
-                                memoryId={entry.memoryId}
-                                attachmentId={entry.firstAttachment.id}
-                                loadImage={loadMemoryImage}
-                              />
-                            </div>
-                          ) : null}
-                          <div className="momente-tapestry-body">
-                            <span className="momente-tapestry-kind">
-                              {role === 'note' ? (
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  width="12"
-                                  height="12"
-                                  fill="currentColor"
-                                  aria-hidden="true"
-                                  className="kind-glyph"
+                          {column.map((entry) => {
+                            const {
+                              role,
+                              presentation,
+                              path,
+                              dateTime,
+                              dateLabel,
+                            } = entry;
+
+                            if (role === 'milestone') {
+                              return (
+                                <Link
+                                  key={entry.key}
+                                  to={path}
+                                  className="momente-tapestry-item momente-tapestry-milestone"
+                                  aria-label={presentation.title}
                                 >
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                </svg>
-                              ) : null}
-                              <span>{presentation.kindLabel}</span>
-                            </span>
-                            {role === 'note' ? (
-                              <blockquote className="momente-tapestry-quote">
-                                "{presentation.title}"
-                              </blockquote>
-                            ) : (
-                              <h4 className="momente-tapestry-title">
-                                {presentation.title}
-                              </h4>
-                            )}
-                            <div className="momente-tapestry-meta">
-                              <time dateTime={dateTime}>{dateLabel}</time>
-                              {entry.author ? (
-                                <span className="momente-author-meta">
-                                  <AuthorAvatar
-                                    author={entry.author}
-                                    profilesApi={profilesApi}
-                                    spaceId={spaceId}
-                                  />
-                                  <span>
-                                    {t('story.byAuthor', {
-                                      author: entry.author.displayName,
-                                    })}
+                                  <span
+                                    className="momente-tapestry-milestone-icon"
+                                    aria-hidden="true"
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      width="16"
+                                      height="16"
+                                      fill="currentColor"
+                                      aria-hidden="true"
+                                    >
+                                      <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+                                    </svg>
                                   </span>
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                                  <span className="momente-tapestry-milestone-copy">
+                                    <span className="momente-tapestry-milestone-title">
+                                      {presentation.title}
+                                    </span>
+                                    <time
+                                      className="momente-tapestry-milestone-date"
+                                      dateTime={dateTime}
+                                    >
+                                      {dateLabel}
+                                    </time>
+                                  </span>
+                                </Link>
+                              );
+                            }
+
+                            return (
+                              <Link
+                                key={entry.key}
+                                to={path}
+                                className={`momente-tapestry-item momente-tapestry-${role}`}
+                                aria-label={presentation.title}
+                              >
+                                {role === 'media' && entry.firstAttachment ? (
+                                  <div className="momente-tapestry-media-frame">
+                                    <MemoryPreview
+                                      memoryId={entry.memoryId}
+                                      attachmentId={entry.firstAttachment.id}
+                                      loadImage={loadMemoryImage}
+                                    />
+                                  </div>
+                                ) : null}
+                                <div className="momente-tapestry-body">
+                                  <span className="momente-tapestry-kind">
+                                    {role === 'note' ? (
+                                      <svg
+                                        viewBox="0 0 24 24"
+                                        width="12"
+                                        height="12"
+                                        fill="currentColor"
+                                        aria-hidden="true"
+                                        className="kind-glyph"
+                                      >
+                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                      </svg>
+                                    ) : null}
+                                    <span>{presentation.kindLabel}</span>
+                                  </span>
+                                  {role === 'note' ? (
+                                    <blockquote className="momente-tapestry-quote">
+                                      "{presentation.title}"
+                                    </blockquote>
+                                  ) : (
+                                    <h4 className="momente-tapestry-title">
+                                      {presentation.title}
+                                    </h4>
+                                  )}
+                                  <div className="momente-tapestry-meta">
+                                    <time dateTime={dateTime}>{dateLabel}</time>
+                                    {entry.author ? (
+                                      <span className="momente-author-meta">
+                                        <AuthorAvatar
+                                          author={entry.author}
+                                          profilesApi={profilesApi}
+                                          spaceId={spaceId}
+                                        />
+                                        <span>
+                                          {t('story.byAuthor', {
+                                            author: entry.author.displayName,
+                                          })}
+                                        </span>
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ))}
                   </div>
-                ))}
+                </section>
+              ))}
             </div>
           </section>
 
@@ -750,8 +829,39 @@ export function StoryProductPage({
       ) : combinedStory && (activeView === 'timeline' || hasActiveFilters) ? (
         <div className="layout-single-column sbs-motion-reveal">
           <div className="story-filter-container">
+            <button
+              type="button"
+              className="story-filter-toggle"
+              aria-expanded={mobileFiltersOpen}
+              aria-controls="story-filter-panel"
+              aria-label={
+                hasActiveFilters
+                  ? t('storyFilters.toggleButtonActive')
+                  : t('storyFilters.toggleButton')
+              }
+              onClick={() => setMobileFiltersOpen((open) => !open)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16l-6 7v6l-4 2v-8z" />
+              </svg>
+              <span>{t('storyFilters.toggleButton')}</span>
+              {hasActiveFilters ? (
+                <span className="story-filter-toggle-dot" aria-hidden="true" />
+              ) : null}
+            </button>
             <section
-              className="story-filter-bar"
+              id="story-filter-panel"
+              className={`story-filter-bar ${mobileFiltersOpen ? 'story-filter-bar-open' : ''}`}
               aria-label={t('storyFilters.aria')}
             >
               <div className="story-filter-group">

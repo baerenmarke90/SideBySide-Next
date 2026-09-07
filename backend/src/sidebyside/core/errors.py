@@ -24,10 +24,20 @@ class DomainError(Exception):
     type: str = "internal_error"
     title: str = "Internal error"
 
-    def __init__(self, detail: str, code: str) -> None:
+    def __init__(
+        self,
+        detail: str,
+        code: str,
+        *,
+        retry_after_seconds: int | None = None,
+    ) -> None:
         super().__init__(detail)
         self.detail = detail
         self.code = code
+        # Optional, standard-HTTP-header-only signal (RFC 9110 Retry-After):
+        # never part of the ProblemDetails JSON body, so the response shape
+        # stays the single uniform format documented in api/errors.py.
+        self.retry_after_seconds = retry_after_seconds
 
 
 class BadRequestError(DomainError):

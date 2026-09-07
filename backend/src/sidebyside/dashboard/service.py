@@ -21,6 +21,7 @@ from sidebyside.authorization import AuthorizationContext, PrivacyClass, readabl
 from sidebyside.chapters.models import Chapter
 from sidebyside.collections.models import Collection
 from sidebyside.core import clock
+from sidebyside.engagement import thinking
 from sidebyside.heart_moments.models import HeartMoment
 from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory
@@ -94,6 +95,7 @@ class DashboardView:
     keepsake: DashboardItem | None
     upcoming: list[DashboardItem]
     recent_shared: list[DashboardItem]
+    thinking_of_you_available_at: datetime | None
 
 
 def read_dashboard(
@@ -121,6 +123,7 @@ def read_dashboard(
         keepsake=_keepsake(session, authorization),
         upcoming=_upcoming(session, authorization, profile, today, instant),
         recent_shared=_recent_shared(session, authorization),
+        thinking_of_you_available_at=thinking.available_at(session, authorization),
     )
 
 

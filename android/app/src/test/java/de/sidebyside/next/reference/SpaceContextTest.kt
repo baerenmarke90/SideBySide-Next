@@ -488,6 +488,7 @@ private class SpaceApi(
             relationshipDuration = null,
             retrospective = null,
             space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
+            thinkingOfYouAvailableAt = null,
             upcoming = emptyList(),
         )
 
