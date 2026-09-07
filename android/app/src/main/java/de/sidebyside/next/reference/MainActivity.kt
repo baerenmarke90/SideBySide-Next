@@ -1212,46 +1212,42 @@ private fun DemoShell(
                     spacePartnerNames = state.spacePartnerNames,
                     activeSpaceId = state.activeSpaceId,
                     onSelectSpace = onSelectSpace,
-                    profileContent = {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(
-                                SideBySideTheme.spacing.step6,
-                            ),
-                        ) {
-                            ProfileSettingsContent(
-                                state = state.profile,
-                                onRetry = viewModel::refreshProfile,
-                                onSaveDisplayName = viewModel::saveProfileDisplayName,
-                                onChooseAvatar = onPickProfileAvatar,
-                                onRemoveAvatar = viewModel::removeProfileAvatar,
-                            )
-                            if (state.activeSpaceId != null) {
-                                SpaceOffboardingContent(
-                                    demoMode = state.demoMode,
-                                    busy = state.spaceOffboardingBusy,
-                                    problem = state.spaceOffboardingProblem,
-                                    onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
-                                    onLeaveSpace = viewModel::leaveActiveSpace,
-                                )
-                            }
-                            AccountSettingsContent(
+                    identityContent = {
+                        ProfileSettingsContent(
+                            state = state.profile,
+                            onRetry = viewModel::refreshProfile,
+                            onSaveDisplayName = viewModel::saveProfileDisplayName,
+                            onChooseAvatar = onPickProfileAvatar,
+                            onRemoveAvatar = viewModel::removeProfileAvatar,
+                        )
+                    },
+                    sensitiveContent = {
+                        if (state.activeSpaceId != null) {
+                            SpaceOffboardingContent(
                                 demoMode = state.demoMode,
-                                busy = state.accountDeletionBusy,
-                                problem = state.accountDeletionProblem,
-                                recentAuthenticationCapabilities =
-                                    state.accountDeletionRecentAuthenticationCapabilities,
-                                recentAuthenticationBusy = state.accountDeletionRecentAuthenticationBusy,
-                                recentAuthenticationProblem = state.accountDeletionRecentAuthenticationProblem,
-                                recentAuthenticationComplete = state.accountDeletionRecentAuthenticationComplete,
-                                onLoadRecentAuthentication = viewModel::loadAccountDeletionRecentAuthentication,
-                                onRecentAuthenticationPassword = viewModel::authenticateAccountDeletionPassword,
-                                onRecentAuthenticationPasskey = viewModel::startAccountDeletionPasskey,
-                                onRecentAuthenticationOidc = viewModel::startAccountDeletionOidc,
-                                onResetRecentAuthentication = viewModel::resetAccountDeletionRecentAuthentication,
+                                busy = state.spaceOffboardingBusy,
+                                problem = state.spaceOffboardingProblem,
                                 onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
-                                onDeleteAccount = viewModel::deleteOwnAccount,
+                                onLeaveSpace = viewModel::leaveActiveSpace,
                             )
                         }
+                        AccountSettingsContent(
+                            demoMode = state.demoMode,
+                            busy = state.accountDeletionBusy,
+                            problem = state.accountDeletionProblem,
+                            recentAuthenticationCapabilities =
+                                state.accountDeletionRecentAuthenticationCapabilities,
+                            recentAuthenticationBusy = state.accountDeletionRecentAuthenticationBusy,
+                            recentAuthenticationProblem = state.accountDeletionRecentAuthenticationProblem,
+                            recentAuthenticationComplete = state.accountDeletionRecentAuthenticationComplete,
+                            onLoadRecentAuthentication = viewModel::loadAccountDeletionRecentAuthentication,
+                            onRecentAuthenticationPassword = viewModel::authenticateAccountDeletionPassword,
+                            onRecentAuthenticationPasskey = viewModel::startAccountDeletionPasskey,
+                            onRecentAuthenticationOidc = viewModel::startAccountDeletionOidc,
+                            onResetRecentAuthentication = viewModel::resetAccountDeletionRecentAuthentication,
+                            onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
+                            onDeleteAccount = viewModel::deleteOwnAccount,
+                        )
                     },
                 )
             }

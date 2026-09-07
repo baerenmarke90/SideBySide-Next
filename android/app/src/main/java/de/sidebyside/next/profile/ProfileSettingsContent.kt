@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import de.sidebyside.next.design.MinimumTouchTarget
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import de.sidebyside.next.reference.UiMessage
@@ -48,7 +49,17 @@ fun ProfileSettingsContent(
         Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
             Text(
                 text = stringResource(R.string.profile_settings_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.labelSmall,
+                color = SideBySideTheme.colors.brandStrong,
+            )
+            // The person's own name is the identity headline, not a generic
+            // "Profil" label; the eyebrow above still carries that word for
+            // orientation. While loading or on error there is no name yet, so
+            // the generic label keeps the heading role.
+            Text(
+                text = self?.displayName?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.profile_settings_title),
+                style = MaterialTheme.typography.headlineSmall.copy(fontFamily = SideBySideDisplayFamily),
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
