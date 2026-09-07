@@ -138,13 +138,48 @@ export function validateAppRelativeReturnTarget(target: string): string | null {
   if (parsed.origin !== 'https://sidebyside.invalid') return null;
   if (parsed.pathname !== target) return null;
 
-  const canonical = CANONICAL_RETURN_PATTERNS.some((pattern) =>
+  const canonicalPattern = CANONICAL_RETURN_PATTERNS.find((pattern) =>
     Boolean(matchPath({ path: pattern, end: true }, parsed.pathname)),
   );
-  return canonical ? parsed.pathname : null;
+  return canonicalPattern ? parsed.pathname : null;
 }
 
-export function rememberCurrentAuthReturnTarget(): string | null {
+/**
+ * Whether a canonical return pattern names a specific resource (carries a
+ * route param, e.g. `:memoryId`) rather than an account-global list/nav
+ * route (e.g. `/today`, `/more/private/notes`). Only resource-specific
+ * routes are bound to the originating Space -- an account-global route is
+ * safe to restore for the same Account regardless of which Space is
+ * currently active (#689).
+ */
+function isResourceSpecificPattern(target: string): boolean {
+  const canonicalPattern = CANONICAL_RETURN_PATTERNS.find((pattern) =>
+    Boolean(matchPath({ path: pattern, end: true }, target)),
+  );
+  return canonicalPattern?.includes(':') ?? false;
+}
+
+interface StoredAuthReturnTarget {
+  path: string;
+  createdAt: number;
+  accountId: string;
+  spaceId: string | null;
+}
+
+/**
+ * Remember the current path as an authentication return target, bound to
+ * the Account (and, for resource-specific routes, the Space) that owns it.
+ *
+ * Without this provenance, a private/resource-specific route remembered
+ * after one Account's session expires could be restored after a different
+ * Account signs in on the same shared browser: the server denies the
+ * content, but the second Account's browser still receives the first
+ * Account's opaque resource id and navigation state (#689).
+ */
+export function rememberCurrentAuthReturnTarget(
+  accountId: string,
+  spaceId: string | null = null,
+): string | null {
   if (typeof window === 'undefined') return null;
   const target = validateAppRelativeReturnTarget(window.location.pathname);
   if (!target) {
@@ -152,24 +187,50 @@ export function rememberCurrentAuthReturnTarget(): string | null {
     return null;
   }
 
-  window.localStorage.setItem(
-    AUTH_RETURN_STORAGE_KEY,
-    JSON.stringify({ path: target, createdAt: Date.now() }),
-  );
+  const record: StoredAuthReturnTarget = {
+    path: target,
+    createdAt: Date.now(),
+    accountId,
+    spaceId: isResourceSpecificPattern(target) ? spaceId : null,
+  };
+  window.localStorage.setItem(AUTH_RETURN_STORAGE_KEY, JSON.stringify(record));
   return target;
 }
 
-export function consumeAuthReturnTarget(now = Date.now()): string | null {
+/**
+ * Consume (always removing) the stored return target, restoring it only
+ * when its provenance matches the just-authenticated context.
+ *
+ * - A different Account than the one that stored it never gets it back,
+ *   even though the path/id itself is only ever privacy-safe opaque data.
+ * - A resource-specific route bound to a Space is not restored into a
+ *   different active Space, even for the same Account.
+ * - `spaceId: undefined` means the caller does not yet know the active
+ *   Space (Space membership resolves after sign-in); a non-resource-
+ *   specific stored target still restores in that case, but a Space-bound
+ *   one does not, since it cannot be proven safe yet.
+ */
+export function consumeAuthReturnTarget(
+  accountId: string,
+  spaceId?: string | null,
+  now = Date.now(),
+): string | null {
   if (typeof window === 'undefined') return null;
   const raw = window.localStorage.getItem(AUTH_RETURN_STORAGE_KEY);
   window.localStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
   if (!raw) return null;
 
   try {
-    const stored = JSON.parse(raw) as { path?: unknown; createdAt?: unknown };
+    const stored = JSON.parse(raw) as {
+      path?: unknown;
+      createdAt?: unknown;
+      accountId?: unknown;
+      spaceId?: unknown;
+    };
     if (
       typeof stored.path !== 'string' ||
-      typeof stored.createdAt !== 'number'
+      typeof stored.createdAt !== 'number' ||
+      typeof stored.accountId !== 'string'
     ) {
       return null;
     }
@@ -179,15 +240,24 @@ export function consumeAuthReturnTarget(now = Date.now()): string | null {
     ) {
       return null;
     }
+    if (stored.accountId !== accountId) return null;
+
+    const storedSpaceId =
+      typeof stored.spaceId === 'string' ? stored.spaceId : null;
+    if (storedSpaceId !== null && storedSpaceId !== spaceId) return null;
+
     return validateAppRelativeReturnTarget(stored.path);
   } catch {
     return null;
   }
 }
 
-export function restoreAuthReturnTarget(): string | null {
+export function restoreAuthReturnTarget(
+  accountId: string,
+  spaceId?: string | null,
+): string | null {
   if (typeof window === 'undefined') return null;
-  const target = consumeAuthReturnTarget();
+  const target = consumeAuthReturnTarget(accountId, spaceId);
   if (!target || target === window.location.pathname) return target;
 
   window.history.replaceState(window.history.state, '', target);

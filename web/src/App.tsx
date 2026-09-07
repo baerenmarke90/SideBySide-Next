@@ -34,7 +34,10 @@ import { createPrivateAreaApi } from './client/privateArea';
 import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCacheInBackground } from './client/productReadCache';
-import { rememberCurrentAuthReturnTarget } from './client/deepLinks';
+import {
+  rememberCurrentAuthReturnTarget,
+  restoreAuthReturnTarget,
+} from './client/deepLinks';
 import {
   clearStoredSession,
   isAccessTokenValid,
@@ -807,6 +810,11 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
   const [spaceId, setSpaceId] = useState<string | null>(
     () => initialStoredSession?.spaceId ?? null,
   );
+  // Tracks which Account a remembered auth-return target has already been
+  // restored for, so the effect that resolves the active Space (below)
+  // attempts restoration once per Account rather than on every Space
+  // switch (#689).
+  const restoredAuthReturnForAccountId = useRef<string | null>(null);
 
   const terminateSession = useCallback(() => {
     clearStoredSession();
@@ -814,6 +822,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
     setSpaceId(null);
     setAccount(null);
     setTokens(null);
+    restoredAuthReturnForAccountId.current = null;
     queryClient.clear();
     clearProductReadCacheInBackground();
   }, [queryClient]);
@@ -854,7 +863,10 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
       } catch {
         if (cancelled) return;
         terminateSession();
-        rememberCurrentAuthReturnTarget();
+        rememberCurrentAuthReturnTarget(
+          activeSession.account.id,
+          activeSession.spaceId ?? null,
+        );
       } finally {
         if (!cancelled) {
           setIsRestoring(false);
@@ -956,6 +968,14 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
       const resolved = resolveActiveSpaceId(membershipsQuery.data, current);
       if (resolved && account && tokens) {
         storeSession({ account, tokens, spaceId: resolved });
+      }
+      // Restore a remembered auth-return target only once both the Account
+      // and its active Space are known, so a Space-bound route is never
+      // blindly restored into the wrong Space (#689). Guarded to fire once
+      // per Account so it does not re-run on every unrelated Space switch.
+      if (account && restoredAuthReturnForAccountId.current !== account.id) {
+        restoredAuthReturnForAccountId.current = account.id;
+        restoreAuthReturnTarget(account.id, resolved);
       }
       return resolved;
     });
