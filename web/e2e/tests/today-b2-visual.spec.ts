@@ -463,7 +463,7 @@ test('B2 no-retrospective runtime promotes a real recent memory instead of resto
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('B2 no-image state, keyboard flow and 200 percent layout zoom remain usable', async ({
+test('B2 no-image state, keyboard flow and 200 percent zoom-equivalent reflow remain usable', async ({
   page,
 }, testInfo) => {
   const state: MockState = {
@@ -501,9 +501,12 @@ test('B2 no-image state, keyboard flow and 200 percent layout zoom remain usable
     fullPage: true,
   });
 
-  await page.locator('html').evaluate((element) => {
-    element.style.zoom = '2';
-  });
+  // Chromium exposes page scale separately from layout viewport. A 1440px
+  // desktop at 200% browser zoom reflows against roughly 720 CSS pixels, so
+  // exercise that equivalent layout width rather than CSS `zoom`, which scales
+  // after layout and can manufacture overflow that real browser zoom avoids.
+  await page.setViewportSize({ width: 720, height: 900 });
+  await expect(page.locator('.mobile-bottom-nav')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);
   expect(unexpectedRequests).toEqual([]);
