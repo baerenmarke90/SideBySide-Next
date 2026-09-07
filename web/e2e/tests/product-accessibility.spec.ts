@@ -351,10 +351,9 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async (
-  { page },
-  testInfo,
-) => {
+test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async ({
+  page,
+}, testInfo) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
     window.localStorage.setItem('sidebyside.theme', 'system');
@@ -420,10 +419,9 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async (
-  { page },
-  testInfo,
-) => {
+test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async ({
+  page,
+}, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
     window.localStorage.setItem('sidebyside.theme', 'system');
