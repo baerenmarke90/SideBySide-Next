@@ -29,6 +29,23 @@ describe('CouplePresence', () => {
     expect(screen.getByText('3y')).toBeDefined();
   });
 
+  it('shows only first names throughout a connected couple hero', () => {
+    render(
+      <CouplePresence
+        spaceTitle="Lea Winters & Alex Winter"
+        primaryPerson={{ displayName: 'Lea Winters' }}
+        secondaryPerson={{ displayName: 'Alex Winter' }}
+        status="connected"
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Lea & Alex' }),
+    ).toBeDefined();
+    expect(document.body.innerHTML).not.toContain('Winters');
+    expect(document.body.innerHTML).not.toContain('Winter');
+  });
+
   it('calls onDurationClick when relationship duration button is pressed', () => {
     const handleDurationClick = vi.fn();
     render(
