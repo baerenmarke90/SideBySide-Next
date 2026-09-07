@@ -9,6 +9,7 @@ There is no data access based only on a resource ID.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, NotFoundError
 from sidebyside.identity.models import Account
+from sidebyside.relationship import policy
 from sidebyside.relationship.models import (
     MAX_ACTIVE_PARTNERS,
     Membership,
@@ -119,6 +121,47 @@ def lock_space(session: Session, space_id: UUID) -> Space:
     if space is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
     return space
+
+
+def freeze_offboarding_purge_deadline_if_orphaned(
+    session: Session,
+    space_id: UUID,
+) -> datetime | None:
+    """Freeze the product-policy deadline when a Space first becomes zero-active.
+
+    The Space row is the relationship lifecycle serialization boundary. Keeping
+    the resulting timestamp on that row makes later policy changes prospective:
+    an already-orphaned Space never has its promised deletion deadline silently
+    recomputed from a newer retention duration.
+
+    Empty Spaces and malformed ended Memberships without ``ended_at`` fail
+    closed and receive no destructive deadline. Callers that end Memberships
+    should already hold the Space lifecycle lock; reacquiring it here is safe
+    and keeps this helper correct for future authoritative callers.
+    """
+    space = lock_space(session, space_id)
+    if space.offboarding_purge_at is not None:
+        return space.offboarding_purge_at
+
+    memberships = list(
+        session.execute(
+            select(Membership)
+            .where(Membership.space_id == space_id)
+            .order_by(Membership.id)
+        ).scalars()
+    )
+    if not memberships:
+        return None
+    if any(membership.status == MembershipStatus.ACTIVE.value for membership in memberships):
+        return None
+
+    ended_at = [membership.ended_at for membership in memberships]
+    if any(value is None for value in ended_at):
+        return None
+
+    orphaned_at = max(value for value in ended_at if value is not None)
+    space.offboarding_purge_at = policy.purge_eligible_at(orphaned_at)
+    return space.offboarding_purge_at
 
 
 def has_ended_membership(session: Session, space_id: UUID) -> bool:
