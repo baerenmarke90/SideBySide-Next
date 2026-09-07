@@ -374,6 +374,10 @@ code {
   letter-spacing: -0.035em;
 }
 
+.brand-dot {
+  color: var(--color-brand);
+}
+
 .brand-suffix {
   color: currentColor;
   font-size: 0.68rem;
@@ -383,6 +387,10 @@ code {
 }
 
 .brand-inverse {
+  color: var(--color-on-accent);
+}
+
+.brand-inverse .brand-dot {
   color: var(--color-on-accent);
 }
 

@@ -64,8 +64,7 @@ const privateArea = {
     targetOnLabel: 'Für wann',
     priceLabel: 'Preisnotiz',
     urlLabel: 'Link',
-    urlHelp:
-      'Der Link wird nur gespeichert. SidebySide lädt keine Vorschau dafür.',
+    urlHelp: 'Der Link wird nur gespeichert. eimir. lädt keine Vorschau dafür.',
     pinnedLabel: 'Oben anheften',
     statusLabel: 'Status',
     status: {

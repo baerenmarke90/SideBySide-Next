@@ -2,8 +2,8 @@
   var storageKey = 'sidebyside.theme';
   var darkModeQuery = '(prefers-color-scheme: dark)';
   var themeColors = {
-    light: '#faf8fc',
-    dark: '#1c1525',
+    light: '#faf7f5',
+    dark: '#18131d',
   };
 
   var preference = 'system';

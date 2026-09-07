@@ -108,7 +108,7 @@ const m5s3 = {
     coordinates: '{{latitude}}, {{longitude}}',
     nameOnly: 'Dieser Ort ist bewusst ohne Koordinaten gespeichert.',
     noMap:
-      'SidebySide verwendet hier keine Karten- oder Geocoding-Dienste. Der gespeicherte Ort bleibt unabhängig davon nutzbar.',
+      'eimir. verwendet hier keine Karten- oder Geocoding-Dienste. Der gespeicherte Ort bleibt unabhängig davon nutzbar.',
     noAddress: 'Keine Adresse hinterlegt',
     deleteConsequence:
       'Der Ort und seine Verknüpfungen werden gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.',
@@ -168,7 +168,7 @@ const m5s3 = {
     deleteItem: '„{{title}}“ löschen',
     reordering: 'Reihenfolge wird gespeichert …',
     deleteConsequence:
-      'Die Liste und ihre eigenen Listeneinträge werden gelöscht. Andere SidebySide-Inhalte werden nicht gelöscht.',
+      'Die Liste und ihre eigenen Listeneinträge werden gelöscht. Andere eimir.-Inhalte werden nicht gelöscht.',
   },
 };
 

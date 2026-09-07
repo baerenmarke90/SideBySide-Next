@@ -1,8 +1,18 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+afterEach(() => {
+  cleanup();
+});
 import type { PeopleApi } from '../api/generated/apis/PeopleApi';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { PersonRelationship } from '../api/generated/models/PersonRelationship';

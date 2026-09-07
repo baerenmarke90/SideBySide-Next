@@ -120,8 +120,9 @@ class DesignTokenTest {
 
     @Test
     fun materialRolesCarryTheDocumentedProductMeaning() {
-        // Purple is the only standard colour for primary actions; mint means
-        // shared, pink means restricted. See docs/DESIGN-PRINCIPLES.md 3.1.
+        // BrandStrong (Rose/Coral) is the standard colour for primary actions;
+        // shared means synchronized togetherness, private means personal space.
+        // See docs/DESIGN-PRINCIPLES.md 3.1.
         assertEquals(lightSideBySideColors.brandStrong, SideBySideLightColorScheme.primary)
         assertEquals(lightSideBySideColors.shared, SideBySideLightColorScheme.secondary)
         assertEquals(lightSideBySideColors.private, SideBySideLightColorScheme.tertiary)
