@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
-import type { MemoryAttachmentEntry } from '../api/generated/models/MemoryAttachmentEntry';
+import type { MemoryAttachmentSummary } from '../api/generated/models/MemoryAttachmentSummary';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import {
   StoryKind,
@@ -76,7 +76,7 @@ interface TapestryEntry {
   key: string;
   role: ReturnType<typeof tapestryItemRole>;
   presentation: ReturnType<typeof storyItemPresentation>;
-  firstAttachment: MemoryAttachmentEntry | undefined;
+  firstAttachment: MemoryAttachmentSummary | undefined;
   path: string;
   memoryId: string;
   author: AuthorSummary;
