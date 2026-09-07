@@ -112,29 +112,21 @@ jobs:
 
           vm_path = Path("android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt")
           vm = vm_path.read_text(encoding="utf-8")
-          old = """                .onSuccess {
-                      if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                      // The server has crossed the irreversible tombstone boundary and
-                      // revoked this session. Reuse the existing logout transition to
-                      // invalidate in-flight work, drafts, Room/protected caches and UI state.
-                      logout()
-                  }
-          """
-          new = """                .onSuccess {
-                      // Server acceptance belongs to the captured Account even if the UI
-                      // moved to another session while the request was in flight. Remove
-                      // only that Account's durable Space preference before touching UI state.
-                      spaceStore.forgetAccount(currentSession.account.id)
-                      if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                      // The server has crossed the irreversible tombstone boundary and
-                      // revoked this session. Reuse the existing logout transition to
-                      // invalidate in-flight work, drafts, Room/protected caches and UI state.
-                      logout()
-                  }
-          """
-          if old not in vm:
-              raise SystemExit("Account deletion success context changed")
-          vm = vm.replace(old, new, 1)
+          deletion_call = vm.index("api.deleteOwnAccount(")
+          success = vm.index(".onSuccess {", deletion_call)
+          guard = "if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess"
+          guard_pos = vm.index(guard, success)
+          line_start = vm.rfind("\n", success, guard_pos) + 1
+          indent = vm[line_start:guard_pos]
+          if indent.strip():
+              raise SystemExit("Unexpected account-deletion guard indentation")
+          insertion = (
+              f"{indent}// Server acceptance belongs to the captured Account even if the UI\n"
+              f"{indent}// moved to another session while the request was in flight. Remove\n"
+              f"{indent}// only that Account's durable Space preference before touching UI state.\n"
+              f"{indent}spaceStore.forgetAccount(currentSession.account.id)\n"
+          )
+          vm = vm[:line_start] + insertion + vm[line_start:]
           vm_path.write_text(vm, encoding="utf-8")
           PY
 
@@ -208,7 +200,6 @@ jobs:
                   )
                   assertFalse(model.uiState.value.loggedIn)
 
-                  // Removing an already-absent Account mapping is deliberately idempotent.
                   store.forgetAccount(api.accountId)
                   assertNull(store.rememberedSpace(api.accountId))
               }
@@ -341,7 +332,6 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add android/app/src/main/java/de/sidebyside/next/reference/SpacePreferenceStore.kt \
                   android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt \
-                  android/app/src/test/java/de/sidebyside/next/reference/SpacePreferenceDeletionTest.kt \
-                  .github/workflows/tmp-682-account-space-retention.yml
+                  android/app/src/test/java/de/sidebyside/next/reference/SpacePreferenceDeletionTest.kt
           git commit -m "fix(android): forget Space preference after Account deletion"
           git push origin HEAD:fix/682-forget-space-preference-after-account-deletion
