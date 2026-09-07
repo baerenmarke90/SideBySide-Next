@@ -100,7 +100,10 @@ export function SettingsPage(props: SettingsPageProps) {
           <ProfileAppearancePanel id="settings-appearance-panel" />
         </div>
 
-        <div id="settings-data" className="settings-section settings-data-block">
+        <div
+          id="settings-data"
+          className="settings-section settings-data-block"
+        >
           <TransferPanel
             apiBaseUrl={props.apiBaseUrl}
             accessToken={props.accessToken}
@@ -115,7 +118,9 @@ export function SettingsPage(props: SettingsPageProps) {
           aria-labelledby="settings-sensitive-heading"
         >
           <div className="settings-sensitive-head">
-            <p className="eyebrow">{t('profileIdentity.settingsSensitiveEyebrow')}</p>
+            <p className="eyebrow">
+              {t('profileIdentity.settingsSensitiveEyebrow')}
+            </p>
             <h2 id="settings-sensitive-heading">
               {t('profileIdentity.settingsSensitiveTitle')}
             </h2>
