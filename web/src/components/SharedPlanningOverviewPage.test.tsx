@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
+import { i18n } from '../i18n';
 import { CollectionsOverviewPage } from './CollectionsOverviewPage';
 import { PlacesOverviewPage } from './PlacesOverviewPage';
 import { SharedPlanningOverviewPage } from './SharedPlanningOverviewPage';
@@ -135,8 +136,8 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(planningHtml).toContain('Noch nichts fest geplant.');
-    expect(planningHtml).toContain('Noch keine Wünsche festgehalten.');
+    expect(planningHtml).toContain(i18n.t('m5s3.overview.soonEmpty'));
+    expect(planningHtml).toContain(i18n.t('m5s3.overview.somedayEmpty'));
 
     const collectionsClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -155,7 +156,7 @@ describe('SharedPlanningOverviewPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(collectionsHtml).toContain('Noch keine gemeinsame Liste.');
+    expect(collectionsHtml).toContain(i18n.t('m5s3.collection.emptyOverview'));
 
     const placesClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -174,6 +175,6 @@ describe('SharedPlanningOverviewPage', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(placesHtml).toContain('Noch keine gemeinsamen Orte gespeichert.');
+    expect(placesHtml).toContain(i18n.t('m5s3.place.emptyOverview'));
   });
 });
