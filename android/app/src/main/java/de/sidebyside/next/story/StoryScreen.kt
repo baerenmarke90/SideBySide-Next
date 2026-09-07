@@ -1,5 +1,6 @@
 package de.sidebyside.next.story
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,15 +16,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.design.VisibilityBadge
 import de.sidebyside.next.reference.R
 import java.time.LocalDate
 import java.util.UUID
@@ -122,9 +129,14 @@ private fun DayHeading(date: LocalDate) {
         text = date.format(
             DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale),
         ),
-        style = MaterialTheme.typography.titleSmall,
+        style = SideBySideTheme.typography.titleSmall.copy(
+            fontFamily = SideBySideDisplayFamily,
+            fontWeight = FontWeight.SemiBold,
+        ),
         color = SideBySideTheme.colors.brandStrong,
-        modifier = Modifier.semantics { heading() },
+        modifier = Modifier
+            .padding(top = SideBySideTheme.spacing.step2)
+            .semantics { heading() },
     )
 }
 
@@ -135,9 +147,37 @@ private fun StoryEntryCard(
     generation: Long,
     onOpen: (() -> Unit)? = null,
 ) {
+    when (entry.kind) {
+        StoryEntryKind.MEMORY -> MemoryCard(
+            entry = entry,
+            imageStore = imageStore,
+            generation = generation,
+            onOpen = onOpen,
+        )
+        StoryEntryKind.MILESTONE -> MilestoneCard(
+            entry = entry,
+            onOpen = onOpen,
+        )
+        StoryEntryKind.HEART_MOMENT -> HeartMomentCard(
+            entry = entry,
+            imageStore = imageStore,
+            generation = generation,
+            onOpen = onOpen,
+        )
+    }
+}
+
+@Composable
+private fun MemoryCard(
+    entry: StoryEntry,
+    imageStore: StoryImageStore,
+    generation: Long,
+    onOpen: (() -> Unit)? = null,
+) {
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
         color = SideBySideTheme.colors.surface,
+        border = BorderStroke(1.dp, SideBySideTheme.colors.borderSubtle),
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
@@ -146,19 +186,31 @@ private fun StoryEntryCard(
             modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
         ) {
-            Text(
-                text = stringResource(entry.kind.labelRes()),
-                style = MaterialTheme.typography.labelSmall,
-                color = entry.kind.accent(),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(entry.kind.labelRes()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SideBySideTheme.colors.shared,
+                )
+                VisibilityBadge(isShared = true)
+            }
+
             Text(
                 text = entry.text,
-                style = MaterialTheme.typography.titleMedium,
+                style = SideBySideTheme.typography.titleMedium.copy(
+                    fontFamily = SideBySideDisplayFamily,
+                    fontWeight = FontWeight.SemiBold,
+                ),
                 color = SideBySideTheme.colors.textPrimary,
                 // A long title wraps rather than being cut: the words are the
                 // record, and truncation would hide part of it for good.
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
+
             Text(
                 text = stringResource(R.string.story_by_author, entry.authorName),
                 style = MaterialTheme.typography.bodySmall,
@@ -168,23 +220,165 @@ private fun StoryEntryCard(
             )
 
             if (entry.images.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(
-                        SideBySideTheme.spacing.step2,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    for (image in entry.images.take(MAX_IMAGES_PER_ENTRY)) {
-                        StoryImage(
-                            image = image,
-                            store = imageStore,
-                            generation = generation,
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f),
-                        )
+                val primaryImage = entry.images.first()
+                val additionalImages = entry.images.drop(1).take(MAX_IMAGES_PER_ENTRY - 1)
+
+                StoryImage(
+                    image = primaryImage,
+                    store = imageStore,
+                    generation = generation,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 10f)
+                        .clip(RoundedCornerShape(SideBySideTheme.radii.card)),
+                )
+
+                if (additionalImages.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(
+                            SideBySideTheme.spacing.step2,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        for (image in additionalImages) {
+                            StoryImage(
+                                image = image,
+                                store = imageStore,
+                                generation = generation,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(SideBySideTheme.radii.card)),
+                            )
+                        }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MilestoneCard(
+    entry: StoryEntry,
+    onOpen: (() -> Unit)? = null,
+) {
+    Surface(
+        shape = RoundedCornerShape(SideBySideTheme.radii.card),
+        color = SideBySideTheme.colors.surface,
+        border = BorderStroke(1.dp, SideBySideTheme.colors.discovery.copy(alpha = 0.35f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
+    ) {
+        Column(
+            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(entry.kind.labelRes()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SideBySideTheme.colors.discovery,
+                )
+                VisibilityBadge(isShared = true)
+            }
+
+            Text(
+                text = entry.text,
+                style = SideBySideTheme.typography.titleMedium.copy(
+                    fontFamily = SideBySideDisplayFamily,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = SideBySideTheme.colors.textPrimary,
+                modifier = Modifier.widthIn(max = ReadingMeasure),
+            )
+
+            Text(
+                text = stringResource(R.string.story_by_author, entry.authorName),
+                style = MaterialTheme.typography.bodySmall,
+                color = SideBySideTheme.colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeartMomentCard(
+    entry: StoryEntry,
+    imageStore: StoryImageStore,
+    generation: Long,
+    onOpen: (() -> Unit)? = null,
+) {
+    Surface(
+        shape = RoundedCornerShape(SideBySideTheme.radii.card),
+        color = SideBySideTheme.colors.brandSurface,
+        border = BorderStroke(1.dp, SideBySideTheme.colors.brand.copy(alpha = 0.25f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
+    ) {
+        Column(
+            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = "♥",
+                        color = SideBySideTheme.colors.brand,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = stringResource(entry.kind.labelRes()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SideBySideTheme.colors.brandStrong,
+                    )
+                }
+                VisibilityBadge(isShared = true)
+            }
+
+            Text(
+                text = entry.text,
+                style = SideBySideTheme.typography.titleMedium.copy(
+                    fontFamily = SideBySideDisplayFamily,
+                    fontStyle = FontStyle.Italic,
+                ),
+                color = SideBySideTheme.colors.textPrimary,
+                modifier = Modifier.widthIn(max = ReadingMeasure),
+            )
+
+            Text(
+                text = stringResource(R.string.story_by_author, entry.authorName),
+                style = MaterialTheme.typography.bodySmall,
+                color = SideBySideTheme.colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            if (entry.images.isNotEmpty()) {
+                StoryImage(
+                    image = entry.images[0],
+                    store = imageStore,
+                    generation = generation,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 10f)
+                        .clip(RoundedCornerShape(SideBySideTheme.radii.card)),
+                )
             }
         }
     }
