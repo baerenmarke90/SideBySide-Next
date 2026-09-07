@@ -78,14 +78,14 @@ describe('Direction B2 /today composition', () => {
           {
             id: 'memory-photo',
             type: 'MEMORY',
-            titleOrText: 'Abend am See',
+            titleOrText: 'Evening by the lake',
             occurredOn: new Date('2026-09-01T18:00:00Z'),
             previewAttachmentId: 'attachment-1',
           },
           {
             id: 'heart-text',
             type: 'HEART_MOMENT',
-            titleOrText: 'Kleine Nachricht',
+            titleOrText: 'Small note',
             occurredOn: new Date('2026-08-31T08:00:00Z'),
           },
         ],
@@ -96,9 +96,9 @@ describe('Direction B2 /today composition', () => {
 
     expect(html).toContain('today-section-keepsake-recent');
     expect(html).toContain('today-card-keepsake');
-    expect(html).toContain('Abend am See');
-    expect(html).toContain('Kleine Nachricht');
-    expect(html.match(/Abend am See/g)).toHaveLength(1);
+    expect(html).toContain('Evening by the lake');
+    expect(html).toContain('Small note');
+    expect(html.match(/Evening by the lake/g)).toHaveLength(1);
   });
 
   it('uses semantic tokens and explicitly supports reduced motion', () => {
