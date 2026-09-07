@@ -17,6 +17,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,10 +30,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.reference.ReferenceViewModel
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
 import java.util.UUID
@@ -43,10 +46,10 @@ private val ReadingMeasure: Dp = 560.dp
 /**
  * An authenticated account that cannot enter a Space yet.
  *
- * With multiple active Spaces and no valid remembered explicit choice this is
- * the mandatory Space chooser. With no active Space it remains the invitation
- * waiting room. In both cases there is deliberately no Space-bound product
- * surface until the account has one unambiguous working context.
+ * The surrounding reference route already owns the authenticated
+ * [ReferenceViewModel]. Looking it up by the same Activity-scoped ViewModel key
+ * keeps this waiting-room route non-Space-bound while allowing it to render the
+ * explicit chooser when the account has several active memberships.
  */
 @Composable
 fun AwaitingSpaceScreen(
@@ -54,8 +57,30 @@ fun AwaitingSpaceScreen(
     problem: UiProblem?,
     onAcceptInvitation: (String) -> Unit,
     onSignOut: () -> Unit,
-    spaces: List<AccountMembershipView> = emptyList(),
-    onSelectSpace: (UUID) -> Unit = {},
+    modifier: Modifier = Modifier,
+    referenceViewModel: ReferenceViewModel = viewModel(),
+) {
+    val referenceState by referenceViewModel.uiState.collectAsState()
+
+    AwaitingSpaceContent(
+        busy = busy,
+        problem = problem,
+        onAcceptInvitation = onAcceptInvitation,
+        onSignOut = onSignOut,
+        spaces = referenceState.availableSpaces,
+        onSelectSpace = referenceViewModel::selectSpace,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun AwaitingSpaceContent(
+    busy: Boolean,
+    problem: UiProblem?,
+    onAcceptInvitation: (String) -> Unit,
+    onSignOut: () -> Unit,
+    spaces: List<AccountMembershipView>,
+    onSelectSpace: (UUID) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
