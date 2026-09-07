@@ -23,6 +23,7 @@ import './components/ProfilePage.css';
 import './components/RelatedPeoplePage.css';
 import './components/StoryProductPages.css';
 import './components/SharedPlanningSanctuary.css';
+import './components/SharedPlanningMotion.css';
 
 initializeTheme();
 
