@@ -280,6 +280,7 @@ data class ReferenceUiState(
      * offered, never what is allowed — the server still refuses what it should.
      */
     val accountId: java.util.UUID? = null,
+    val accountDisplayName: String? = null,
     val comments: List<CommentDetail> = emptyList(),
     /**
      * Only the wishes nobody has acted on yet.
@@ -611,6 +612,7 @@ class ReferenceViewModel(
                                 loggedIn = false,
                                 awaitingSpace = true,
                                 accountId = signedIn.account.id,
+                                accountDisplayName = signedIn.account.displayName,
                                 busy = false,
                                 error = null,
                                 status = null,
@@ -629,6 +631,7 @@ class ReferenceViewModel(
                             loggedIn = true,
                             awaitingSpace = false,
                             accountId = signedIn.account.id,
+                            accountDisplayName = signedIn.account.displayName,
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
@@ -711,6 +714,7 @@ class ReferenceViewModel(
                         configured = true,
                         loggedIn = true,
                         accountId = signedIn.account.id,
+                        accountDisplayName = signedIn.account.displayName,
                         demoMode = true,
                         demoPersona = persona,
                         activeSpaceId = space,
@@ -2984,6 +2988,7 @@ class ReferenceViewModel(
                 )
                 mutate {
                     it.copy(
+                        accountDisplayName = updated.displayName,
                         profile = it.profile.copy(
                             self = updated,
                             busy = false,

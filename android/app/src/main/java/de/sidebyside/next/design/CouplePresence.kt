@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.sidebyside.next.reference.R
 
@@ -43,6 +44,7 @@ fun CouplePresence(
     onInviteClick: (() -> Unit)? = null,
     actionContent: (@Composable () -> Unit)? = null,
     unboxed: Boolean = false,
+    isCompact: Boolean = false,
 ) {
     val displayStatus = statusText ?: when (presenceState) {
         PartnerPresenceState.CONNECTED -> stringResource(R.string.relationship_presence_connected)
@@ -89,20 +91,27 @@ fun CouplePresence(
                     userName = userName,
                     partnerName = partnerName,
                     presenceState = presenceState,
-                    size = if (unboxed) 56.dp else 52.dp,
+                    size = if (unboxed) (if (isCompact) 48.dp else 56.dp) else 52.dp,
                     onInviteClick = onInviteClick,
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(if (isCompact) 12.dp else 16.dp))
 
                 Column {
                     Text(
                         text = spaceName,
                         style = if (unboxed) {
-                            SideBySideTheme.typography.headlineMedium.copy(
-                                fontFamily = SideBySideDisplayFamily,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            if (isCompact) {
+                                SideBySideTheme.typography.titleLarge.copy(
+                                    fontFamily = SideBySideDisplayFamily,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            } else {
+                                SideBySideTheme.typography.headlineMedium.copy(
+                                    fontFamily = SideBySideDisplayFamily,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         } else {
                             SideBySideTheme.typography.titleLarge.copy(
                                 fontFamily = SideBySideDisplayFamily,
@@ -110,6 +119,8 @@ fun CouplePresence(
                             )
                         },
                         color = SideBySideTheme.colors.textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
 
                     Row(
@@ -160,7 +171,7 @@ fun CouplePresence(
             }
 
             if (actionContent != null) {
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(if (isCompact) 8.dp else 12.dp))
                 actionContent()
             }
         }
