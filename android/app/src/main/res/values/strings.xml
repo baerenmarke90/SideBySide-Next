@@ -261,6 +261,7 @@
     <string name="plan_status_completed">Gemeinsam erlebt</string>
     <string name="plan_schedule">Zeitpunkt festlegen</string>
     <string name="plan_schedule_date_hint">Datum (JJJJ-MM-TT)</string>
+    <string name="plan_schedule_time_hint">Uhrzeit (HH:MM)</string>
     <string name="plan_schedule_confirm">Zeitpunkt bestätigen</string>
     <string name="plan_unschedule">Zeitpunkt entfernen</string>
     <string name="plan_complete">Haben wir erlebt</string>
