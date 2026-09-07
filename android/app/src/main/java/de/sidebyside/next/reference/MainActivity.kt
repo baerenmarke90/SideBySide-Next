@@ -291,10 +291,9 @@ private fun ReferenceFlowRoute(
         )
     }
 
-    // An authenticated account with no Space yet, or with multiple active
-    // Spaces and no valid remembered explicit choice, is neither signed out
-    // nor ready for the navigated shell. Keep it on this non-Space-bound
-    // surface until an invitation or explicit Space selection resolves that.
+    // An authenticated account with no Space yet is neither signed out nor
+    // signed in in the sense the rest of the shell means; it gets its own
+    // surface rather than falling into the entry form or the navigated shell.
     if (state.awaitingSpace) {
         ShellSurface {
             AwaitingSpaceScreen(
@@ -302,8 +301,6 @@ private fun ReferenceFlowRoute(
                 problem = state.invitationProblem,
                 onAcceptInvitation = referenceViewModel::acceptInvitation,
                 onSignOut = signOut,
-                spaces = state.availableSpaces,
-                onSelectSpace = referenceViewModel::selectSpace,
             )
         }
         return
@@ -404,6 +401,10 @@ private fun DemoShell(
         }
     }
     AppNavigation(
+        // Planen joins now that #419 put something behind it; a destination
+        // with nothing behind it would be dead navigation.
+        // Heute leads, as the Information Architecture has it; #421 put
+        // something behind it.
         destinations = listOf(
             AppDestination.Today,
             AppDestination.Story,
@@ -421,6 +422,10 @@ private fun DemoShell(
         },
         floatingActionButton = {
             QuickCreateFab(
+                // The Story screen's own inline "Erinnerung festhalten"
+                // button is one tap further from here — see
+                // QuickCreateFab's own doc comment for why this does not
+                // also reach into StoryDestination's local capture state.
                 onCreateMemory = { navController.navigateToPrimary(AppDestination.Story) },
                 onCreateHeartMoment = { navController.navigate(HEART_MOMENTS_ROUTE) },
                 onCreateMilestone = { navController.navigate(MILESTONE_CREATE_ROUTE) },
@@ -435,6 +440,9 @@ private fun DemoShell(
                 val memoryId = entry.arguments?.getString(MEMORY_ID_ARGUMENT)
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
 
+                // Loading is tied to the route rather than to the tap, so
+                // returning to this screen after process death still shows the
+                // memory instead of an empty one.
                 LaunchedEffect(memoryId, state.activeSpaceId, state.reconnectEpoch) {
                     memoryId?.let(viewModel::openMemory)
                     memoryId?.let { viewModel.loadComments(MEMORY_COMMENTS, it) }
@@ -469,7 +477,9 @@ private fun DemoShell(
                                 accountId = state.accountId,
                                 busy = state.commentsBusy,
                                 problem = state.commentsProblem,
-                                onAdd = { body -> viewModel.addComment(MEMORY_COMMENTS, id, body) },
+                                onAdd = { body ->
+                                    viewModel.addComment(MEMORY_COMMENTS, id, body)
+                                },
                                 onEdit = { commentId, body ->
                                     viewModel.editComment(MEMORY_COMMENTS, id, commentId, body)
                                 },
@@ -539,15 +549,27 @@ private fun DemoShell(
                                 accountId = state.accountId,
                                 busy = state.commentsBusy,
                                 problem = state.commentsProblem,
-                                onAdd = { body -> viewModel.addComment(MILESTONE_COMMENTS, parentId, body) },
+                                onAdd = { body ->
+                                    viewModel.addComment(MILESTONE_COMMENTS, parentId, body)
+                                },
                                 onEdit = { commentId, body ->
-                                    viewModel.editComment(MILESTONE_COMMENTS, parentId, commentId, body)
+                                    viewModel.editComment(
+                                        MILESTONE_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                        body,
+                                    )
                                 },
                                 onDelete = { commentId ->
-                                    viewModel.removeComment(MILESTONE_COMMENTS, parentId, commentId)
+                                    viewModel.removeComment(
+                                        MILESTONE_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                    )
                                 },
-                                onLoadMore = { viewModel.loadMoreComments(MILESTONE_COMMENTS, parentId) }
-                                    .takeIf { state.commentsHaveMore },
+                                onLoadMore = {
+                                    viewModel.loadMoreComments(MILESTONE_COMMENTS, parentId)
+                                }.takeIf { state.commentsHaveMore },
                             )
                         }
                     },
@@ -586,15 +608,27 @@ private fun DemoShell(
                                 accountId = state.accountId,
                                 busy = state.commentsBusy,
                                 problem = state.commentsProblem,
-                                onAdd = { body -> viewModel.addComment(HEART_MOMENT_COMMENTS, parentId, body) },
+                                onAdd = { body ->
+                                    viewModel.addComment(HEART_MOMENT_COMMENTS, parentId, body)
+                                },
                                 onEdit = { commentId, body ->
-                                    viewModel.editComment(HEART_MOMENT_COMMENTS, parentId, commentId, body)
+                                    viewModel.editComment(
+                                        HEART_MOMENT_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                        body,
+                                    )
                                 },
                                 onDelete = { commentId ->
-                                    viewModel.removeComment(HEART_MOMENT_COMMENTS, parentId, commentId)
+                                    viewModel.removeComment(
+                                        HEART_MOMENT_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                    )
                                 },
-                                onLoadMore = { viewModel.loadMoreComments(HEART_MOMENT_COMMENTS, parentId) }
-                                    .takeIf { state.commentsHaveMore },
+                                onLoadMore = {
+                                    viewModel.loadMoreComments(HEART_MOMENT_COMMENTS, parentId)
+                                }.takeIf { state.commentsHaveMore },
                             )
                         }
                     },
@@ -618,6 +652,8 @@ private fun DemoShell(
             }
 
             composable(HEART_MOMENTS_ROUTE) {
+                // Tied to the route, so returning here after process death
+                // loads again instead of showing an empty list.
                 LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadHeartMoments() }
                 DisposableEffect(Unit) { onDispose(viewModel::clearHeartMoments) }
 
@@ -636,6 +672,13 @@ private fun DemoShell(
             }
 
             composable(RELATED_PERSONS_ROUTE) {
+                // Deliberately no dispose-time clear here, unlike HeartMoments:
+                // opening a person's ImportantDates navigates forward to a
+                // child route that reads this same list for the person's
+                // name, and clearing on leave wiped it before that screen
+                // could render. Every session-changing event already calls
+                // clearRelatedPersons() directly, so nothing leaks across
+                // sign-in/demo/Space boundaries without this.
                 LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadRelatedPersons() }
 
                 RelatedPersonsScreen(
@@ -786,7 +829,9 @@ private fun DemoShell(
                     busy = state.collectionsBusy,
                     problem = state.collectionsProblem,
                     onBack = { controller.popBackStack() },
-                    onOpen = { collection -> controller.navigate("planning/collections/${collection.id}") },
+                    onOpen = { collection ->
+                        controller.navigate("planning/collections/${collection.id}")
+                    },
                     onAdd = viewModel::addCollection,
                     onEdit = viewModel::updateCollection,
                     onDelete = viewModel::deleteCollection,
@@ -867,8 +912,12 @@ private fun DemoShell(
                     busy = state.chapterContentBusy,
                     problem = state.chapterContentProblem,
                     onBack = { controller.popBackStack() },
-                    onLink = { target -> chapterId?.let { viewModel.linkChapterContent(it, target) } },
-                    onUnlink = { target -> chapterId?.let { viewModel.unlinkChapterContent(it, target) } },
+                    onLink = { target ->
+                        chapterId?.let { viewModel.linkChapterContent(it, target) }
+                    },
+                    onUnlink = { target ->
+                        chapterId?.let { viewModel.unlinkChapterContent(it, target) }
+                    },
                 )
             }
 
@@ -920,7 +969,9 @@ private fun DemoShell(
                     busy = state.privateCollectionsBusy,
                     problem = state.privateCollectionsProblem,
                     onBack = { controller.popBackStack() },
-                    onOpen = { collection -> controller.navigate("more/private/collections/${collection.id}") },
+                    onOpen = { collection ->
+                        controller.navigate("more/private/collections/${collection.id}")
+                    },
                     onAdd = viewModel::addPrivateCollection,
                     onEdit = viewModel::updatePrivateCollection,
                     onDelete = viewModel::deletePrivateCollection,
@@ -945,16 +996,16 @@ private fun DemoShell(
                     onBack = { controller.popBackStack() },
                     onAddItem = { title -> collection?.let { viewModel.addPrivateCollectionItem(it, title) } },
                     onRenameItem = { item, title ->
-                        collection?.let { viewModel.renamePrivateCollectionItem(it, item, title) }
+                        collection?.let { viewModel.renameCollectionItem(it, item, title) }
                     },
                     onToggleCompleted = { item ->
-                        collection?.let { viewModel.togglePrivateCollectionItemCompleted(it, item) }
+                        collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
                     },
                     onDeleteItem = { item ->
                         collection?.let { viewModel.deletePrivateCollectionItem(it, item) }
                     },
-                    onMoveUp = { item -> collection?.let { viewModel.movePrivateCollectionItemUp(it, item) } },
-                    onMoveDown = { item -> collection?.let { viewModel.movePrivateCollectionItemDown(it, item) } },
+                    onMoveUp = { item -> collection?.let { viewModel.moveCollectionItemUp(it, item) } },
+                    onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
                 )
             }
 
@@ -1145,7 +1196,9 @@ private fun DemoShell(
                     onSelectSpace = onSelectSpace,
                     profileContent = {
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step6),
+                            verticalArrangement = Arrangement.spacedBy(
+                                SideBySideTheme.spacing.step6,
+                            ),
                         ) {
                             ProfileSettingsContent(
                                 state = state.profile,
@@ -1167,7 +1220,8 @@ private fun DemoShell(
                                 demoMode = state.demoMode,
                                 busy = state.accountDeletionBusy,
                                 problem = state.accountDeletionProblem,
-                                recentAuthenticationCapabilities = state.accountDeletionRecentAuthenticationCapabilities,
+                                recentAuthenticationCapabilities =
+                                    state.accountDeletionRecentAuthenticationCapabilities,
                                 recentAuthenticationBusy = state.accountDeletionRecentAuthenticationBusy,
                                 recentAuthenticationProblem = state.accountDeletionRecentAuthenticationProblem,
                                 recentAuthenticationComplete = state.accountDeletionRecentAuthenticationComplete,
@@ -1193,27 +1247,53 @@ private fun DemoShell(
     }
 }
 
+/**
+ * Matches the Web path from
+ * `docs/decisions/0003-primary-navigation-and-route-model.md`, so the Deep Link
+ * registry can be built on it without a second mapping.
+ */
 private const val MEMORY_ID_ARGUMENT = "memoryId"
 private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
+
+/** The account's own HeartMoments, private ones included. */
 private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
 private const val INVITATIONS_ROUTE = "more/invitations"
+
 private const val ITEM_ID_ARGUMENT = "itemId"
 private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
+
+/**
+ * Matches the Web path from `web/src/client/routes.ts`
+ * (`MILESTONE_CREATE_ROUTE`). Registered ahead of [MILESTONE_ROUTE] in the
+ * Nav graph, since Navigation Compose scores a literal path segment above a
+ * `{itemId}` wildcard when both could otherwise match "new".
+ */
 private const val MILESTONE_CREATE_ROUTE = "story/milestones/new"
 private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
+
 private const val RELATED_PERSONS_ROUTE = "people/related-persons"
 private const val PERSON_ID_ARGUMENT = "personId"
-private const val IMPORTANT_DATES_ROUTE = "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
+private const val IMPORTANT_DATES_ROUTE =
+    "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
+
 private const val PREFERENCES_ROUTE = "profile/preferences"
+
 private const val PLACES_ROUTE = "planning/places"
 private const val PLACE_ID_ARGUMENT = "placeId"
 private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
+
 private const val COLLECTIONS_ROUTE = "planning/collections"
+
 private const val CHAPTERS_ROUTE = "planning/chapters"
 private const val CHAPTER_ID_ARGUMENT = "chapterId"
 private const val CHAPTER_CONTENT_ROUTE = "planning/chapters/{$CHAPTER_ID_ARGUMENT}/content"
+
 private const val PRIVATE_AREA_ROUTE = "more/private"
+
+/** No Web equivalent exists yet to match — this UI is Android-first. */
 private const val DATA_EXPORT_ROUTE = "more/data-export"
+
+/** No Web equivalent exists yet to match — this UI is Android-first. */
 private const val DATA_IMPORT_ROUTE = "more/data-import"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
@@ -1221,10 +1301,36 @@ private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
 private const val COLLECTION_ID_ARGUMENT = "collectionId"
 private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
 private const val COLLECTION_DETAIL_ROUTE = "planning/collections/{$COLLECTION_ID_ARGUMENT}"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
 private const val NOTIFICATIONS_ROUTE = "more/notifications"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`ACTIVITY_ROUTE`). */
 private const val ACTIVITY_ROUTE = "today/activity"
+
+/**
+ * Matches the Web path from `web/src/client/routes.ts` (`SEARCH_ROUTE`).
+ * Secured the same way as the Private Area subtree (see `secureWhen`
+ * above): a result's `SearchKind` can be `PRIVATE_NOTE`, `GIFT_IDEA`, or a
+ * PrivateCollection kind just as easily as a shared one, so the screen as a
+ * whole gets the same screenshot/Recents protection rather than only the
+ * routes with "private" in their path.
+ */
 private const val SEARCH_ROUTE = "search"
 
+/**
+ * The M2-D18 cross-client Deep Link contract's "small logical target
+ * tuple... maps to the current client's canonical route," applied to
+ * Notifications and Activity: each entry names a resource kind and id
+ * rather than a client-specific path, and this is where that tuple becomes
+ * an actual in-app route. Reuses the route templates above rather than a
+ * second copy of the same path shapes.
+ *
+ * `null` for [targetId] being absent, or for a kind with no per-resource
+ * route on Android yet — Wish and Plan both live in one shared list screen,
+ * not a route of their own. A caller's tap on such an entry does nothing
+ * rather than navigating to a route that cannot be built.
+ */
 internal fun engagementTargetRoute(targetType: EngagementTarget?, targetId: java.util.UUID?): String? {
     if (targetId == null) return null
     return when (targetType) {
@@ -1238,15 +1344,33 @@ internal fun engagementTargetRoute(targetType: EngagementTarget?, targetId: java
     }
 }
 
+/**
+ * Whether [route] is inside the owner-only Private Area subtree — the hub
+ * and every screen under it, matched by prefix so a new private-area screen
+ * is secure by default rather than needing to opt in.
+ */
 internal fun isPrivateAreaRoute(route: String?): Boolean =
     route != null && (route == PRIVATE_AREA_ROUTE || route.startsWith("$PRIVATE_AREA_ROUTE/"))
 
+/**
+ * Every route that gets [de.sidebyside.next.shell.SecureWindowEffect]: the
+ * Private Area subtree, and Search — a result's `SearchKind` can be a
+ * private one just as easily as a shared one.
+ */
 internal fun isSecureRoute(route: String?): Boolean = isPrivateAreaRoute(route) || route == SEARCH_ROUTE
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
 private val HEART_MOMENT_COMMENTS = ReferenceContract.CommentParent.HEART_MOMENT
 
+/**
+ * The Story destination.
+ *
+ * Reading is the default and capturing is a deliberate step away from it,
+ * because a couple opens their history far more often than they add to it.
+ * The capture form is still the M2 reference form; giving it a product shape
+ * belongs to the authoring slice.
+ */
 @Composable
 private fun StoryDestination(
     state: ReferenceUiState,
@@ -1262,6 +1386,8 @@ private fun StoryDestination(
     LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.refreshStory() }
 
     if (capturing) {
+        // The system back gesture is how someone leaves a step like this on
+        // Android; the visible action exists for anyone who does not use it.
         BackHandler { capturing = false }
         ReferenceFlowScreen(
             state = state,
@@ -1291,13 +1417,21 @@ private fun StoryDestination(
         loadingMore = state.storyLoadingMore,
         cachedAt = state.storyCachedAt,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        ) {
             Text(
                 text = stringResource(R.string.story_title),
-                style = MaterialTheme.typography.headlineMedium.copy(fontFamily = SideBySideDisplayFamily),
+                // An editorial moment, which is what the delivered display face
+                // is for. The size stays the token scale's; only the family
+                // changes.
+                style = MaterialTheme.typography.headlineMedium
+                    .copy(fontFamily = SideBySideDisplayFamily),
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
+            // Below the title rather than beside it: the action's label is a
+            // whole phrase, and squeezing it next to a headline wrapped both.
             FilledTonalButton(
                 onClick = { capturing = true },
                 enabled = !state.busy,
