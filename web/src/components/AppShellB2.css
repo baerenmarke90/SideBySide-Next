@@ -1,0 +1,250 @@
+/* Direction B2 — Living Sanctuary Refined.
+ *
+ * The legacy shell stylesheet remains the shared compact baseline. This layer
+ * deliberately removes the expanded sidebar metaphor and gives product content
+ * the visual stage while preserving the existing routes, utilities and mobile
+ * navigation contract.
+ */
+
+.product-shell-b2 .product-shell-body {
+  display: block;
+}
+
+.product-topbar-b2 {
+  padding-inline: clamp(var(--space-4), 3vw, var(--space-8));
+  border-bottom: 1px solid var(--color-header-border);
+  background: var(--color-header-surface);
+}
+
+.product-topbar-layout {
+  display: grid;
+  width: min(88rem, 100%);
+  min-height: var(--topbar-height);
+  margin-inline: auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(var(--space-4), 2.5vw, var(--space-8));
+}
+
+.shell-nav-desktop {
+  display: none;
+}
+
+.product-topbar-b2 .header-actions {
+  min-width: 0;
+}
+
+.product-topbar-b2 .shell-utility-link,
+.product-topbar-b2 .header-profile-trigger,
+.product-topbar-b2 .header-notifications-trigger {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.product-topbar-b2 .shell-utility-link:hover,
+.product-topbar-b2 .header-profile-trigger:hover,
+.product-topbar-b2 .header-notifications-trigger:hover {
+  border-color: transparent;
+  background: var(--color-surface-subtle);
+}
+
+.shell-header-create {
+  display: none;
+  margin: 0;
+}
+
+/* Keep the compact navigation contract through the intermediate/tablet range.
+ * The former 840px breakpoint would otherwise leave this range with neither a
+ * sidebar nor bottom navigation after the structural shell change.
+ */
+@media (min-width: 840px) and (max-width: 959px) {
+  .product-shell-b2 .mobile-bottom-nav {
+    display: grid;
+  }
+
+  .product-shell-b2 .mobile-quick-create {
+    display: flex;
+  }
+
+  .product-shell-b2 .product-main {
+    width: min(var(--content-max), calc(100% - 3rem));
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+
+  .product-topbar-b2 .shared-context:not(.private-context) {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .product-topbar-layout {
+    grid-template-columns: auto minmax(25rem, 1fr) auto;
+  }
+
+  .shell-nav-desktop {
+    display: flex;
+    min-width: 0;
+    justify-content: center;
+    gap: clamp(var(--space-1), 0.8vw, var(--space-3));
+  }
+
+  .shell-nav-desktop .shell-nav-link {
+    min-height: 44px;
+    gap: var(--space-2);
+    border-radius: 0;
+    padding: 0 clamp(var(--space-2), 0.9vw, var(--space-3));
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.94rem;
+    font-weight: 650;
+  }
+
+  .shell-nav-desktop .shell-nav-link:hover {
+    background: transparent;
+    color: var(--color-text);
+    transform: none;
+  }
+
+  .shell-nav-desktop .shell-nav-link-active {
+    background: transparent;
+    color: var(--color-text);
+    font-weight: 750;
+  }
+
+  .shell-nav-desktop .shell-nav-link-active::before {
+    top: auto;
+    right: var(--space-2);
+    bottom: -1px;
+    left: var(--space-2);
+    width: auto;
+    height: 2px;
+    border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+  }
+
+  .shell-nav-desktop .shell-nav-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .shell-nav-desktop .shell-nav-icon svg {
+    width: 1.12rem;
+    height: 1.12rem;
+    stroke-width: 1.8;
+  }
+
+  .product-topbar-b2 .shared-context:not(.private-context) {
+    display: none;
+  }
+
+  .shell-header-create {
+    position: relative;
+    display: block;
+  }
+
+  .shell-header-create .quick-create {
+    width: auto;
+  }
+
+  .shell-header-create .quick-create-trigger {
+    display: inline-grid;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    place-items: center;
+    border: 1px solid var(--color-brand-glow);
+    border-radius: var(--radius-pill);
+    padding: 0;
+    background: var(--color-brand-surface);
+    color: var(--color-brand-text);
+    box-shadow: none;
+  }
+
+  .shell-header-create .quick-create-trigger:hover {
+    border-color: var(--color-brand);
+    background: var(--color-brand-surface);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .shell-header-create .quick-create-trigger > span:not(.shell-nav-icon) {
+    display: none;
+  }
+
+  .shell-header-create .quick-create-trigger .shell-nav-icon,
+  .shell-header-create .quick-create-trigger .shell-nav-icon svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .shell-header-create .quick-create-menu {
+    position: absolute;
+    top: calc(100% + var(--space-3));
+    right: 0;
+    left: auto;
+    width: min(32rem, calc(100vw - 2rem));
+    max-width: none;
+    min-width: min(26rem, calc(100vw - 2rem));
+    margin: 0;
+    padding: var(--space-4);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-card);
+  }
+
+  .shell-header-create .quick-create-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shell-header-create .quick-create-tile {
+    box-shadow: none;
+  }
+
+  .product-shell-b2 .product-main {
+    width: min(88rem, calc(100% - clamp(3rem, 7vw, 7rem)));
+    padding-top: clamp(var(--space-8), 4vw, var(--space-12));
+    padding-bottom: var(--space-16);
+  }
+
+  .product-shell-b2 .mobile-bottom-nav,
+  .product-shell-b2 .mobile-quick-create {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1120px) {
+  .product-topbar-layout {
+    gap: var(--space-3);
+  }
+
+  .shell-nav-desktop {
+    gap: 0;
+  }
+
+  .shell-nav-desktop .shell-nav-link {
+    gap: var(--space-1);
+    padding-inline: var(--space-2);
+    font-size: 0.88rem;
+  }
+
+  .shell-nav-desktop .shell-nav-icon {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .product-topbar-b2 {
+    padding-inline: var(--space-3);
+  }
+
+  .product-topbar-layout {
+    gap: var(--space-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-nav-desktop .shell-nav-link,
+  .shell-header-create .quick-create-trigger {
+    transition: none;
+  }
+}
