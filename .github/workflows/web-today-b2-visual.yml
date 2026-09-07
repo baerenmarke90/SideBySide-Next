@@ -1,0 +1,56 @@
+name: Web Today B2 Visual Evidence
+
+on:
+  pull_request:
+    paths:
+      - "web/src/components/AppShell.tsx"
+      - "web/src/components/AppShellB2.css"
+      - "web/src/components/TodayPage.tsx"
+      - "web/src/components/TodayPageB2.css"
+      - "web/src/i18n/locales/m5s5.ts"
+      - "web/e2e/tests/today-b2-visual.spec.ts"
+      - ".github/workflows/web-today-b2-visual.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-today-b2-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Runtime screenshots + axe
+    runs-on: ubuntu-latest
+    container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install locked Web dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install locked browser QA dependencies
+        working-directory: web/e2e
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Production build
+        working-directory: web
+        run: npm run build
+
+      - name: Install pinned Chromium runtime
+        working-directory: web/e2e
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Capture Direction B2 runtime evidence
+        working-directory: web/e2e
+        run: ./node_modules/.bin/playwright test tests/today-b2-visual.spec.ts
+
+      - name: Upload Direction B2 visual evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-today-b2-visual-evidence-${{ github.sha }}
+          path: web/e2e/test-results/**/today-b2-*.png
+          if-no-files-found: error
+          retention-days: 14
