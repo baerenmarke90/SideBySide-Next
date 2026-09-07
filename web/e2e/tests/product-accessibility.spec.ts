@@ -221,9 +221,7 @@ async function navigateWithinApp(page: Page, path: string): Promise<void> {
     return;
   }
 
-  await page
-    .getByRole('link', { name: navigation.more, exact: true })
-    .click();
+  await page.getByRole('link', { name: navigation.more, exact: true }).click();
   await expect(page).toHaveURL(/\/more$/);
   await page.locator(`a[href="${path}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`${path}$`));

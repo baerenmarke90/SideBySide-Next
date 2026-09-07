@@ -123,10 +123,7 @@ describe('SharedPlanningOverviewPage', () => {
       ['m5-s3', 'wishes', 'space-1'],
       emptyInfinitePage(),
     );
-    planningClient.setQueryData(
-      ['m5-s3', 'places', 'space-1', 'options'],
-      [],
-    );
+    planningClient.setQueryData(['m5-s3', 'places', 'space-1', 'options'], []);
 
     const planningHtml = renderToStaticMarkup(
       <QueryClientProvider client={planningClient}>
