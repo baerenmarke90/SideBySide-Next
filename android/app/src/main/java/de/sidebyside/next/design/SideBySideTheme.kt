@@ -10,6 +10,7 @@ import android.view.WindowInsetsController
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -114,6 +115,9 @@ fun SideBySideTheme(
 object SideBySideTheme {
     val colors: SideBySideColors
         @Composable @ReadOnlyComposable get() = LocalSideBySideColors.current
+
+    val typography: Typography
+        @Composable @ReadOnlyComposable get() = MaterialTheme.typography
 
     val spacing: SideBySideSpacing
         @Composable @ReadOnlyComposable get() = LocalSideBySideSpacing.current

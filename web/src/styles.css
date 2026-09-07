@@ -59,6 +59,8 @@
   --color-shared-surface: #edf7f5;
   --color-success: var(--color-shared);
   --color-private: #d13b65;
+  --color-discovery: #7a5100;
+  --color-discovery-surface: #fff2d5;
   --color-error: #b81434;
   --color-error-surface: #fff0f2;
   --color-focus: #285f91;
@@ -142,6 +144,11 @@ button:hover:not(:disabled),
 .button-link:hover {
   filter: brightness(0.96);
   transform: translateY(-1px);
+}
+
+button:active:not(:disabled),
+.button-link:active {
+  transform: translateY(0) scale(0.98);
 }
 
 button.secondary,
@@ -444,6 +451,30 @@ code {
 
 .setup-card .brand {
   margin-bottom: clamp(var(--space-12), 8vw, var(--space-16));
+}
+
+.card-warm {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-5);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.card-warm:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.surface-elevated {
+  background: var(--color-surface);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .setup-content {
