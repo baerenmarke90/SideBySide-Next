@@ -52,22 +52,27 @@ export function CouplePresence({
 
   const primaryFirstName = firstNameFromDisplayName(
     primaryPerson.displayName,
-    '',
+    relationshipComponents.couplePresenceYouFallback,
   );
   const secondaryFirstName = secondaryPerson
-    ? firstNameFromDisplayName(secondaryPerson.displayName, '')
+    ? firstNameFromDisplayName(
+        secondaryPerson.displayName,
+        relationshipComponents.couplePresencePartnerFallback,
+      )
     : null;
-  const presenceTitle =
-    primaryFirstName && secondaryFirstName
-      ? `${primaryFirstName} & ${secondaryFirstName}`
-      : spaceTitle;
-  const heroPrimaryPerson = primaryFirstName
-    ? { ...primaryPerson, displayName: primaryFirstName }
-    : primaryPerson;
+  const presenceTitle = secondaryFirstName
+    ? `${primaryFirstName} & ${secondaryFirstName}`
+    : spaceTitle;
+  const heroPrimaryPerson = {
+    ...primaryPerson,
+    displayName: primaryFirstName,
+  };
   const heroSecondaryPerson = secondaryPerson
     ? {
         ...secondaryPerson,
-        displayName: secondaryFirstName || secondaryPerson.displayName,
+        displayName:
+          secondaryFirstName ||
+          relationshipComponents.couplePresencePartnerFallback,
       }
     : null;
 
