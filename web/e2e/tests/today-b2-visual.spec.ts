@@ -40,7 +40,7 @@ const RICH_DASHBOARD: DashboardFixture = {
     {
       id: 'plan-market',
       type: 'PLAN',
-      titleOrText: 'Flohmarkt am Samstag',
+      titleOrText: 'Saturday flea market',
       createdAt: TEST_NOW,
       occurredOn: null,
       scheduledAt: '2026-09-18T10:00:00Z',
@@ -48,7 +48,7 @@ const RICH_DASHBOARD: DashboardFixture = {
     {
       id: 'plan-hike',
       type: 'PLAN',
-      titleOrText: 'Herbstwanderung im Hochwald',
+      titleOrText: 'Autumn hike through the high forest',
       createdAt: TEST_NOW,
       occurredOn: null,
       scheduledAt: '2026-10-03T09:00:00Z',
@@ -56,7 +56,7 @@ const RICH_DASHBOARD: DashboardFixture = {
     {
       id: 'plan-concert',
       type: 'PLAN',
-      titleOrText: 'Konzert im Herbst',
+      titleOrText: 'Concert in autumn',
       createdAt: TEST_NOW,
       occurredOn: null,
       scheduledAt: '2026-10-24T18:30:00Z',
@@ -66,7 +66,7 @@ const RICH_DASHBOARD: DashboardFixture = {
     {
       id: 'memory-breakfast',
       type: 'MEMORY',
-      titleOrText: 'Sonntagmorgen, Kaffee und viel zu viele Croissants',
+      titleOrText: 'Sunday morning, coffee and far too many croissants',
       createdAt: '2026-09-04T08:00:00Z',
       occurredOn: '2026-09-04',
       scheduledAt: null,
@@ -75,7 +75,7 @@ const RICH_DASHBOARD: DashboardFixture = {
     {
       id: 'heart-note',
       type: 'HEART_MOMENT',
-      titleOrText: 'Danke für diesen ganz normalen, guten Abend zusammen.',
+      titleOrText: 'Thank you for this ordinary, good evening together.',
       createdAt: '2026-09-03T20:15:00Z',
       occurredOn: '2026-09-03',
       scheduledAt: null,
@@ -85,7 +85,7 @@ const RICH_DASHBOARD: DashboardFixture = {
   retrospective: {
     id: 'memory-cabin',
     type: 'MEMORY',
-    titleOrText: 'Der Morgen am See, an dem wir einfach sitzen geblieben sind',
+    titleOrText: 'The morning by the lake when we simply stayed a little longer',
     createdAt: '2025-09-07T07:30:00Z',
     occurredOn: '2025-09-07',
     scheduledAt: null,
@@ -100,7 +100,7 @@ const NO_RETROSPECTIVE_DASHBOARD: DashboardFixture = {
     {
       id: 'memory-lake-recent',
       type: 'MEMORY',
-      titleOrText: 'Noch einmal dieser späte Sommerabend am Wasser',
+      titleOrText: 'One more late summer evening by the water',
       createdAt: '2026-09-05T18:30:00Z',
       occurredOn: '2026-09-05',
       scheduledAt: null,
@@ -118,7 +118,7 @@ const NO_IMAGE_DASHBOARD: DashboardFixture = {
       id: 'memory-text-only',
       type: 'MEMORY',
       titleOrText:
-        'Spaziergang nach dem Regen – mit nassen Schuhen, langen Gesprächen und dem Umweg, den wir inzwischen immer nehmen',
+        'A walk after the rain, with wet shoes, long conversations, and the detour we now always take',
       createdAt: '2026-09-06T19:10:00Z',
       occurredOn: '2026-09-06',
       scheduledAt: null,
@@ -127,7 +127,7 @@ const NO_IMAGE_DASHBOARD: DashboardFixture = {
     {
       id: 'heart-text-only',
       type: 'HEART_MOMENT',
-      titleOrText: 'Für später: Genau so fühlt sich Zuhause an.',
+      titleOrText: 'For later: this is exactly what home feels like.',
       createdAt: '2026-09-05T21:00:00Z',
       occurredOn: '2026-09-05',
       scheduledAt: null,
@@ -404,7 +404,9 @@ test('B2 rich runtime evidence covers expanded and compact light/dark', async ({
     ).toBeVisible();
     await expect(page.locator('.header-notifications-trigger')).toBeVisible();
     await expect(page.locator('.header-profile-trigger')).toBeVisible();
-    await expect(page.locator('.shell-header-create .quick-create-trigger')).toBeVisible();
+    await expect(
+      page.locator('.shell-header-create .quick-create-trigger'),
+    ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(`today-b2-rich-expanded-${colorScheme}.png`),
       fullPage: true,
