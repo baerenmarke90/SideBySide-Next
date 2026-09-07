@@ -84,7 +84,7 @@ export function CollectionsOverviewPage({
   }
 
   return (
-    <div className="page planning-page">
+    <div className="page planning-page planning-sanctuary">
       <PageHeader
         before={
           <Link className="back-link" to={appRoutePath('more')}>
@@ -110,7 +110,7 @@ export function CollectionsOverviewPage({
         {collectionItems.length === 0 &&
         !collections.isLoading &&
         !collections.error ? (
-          <p className="planning-empty">{t('m5s3.common.empty')}</p>
+          <p className="planning-empty">{t('m5s3.collection.emptyOverview')}</p>
         ) : (
           <ul className="planning-list">
             {collectionItems.map((collection) => (

@@ -103,7 +103,7 @@ export function SharedPlanningOverviewPage({
   });
 
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'places', spaceId],
+    queryKey: ['m5-s3', 'places', spaceId, 'options'],
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,
@@ -165,7 +165,7 @@ export function SharedPlanningOverviewPage({
   ));
 
   return (
-    <div className="page planning-page">
+    <div className="page planning-page planning-sanctuary">
       <PageHeader
         eyebrow={t('m5s3.overview.eyebrow')}
         title={t('m5s3.overview.title')}
@@ -193,7 +193,7 @@ export function SharedPlanningOverviewPage({
               />
             ) : null}
             {!plans.isLoading && !plans.error && planItems.length === 0 ? (
-              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+              <p className="planning-empty">{t('m5s3.overview.soonEmpty')}</p>
             ) : null}
             {planItems.length > 0 ? (
               <ul className="planning-list">
@@ -285,7 +285,9 @@ export function SharedPlanningOverviewPage({
               />
             ) : null}
             {!wishes.isLoading && !wishes.error && wishItems.length === 0 ? (
-              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+              <p className="planning-empty">
+                {t('m5s3.overview.somedayEmpty')}
+              </p>
             ) : null}
             {wishItems.length > 0 ? (
               <ul className="planning-list">

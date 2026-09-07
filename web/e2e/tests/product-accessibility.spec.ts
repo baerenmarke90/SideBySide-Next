@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import m5s3 from '../../src/i18n/locales/m5s3';
 import m5s5 from '../../src/i18n/locales/m5s5';
 import navigation from '../../src/i18n/locales/navigation';
 
@@ -85,6 +86,24 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({
+        displayName: 'Anna',
+        id: ACCOUNT_ID,
+      });
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/v1/auth/refresh') {
+      await fulfillJson({
+        accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        accessToken: 'browser-e2e-access-token-refreshed',
+        refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
+        refreshToken: 'browser-e2e-refresh-token-refreshed',
+      });
+      return;
+    }
+
     if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
       await fulfillJson({ serverAdmin: false });
       return;
@@ -155,6 +174,23 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (
+      method === 'GET' &&
+      [
+        `/api/v1/spaces/${SPACE_ID}/collections`,
+        `/api/v1/spaces/${SPACE_ID}/plans`,
+        `/api/v1/spaces/${SPACE_ID}/places`,
+        `/api/v1/spaces/${SPACE_ID}/wishes`,
+      ].includes(pathname)
+    ) {
+      await fulfillJson({
+        hasMore: false,
+        items: [],
+        nextCursor: null,
+      });
+      return;
+    }
+
     unexpectedRequests.push(`${method} ${pathname}`);
     await fulfillJson(
       {
@@ -174,6 +210,21 @@ async function signIn(page: Page): Promise<void> {
   await page.getByLabel(de.login.email).fill('anna@example.org');
   await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
   await page.getByRole('button', { name: de.login.submit }).click();
+}
+
+async function navigateWithinApp(page: Page, path: string): Promise<void> {
+  if (path === '/plan') {
+    await page
+      .getByRole('link', { name: navigation.plan, exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/plan$/);
+    return;
+  }
+
+  await page.getByRole('link', { name: navigation.more, exact: true }).click();
+  await expect(page).toHaveURL(/\/more$/);
+  await page.locator(`a[href="${path}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`${path}$`));
 }
 
 test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean', async ({
@@ -327,6 +378,133 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
       level: 1,
     }),
   ).toBeVisible();
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    window.localStorage.setItem('sidebyside.theme', 'system');
+  });
+  await page.setViewportSize({ width: 320, height: 800 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+  await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText(m5s3.overview.soonEmpty)).toBeVisible();
+  await expect(page.getByText(m5s3.overview.somedayEmpty)).toBeVisible();
+
+  const createPlan = page.locator('summary', { hasText: m5s3.plan.create });
+  await createPlan.focus();
+  await expect(createPlan).toBeFocused();
+  const createPlanBox = await createPlan.boundingBox();
+  expect(createPlanBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel(m5s3.common.title).first()).toBeVisible();
+
+  const revealAnimation = await page
+    .locator('.future-map-stop')
+    .first()
+    .evaluate((element) => getComputedStyle(element).animationName);
+  expect(revealAnimation).toBe('none');
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-overview-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await navigateWithinApp(page, '/more/collections');
+  await expect(
+    page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-collections-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await navigateWithinApp(page, '/more/places');
+  await expect(
+    page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-places-compact-dark.png'),
+    fullPage: true,
+  });
+
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.addInitScript(() => {
+    window.localStorage.setItem('sidebyside.theme', 'system');
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+  await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath('planning-overview-expanded-light.png'),
+    fullPage: true,
+  });
+
+  await navigateWithinApp(page, '/more/collections');
+  await expect(
+    page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-collections-expanded-light.png'),
+    fullPage: true,
+  });
+
+  await navigateWithinApp(page, '/more/places');
+  await expect(
+    page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-places-expanded-light.png'),
+    fullPage: true,
+  });
+
+  await navigateWithinApp(page, '/plan');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
 
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);

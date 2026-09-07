@@ -1,0 +1,22 @@
+/* Keep Future Map copy fully opaque while preserving the gentle reveal motion. */
+@keyframes eimir-planning-reveal {
+  from {
+    transform: translateY(8px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal {
+  animation-name: eimir-planning-reveal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
