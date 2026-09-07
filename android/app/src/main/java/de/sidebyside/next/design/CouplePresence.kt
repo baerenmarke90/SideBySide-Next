@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ fun CouplePresence(
     onDurationClick: (() -> Unit)? = null,
     onInviteClick: (() -> Unit)? = null,
     actionContent: (@Composable () -> Unit)? = null,
+    unboxed: Boolean = false,
 ) {
     val displayStatus = statusText ?: when (presenceState) {
         PartnerPresenceState.CONNECTED -> stringResource(R.string.relationship_presence_connected)
@@ -54,8 +56,12 @@ fun CouplePresence(
         PartnerPresenceState.OFFLINE -> SideBySideTheme.colors.textMuted
     }
 
-    Box(
-        modifier = modifier
+    val containerModifier = if (unboxed) {
+        modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    } else {
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(SideBySideTheme.radii.large))
             .background(SideBySideTheme.colors.surface)
@@ -64,7 +70,11 @@ fun CouplePresence(
                 SideBySideTheme.colors.borderSubtle,
                 RoundedCornerShape(SideBySideTheme.radii.large),
             )
-            .padding(16.dp),
+            .padding(16.dp)
+    }
+
+    Box(
+        modifier = containerModifier,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -79,7 +89,7 @@ fun CouplePresence(
                     userName = userName,
                     partnerName = partnerName,
                     presenceState = presenceState,
-                    size = 52.dp,
+                    size = if (unboxed) 56.dp else 52.dp,
                     onInviteClick = onInviteClick,
                 )
 
@@ -88,7 +98,17 @@ fun CouplePresence(
                 Column {
                     Text(
                         text = spaceName,
-                        style = SideBySideTheme.typography.titleLarge,
+                        style = if (unboxed) {
+                            SideBySideTheme.typography.headlineMedium.copy(
+                                fontFamily = SideBySideDisplayFamily,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        } else {
+                            SideBySideTheme.typography.titleLarge.copy(
+                                fontFamily = SideBySideDisplayFamily,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        },
                         color = SideBySideTheme.colors.textPrimary,
                     )
 
@@ -124,11 +144,14 @@ fun CouplePresence(
                                 color = SideBySideTheme.colors.brand,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = if (onDurationClick != null) {
-                                    Modifier.clickable(
-                                        role = Role.Button,
-                                        onClickLabel = stringResource(R.string.relationship_presence_view_duration),
-                                        onClick = onDurationClick,
-                                    )
+                                    Modifier
+                                        .heightIn(min = 48.dp)
+                                        .clickable(
+                                            role = Role.Button,
+                                            onClickLabel = stringResource(R.string.relationship_presence_view_duration),
+                                            onClick = onDurationClick,
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 12.dp)
                                 } else Modifier,
                             )
                         }
