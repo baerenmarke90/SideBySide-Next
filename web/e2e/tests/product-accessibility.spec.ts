@@ -86,6 +86,24 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({
+        displayName: 'Anna',
+        id: ACCOUNT_ID,
+      });
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/v1/auth/refresh') {
+      await fulfillJson({
+        accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        accessToken: 'browser-e2e-access-token-refreshed',
+        refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
+        refreshToken: 'browser-e2e-refresh-token-refreshed',
+      });
+      return;
+    }
+
     if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
       await fulfillJson({ serverAdmin: false });
       return;
