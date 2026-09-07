@@ -146,7 +146,7 @@ describe('web layout tokens', () => {
 describe('compact navigation', () => {
   it('owns the bottom navigation grid in one stylesheet', () => {
     expect(ruleBlock(shellCss, '.mobile-bottom-nav')).toContain(
-      'grid-auto-columns: minmax(4.75rem, 1fr)',
+      'grid-auto-columns: minmax(44px, 1fr)',
     );
 
     const pageStylesheets = [

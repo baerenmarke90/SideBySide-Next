@@ -24,6 +24,8 @@ composition and Planning zoom. None is automatically imported into A1.
 Other open Web PRs: #317 changes App/Space selection and locale resources;
 #763 changes artifact action versions; #762 and dependency PRs change build
 inputs. No A1 runtime-file overlap except the deliberately read-only #784.
+The existing browser-QA artifact upload is extended to include shell screenshots;
+this file overlaps #763, whose action-version-only change remains independent.
 The Lists/Planning and Profile/Settings eimir branches have no remaining diff
 against current main. The original workspace's Android edit is outside this
 isolated checkout and outside this rescue.

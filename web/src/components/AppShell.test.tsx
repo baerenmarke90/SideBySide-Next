@@ -69,6 +69,8 @@ describe('AppShell', () => {
     expect(html).toContain('id="main-content"');
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
+    expect(html).not.toContain('<aside');
+    expect(html.indexOf('<nav')).toBeLessThan(html.indexOf('</header>'));
     expect(html).toContain('href="/today"');
     expect(html).toContain(`>${navigation.today}<`);
     expect(html).toContain('href="/story"');
@@ -81,14 +83,16 @@ describe('AppShell', () => {
 
   it('keeps the landing destination first in primary navigation', () => {
     const html = renderShell('/story');
-    const sidebar = html.slice(
+    const primaryNavigation = html.slice(
       html.indexOf('<nav class="shell-nav"'),
       html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
 
-    expect(sidebar.indexOf('href="/today"')).toBeGreaterThanOrEqual(0);
-    expect(sidebar.indexOf('href="/today"')).toBeLessThan(
-      sidebar.indexOf('href="/story"'),
+    expect(primaryNavigation.indexOf('href="/today"')).toBeGreaterThanOrEqual(
+      0,
+    );
+    expect(primaryNavigation.indexOf('href="/today"')).toBeLessThan(
+      primaryNavigation.indexOf('href="/story"'),
     );
   });
 
@@ -112,12 +116,12 @@ describe('AppShell', () => {
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     expect(compact).not.toContain('href="/search"');
     expect(compact).not.toContain('href="/more/notifications"');
-    const sidebar = html.slice(
-      html.indexOf('shell-sidebar'),
-      html.indexOf('main-content'),
+    const primaryNavigation = html.slice(
+      html.indexOf('<nav class="shell-nav"'),
+      html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
-    expect(sidebar).not.toContain('href="/search"');
-    expect(sidebar).not.toContain('href="/more/notifications"');
+    expect(primaryNavigation).not.toContain('href="/search"');
+    expect(primaryNavigation).not.toContain('href="/more/notifications"');
   });
 
   it('keeps Profile, Settings and Activity in the account tree rather than primary navigation', () => {
@@ -126,9 +130,9 @@ describe('AppShell', () => {
       html.indexOf('<header'),
       html.indexOf('</header>') + '</header>'.length,
     );
-    const sidebar = html.slice(
-      html.indexOf('shell-sidebar'),
-      html.indexOf('main-content'),
+    const primaryNavigation = html.slice(
+      html.indexOf('<nav class="shell-nav"'),
+      html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
 
     expect(header).toContain(`aria-label="${navigation.profileMenu}"`);
@@ -136,9 +140,9 @@ describe('AppShell', () => {
     expect(header).toContain('href="/more/settings"');
     expect(header).toContain('href="/today/activity"');
     expect(header).toContain('header-profile-menu-logout');
-    expect(sidebar).not.toContain('href="/more/profile"');
-    expect(sidebar).not.toContain('href="/more/settings"');
-    expect(sidebar).not.toContain('href="/today/activity"');
+    expect(primaryNavigation).not.toContain('href="/more/profile"');
+    expect(primaryNavigation).not.toContain('href="/more/settings"');
+    expect(primaryNavigation).not.toContain('href="/today/activity"');
   });
 
   it('shows ServerAdmin only for an authorized account capability', () => {
@@ -160,7 +164,9 @@ describe('AppShell', () => {
       (button) => button.match(/aria-controls="([^"]+)"/)?.[1],
     );
 
-    expect(html).toContain('shell-primary-action');
+    expect(html.slice(0, html.indexOf('</header>'))).toContain(
+      'shell-primary-action',
+    );
     expect(html).toContain('mobile-quick-create');
     expect(quickCreateButtons).toHaveLength(2);
     expect(menuIds.every(Boolean)).toBe(true);

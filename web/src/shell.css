@@ -25,6 +25,8 @@
 
 .product-topbar {
   z-index: 40;
+  flex-wrap: wrap;
+  padding-inline: var(--space-5);
   background: var(--color-header-surface);
   transform: translateZ(0);
 }
@@ -34,9 +36,17 @@
   min-height: calc(100vh - var(--topbar-height));
 }
 
+.quick-create-trigger {
+  justify-content: flex-start;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 /* Global utilities live in the app bar and stay icon-only in persistent chrome. */
 .shell-utility-link,
-.header-profile-trigger {
+.header-profile-trigger,
+.shell-primary-action .quick-create-trigger {
   display: inline-grid;
   width: 44px;
   min-width: 44px;
@@ -365,33 +375,9 @@
   }
 }
 
-/*
- * Creating content is the primary desktop action and belongs in the sidebar
- * rather than in the destination list. On compact viewports the same route
- * stays reachable through the product flow rather than becoming a utility.
- */
-.shell-primary-action {
-  position: relative;
-  display: none;
-  margin-bottom: var(--space-6);
-}
-
-.shell-primary-action .button-link {
-  width: 100%;
-  gap: var(--space-2);
-  box-shadow: 0 8px 20px var(--color-shadow-brand);
-}
-
 .quick-create {
   position: relative;
   width: 100%;
-}
-
-.quick-create-trigger {
-  justify-content: flex-start;
-  border: 0;
-  font: inherit;
-  cursor: pointer;
 }
 
 .quick-create-trigger:focus-visible,
@@ -452,6 +438,39 @@
   color: var(--color-text-secondary);
 }
 
+/* Global creation shares the header utilities; Compact keeps its action sheet. */
+.shell-primary-action {
+  position: relative;
+  display: none;
+}
+
+.shell-primary-action .quick-create-trigger {
+  border-color: var(--color-brand-glow);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  box-shadow: none;
+}
+
+.shell-primary-action .quick-create-trigger > span:not(.shell-nav-icon) {
+  display: none;
+}
+
+.shell-primary-action .quick-create-menu {
+  position: absolute;
+  right: 0;
+  left: auto;
+  width: min(26rem, calc(100vw - var(--space-10)));
+  max-width: none;
+  max-height: calc(100dvh - var(--topbar-height) - var(--space-8));
+  overflow-y: auto;
+  margin: 0;
+  background: var(--color-surface-raised);
+}
+
+.shell-primary-action .quick-create-tile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .product-main {
   width: calc(100% - 2rem);
   margin: 0 auto;
@@ -459,13 +478,17 @@
     calc(7rem + env(safe-area-inset-bottom));
 }
 
-.shell-sidebar {
+.shell-nav {
   display: none;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
 }
 
-.shell-nav {
-  display: grid;
-  gap: var(--space-1);
+.product-topbar .shared-context:not(.private-context) {
+  display: none;
 }
 
 .shell-nav-link {
@@ -534,6 +557,22 @@
   color: var(--color-brand);
 }
 
+.shell-nav .shell-nav-link {
+  gap: var(--space-2);
+  border-radius: 0;
+  padding-inline: var(--space-2);
+  background: transparent;
+}
+
+.shell-nav .shell-nav-link-active::before {
+  top: auto;
+  right: var(--space-2);
+  bottom: 0;
+  left: var(--space-2);
+  width: auto;
+  height: 2px;
+}
+
 .mobile-bottom-nav .shell-nav-link-active::before {
   display: none;
 }
@@ -571,15 +610,8 @@
   bottom: 0;
   left: 0;
   display: grid;
-  /*
-   * All primary destinations stay reachable on a compact viewport. The row
-   * scrolls horizontally rather than shrinking targets below 44 px.
-   */
   grid-auto-flow: column;
-  grid-auto-columns: minmax(4.75rem, 1fr);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
+  grid-auto-columns: minmax(44px, 1fr);
   gap: var(--space-2);
   border-top: 1px solid var(--color-header-border);
   padding: var(--space-2) var(--space-3)
@@ -768,20 +800,8 @@
 }
 
 @media (min-width: 840px) {
-  .product-shell-body {
-    display: grid;
-    grid-template-columns: 15rem minmax(0, 1fr);
-  }
-
-  .shell-sidebar {
-    display: block;
-    padding: var(--space-8) var(--space-4);
-    background: transparent;
-  }
-
-  .shell-sidebar-inner {
-    position: sticky;
-    top: calc(var(--topbar-height) + var(--space-6));
+  .shell-nav {
+    display: flex;
   }
 
   .product-main {
@@ -801,6 +821,7 @@
 @media (prefers-reduced-motion: reduce) {
   .skip-link,
   .shell-nav-link,
+  .shell-nav .shell-nav-link,
   .shell-utility-link,
   .header-profile-trigger {
     transition: none;
