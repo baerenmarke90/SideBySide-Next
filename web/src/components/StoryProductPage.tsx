@@ -275,7 +275,17 @@ export function StoryProductPage({
             className={`momente-tab-btn ${activeView === 'discover' ? 'active' : ''}`}
             onClick={() => setView('discover')}
           >
-            <span aria-hidden="true">✨</span> {t('story.tabDiscover')}
+            <svg
+              className="tab-icon"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+            </svg>
+            <span>{t('story.tabDiscover')}</span>
           </button>
           <button
             type="button"
@@ -284,7 +294,17 @@ export function StoryProductPage({
             className={`momente-tab-btn ${activeView === 'timeline' ? 'active' : ''}`}
             onClick={() => setView('timeline')}
           >
-            <span aria-hidden="true">📖</span> {t('story.tabTimeline')}
+            <svg
+              className="tab-icon"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />
+            </svg>
+            <span>{t('story.tabTimeline')}</span>
           </button>
         </div>
       </div>
@@ -305,7 +325,15 @@ export function StoryProductPage({
       !hasActiveFilters ? (
         <div className="new-space-experience sbs-motion-reveal">
           <div className="new-space-mark" aria-hidden="true">
-            ❤️
+            <svg
+              viewBox="0 0 24 24"
+              width="36"
+              height="36"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
           </div>
           <h2 className="new-space-title">{t('story.emptyTitle')}</h2>
           <p className="new-space-body">{t('story.emptyBody')}</p>
@@ -343,7 +371,17 @@ export function StoryProductPage({
                 ) : null}
                 <div className="momente-hero-body">
                   <span className="momente-hero-kicker">
-                    ✨ {t('story.featuredKicker')}
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      className="kicker-icon"
+                    >
+                      <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+                    </svg>
+                    <span>{t('story.featuredKicker')}</span>
                   </span>
                   {featuredItem.kind === 'HEART_MOMENT' ? (
                     <blockquote className="momente-hero-quote">
@@ -445,12 +483,30 @@ export function StoryProductPage({
                       <div className="momente-stream-card-body">
                         <div className="momente-stream-card-main">
                           <span className="momente-stream-card-kind">
-                            {item.kind === 'HEART_MOMENT'
-                              ? '♥ '
-                              : item.kind === 'MILESTONE'
-                                ? '★ '
-                                : ''}
-                            {presentation.kindLabel}
+                            {item.kind === 'HEART_MOMENT' ? (
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="12"
+                                height="12"
+                                fill="currentColor"
+                                aria-hidden="true"
+                                className="kind-glyph"
+                              >
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                              </svg>
+                            ) : item.kind === 'MILESTONE' ? (
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="12"
+                                height="12"
+                                fill="currentColor"
+                                aria-hidden="true"
+                                className="kind-glyph"
+                              >
+                                <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+                              </svg>
+                            ) : null}
+                            <span>{presentation.kindLabel}</span>
                           </span>
                           {item.kind === 'HEART_MOMENT' ? (
                             <blockquote className="momente-stream-card-quote">
@@ -501,7 +557,17 @@ export function StoryProductPage({
                 className="momente-sub-card"
               >
                 <span className="momente-sub-card-kicker">
-                  ★ {t('story.milestonesKicker')}
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="14"
+                    height="14"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className="kicker-icon"
+                  >
+                    <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+                  </svg>
+                  <span>{t('story.milestonesKicker')}</span>
                 </span>
                 <h4 className="momente-sub-card-title">
                   {t('story.milestonesTitle')}
@@ -513,7 +579,17 @@ export function StoryProductPage({
             ) : null}
             <Link to={STORY_CHAPTERS_ROUTE} className="momente-sub-card">
               <span className="momente-sub-card-kicker">
-                📖 {t('story.chaptersKicker')}
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="kicker-icon"
+                >
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />
+                </svg>
+                <span>{t('story.chaptersKicker')}</span>
               </span>
               <h4 className="momente-sub-card-title">
                 {t('story.chaptersTitle')}
@@ -552,7 +628,23 @@ export function StoryProductPage({
                       setSearchParams(next, { replace: true });
                     }}
                   >
-                    <span>🗓️</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="year-pill-icon"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
                     <span>{year}</span>
                   </button>
                 ))}

@@ -33,6 +33,7 @@ import { MediaGallery } from './MediaGallery';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
+import { VisibilityBadge } from './VisibilityBadge';
 
 export type HeartMomentProductMode = 'create' | 'detail' | 'edit';
 
@@ -652,17 +653,10 @@ export function HeartMomentProductPage({
               <div>
                 <dt>{t('heartMomentProduct.visibilityLabel')}</dt>
                 <dd>
-                  <span
-                    className={`visibility-badge ${
-                      shared
-                        ? 'visibility-badge-shared'
-                        : 'visibility-badge-private'
-                    }`}
-                  >
-                    {shared
-                      ? t('heartMomentProduct.visibilityShared')
-                      : t('heartMomentProduct.visibilityPrivate')}
-                  </span>
+                  <VisibilityBadge
+                    visibility={shared ? 'SPACE_SHARED' : 'OWNER_ONLY'}
+                    size="small"
+                  />
                 </dd>
               </div>
             </dl>

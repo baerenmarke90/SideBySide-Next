@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import {
   PartnerAvatarPair,
   type PartnerAvatarPerson,
@@ -14,9 +15,12 @@ export interface CouplePresenceProps {
   status?: PartnerPresenceStatus;
   statusText?: string;
   relationshipDuration?: string;
+  durationLinkTo?: string;
+  durationTitle?: string;
   onDurationClick?: () => void;
   onInviteClick?: () => void;
   actions?: ReactNode;
+  headingLevel?: 'h1' | 'h2';
   className?: string;
 }
 
@@ -27,9 +31,12 @@ export function CouplePresence({
   status = 'connected',
   statusText,
   relationshipDuration,
+  durationLinkTo,
+  durationTitle,
   onDurationClick,
   onInviteClick,
   actions,
+  headingLevel = 'h2',
   className = '',
 }: CouplePresenceProps) {
   const defaultStatusText =
@@ -38,6 +45,8 @@ export function CouplePresence({
       : status === 'waiting'
         ? relationshipComponents.couplePresenceWaiting
         : relationshipComponents.couplePresenceOffline;
+
+  const HeadingTag = headingLevel;
 
   return (
     <section
@@ -54,9 +63,12 @@ export function CouplePresence({
         />
 
         <div className="couple-presence-details">
-          <h2 id="couple-presence-title" className="couple-presence-title">
+          <HeadingTag
+            id="couple-presence-title"
+            className="couple-presence-title"
+          >
             {spaceTitle}
-          </h2>
+          </HeadingTag>
 
           <div className="couple-presence-meta">
             <span className={`couple-presence-indicator status-${status}`}>
@@ -71,12 +83,37 @@ export function CouplePresence({
                 <span className="couple-presence-separator" aria-hidden="true">
                   ·
                 </span>
-                {onDurationClick ? (
+                {durationLinkTo ? (
+                  <Link
+                    to={durationLinkTo}
+                    className="couple-presence-duration-btn today-hero-duration-link"
+                    title={
+                      durationTitle ||
+                      relationshipComponents.couplePresenceDurationAction
+                    }
+                  >
+                    <span className="today-hero-pill-icon" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="12"
+                        height="12"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+                      </svg>
+                    </span>
+                    <span>{relationshipDuration}</span>
+                  </Link>
+                ) : onDurationClick ? (
                   <button
                     type="button"
                     className="couple-presence-duration-btn"
                     onClick={onDurationClick}
-                    title={relationshipComponents.couplePresenceDurationAction}
+                    title={
+                      durationTitle ||
+                      relationshipComponents.couplePresenceDurationAction
+                    }
                   >
                     {relationshipDuration}
                   </button>

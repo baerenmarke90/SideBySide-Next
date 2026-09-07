@@ -2,112 +2,60 @@
   padding-top: var(--space-6);
 }
 
-.today-hero {
+.today-hero.couple-presence-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   margin-bottom: var(--space-8);
   border: 1px solid var(--color-brand-glow);
   border-radius: var(--radius-card);
-  padding: clamp(var(--space-6), 4.5vw, var(--space-8)) var(--space-5);
+  padding: var(--space-5);
   background: radial-gradient(
     ellipse at 50% 0%,
     var(--color-brand-surface) 0%,
     var(--color-surface-raised) 75%
   );
   box-shadow: 0 4px 20px var(--color-shadow-soft);
-  text-align: center;
+  gap: var(--space-4);
 }
 
-.today-hero-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+@media (min-width: 768px) {
+  .today-hero.couple-presence-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6) var(--space-7);
+  }
 }
 
-.today-hero-avatars {
-  display: inline-flex;
-  align-items: center;
-}
-
-.today-hero-avatars .person-identity + .person-identity {
-  margin-left: -0.6rem;
-}
-
-.today-hero-avatars .person-identity-avatar {
-  border: 2px solid var(--color-surface);
-  box-shadow: 0 2px 8px var(--color-shadow-soft);
-}
-
-.today-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-brand-text);
-}
-
-.today-hero-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  box-shadow: 0 0 8px var(--color-brand);
-}
-
-.today-hero-greeting {
-  margin-bottom: var(--space-2);
+.today-hero .couple-presence-title {
   color: var(--color-text);
   font-family: var(--font-display);
-  font-size: clamp(2rem, 4.5vw, 2.75rem);
-  font-weight: 800;
-  line-height: 1.15;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 750;
+  line-height: 1.2;
   letter-spacing: -0.02em;
 }
 
-.today-hero-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.today-hero-subtitle {
+.today-hero-duration-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-pill);
-  padding: 0.35rem 1rem;
-  background: var(--color-surface);
-  color: var(--color-brand-text);
-  box-shadow: 0 2px 8px var(--color-shadow-soft);
-  font-size: 0.92rem;
-  font-weight: 700;
-}
-
-.today-hero-duration-link {
-  text-decoration: none;
+  gap: var(--space-1);
+  color: var(--color-brand);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border);
   transition:
-    border-color var(--transition-base),
-    transform var(--transition-base),
-    box-shadow var(--transition-base);
+    color var(--motion-fast),
+    text-decoration-color var(--motion-fast);
 }
 
 .today-hero-duration-link:hover,
 .today-hero-duration-link:focus-visible {
-  border-color: var(--color-brand-glow);
-  box-shadow: 0 4px 12px var(--color-shadow-soft);
-  transform: translateY(-1px);
+  color: var(--color-brand-strong);
+  text-decoration-color: var(--color-brand-strong);
 }
 
 .today-signal-avatar .person-identity-avatar-small {
@@ -119,14 +67,31 @@
 }
 
 .today-hero-pill-icon {
+  display: inline-flex;
+  align-items: center;
   color: var(--color-brand);
-  font-size: 0.85rem;
+}
+
+.today-hero-pill-icon svg {
+  display: block;
+}
+
+.retrospective-badge-icon {
+  display: inline-flex;
+  margin-right: 0.35rem;
+  vertical-align: -1px;
 }
 
 .today-hero-action-container {
   display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .today-hero-action-container {
+    justify-content: flex-end;
+  }
 }
 
 @keyframes pulse-heart {
