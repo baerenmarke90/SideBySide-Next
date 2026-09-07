@@ -17,15 +17,18 @@ interface SpacePreferenceStore {
     fun rememberedSpace(accountId: UUID): UUID?
 
     fun rememberSpace(accountId: UUID, spaceId: UUID)
+
+    /** Removes only this Account's remembered Space selection. */
+    fun forgetAccount(accountId: UUID)
 }
 
 /**
  * Never remembers anything past this instance's own lifetime.
  *
- * The default for [ReferenceViewModel] so existing and new unit tests keep
- * resolving to the first ACTIVE membership without needing a Context —
- * exactly one fresh instance per ViewModel, never a shared singleton, so one
- * test's remembered Space can never leak into another's.
+ * The default for [ReferenceViewModel] so unit tests can model an explicit
+ * remembered Space without needing a Context. Exactly one fresh instance is
+ * created per ViewModel, never a shared singleton, so one test's preference
+ * can never leak into another's.
  */
 class InMemorySpacePreferenceStore : SpacePreferenceStore {
     private val remembered = mutableMapOf<UUID, UUID>()
@@ -34,6 +37,10 @@ class InMemorySpacePreferenceStore : SpacePreferenceStore {
 
     override fun rememberSpace(accountId: UUID, spaceId: UUID) {
         remembered[accountId] = spaceId
+    }
+
+    override fun forgetAccount(accountId: UUID) {
+        remembered.remove(accountId)
     }
 }
 
@@ -52,6 +59,10 @@ class SharedPreferencesSpaceStore(context: Context) : SpacePreferenceStore {
 
     override fun rememberSpace(accountId: UUID, spaceId: UUID) {
         prefs.edit().putString(accountId.toString(), spaceId.toString()).apply()
+    }
+
+    override fun forgetAccount(accountId: UUID) {
+        prefs.edit().remove(accountId.toString()).apply()
     }
 
     private companion object {

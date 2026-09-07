@@ -5492,6 +5492,10 @@ class ReferenceViewModel(
                 )
             }
                 .onSuccess {
+                    // Server acceptance belongs to the captured Account even if the UI
+                    // moved to another session while the request was in flight. Remove
+                    // only that Account's durable Space preference before touching UI state.
+                    spaceStore.forgetAccount(currentSession.account.id)
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
                     // The server has crossed the irreversible tombstone boundary and
                     // revoked this session. Reuse the existing logout transition to
