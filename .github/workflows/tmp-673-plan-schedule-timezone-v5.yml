@@ -1,0 +1,104 @@
+name: Temporary 673 plan schedule timezone fix v5
+
+on:
+  push:
+    branches:
+      - fix/673-android-plan-schedule-timezone
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Install Android SDK 37.1
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Apply validated #673 patch and test corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path(".github/workflows/tmp-673-plan-schedule-timezone-v3.yml").read_text(encoding="utf-8")
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "          PY\n"
+          start = workflow.index(start_marker) + len(start_marker)
+          end = workflow.index(end_marker, start)
+          script = textwrap.dedent(workflow[start:end])
+          Path("/tmp/apply_673.py").write_text(script, encoding="utf-8")
+          PY
+
+          python /tmp/apply_673.py
+
+          python - <<'PY'
+          from pathlib import Path
+
+          web_path = Path("web/src/client/sharedPlanning.test.ts")
+          web = web_path.read_text(encoding="utf-8")
+          old = "  dateTimeFromInput,\n  loadAllPlaces,\n"
+          new = "  dateTimeFromInput,\n  localDateTimeInput,\n  loadAllPlaces,\n"
+          if old not in web:
+              raise SystemExit("Web parity import context changed")
+          web_path.write_text(web.replace(old, new, 1), encoding="utf-8")
+
+          android_test_path = Path("android/app/src/test/java/de/sidebyside/next/plan/PlanScreenTest.kt")
+          android_test = android_test_path.read_text(encoding="utf-8")
+          android_test = android_test.replace("import androidx.compose.ui.test.assertExists\n", "", 1)
+          if "import androidx.compose.ui.test.assertExists" in android_test:
+              raise SystemExit("Unexpected assertExists import remains")
+          android_test_path.write_text(android_test, encoding="utf-8")
+          PY
+
+          git rm .github/workflows/tmp-673-plan-schedule-timezone.yml \
+                 .github/workflows/tmp-673-plan-schedule-timezone-v3.yml \
+                 .github/workflows/tmp-673-plan-schedule-timezone-v4.yml \
+                 .github/workflows/tmp-673-plan-schedule-timezone-v5.yml
+          git diff --check
+
+      - name: Web schedule parity test
+        working-directory: web
+        run: |
+          npm ci
+          npm test -- src/client/sharedPlanning.test.ts
+
+      - name: Focused Android planning tests
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:testDebugUnitTest \
+            --tests de.sidebyside.next.plan.PlanningTest \
+            --tests de.sidebyside.next.plan.PlanScreenTest
+
+      - name: Full Android unit suite
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:testDebugUnitTest
+
+      - name: Commit validated #673 implementation
+        run: |
+          set -euo pipefail
+          git config user.name "SideBySide CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt \
+                  android/app/src/main/java/de/sidebyside/next/plan/PlanScreen.kt \
+                  android/app/src/main/res/values/strings.xml \
+                  android/app/src/test/java/de/sidebyside/next/plan/PlanningTest.kt \
+                  android/app/src/test/java/de/sidebyside/next/plan/PlanScreenTest.kt \
+                  web/src/client/sharedPlanning.test.ts
+          git commit -m "fix(android): preserve explicit Plan schedule time and timezone"
+          git push origin HEAD:fix/673-android-plan-schedule-timezone
