@@ -294,6 +294,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Dies ist das Profil, das dein Partner sieht.",
     "Erinnerung mit Bild speichern",
     "Eure Story beginnt hier.",
+    "Herbstwochenende im Elsass",
     "Keine Einträge",
     "Konzert im Herbst",
     "Noch keine Einträge in eurer Story.",

@@ -179,49 +179,78 @@ export function ChaptersOverviewPage({
 
         <details className="planning-create" id="chapter-create-details">
           <summary id="chapter-title">{t('m5s3.chapter.create')}</summary>
-          <form
-            onSubmit={submitChapter}
-            className="form-grid planning-create-form"
-          >
-            <label htmlFor="chapter-name">{t('m5s3.common.title')}</label>
-            <input id="chapter-name" name="title" required maxLength={200} />
-            <label htmlFor="chapter-desc">{t('m5s3.common.description')}</label>
-            <textarea id="chapter-desc" name="description" rows={3} />
-            <div className="planning-coordinate-grid">
-              <div className="field-group">
-                <label htmlFor="chapter-start">
-                  {t('m5s3.chapter.startOn')}
+          <div className="immersive-create-card">
+            <form onSubmit={submitChapter} className="immersive-create-form">
+              <div className="immersive-create-hero">
+                <label htmlFor="chapter-name" className="sr-only">
+                  {t('m5s3.common.title')}
                 </label>
-                <input id="chapter-start" name="startOn" type="date" />
+                <input
+                  id="chapter-name"
+                  name="title"
+                  required
+                  maxLength={200}
+                  placeholder={t('m5s3.common.title')}
+                  className="immersive-create-title"
+                />
               </div>
-              <div className="field-group">
-                <label htmlFor="chapter-end">{t('m5s3.chapter.endOn')}</label>
-                <input id="chapter-end" name="endOn" type="date" />
+
+              <details className="immersive-create-details">
+                <summary>{t('m5s3.chapter.addMoreDetails')}</summary>
+                <div className="immersive-create-details-content">
+                  <div className="field-group">
+                    <label htmlFor="chapter-desc">
+                      {t('m5s3.common.description')}
+                    </label>
+                    <textarea id="chapter-desc" name="description" rows={3} />
+                  </div>
+                  <div className="planning-coordinate-grid">
+                    <div className="field-group">
+                      <label htmlFor="chapter-start">
+                        {t('m5s3.chapter.startOn')}
+                      </label>
+                      <input id="chapter-start" name="startOn" type="date" />
+                    </div>
+                    <div className="field-group">
+                      <label htmlFor="chapter-end">
+                        {t('m5s3.chapter.endOn')}
+                      </label>
+                      <input id="chapter-end" name="endOn" type="date" />
+                    </div>
+                  </div>
+                  <div className="field-group">
+                    <label htmlFor="chapter-place">
+                      {t('m5s3.common.place')}
+                    </label>
+                    <select
+                      id="chapter-place"
+                      name="placeId"
+                      defaultValue=""
+                      disabled={placesQuery.isLoading}
+                    >
+                      <option value="">{t('m5s3.common.noPlace')}</option>
+                      {(placesQuery.data ?? []).map((place) => (
+                        <option key={place.id} value={place.id}>
+                          {place.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </details>
+
+              <div className="form-actions">
+                <button type="submit" disabled={createChapter.isPending}>
+                  {createChapter.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
+                </button>
               </div>
-            </div>
-            <label htmlFor="chapter-place">{t('m5s3.common.place')}</label>
-            <select
-              id="chapter-place"
-              name="placeId"
-              defaultValue=""
-              disabled={placesQuery.isLoading}
-            >
-              <option value="">{t('m5s3.common.noPlace')}</option>
-              {(placesQuery.data ?? []).map((place) => (
-                <option key={place.id} value={place.id}>
-                  {place.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" disabled={createChapter.isPending}>
-              {createChapter.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.common.save')}
-            </button>
-            {createChapter.error ? (
-              <ProblemState error={createChapter.error} />
-            ) : null}
-          </form>
+              {createChapter.error ? (
+                <ProblemState error={createChapter.error} />
+              ) : null}
+            </form>
+          </div>
         </details>
       </section>
     </div>

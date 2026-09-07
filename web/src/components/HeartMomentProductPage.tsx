@@ -330,7 +330,7 @@ export function HeartMomentProductPage({
     }
 
     return (
-      <div className="page page-reading create-page product-editor-page">
+      <div className="page page-reading create-page">
         <PageHeader
           before={
             <Link className="back-link" to={appRoutePath('story')}>
@@ -340,38 +340,83 @@ export function HeartMomentProductPage({
           eyebrow={t('heartMomentProduct.createEyebrow')}
           title={t('heartMomentProduct.createHeading')}
           description={t('heartMomentProduct.createIntro')}
+          className="create-heading"
         />
         <section
-          className="form-card product-sheet"
-          aria-labelledby="heart-moment-create-heading"
+          className="immersive-create-card sbs-motion-reveal"
+          aria-labelledby="heart-moment-form-heading"
         >
-          <h2 id="heart-moment-create-heading" className="sr-only">
+          <h2 id="heart-moment-form-heading" className="sr-only">
             {t('heartMomentProduct.createHeading')}
           </h2>
-          <form className="form-grid" onSubmit={submitCreate}>
-            <HeartMomentFields />
+          <form onSubmit={submitCreate} className="immersive-create-form">
+            <div className="immersive-create-hero">
+              <label htmlFor="heart-moment-text" className="sr-only">
+                {t('heartMomentProduct.textLabel')}
+              </label>
+              <textarea
+                id="heart-moment-text"
+                name="text"
+                required
+                rows={3}
+                maxLength={4000}
+                placeholder={t('heartMomentProduct.textPlaceholder')}
+                className="immersive-create-title immersive-create-title-multiline"
+              />
+            </div>
+
             <div className="field-group">
-              <label htmlFor="heart-moment-create-visibility">
-                {t('heartMomentProduct.visibilityLabel')}
+              <label htmlFor="heart-moment-emotion">
+                {t('heartMomentProduct.emotionLabel')}
               </label>
               <select
-                id="heart-moment-create-visibility"
-                name="visibility"
-                defaultValue={ContentVisibility.SHARED}
+                id="heart-moment-emotion"
+                name="emotion"
+                defaultValue={HeartEmotion.LOVED}
               >
-                <option value={ContentVisibility.SHARED}>
-                  {t('heartMomentProduct.visibilityShared')}
-                </option>
-                <option value={ContentVisibility.PRIVATE}>
-                  {t('heartMomentProduct.visibilityPrivate')}
-                </option>
+                {Object.values(HeartEmotion).map((emotion) => (
+                  <option key={emotion} value={emotion}>
+                    {t(`heartEmotion.${emotion}`)}
+                  </option>
+                ))}
               </select>
             </div>
-            <AttachmentDraftPicker
-              id="heart-moment-create-photo"
-              attachments={attachments}
-              multiple={false}
-            />
+
+            <div className="field-group">
+              <label htmlFor="heart-moment-date">
+                {t('heartMomentProduct.happenedOnLabel')}
+              </label>
+              <input id="heart-moment-date" name="happenedOn" type="date" required />
+            </div>
+
+            <details className="immersive-create-details">
+              <summary>{t('heartMomentProduct.addMoreDetails')}</summary>
+              <div className="immersive-create-details-content">
+                <div className="field-group">
+                  <label htmlFor="heart-moment-create-visibility">
+                    {t('heartMomentProduct.visibilityLabel')}
+                  </label>
+                  <select
+                    id="heart-moment-create-visibility"
+                    name="visibility"
+                    defaultValue={ContentVisibility.SHARED}
+                  >
+                    <option value={ContentVisibility.SHARED}>
+                      {t('heartMomentProduct.visibilityShared')}
+                    </option>
+                    <option value={ContentVisibility.PRIVATE}>
+                      {t('heartMomentProduct.visibilityPrivate')}
+                    </option>
+                  </select>
+                </div>
+                <AttachmentDraftPicker
+                  id="heart-moment-create-photo"
+                  attachments={attachments}
+                  multiple={false}
+                />
+              </div>
+            </details>
+
             <div className="form-actions">
               <Link
                 className="button-link secondary-link"

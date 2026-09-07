@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -130,6 +130,32 @@ export function SharedPlanningOverviewPage({
     },
   });
 
+  const [selectedPlanPlaceId, setSelectedPlanPlaceId] = useState('');
+  const [isCreatingPlanPlace, setIsCreatingPlanPlace] = useState(false);
+  const [newPlanPlaceName, setNewPlanPlaceName] = useState('');
+  const [newPlanPlaceAddress, setNewPlanPlaceAddress] = useState('');
+
+  const createPlanPlace = useMutation({
+    mutationFn: (values: { name: string; address?: string }) =>
+      apiCall(() => apis.places.createPlace({ spaceId, placeCreate: values })),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['m5-s3', 'places', spaceId, 'options'],
+      });
+      setSelectedPlanPlaceId(created.id);
+      setIsCreatingPlanPlace(false);
+      setNewPlanPlaceName('');
+      setNewPlanPlaceAddress('');
+    },
+  });
+
+  function submitNewPlanPlace() {
+    const name = newPlanPlaceName.trim();
+    if (!name) return;
+    const address = newPlanPlaceAddress.trim();
+    createPlanPlace.mutate({ name, address: address || undefined });
+  }
+
   const wishItems = wishes.data?.pages.flatMap((page) => page.items) ?? [];
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -154,7 +180,13 @@ export function SharedPlanningOverviewPage({
         description: description || undefined,
         placeId: placeId || undefined,
       },
-      { onSuccess: () => form.reset() },
+      {
+        onSuccess: () => {
+          form.reset();
+          setSelectedPlanPlaceId('');
+          setIsCreatingPlanPlace(false);
+        },
+      },
     );
   }
 
@@ -245,10 +277,83 @@ export function SharedPlanningOverviewPage({
                 <label htmlFor="create-plan-place">
                   {t('m5s3.common.place')}
                 </label>
-                <select id="create-plan-place" name="placeId" defaultValue="">
+                <select
+                  id="create-plan-place"
+                  name="placeId"
+                  value={selectedPlanPlaceId}
+                  onChange={(event) =>
+                    setSelectedPlanPlaceId(event.target.value)
+                  }
+                >
                   <option value="">{t('m5s3.common.noPlace')}</option>
                   {placeChoices}
                 </select>
+                {isCreatingPlanPlace ? (
+                  <div className="inline-place-create">
+                    <div className="field-group">
+                      <label htmlFor="new-plan-place-name">
+                        {t('m5s3.place.name')}
+                      </label>
+                      <input
+                        id="new-plan-place-name"
+                        value={newPlanPlaceName}
+                        onChange={(event) =>
+                          setNewPlanPlaceName(event.target.value)
+                        }
+                        required
+                        maxLength={200}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label htmlFor="new-plan-place-address">
+                        {t('m5s3.place.address')}
+                      </label>
+                      <input
+                        id="new-plan-place-address"
+                        value={newPlanPlaceAddress}
+                        onChange={(event) =>
+                          setNewPlanPlaceAddress(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="inline-place-create-actions">
+                      <button
+                        type="button"
+                        className="button-link secondary-link"
+                        onClick={() => {
+                          setIsCreatingPlanPlace(false);
+                          setNewPlanPlaceName('');
+                          setNewPlanPlaceAddress('');
+                        }}
+                      >
+                        {t('m5s3.plan.newPlaceCancel')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          createPlanPlace.isPending ||
+                          !newPlanPlaceName.trim()
+                        }
+                        onClick={submitNewPlanPlace}
+                      >
+                        {createPlanPlace.isPending
+                          ? t('m5s3.plan.newPlaceSaving')
+                          : t('m5s3.plan.newPlaceSave')}
+                      </button>
+                    </div>
+                    {createPlanPlace.error ? (
+                      <ProblemState error={createPlanPlace.error} />
+                    ) : null}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="tertiary compact-action"
+                    onClick={() => setIsCreatingPlanPlace(true)}
+                  >
+                    {t('m5s3.plan.addNewPlace')}
+                  </button>
+                )}
                 <button type="submit" disabled={createPlan.isPending}>
                   {createPlan.isPending
                     ? t('m5s3.common.saving')

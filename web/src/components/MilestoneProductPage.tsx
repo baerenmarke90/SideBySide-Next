@@ -204,7 +204,7 @@ export function MilestoneProductPage({
     }
 
     return (
-      <div className="page page-reading create-page product-editor-page">
+      <div className="page page-reading create-page">
         <PageHeader
           before={
             <Link className="back-link" to={appRoutePath('story')}>
@@ -214,16 +214,54 @@ export function MilestoneProductPage({
           eyebrow={t('milestoneProduct.createEyebrow')}
           title={t('milestoneProduct.createHeading')}
           description={t('milestoneProduct.createIntro')}
+          className="create-heading"
         />
         <section
-          className="form-card product-sheet"
-          aria-labelledby="milestone-create-heading"
+          className="immersive-create-card sbs-motion-reveal"
+          aria-labelledby="milestone-form-heading"
         >
-          <h2 id="milestone-create-heading" className="sr-only">
+          <h2 id="milestone-form-heading" className="sr-only">
             {t('milestoneProduct.createHeading')}
           </h2>
-          <form className="form-grid" onSubmit={submitCreate}>
-            <MilestoneFields />
+          <form onSubmit={submitCreate} className="immersive-create-form">
+            <div className="immersive-create-hero">
+              <label htmlFor="milestone-title" className="sr-only">
+                {t('milestoneProduct.titleLabel')}
+              </label>
+              <input
+                id="milestone-title"
+                name="title"
+                required
+                maxLength={200}
+                placeholder={t('milestoneProduct.titlePlaceholder')}
+                className="immersive-create-title"
+              />
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="milestone-date">
+                {t('milestoneProduct.happenedOnLabel')}
+              </label>
+              <input id="milestone-date" name="happenedOn" type="date" required />
+            </div>
+
+            <details className="immersive-create-details">
+              <summary>{t('milestoneProduct.addMoreDetails')}</summary>
+              <div className="immersive-create-details-content">
+                <div className="field-group">
+                  <label htmlFor="milestone-body">
+                    {t('milestoneProduct.bodyLabel')}
+                  </label>
+                  <textarea
+                    id="milestone-body"
+                    name="body"
+                    rows={4}
+                    placeholder={t('milestoneProduct.bodyPlaceholder')}
+                  />
+                </div>
+              </div>
+            </details>
+
             <div className="form-actions">
               <Link
                 className="button-link secondary-link"
