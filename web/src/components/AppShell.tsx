@@ -21,6 +21,7 @@ import {
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { HeaderCouplePresence } from './HeaderCouplePresence';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
@@ -166,7 +167,13 @@ export function AppShell({
 
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
+        <nav className="shell-nav" aria-label={t('navigation.primary')}>
+          <PrimaryNavigationLinks />
+        </nav>
         <div className="header-actions">
+          <div className="shell-primary-action">
+            <QuickCreateMenu variant="desktop" />
+          </div>
           <span
             className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}
           >
@@ -200,6 +207,12 @@ export function AppShell({
             unreadCount={unreadCount}
             currentAccountId={account.id}
           />
+          <HeaderCouplePresence
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            account={account}
+            spaceId={spaceId}
+          />
           <HeaderProfileMenu
             apiBaseUrl={apiBaseUrl}
             accessToken={accessToken}
@@ -226,17 +239,6 @@ export function AppShell({
       ) : null}
 
       <div className="product-shell-body">
-        <aside className="shell-sidebar">
-          <div className="shell-sidebar-inner">
-            <div className="shell-primary-action">
-              <QuickCreateMenu variant="desktop" />
-            </div>
-            <nav className="shell-nav" aria-label={t('navigation.primary')}>
-              <PrimaryNavigationLinks />
-            </nav>
-          </div>
-        </aside>
-
         <main
           key={location.pathname}
           id="main-content"

@@ -7,8 +7,10 @@ import {
 import { act, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import navigation from '../i18n/locales/navigation';
 import { AppShell } from './AppShell';
+import { personInitials } from './PersonIdentity';
 
 /** Opening anchor tags, so attribute order in the markup does not matter. */
 function anchorTags(html: string): string[] {
@@ -30,6 +32,10 @@ function renderShell(
   route: string,
   serverAdmin = false,
   unreadCount = 0,
+  partners: Array<{ id: string; displayName: string }> = [
+    { id: 'account-1', displayName: 'Alex Example' },
+    { id: 'partner-1', displayName: 'Sam Example' },
+  ],
 ): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -42,6 +48,11 @@ function renderShell(
   });
   queryClient.setQueryData(['m5-s5', 'notification-unread-count', 'space-1'], {
     unreadCount,
+  });
+  queryClient.setQueryData(authorSummaryQueryKeys.space('space-1'), {
+    id: 'space-1',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    partners,
   });
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
@@ -69,6 +80,8 @@ describe('AppShell', () => {
     expect(html).toContain('id="main-content"');
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
+    expect(html).not.toContain('<aside');
+    expect(html.indexOf('<nav')).toBeLessThan(html.indexOf('</header>'));
     expect(html).toContain('href="/today"');
     expect(html).toContain(`>${navigation.today}<`);
     expect(html).toContain('href="/story"');
@@ -81,14 +94,16 @@ describe('AppShell', () => {
 
   it('keeps the landing destination first in primary navigation', () => {
     const html = renderShell('/story');
-    const sidebar = html.slice(
+    const primaryNavigation = html.slice(
       html.indexOf('<nav class="shell-nav"'),
       html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
 
-    expect(sidebar.indexOf('href="/today"')).toBeGreaterThanOrEqual(0);
-    expect(sidebar.indexOf('href="/today"')).toBeLessThan(
-      sidebar.indexOf('href="/story"'),
+    expect(primaryNavigation.indexOf('href="/today"')).toBeGreaterThanOrEqual(
+      0,
+    );
+    expect(primaryNavigation.indexOf('href="/today"')).toBeLessThan(
+      primaryNavigation.indexOf('href="/story"'),
     );
   });
 
@@ -112,12 +127,12 @@ describe('AppShell', () => {
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     expect(compact).not.toContain('href="/search"');
     expect(compact).not.toContain('href="/more/notifications"');
-    const sidebar = html.slice(
-      html.indexOf('shell-sidebar'),
-      html.indexOf('main-content'),
+    const primaryNavigation = html.slice(
+      html.indexOf('<nav class="shell-nav"'),
+      html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
-    expect(sidebar).not.toContain('href="/search"');
-    expect(sidebar).not.toContain('href="/more/notifications"');
+    expect(primaryNavigation).not.toContain('href="/search"');
+    expect(primaryNavigation).not.toContain('href="/more/notifications"');
   });
 
   it('keeps Profile, Settings and Activity in the account tree rather than primary navigation', () => {
@@ -126,9 +141,9 @@ describe('AppShell', () => {
       html.indexOf('<header'),
       html.indexOf('</header>') + '</header>'.length,
     );
-    const sidebar = html.slice(
-      html.indexOf('shell-sidebar'),
-      html.indexOf('main-content'),
+    const primaryNavigation = html.slice(
+      html.indexOf('<nav class="shell-nav"'),
+      html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
     );
 
     expect(header).toContain(`aria-label="${navigation.profileMenu}"`);
@@ -136,9 +151,9 @@ describe('AppShell', () => {
     expect(header).toContain('href="/more/settings"');
     expect(header).toContain('href="/today/activity"');
     expect(header).toContain('header-profile-menu-logout');
-    expect(sidebar).not.toContain('href="/more/profile"');
-    expect(sidebar).not.toContain('href="/more/settings"');
-    expect(sidebar).not.toContain('href="/today/activity"');
+    expect(primaryNavigation).not.toContain('href="/more/profile"');
+    expect(primaryNavigation).not.toContain('href="/more/settings"');
+    expect(primaryNavigation).not.toContain('href="/today/activity"');
   });
 
   it('shows ServerAdmin only for an authorized account capability', () => {
@@ -160,7 +175,9 @@ describe('AppShell', () => {
       (button) => button.match(/aria-controls="([^"]+)"/)?.[1],
     );
 
-    expect(html).toContain('shell-primary-action');
+    expect(html.slice(0, html.indexOf('</header>'))).toContain(
+      'shell-primary-action',
+    );
     expect(html).toContain('mobile-quick-create');
     expect(quickCreateButtons).toHaveLength(2);
     expect(menuIds.every(Boolean)).toBe(true);
@@ -229,6 +246,37 @@ describe('AppShell', () => {
     expect(html).toContain('Unsere Aktivitäten');
   });
 
+  it('shows only the partner in the header couple presence, never the account a second time', () => {
+    const html = renderShell('/story');
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
+
+    const coupleIndex = header.indexOf('header-couple-presence');
+    const profileMenuIndex = header.indexOf('header-profile-menu');
+    expect(coupleIndex).toBeGreaterThan(-1);
+    expect(profileMenuIndex).toBeGreaterThan(coupleIndex);
+
+    const coupleBlock = header.slice(coupleIndex, profileMenuIndex);
+    expect(coupleBlock).toContain('title="Sam Example"');
+    expect(coupleBlock).toContain(personInitials('Sam Example'));
+    expect(coupleBlock).not.toContain('Alex Example');
+    expect(coupleBlock).not.toContain(personInitials('Alex Example'));
+  });
+
+  it('hides the couple presence entirely when no partner can be resolved, rather than a waiting placeholder', () => {
+    const html = renderShell('/story', false, 0, [
+      { id: 'account-1', displayName: 'Alex Example' },
+    ]);
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
+
+    expect(header).not.toContain('header-couple-presence');
+  });
+
   it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {
     window.matchMedia =
       window.matchMedia ||
@@ -268,6 +316,14 @@ describe('AppShell', () => {
       displayName: 'Alex Example',
       profileAttachmentId: null,
       version: 1,
+    });
+    queryClient.setQueryData(authorSummaryQueryKeys.space('space-1'), {
+      id: 'space-1',
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      partners: [
+        { id: 'account-1', displayName: 'Alex Example' },
+        { id: 'partner-1', displayName: 'Sam Example' },
+      ],
     });
 
     const { container } = render(

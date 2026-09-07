@@ -104,6 +104,29 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({ id: SPACE_ID, createdAt: TEST_NOW, partners: [] });
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        version: 1,
+        relationshipStartedOn: null,
+        showRelationshipDuration: false,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profile-preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
     if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
       await fulfillJson({ serverAdmin: false });
       return;
@@ -177,6 +200,9 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
     if (
       method === 'GET' &&
       [
+        `/api/v1/spaces/${SPACE_ID}/search`,
+        `/api/v1/spaces/${SPACE_ID}/notifications`,
+        `/api/v1/spaces/${SPACE_ID}/story`,
         `/api/v1/spaces/${SPACE_ID}/collections`,
         `/api/v1/spaces/${SPACE_ID}/plans`,
         `/api/v1/spaces/${SPACE_ID}/places`,
@@ -510,3 +536,147 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
   await expectNoWcagViolations(page);
   expect(unexpectedRequests).toEqual([]);
 });
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`shell navigation and utilities reflow in ${colorScheme} mode`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.addInitScript(() =>
+      localStorage.setItem('sidebyside.theme', 'system'),
+    );
+    const unexpectedRequests = await installAuthorizedApiMocks(page);
+    await page.goto('/today');
+    await signIn(page);
+    await expect(page).toHaveURL(/\/today$/);
+
+    // Covers both sides of the existing breakpoint and #784's proposed transition.
+    for (const width of [320, 390, 599, 600, 839, 840, 959, 960, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const navigationRegion = page.getByRole('navigation', {
+        name: de.navigation.primary,
+      });
+      await expect(navigationRegion).toHaveCount(1);
+      for (const [name, path] of [
+        [navigation.today, '/today'],
+        [navigation.story, '/story'],
+        [navigation.plan, '/plan'],
+        [navigation.more, '/more'],
+      ]) {
+        const link = navigationRegion.getByRole('link', { name, exact: true });
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute('href', path);
+        const box = await link.boundingBox();
+        if (!box)
+          throw new Error(`Navigation target ${path} has no visible bounds.`);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(width);
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      await expect(
+        page.getByRole('button', { name: navigation.newContent }),
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole('button', { name: navigation.newContent }),
+      ).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      const inHeader = await navigationRegion.evaluate((element) =>
+        Boolean(element.closest('header')),
+      );
+      expect(inHeader).toBe(width >= 840);
+    }
+
+    await page
+      .getByRole('link', { name: navigation.plan, exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/plan$/);
+    await expect(
+      page.getByRole('link', { name: navigation.plan, exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+    await page
+      .getByRole('link', { name: navigation.today, exact: true })
+      .click();
+    const header = page.getByRole('banner');
+    const create = page.getByRole('button', { name: navigation.newContent });
+    await create.focus();
+    await page.keyboard.press('ArrowDown');
+    const menu = page.getByRole('menu', { name: navigation.newContent });
+    await expect(menu).toBeVisible();
+    const memory = menu.getByRole('menuitem', {
+      name: navigation.quickCreateMemory,
+    });
+    await expect(memory).toBeFocused();
+    await expect(memory).toHaveAttribute('href', '/story/memories/new');
+    await page.keyboard.press('End');
+    await expect(
+      menu.getByRole('menuitem', { name: navigation.quickCreatePrivateNote }),
+    ).toBeFocused();
+    await expectNoWcagViolations(page);
+    await page.screenshot({
+      path: testInfo.outputPath(`shell-create-expanded-${colorScheme}.png`),
+    });
+    await page.keyboard.press('Escape');
+    await expect(create).toBeFocused();
+    await expect(menu).toHaveCount(0);
+
+    const search = header.getByRole('link', {
+      name: navigation.search,
+      exact: true,
+    });
+    await search.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/search$/);
+    const searchInput = page.getByRole('searchbox', {
+      name: m5s5.search.label,
+    });
+    await searchInput.focus();
+    await searchInput.fill('Shared memory');
+    await page.keyboard.press('Enter');
+    await expect(searchInput).toBeFocused();
+    await expect(
+      page.getByRole('button', { name: m5s5.search.submit, exact: true }),
+    ).toBeEnabled();
+    await page.goBack();
+    const notifications = header.getByRole('button', {
+      name: navigation.notifications,
+      exact: true,
+    });
+    await notifications.focus();
+    await page.keyboard.press('Enter');
+    await expect(header.locator('a[href="/more/notifications"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(notifications).toBeFocused();
+    const profile = header.getByRole('button', {
+      name: navigation.profileMenu,
+    });
+    await profile.focus();
+    await page.keyboard.press('Enter');
+    await header.locator('a[href="/more/profile"]').click();
+    await expect(page).toHaveURL(/\/more\/profile$/);
+    await expect(
+      page.getByRole('link', { name: navigation.more, exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+    await page
+      .getByRole('link', { name: navigation.today, exact: true })
+      .click();
+
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectNoWcagViolations(page);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `shell-${width >= 840 ? 'expanded' : 'compact'}-${colorScheme}.png`,
+        ),
+      });
+    }
+    // Browser zoom halves the CSS viewport; unlike CSS zoom it changes media queries.
+    await page.setViewportSize({ width: 720, height: 450 });
+    await expect(
+      page.getByRole('navigation', { name: de.navigation.primary }),
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectNoWcagViolations(page);
+    expect(unexpectedRequests).toEqual([]);
+  });
+}
