@@ -178,11 +178,7 @@ function RecentItemTypeIcon({ type }: { type: DashboardItemType }) {
     );
   }
 
-  if (
-    type === 'PLAN' ||
-    type === 'IMPORTANT_DATE' ||
-    type === 'BIRTHDAY'
-  ) {
+  if (type === 'PLAN' || type === 'IMPORTANT_DATE' || type === 'BIRTHDAY') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="recent-type-icon">
         <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -229,7 +225,9 @@ function TodayContextualCard({ item }: { item: DashboardItem }) {
     <div className="today-context-card sbs-motion-lift">
       <div className="today-context-header">
         <span className="today-context-kicker">{kicker}</span>
-        <span className={`today-card-kind today-kind-${item.type.toLowerCase()}`}>
+        <span
+          className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
+        >
           <span className="today-type-icon" aria-hidden="true">
             <RecentItemTypeIcon type={item.type} />
           </span>
@@ -342,7 +340,10 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
               <span className="recent-shared-meta-sep" aria-hidden="true">
                 ·
               </span>
-              <time className="recent-shared-date" dateTime={rawDate?.toISOString()}>
+              <time
+                className="recent-shared-date"
+                dateTime={rawDate?.toISOString()}
+              >
                 {recency}
               </time>
             </>
@@ -398,7 +399,9 @@ function VisualMemoryCard({
       ) : null}
       <div className="today-card-content">
         <div className="today-card-badges">
-          <span className={`today-card-kind today-kind-${item.type.toLowerCase()}`}>
+          <span
+            className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
+          >
             <span className="today-type-icon" aria-hidden="true">
               <RecentItemTypeIcon type={item.type} />
             </span>
@@ -496,7 +499,8 @@ export function TodayPage({
   });
   const activityQuery = useQuery({
     queryKey: ['m4', 'activity', spaceId],
-    queryFn: () => apiCall(() => apis.activity.getActivity({ spaceId, limit: 10 })),
+    queryFn: () =>
+      apiCall(() => apis.activity.getActivity({ spaceId, limit: 10 })),
     enabled: Boolean(apis?.activity && spaceId),
     retry: false,
   });
@@ -557,8 +561,12 @@ export function TodayPage({
         )
       : undefined;
 
-  const hasContextModules = Boolean(primaryContextItem || relationshipSignalItem);
-  const hasBothContextModules = Boolean(primaryContextItem && relationshipSignalItem);
+  const hasContextModules = Boolean(
+    primaryContextItem || relationshipSignalItem,
+  );
+  const hasBothContextModules = Boolean(
+    primaryContextItem && relationshipSignalItem,
+  );
   const recentShared = dashboardQuery.data?.recentShared ?? [];
   const retrospective = dashboardQuery.data?.retrospective;
   const visualRecentSharedItem =
@@ -652,9 +660,14 @@ export function TodayPage({
                     })
                   : t('m5s5.dashboard.newSpaceEmpty')}
               </h1>
-              <p className="new-space-body">{t('m5s5.dashboard.newSpaceIntro')}</p>
+              <p className="new-space-body">
+                {t('m5s5.dashboard.newSpaceIntro')}
+              </p>
               <div className="new-space-actions">
-                <Link className="button-link primary new-space-cta" to="/story/memories/new">
+                <Link
+                  className="button-link primary new-space-cta"
+                  to="/story/memories/new"
+                >
                   {t('m5s5.dashboard.newSpaceAction')}
                 </Link>
               </div>
@@ -742,12 +755,17 @@ export function TodayPage({
                   animationDelay="200ms"
                 >
                   <div className="today-stream today-stream-recent">
-                    {recentSharedForTrace.slice(0, 4).map((item: DashboardItem) => (
-                      <RecentSharedItemCard key={item.id} item={item} />
-                    ))}
+                    {recentSharedForTrace
+                      .slice(0, 4)
+                      .map((item: DashboardItem) => (
+                        <RecentSharedItemCard key={item.id} item={item} />
+                      ))}
                   </div>
                   <div className="today-recent-footer">
-                    <Link to={ACTIVITY_ROUTE} className="today-recent-activity-link">
+                    <Link
+                      to={ACTIVITY_ROUTE}
+                      className="today-recent-activity-link"
+                    >
                       {t('m5s5.dashboard.allActivityAction')}
                     </Link>
                   </div>
