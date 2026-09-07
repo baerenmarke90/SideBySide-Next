@@ -445,6 +445,7 @@
 }
 
 .shell-primary-action .quick-create-trigger {
+  justify-content: center;
   border-color: var(--color-brand-glow);
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
@@ -796,6 +797,17 @@
 
   .ui-state-action {
     grid-column: 1;
+  }
+}
+
+@media (min-width: 840px) and (max-width: 1023px) {
+  .product-topbar .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }
 

@@ -16,7 +16,7 @@
   justify-content: center;
   border-radius: var(--radius-pill);
   background: var(--color-surface-subtle);
-  color: var(--color-brand-strong);
+  color: var(--color-brand-text);
   font-family: var(--font-ui);
   font-weight: 700;
   box-shadow: 0 0 0 2px var(--color-surface);
@@ -39,7 +39,7 @@
   margin-left: -0.55rem;
   border: 1.5px dashed var(--color-brand);
   background: var(--color-brand-surface);
-  color: var(--color-brand-strong);
+  color: var(--color-brand-text);
   cursor: pointer;
   transition:
     transform var(--motion-fast),

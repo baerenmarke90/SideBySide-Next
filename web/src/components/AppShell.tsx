@@ -21,6 +21,7 @@ import {
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { HeaderCouplePresence } from './HeaderCouplePresence';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
@@ -205,6 +206,12 @@ export function AppShell({
             spaceId={spaceId}
             unreadCount={unreadCount}
             currentAccountId={account.id}
+          />
+          <HeaderCouplePresence
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            account={account}
+            spaceId={spaceId}
           />
           <HeaderProfileMenu
             apiBaseUrl={apiBaseUrl}

@@ -7,6 +7,7 @@ import {
 import { act, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import navigation from '../i18n/locales/navigation';
 import { AppShell } from './AppShell';
 
@@ -30,6 +31,10 @@ function renderShell(
   route: string,
   serverAdmin = false,
   unreadCount = 0,
+  partners: Array<{ id: string; displayName: string }> = [
+    { id: 'account-1', displayName: 'Alex Example' },
+    { id: 'partner-1', displayName: 'Sam Example' },
+  ],
 ): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -42,6 +47,11 @@ function renderShell(
   });
   queryClient.setQueryData(['m5-s5', 'notification-unread-count', 'space-1'], {
     unreadCount,
+  });
+  queryClient.setQueryData(authorSummaryQueryKeys.space('space-1'), {
+    id: 'space-1',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    partners,
   });
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
@@ -235,6 +245,38 @@ describe('AppShell', () => {
     expect(html).toContain('Unsere Aktivitäten');
   });
 
+  it('shows a couple presence cluster in the header, separate from the account menu', () => {
+    const html = renderShell('/story');
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
+
+    expect(header).toContain('header-couple-presence');
+    expect(header).toContain('partner-avatar-pair-small');
+    expect(header).toContain('status-connected');
+    expect(header).toContain('Alex Example und Sam Example');
+
+    const coupleIndex = header.indexOf('header-couple-presence');
+    const profileMenuIndex = header.indexOf('header-profile-menu');
+    expect(coupleIndex).toBeGreaterThan(-1);
+    expect(profileMenuIndex).toBeGreaterThan(coupleIndex);
+  });
+
+  it('shows a waiting state in the couple presence cluster when no partner has joined yet', () => {
+    const html = renderShell('/story', false, 0, [
+      { id: 'account-1', displayName: 'Alex Example' },
+    ]);
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
+
+    expect(header).toContain('header-couple-presence');
+    expect(header).toContain('status-waiting');
+    expect(header).toContain('Alex Example (Wartet auf Partner)');
+  });
+
   it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {
     window.matchMedia =
       window.matchMedia ||
@@ -274,6 +316,14 @@ describe('AppShell', () => {
       displayName: 'Alex Example',
       profileAttachmentId: null,
       version: 1,
+    });
+    queryClient.setQueryData(authorSummaryQueryKeys.space('space-1'), {
+      id: 'space-1',
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      partners: [
+        { id: 'account-1', displayName: 'Alex Example' },
+        { id: 'partner-1', displayName: 'Sam Example' },
+      ],
     });
 
     const { container } = render(
