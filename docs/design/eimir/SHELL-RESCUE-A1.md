@@ -79,3 +79,23 @@ resources. Existing offline notices and authorized utility components stay in
 place. Run Web tests, lint, format, typecheck/build, engineering-language audit
 and browser QA. Diagnose failures against the same current-main baseline;
 keep unrelated pre-existing defects outside the rescue. Stop after A1.
+
+## Validation result
+
+The rescue passes 456 Web tests (one existing skip), build/typecheck, lint,
+format and the engineering-language audit. Both new shell browser cases pass
+in Light/Dark, including all ten viewport widths, keyboard utilities, menu
+focus restoration, minimum navigation targets, overflow and axe. Compact and
+Expanded screenshots plus the create menu were visually inspected.
+
+The complete browser suite has 11 passes and one failure in the unchanged
+Planning/Places accessibility case. The same case fails in three runs against
+an isolated, unchanged `main` archive at the audited baseline: `.eyebrow`
+contrast 4.36:1 (and occasionally another link), expected 4.5:1. The current
+rescue CI reproduces this baseline failure while both shell cases pass.
+This is outside A1 and is not fixed, skipped or weakened here. The existing
+artifact upload runs even when a test fails so reviewers can inspect successful
+shell evidence; the failing browser job remains red.
+
+Merge requires all applicable gates and no unresolved reviews. The wider
+Today rescue is not started by this change.
