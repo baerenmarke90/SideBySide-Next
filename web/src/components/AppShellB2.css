@@ -26,8 +26,10 @@
   gap: clamp(var(--space-4), 2.5vw, var(--space-8));
 }
 
-.shell-nav-desktop {
+.product-shell-b2 .shell-nav-desktop {
   display: none;
+  flex-direction: row;
+  align-items: center;
 }
 
 .product-topbar-b2 .header-actions {
@@ -82,9 +84,11 @@
     grid-template-columns: auto minmax(25rem, 1fr) auto;
   }
 
-  .shell-nav-desktop {
+  .product-shell-b2 .shell-nav-desktop {
     display: flex;
     min-width: 0;
+    flex-direction: row;
+    align-items: center;
     justify-content: center;
     gap: clamp(var(--space-1), 0.8vw, var(--space-3));
   }
@@ -217,7 +221,7 @@
     gap: var(--space-3);
   }
 
-  .shell-nav-desktop {
+  .product-shell-b2 .shell-nav-desktop {
     gap: 0;
   }
 
