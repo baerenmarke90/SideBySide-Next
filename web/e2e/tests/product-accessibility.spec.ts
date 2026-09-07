@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import m5s3 from '../../src/i18n/locales/m5s3';
 import m5s5 from '../../src/i18n/locales/m5s5';
 import navigation from '../../src/i18n/locales/navigation';
 
@@ -152,6 +153,22 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
     ) {
       await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      [
+        `/api/v1/spaces/${SPACE_ID}/plans`,
+        `/api/v1/spaces/${SPACE_ID}/places`,
+        `/api/v1/spaces/${SPACE_ID}/wishes`,
+      ].includes(pathname)
+    ) {
+      await fulfillJson({
+        hasMore: false,
+        items: [],
+        nextCursor: null,
+      });
       return;
     }
 
@@ -327,6 +344,76 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
       level: 1,
     }),
   ).toBeVisible();
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    window.localStorage.setItem('sidebyside.theme', 'system');
+  });
+  await page.setViewportSize({ width: 320, height: 800 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+  await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText(m5s3.overview.soonEmpty)).toBeVisible();
+  await expect(page.getByText(m5s3.overview.somedayEmpty)).toBeVisible();
+
+  const createPlan = page.locator('summary', { hasText: m5s3.plan.create });
+  await createPlan.focus();
+  await expect(createPlan).toBeFocused();
+  const createPlanBox = await createPlan.boundingBox();
+  expect(createPlanBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel(m5s3.common.title).first()).toBeVisible();
+
+  const revealAnimation = await page
+    .locator('.future-map-stop')
+    .first()
+    .evaluate((element) => getComputedStyle(element).animationName);
+  expect(revealAnimation).toBe('none');
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.addInitScript(() => {
+    window.localStorage.setItem('sidebyside.theme', 'system');
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+  await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
+
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
 
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);
