@@ -530,10 +530,13 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
     // 3. Click Lea -> calls demo entry and redirects to /auth/magic-link?token=...
     await leaButton.click();
 
-    // 4. Verify magic-link callback is processed and app opens (Today dashboard or default route)
-    await expect(page.getByRole('heading', { name: /Alex/i })).toBeVisible({
-      timeout: 10000,
-    });
+    // 4. Verify magic-link callback is processed and app opens on the B2 couple-presence heading
+    await expect(
+      page.getByRole('heading', {
+        name: /^Gemeinsam mit Alex$/,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: 10000 });
     // DemoEntry person picker is gone
     await expect(
       page.getByRole('button', { name: demoDe.joinLea }),

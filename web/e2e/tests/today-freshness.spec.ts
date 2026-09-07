@@ -286,11 +286,11 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   // Step 4: Verify Dashboard query was automatically refetched (poll until React Query refetch completes)
   await expect.poll(() => dashboardRequestCount).toBeGreaterThanOrEqual(2);
 
-  // Step 5: Verify earlier item is now visible in the primary context slot
+  // Step 5: Verify earlier item is now visible in the B2 primary shared-horizon slot
   await expect(
-    page.getByRole('heading', {
+    page.locator('a.today-context-link').getByRole('heading', {
       name: 'Earlier September outing',
-      level: 3,
+      level: 2,
     }),
   ).toBeVisible();
   await expect(page.getByText('Later October trip')).toHaveCount(0);
