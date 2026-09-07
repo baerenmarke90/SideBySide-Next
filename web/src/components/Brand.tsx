@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-export const PRODUCT_NAME = 'SidebySide';
+export const PRODUCT_NAME = 'eimir.';
 
 type BrandProps = {
   to?: string;
@@ -32,7 +32,9 @@ function BrandContent() {
     <>
       <BrandMark />
       <span className="brand-name">
-        <strong>{PRODUCT_NAME}</strong>
+        <strong>
+          eimir<span className="brand-dot">.</span>
+        </strong>
       </span>
     </>
   );

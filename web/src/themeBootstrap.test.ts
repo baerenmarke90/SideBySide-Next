@@ -42,7 +42,7 @@ function runBootstrap(
 ) {
   const dataset: Record<string, string> = {};
   const style: Record<string, string> = {};
-  const themeColor = { content: '#faf8fc' };
+  const themeColor = { content: '#faf7f5' };
   const windowMock: ThemeWindow = {
     localStorage: {
       getItem: () => {
@@ -74,7 +74,7 @@ describe('theme bootstrap', () => {
     const result = runBootstrap('dark', false);
     expect(result.dataset).toEqual({ theme: 'dark', themePreference: 'dark' });
     expect(result.style.colorScheme).toBe('dark');
-    expect(result.themeColor.content).toBe('#1c1525');
+    expect(result.themeColor.content).toBe('#18131d');
   });
 
   it('keeps an explicit light preference before app startup even on a dark system', () => {
@@ -84,7 +84,7 @@ describe('theme bootstrap', () => {
       themePreference: 'light',
     });
     expect(result.style.colorScheme).toBe('light');
-    expect(result.themeColor.content).toBe('#faf8fc');
+    expect(result.themeColor.content).toBe('#faf7f5');
   });
 
   it('follows the operating-system preference in system mode', () => {
@@ -93,7 +93,7 @@ describe('theme bootstrap', () => {
       theme: 'dark',
       themePreference: 'system',
     });
-    expect(result.themeColor.content).toBe('#1c1525');
+    expect(result.themeColor.content).toBe('#18131d');
   });
 
   it('falls back to system for missing or invalid stored values', () => {

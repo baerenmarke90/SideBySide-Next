@@ -5,8 +5,8 @@
   resources are needed before Compose starts or by the platform launcher.
 -->
 <resources>
-    <color name="launch_background">#FAF8FC</color>
-    <color name="launch_background_dark">#1C1525</color>
-    <color name="launch_ink">#211A2B</color>
+    <color name="launch_background">#FAF7F5</color>
+    <color name="launch_background_dark">#18131D</color>
+    <color name="launch_ink">#231E28</color>
     <color name="launcher_icon_background">#D93D59</color>
 </resources>

@@ -79,7 +79,7 @@ const de = {
         'Offline – Änderungen und neue Inhalte benötigen eine Verbindung.',
     },
     server: {
-      title: 'SidebySide ist gerade nicht erreichbar.',
+      title: 'eimir. ist gerade nicht erreichbar.',
       body: 'Versuche es in einem Moment erneut.',
     },
     unknown: {
@@ -99,7 +99,7 @@ const de = {
   },
   brand: {
     suffix: '',
-    homeAria: 'SidebySide – zum gemeinsamen Start',
+    homeAria: 'eimir. – zum gemeinsamen Ort',
   },
   spaceContext: {
     eyebrow: 'Gemeinsamer Bereich',
@@ -114,8 +114,8 @@ const de = {
     spaceFallback: 'Gemeinsamer Bereich {{index}}',
   },
   identity: {
-    entryAria: 'Zugang zu SidebySide',
-    invitationEyebrow: 'Einladung zu SidebySide',
+    entryAria: 'Zugang zu eimir.',
+    invitationEyebrow: 'Einladung zu eimir.',
     invitationTitle:
       'Dein Partner hat einen gemeinsamen Ort für euch vorbereitet.',
     invitationBody:
@@ -159,7 +159,7 @@ const de = {
     recoveryRequestEyebrow: 'Kontozugang wiederherstellen',
     recoveryRequestTitle: 'Passwort zurücksetzen',
     recoveryRequestBody:
-      'Gib deine E-Mail-Adresse ein. Wenn dafür ein lokales SidebySide-Konto existiert, erhältst du einen zeitlich begrenzten Link.',
+      'Gib deine E-Mail-Adresse ein. Wenn dafür ein lokales eimir.-Konto existiert, erhältst du einen zeitlich begrenzten Link.',
     recoveryRequestSubmit: 'Wiederherstellungslink anfordern',
     recoveryRequestPending: 'Anfrage wird gesendet …',
     mailRequestedTitle: 'Prüfe dein Postfach',
@@ -198,7 +198,7 @@ const de = {
     pending: 'Anmeldung läuft …',
     errorFallback:
       'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
-    assurance: 'Deine Anmeldung führt dich direkt zurück zu SidebySide.',
+    assurance: 'Deine Anmeldung führt dich direkt zurück zu eimir.',
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',

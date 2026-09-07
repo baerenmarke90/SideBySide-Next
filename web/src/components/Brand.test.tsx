@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { Brand, PRODUCT_NAME } from './Brand';
@@ -6,16 +7,18 @@ describe('Brand', () => {
   it('renders the canonical accessible product link with a decorative mark', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <Brand to="/story" ariaLabel="Open SidebySide Story" />
+        <Brand to="/story" ariaLabel="Open eimir. Story" />
       </MemoryRouter>,
     );
 
-    expect(PRODUCT_NAME).toBe('SidebySide');
+    expect(PRODUCT_NAME).toBe('eimir.');
     expect(html).toContain('href="/story"');
-    expect(html).toContain('aria-label="Open SidebySide Story"');
+    expect(html).toContain('aria-label="Open eimir. Story"');
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('<svg');
-    expect(html).toContain('SidebySide');
+    expect(html).toContain('eimir');
+    expect(html).toContain('brand-dot');
+    expect(html).not.toContain('SidebySide');
     expect(html).not.toContain('SideBySide');
   });
 
@@ -23,7 +26,7 @@ describe('Brand', () => {
     const html = renderToStaticMarkup(<Brand suffix={<span>Next</span>} />);
 
     expect(html).not.toContain('<a');
-    expect(html).toContain('SidebySide');
+    expect(html).toContain('eimir');
     expect(html).not.toContain('Next');
     expect(html).not.toContain('brand-inverse');
   });

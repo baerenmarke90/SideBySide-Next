@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SidebySide</string>
-    <string name="brand_name">SidebySide</string>
+    <string name="app_name">eimir.</string>
+    <string name="brand_name">eimir.</string>
     <string name="brand_suffix">Next</string>
 
     <string name="entry_eyebrow">WILLKOMMEN</string>
-    <string name="entry_headline">Euer gemeinsamer Raum für die Dinge, die bleiben.</string>
+    <string name="entry_headline">Euer gemeinsamer Ort.</string>
     <string name="entry_lede">Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.</string>
     <string name="entry_sign_in_heading">Anmelden</string>
     <string name="entry_email">E-Mail</string>
@@ -33,7 +33,7 @@
     <string name="state_validation_body">Bitte prüfe deine Eingaben und versuche es erneut.</string>
     <string name="state_rate_limit_title">Das waren zu viele Anfragen in kurzer Zeit.</string>
     <string name="state_rate_limit_body">Warte einen Moment und versuche es dann erneut.</string>
-    <string name="state_server_title">SidebySide ist gerade nicht erreichbar.</string>
+    <string name="state_server_title">eimir. ist gerade nicht erreichbar.</string>
     <string name="state_server_body">Versuche es in einem Moment erneut.</string>
     <string name="state_unknown_title">Etwas ist schiefgegangen.</string>
     <string name="state_unknown_body">Bitte versuche es erneut.</string>
@@ -47,7 +47,7 @@
     <string name="more_sign_out">Abmelden</string>
 
     <string name="demo_heading">Erst mal ansehen?</string>
-    <string name="demo_body">Probiert SidebySide mit erfundenen Inhalten aus. Ihr braucht kein Konto, und es wird nichts von euch gespeichert.</string>
+    <string name="demo_body">Probiert eimir. mit erfundenen Inhalten aus. Ihr braucht kein Konto, und es wird nichts von euch gespeichert.</string>
     <string name="demo_join_as_lea">Als Lea beitreten</string>
     <string name="demo_join_as_alex">Als Alex beitreten</string>
     <string name="demo_persona_lea">Lea</string>
@@ -56,7 +56,7 @@
     <string name="demo_entered">Du bist in der Demo.</string>
     <string name="demo_entry_failed">Die Demo ist gerade nicht erreichbar. Versuche es später noch einmal.</string>
     <string name="demo_left">Du hast die Demo verlassen.</string>
-    <string name="demo_banner">Demo · du siehst SidebySide als %1$s</string>
+    <string name="demo_banner">Demo · du siehst eimir. als %1$s</string>
     <string name="demo_leave">Demo verlassen</string>
 
     <string name="error_no_active_space">Für dieses Konto ist noch kein gemeinsamer Bereich aktiv.</string>
@@ -169,7 +169,7 @@
     <string name="memory_written_by">Festgehalten von %1$s</string>
 
     <string name="profile_settings_title">Profil</string>
-    <string name="profile_settings_intro">Hier legst du fest, wie du für deinen Partner in SidebySide angezeigt wirst.</string>
+    <string name="profile_settings_intro">Hier legst du fest, wie du für deinen Partner in eimir. angezeigt wirst.</string>
     <string name="profile_settings_loading">Profil wird geladen …</string>
     <string name="profile_settings_retry">Erneut laden</string>
     <string name="profile_preview_label">Vorschau für deinen Partner</string>
@@ -178,11 +178,11 @@
     <string name="profile_display_name_help">Der Anzeigename ändert nur deine sichtbare Darstellung. Anmeldung und Konto bleiben unverändert.</string>
     <string name="profile_display_name_save">Anzeigenamen speichern</string>
     <string name="profile_avatar_title">Profilbild</string>
-    <string name="profile_avatar_help">Ohne Profilbild verwendet SidebySide automatisch deine Initialen.</string>
+    <string name="profile_avatar_help">Ohne Profilbild verwendet eimir. automatisch deine Initialen.</string>
     <string name="profile_avatar_choose">Profilbild auswählen</string>
     <string name="profile_avatar_remove">Profilbild entfernen</string>
     <string name="profile_partner_title">Dein Partner</string>
-    <string name="profile_partner_intro">So wird dein Partner aktuell in SidebySide dargestellt.</string>
+    <string name="profile_partner_intro">So wird dein Partner aktuell in eimir. dargestellt.</string>
     <string name="profile_saved">Profil wurde gespeichert.</string>
     <string name="profile_loading_failed">Profil konnte nicht geladen werden.</string>
     <string name="profile_save_failed">Profil konnte nicht gespeichert werden.</string>
@@ -339,7 +339,7 @@
     <string name="invitation_revoke">Zurückziehen</string>
     <string name="invitation_expires">Läuft ab am %1$s</string>
     <string name="invitations_empty">Noch keine offene Einladung.</string>
-    <string name="invitation_share_text">Mit diesem Code kannst du unserem gemeinsamen Bereich in SidebySide beitreten: %1$s</string>
+    <string name="invitation_share_text">Mit diesem Code kannst du unserem gemeinsamen Ort in eimir. beitreten: %1$s</string>
     <string name="related_persons_title">Menschen in eurem Leben</string>
     <string name="related_persons_intro">Namen, die ihr euch merken wollt — für Geburtstage und wichtige Tage.</string>
     <string name="related_persons_open">Personen verwalten</string>
@@ -496,10 +496,10 @@
     <string name="data_export_status_expired">Dieser Export ist abgelaufen. Starte einen neuen.</string>
 
     <string name="data_import_card_title">Daten importieren</string>
-    <string name="data_import_card_intro">Spielt eine zuvor exportierte SideBySide-Datei in diesen Space ein.</string>
+    <string name="data_import_card_intro">Spielt eine zuvor exportierte eimir.-Datei in diesen Ort ein.</string>
     <string name="data_import_open">Import öffnen</string>
     <string name="data_import_title">Daten importieren</string>
-    <string name="data_import_intro">Wählt eine SideBySide-Exportdatei aus. Sie wird zunächst geprüft; erst nach eurer Bestätigung werden die Inhalte tatsächlich übernommen.</string>
+    <string name="data_import_intro">Wählt eine eimir.-Exportdatei aus. Sie wird zunächst geprüft; erst nach eurer Bestätigung werden die Inhalte tatsächlich übernommen.</string>
     <string name="data_import_pick_archive">Datei auswählen</string>
     <string name="data_import_refresh">Status aktualisieren</string>
     <string name="data_import_apply">Import übernehmen</string>
@@ -746,7 +746,7 @@
 
     <!-- Account self-service deletion (#644). User-facing localized copy belongs in this file. -->
     <string name="account_settings_title">Account</string>
-    <string name="account_settings_intro">Hier verwaltest du Aktionen, die dein persönliches SidebySide-Konto betreffen. Beziehung und gemeinsamer Bereich bleiben davon getrennt.</string>
+    <string name="account_settings_intro">Hier verwaltest du Aktionen, die dein persönliches eimir.-Konto betreffen. Beziehung und gemeinsamer Bereich bleiben davon getrennt.</string>
     <string name="account_delete_danger_label">DANGER ZONE</string>
     <string name="account_delete_title">Konto löschen</string>
     <string name="account_delete_intro">Die Kontolöschung betrifft nur dein persönliches Konto. Sie ist nicht dasselbe wie den gemeinsamen Bereich zu verlassen oder eine Beziehung zu beenden.</string>
@@ -787,7 +787,7 @@
     <string name="space_offboarding_consequences_title">Was danach passiert</string>
     <string name="space_offboarding_consequences_intro">Prüfe die Folgen, bevor du deine Mitgliedschaft in diesem Bereich beendest.</string>
     <string name="space_offboarding_consequence_access">Du kannst diesen gemeinsamen Bereich danach nicht mehr öffnen.</string>
-    <string name="space_offboarding_consequence_account">Dein SideBySide-Konto bleibt bestehen. Andere aktive gemeinsame Bereiche bleiben ebenfalls verfügbar.</string>
+    <string name="space_offboarding_consequence_account">Dein eimir.-Konto bleibt bestehen. Andere aktive gemeinsame Bereiche bleiben ebenfalls verfügbar.</string>
     <string name="space_offboarding_consequence_private">Deine nur für dich bestimmten Daten in diesem Bereich werden nach der festgelegten Datenschutzregel entfernt.</string>
     <string name="space_offboarding_consequence_shared">Gemeinsame Historie wird nicht auf den anderen Partner übertragen oder durch deinen Austritt sofort gelöscht. Sie folgt der festgelegten Aufbewahrungsregel.</string>
     <string name="space_offboarding_consequence_export">Wenn du eine persönliche Kopie möchtest, erstelle und lade den Export vor dem Verlassen vollständig herunter.</string>

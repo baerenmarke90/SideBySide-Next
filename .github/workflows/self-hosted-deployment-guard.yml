@@ -324,7 +324,7 @@ jobs:
         run: |
           curl --fail --silent --show-error http://127.0.0.1:18082/healthz
           test "$(curl --fail --silent --show-error http://127.0.0.1:18082/.well-known/sidebyside-revision)" = "unverified-local-checkout"
-          curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>SidebySide</title>"
+          curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>eimir."
 
       - name: Deployment smoke helper against running stack
         run: |

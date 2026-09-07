@@ -1,10 +1,10 @@
-# Design Principles for SideBySide Next
+# Design Principles for eimir.
 
-**Status:** Mandatory foundation for Web and App  
-**Version:** 1.0  
-**Effective from:** August 24, 2026
+**Status:** Mandatory foundation for Web and App<br/>
+**Version:** 2.0<br/>
+**Effective from:** September 7, 2026
 
-This document translates the SideBySide Next product idea into mandatory
+This document translates the eimir. product idea into mandatory
 design rules. It applies to product surfaces, the website, store listings,
 marketing pages, and new features.
 
@@ -20,8 +20,9 @@ When requirements conflict, use this priority order:
 
 ## 1. Design goal
 
-SideBySide should feel like a calm, private space for two people: warm,
+eimir. should feel like a calm, private space for two people: warm,
 personal, and high-quality, but never kitschy or overloaded.
+Claim: „Euer gemeinsamer Ort.“
 
 Every surface answers these questions within a few seconds:
 
@@ -137,29 +138,37 @@ Motion supports orientation and feedback.
 ### 3.1 Color semantics
 
 Colors are used according to meaning, not according to the preference of an
-individual view.
+individual view. `design/tokens.json` is the sole source of truth.
 
 | Token | Value | Meaning |
 |---|---:|---|
-| Background | `#FAF8FC` | warm, calm page background |
+| Background | `#FAF7F5` | warm, calm page background (Cream) |
 | Surface | `#FFFFFF` | cards, dialogs, and content surfaces |
-| Ink | `#211A2B` | primary text and strong contrast |
-| Muted | `#6F6878` | secondary text |
-| Line | `#E6DFEC` | dividers and subtle borders |
-| Brand Purple | `#7C4DFF` | product core and primary action |
-| Brand Soft | `#EEE7FF` | active or highlighted surfaces |
-| Shared Mint | `#36AE97` | shared, confirmed, synchronized |
-| Info Blue | `#4B96E6` | system information and technical context |
-| Discovery Yellow | `#E8A932` | inspiration, options, and discovery |
-| Private Pink | `#F45B88` | private, restricted, or owner-only |
-| Dark Background | `#1C1525` | high-quality dark hero and focus surfaces |
-| Dark Surface | `#2A2135` | cards in Dark Mode |
+| Surface Subtle | `#F5EFE9` | receding panels, muted surfaces |
+| Surface Raised | `#FFFFFF` / `#32283A` | raised content layers |
+| Ink (Text Primary) | `#231E28` | primary text and high-contrast typography (Deep Aubergine) |
+| Text Secondary | `#5E5466` | secondary copy and subtitles |
+| Text Muted | `#8C8094` | placeholders and timestamps |
+| Border | `#E4DDD6` | warm dividers and subtle card borders |
+| Brand Coral | `#D93D59` | signature brand element and accent |
+| Brand Strong | `#BE2340` | primary actions and high-emphasis controls |
+| Brand Surface | `#FFF0F2` | highlighted brand surfaces |
+| Brand Glow | `#D93D5926` | warm ambient aura |
+| Shared Mint | `#207266` | shared, confirmed, synchronized togetherness |
+| Shared Surface | `#EDF7F5` | shared badge and container surfaces |
+| Technical Blue | `#1769AA` | system information and technical context |
+| Discovery Amber | `#7A5100` | inspiration, options, and discovery |
+| Private Rose | `#D13B65` | private, restricted, or personal-only space |
+| Focus Blue | `#285F91` | high-contrast keyboard focus indicator |
+| Dark Background | `#18131D` | night / dark mode deep aubergine background |
+| Dark Surface | `#231C29` | cards in dark mode |
+| Dark Surface Raised | `#32283A` | raised surfaces in dark mode |
 
 Mandatory rules:
 
-- Purple is the only standard color for primary actions.
-- Mint means shared, synchronized, or positively confirmed.
-- Pink marks privacy or restriction, not automatically an error.
+- Brand Strong (`#BE2340`) / Brand Coral (`#D93D59`) is the primary action color.
+- Mint means shared, synchronized, or positively confirmed togetherness.
+- Rose marks private or restricted personal space, not automatically an error.
 - Errors and destructive actions additionally require a clear warning icon and
   unambiguous text.
 - Pastel surfaces may be combined only with sufficiently dark text.
@@ -223,7 +232,7 @@ The base unit is a 4-unit grid.
 ### Buttons
 
 - Each view has at most one visually dominant primary action.
-- Primary: Purple surface, white text.
+- Primary: Brand Strong surface (`#BE2340`), white text.
 - Secondary: light Surface with a clear outline.
 - Tertiary: text action without its own surface.
 - Destructive: unambiguous warning text; never communicate destructiveness through red alone.

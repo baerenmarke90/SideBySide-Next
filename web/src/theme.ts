@@ -6,8 +6,8 @@ export const THEME_PREFERENCE_EVENT = 'sidebyside:theme-preference';
 export const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
 
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#faf8fc',
-  dark: '#1c1525',
+  light: '#faf7f5',
+  dark: '#18131d',
 };
 
 let activeThemePreference: ThemePreference | null = null;
