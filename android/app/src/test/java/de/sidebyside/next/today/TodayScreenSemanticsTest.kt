@@ -50,7 +50,7 @@ class TodayScreenSemanticsTest {
         val dashboard = sampleDashboard(partnerName = "Alex", daysTogether = 365)
         render(dashboard)
 
-        composeRule.onNodeWithText("Wir & Alex").assertIsDisplayed()
+        composeRule.onNodeWithText("Du & Alex").assertIsDisplayed()
         composeRule.onNodeWithText("365 Tage zusammen").assertIsDisplayed()
         composeRule.onNodeWithContentDescription(
             context.getString(R.string.relationship_thinking_of_you_send, "Alex"),
@@ -62,7 +62,7 @@ class TodayScreenSemanticsTest {
         val dashboard = sampleDashboard(partnerName = null, daysTogether = null)
         render(dashboard)
 
-        composeRule.onNodeWithText("Wir").assertIsDisplayed()
+        composeRule.onNodeWithText("Du").assertIsDisplayed()
         composeRule.onNodeWithText(
             context.getString(R.string.relationship_presence_waiting),
         ).assertIsDisplayed()

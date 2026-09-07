@@ -111,8 +111,8 @@ fun TodayScreen(
 
     val partnerName = dashboard.space.partner?.displayName
     val spaceTitle = partnerName?.let {
-        "${stringResource(R.string.destination_today)} & $it"
-    } ?: stringResource(R.string.destination_today)
+        "$resolvedUserName & $it"
+    } ?: resolvedUserName
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
