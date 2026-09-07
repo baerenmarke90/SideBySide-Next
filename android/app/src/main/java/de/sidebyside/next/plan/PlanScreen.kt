@@ -71,7 +71,7 @@ fun PlanScreen(
     onRemoveWish: (UUID) -> Unit,
     onCreatePlan: (title: String, description: String, placeId: UUID?) -> Unit,
     onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
-    onSchedule: (id: UUID, startOn: String) -> Unit,
+    onSchedule: (id: UUID, startOn: String, startAt: String) -> Unit,
     onUnschedule: (UUID) -> Unit,
     onComplete: (id: UUID, experiencedOn: String) -> Unit,
     onReturnToWish: (UUID) -> Unit,
@@ -437,6 +437,7 @@ fun PlanScreen(
             title = { Text(stringResource(R.string.plan_schedule)) },
             text = {
                 var startOn by rememberSaveable(id) { mutableStateOf("") }
+        var startAt by rememberSaveable(id) { mutableStateOf("") }
                 Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
                     OutlinedTextField(
                         value = startOn,
@@ -445,12 +446,19 @@ fun PlanScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    OutlinedTextField(
+                        value = startAt,
+                        onValueChange = { startAt = it },
+                        label = { Text(stringResource(R.string.plan_schedule_time_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Button(
                         onClick = {
                             scheduleTarget = null
-                            plans.firstOrNull { it.id.toString() == id }?.let { onSchedule(it.id, startOn) }
+                            plans.firstOrNull { it.id.toString() == id }?.let { onSchedule(it.id, startOn, startAt) }
                         },
-                        enabled = !busy && startOn.isNotBlank(),
+                        enabled = !busy && startOn.isNotBlank() && startAt.isNotBlank(),
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.plan_schedule_confirm))
@@ -614,6 +622,8 @@ private fun PlanCard(
 ) {
     val locale: Locale = LocalConfiguration.current.locales[0]
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
+    val dateTimeFormat =
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).withLocale(locale)
 
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
@@ -649,8 +659,7 @@ private fun PlanCard(
                 Text(
                     text = stringResource(
                         R.string.plan_scheduled_for,
-                        start.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate()
-                            .format(dateFormat),
+                        start.atZoneSameInstant(java.time.ZoneId.systemDefault()).format(dateTimeFormat),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = SideBySideTheme.colors.textSecondary,

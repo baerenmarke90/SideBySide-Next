@@ -3,6 +3,8 @@ import type { StoryItem } from '../api/generated/models/StoryItem';
 import {
   dateFromInput,
   dateOnlyInput,
+  dateTimeFromInput,
+  localDateTimeInput,
   loadAllPlaces,
   moveItemIds,
   planningIfMatch,
@@ -18,6 +20,12 @@ describe('shared planning client helpers', () => {
     const value = dateFromInput('2026-08-31');
     expect(value?.toISOString()).toBe('2026-08-31T00:00:00.000Z');
     expect(dateOnlyInput(value)).toBe('2026-08-31');
+  });
+
+  it('round-trips an explicit local Plan schedule date and time', () => {
+    const value = dateTimeFromInput('2026-12-20T18:30');
+    expect(value).toBeDefined();
+    expect(localDateTimeInput(value)).toBe('2026-12-20T18:30');
   });
 
   it('loads every page of selectable places', async () => {

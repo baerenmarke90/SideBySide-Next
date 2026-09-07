@@ -420,6 +420,13 @@ private data class PlanningSnapshot(
     val plans: List<PlanDetail>,
 )
 
+internal fun planScheduleStart(
+    day: java.time.LocalDate,
+    time: java.time.LocalTime,
+    zoneId: java.time.ZoneId,
+): java.time.OffsetDateTime =
+    day.atTime(time).atZone(zoneId).toOffsetDateTime()
+
 class ReferenceViewModel(
     private val config: ReferenceConfig = ReferenceConfig.fromBuildConfig(),
     api: ReferenceContract? = null,
@@ -2743,18 +2750,18 @@ class ReferenceViewModel(
 
     /**
      * `IDEA -> PLANNED`. [startOn] carries the calendar date the couple chose;
-     * the time of day is the moment of scheduling, since no client in this
-     * codebase asks for a time-of-day separately from a date.
+     * the selected date and time are resolved through the device's IANA
+     * timezone rules for that local instant, including daylight-saving changes.
      */
-    fun schedulePlan(planId: java.util.UUID, startOn: String) {
-        val day = parseHappenedOn(startOn) ?: return
-        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
-        val now = java.time.OffsetDateTime.now()
-        val start = day.atTime(now.toLocalTime()).atOffset(now.offset)
-        planningCall { api, spaceId, token ->
-            api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))
-        }
+    fun schedulePlan(planId: java.util.UUID, startOn: String, startAt: String) {
+    val day = parseHappenedOn(startOn) ?: return
+    val time = runCatching { java.time.LocalTime.parse(startAt) }.getOrNull() ?: return
+    val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+    val start = planScheduleStart(day, time, java.time.ZoneId.systemDefault())
+    planningCall { api, spaceId, token ->
+        api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))
     }
+}
 
     fun unschedulePlan(planId: java.util.UUID) {
         val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
