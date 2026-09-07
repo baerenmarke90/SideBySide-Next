@@ -214,12 +214,16 @@ async function signIn(page: Page): Promise<void> {
 
 async function navigateWithinApp(page: Page, path: string): Promise<void> {
   if (path === '/plan') {
-    await page.locator('a[href="/plan"]').first().click();
+    await page
+      .getByRole('link', { name: navigation.plan, exact: true })
+      .click();
     await expect(page).toHaveURL(/\/plan$/);
     return;
   }
 
-  await page.locator('a[href="/more"]').first().click();
+  await page
+    .getByRole('link', { name: navigation.more, exact: true })
+    .click();
   await expect(page).toHaveURL(/\/more$/);
   await page.locator(`a[href="${path}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`${path}$`));

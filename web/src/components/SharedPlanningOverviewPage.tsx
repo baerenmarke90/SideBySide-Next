@@ -103,7 +103,7 @@ export function SharedPlanningOverviewPage({
   });
 
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'places', spaceId],
+    queryKey: ['m5-s3', 'places', spaceId, 'options'],
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,
