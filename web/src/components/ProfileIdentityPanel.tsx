@@ -221,7 +221,7 @@ export function ProfileIdentityPanel({
             <div className="profile-identity-name-row">
               <h2 className="profile-identity-display-name">{visibleName}</h2>
               <span className="profile-identity-visibility-badge">
-                ♥ {t('profileIdentity.partnerVisibilityNote')}
+                {t('profileIdentity.partnerVisibilityNote')}
               </span>
             </div>
 
