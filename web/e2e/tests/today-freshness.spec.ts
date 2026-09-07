@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import m5s3 from '../../src/i18n/locales/m5s3';
-import m5s5 from '../../src/i18n/locales/m5s5';
 import navigation from '../../src/i18n/locales/navigation';
 
 const ACCOUNT_ID = '00000000-0000-0000-0000-000000000001';
@@ -250,7 +249,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   await expect(page).toHaveURL(/\/today$/);
   await expect(
     page.getByRole('heading', {
-      name: m5s5.dashboard.partner.replace('{{name}}', 'Ben'),
+      name: 'Anna & Ben',
       level: 1,
     }),
   ).toBeVisible();
