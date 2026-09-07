@@ -46,6 +46,20 @@
     <string name="more_session_body">Du bist auf diesem Gerät angemeldet. Beim Abmelden werden alle geladenen Inhalte aus dem Speicher entfernt.</string>
     <string name="more_sign_out">Abmelden</string>
 
+    <!-- Direction B section grouping (#639/#771 Phase 5 Android Profile/Settings) -->
+    <string name="more_section_relationship_eyebrow">BEZIEHUNG</string>
+    <string name="more_section_relationship_title">Euer gemeinsamer Bereich</string>
+    <string name="more_section_relationship_intro">Wer zu eurer Geschichte gehört, und wie ihr verbunden bleibt.</string>
+    <string name="more_section_daily_eyebrow">ALLTAG</string>
+    <string name="more_section_daily_title">Benachrichtigungen &amp; Vorlieben</string>
+    <string name="more_section_daily_intro">Was du sehen möchtest, und wie du es wiederfindest.</string>
+    <string name="more_section_data_eyebrow">DATEN</string>
+    <string name="more_section_data_title">Daten &amp; Datenschutz</string>
+    <string name="more_section_data_intro">Was privat bleibt, und wie ihr eure Geschichte mitnehmt.</string>
+    <string name="more_section_sensitive_eyebrow">SENSIBLE AKTIONEN</string>
+    <string name="more_section_sensitive_title">Bereich verlassen oder Konto löschen</string>
+    <string name="more_section_sensitive_intro">Bewusst getrennt von euren gewöhnlichen Einstellungen: Diese Schritte sind nicht rückgängig zu machen.</string>
+
     <string name="demo_heading">Erst mal ansehen?</string>
     <string name="demo_body">Probiert eimir. mit erfundenen Inhalten aus. Ihr braucht kein Konto, und es wird nichts von euch gespeichert.</string>
     <string name="demo_join_as_lea">Als Lea beitreten</string>
@@ -747,7 +761,7 @@
     <!-- Account self-service deletion (#644). User-facing localized copy belongs in this file. -->
     <string name="account_settings_title">Account</string>
     <string name="account_settings_intro">Hier verwaltest du Aktionen, die dein persönliches eimir.-Konto betreffen. Beziehung und gemeinsamer Bereich bleiben davon getrennt.</string>
-    <string name="account_delete_danger_label">DANGER ZONE</string>
+    <string name="account_delete_danger_label">Sensible Aktion</string>
     <string name="account_delete_title">Konto löschen</string>
     <string name="account_delete_intro">Die Kontolöschung betrifft nur dein persönliches Konto. Sie ist nicht dasselbe wie den gemeinsamen Bereich zu verlassen oder eine Beziehung zu beenden.</string>
     <string name="account_delete_action">Konto löschen</string>
