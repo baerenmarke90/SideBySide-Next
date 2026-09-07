@@ -106,7 +106,7 @@ export function PlacesOverviewPage({
   }
 
   return (
-    <div className="page planning-page">
+    <div className="page planning-page planning-sanctuary">
       <PageHeader
         before={
           <Link className="back-link" to={appRoutePath('more')}>
@@ -130,7 +130,7 @@ export function PlacesOverviewPage({
         ) : null}
 
         {placeItems.length === 0 && !places.isLoading && !places.error ? (
-          <p className="planning-empty">{t('m5s3.common.empty')}</p>
+          <p className="planning-empty">{t('m5s3.place.emptyOverview')}</p>
         ) : (
           <ul className="planning-list">
             {placeItems.map((place) => (

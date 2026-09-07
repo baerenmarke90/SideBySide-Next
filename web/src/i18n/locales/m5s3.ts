@@ -30,26 +30,31 @@ const m5s3 = {
   },
   overview: {
     soon: 'Bald & Geplant',
-    soonIntro: 'Eure nächsten konkreten Schritte.',
+    soonIntro: 'Was schon Form angenommen hat und als Nächstes auf euch wartet.',
+    soonEmpty:
+      'Noch nichts fest geplant. Sobald aus einer Idee ein konkretes Vorhaben wird, findet ihr es hier.',
     someday: 'Wünsche & Ideen',
     somedayIntro:
-      'Dinge, die ihr gemeinsam einmal machen, erleben oder ausprobieren möchtet.',
+      'Ideen für später, die ihr gemeinsam festhalten und irgendwann weiterplanen könnt.',
+    somedayEmpty:
+      'Noch keine Wünsche festgehalten. Sammelt hier, was ihr irgendwann gemeinsam erleben möchtet.',
     others: 'Weitere gemeinsame Dinge',
     eyebrow: 'Gemeinsam planen',
     title: 'Eure Wünsche und Pläne',
     intro:
-      'Wünsche und konkrete Pläne für eure gemeinsame Zukunft – ohne versteckte Automatik und immer auf dem aktuellen Serverstand.',
+      'Was ihr gemeinsam vorhabt – von leisen Ideen bis zu Plänen mit einem festen Zeitpunkt.',
   },
   wish: {
     heading: 'Wünsche',
-    intro: 'Ideen, die ihr später bewusst in einen Plan überführen könnt.',
+    intro:
+      'Ideen für später, die ihr gemeinsam festhaltet und bei Bedarf in einen konkreten Plan verwandelt.',
     create: 'Wunsch hinzufügen',
     loading: 'Wunsch wird geladen …',
     detailEyebrow: 'Gemeinsamer Wunsch',
     planTitle: 'Titel des Plans (optional)',
     convertHeading: 'Daraus einen Plan machen',
     convertIntro:
-      'Die Umwandlung erfolgt auf dem Server. Ohne eigenen Plantitel wird der Wunschtitel übernommen.',
+      'Gebt eurem Wunsch einen konkreten Platz in eurer Planung. Ohne eigenen Plantitel wird der Wunschtitel übernommen.',
     convert: 'In Plan umwandeln',
     converting: 'Wird umgewandelt …',
     deleteConsequence:
@@ -92,7 +97,9 @@ const m5s3 = {
   place: {
     heading: 'Orte',
     intro:
-      'Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.',
+      'Orte, die zu euren Plänen und gemeinsamen Momenten gehören. Ein Name reicht; Adresse und Koordinaten bleiben optional.',
+    emptyOverview:
+      'Noch keine gemeinsamen Orte gespeichert. Haltet hier Orte fest, die für eure Pläne oder Momente wichtig sind.',
     create: 'Ort hinzufügen',
     loading: 'Ort wird geladen …',
     detailEyebrow: 'Gemeinsamer Ort',
@@ -146,7 +153,10 @@ const m5s3 = {
   },
   collection: {
     heading: 'Gemeinsame Listen',
-    intro: 'Gemeinsam abhaken und die Reihenfolge bewusst festlegen.',
+    intro:
+      'Listen für Dinge, die ihr gemeinsam im Blick behalten, sortieren und abhaken möchtet.',
+    emptyOverview:
+      'Noch keine gemeinsame Liste. Legt eine an für Dinge, die ihr zusammen im Blick behalten möchtet.',
     create: 'Liste hinzufügen',
     loading: 'Liste wird geladen …',
     detailEyebrow: 'Gemeinsame Liste',
@@ -154,12 +164,13 @@ const m5s3 = {
     itemCount_other: '{{count}} Einträge',
     itemsHeading: 'Einträge',
     itemsIntro:
-      'Änderungen an der Reihenfolge werden vollständig und atomar mit der aktuellen Listen-Version gespeichert.',
+      'Gemeinsam ergänzen, abhaken und in die Reihenfolge bringen, die für euch passt.',
     newItem: 'Neuer Listeneintrag',
     newItemPlaceholder: 'Neuen Eintrag hinzufügen',
     addItem: 'Hinzufügen',
     itemTitle: 'Titel des Eintrags',
-    itemsEmpty: 'Die Liste ist noch leer.',
+    itemsEmpty:
+      'Noch nichts auf dieser Liste. Fügt den ersten gemeinsamen Eintrag hinzu.',
     markDone: '„{{title}}“ als erledigt markieren',
     markOpen: '„{{title}}“ wieder als offen markieren',
     saveItem: '„{{title}}“ speichern',
