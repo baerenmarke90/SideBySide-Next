@@ -16,6 +16,7 @@ import {
   memoryUpdatePayload,
   type MemoryEditValues,
 } from '../client/memoryProduct';
+import { MAX_MEMORY_ATTACHMENTS } from '../client/attachmentLimits';
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
 import {
@@ -112,14 +113,6 @@ export function MemoryProductPage({
     [contextKey],
   );
 
-  const attachments = useAttachmentDrafts({
-    apis,
-    apiBaseUrl,
-    accessToken,
-    spaceId,
-    accountId: currentAccountId,
-  });
-
   const memoryQuery = useQuery({
     queryKey: memoryKey,
     queryFn: async () => {
@@ -136,6 +129,26 @@ export function MemoryProductPage({
     },
     enabled: Boolean(memoryId),
     retry: false,
+  });
+
+  // Edit accepts new draft uploads only up to the capacity the Memory's
+  // already-bound attachments (minus any the user has marked for removal)
+  // leave available; the backend's MAX_MEMORY_ATTACHMENTS stays authoritative
+  // regardless (#701).
+  const keptBoundAttachmentCount = memoryQuery.data
+    ? memoryQuery.data.value.attachments.filter(
+        (attachment) =>
+          attachment.status === 'READY' &&
+          !removedAttachmentIds.has(attachment.id),
+      ).length
+    : 0;
+  const attachments = useAttachmentDrafts({
+    apis,
+    apiBaseUrl,
+    accessToken,
+    spaceId,
+    accountId: currentAccountId,
+    maxAttachments: MAX_MEMORY_ATTACHMENTS - keptBoundAttachmentCount,
   });
 
   const updateMutation = useMutation({

@@ -84,6 +84,7 @@ import {
   loadAuthorizedSpaces,
   resolveActiveSpaceId,
 } from './client/spaceContext';
+import { MAX_MEMORY_ATTACHMENTS } from './client/attachmentLimits';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
@@ -234,6 +235,7 @@ function MemoryCreatePage({
     accessToken,
     spaceId,
     accountId,
+    maxAttachments: MAX_MEMORY_ATTACHMENTS,
   });
 
   const mutation = useMutation({

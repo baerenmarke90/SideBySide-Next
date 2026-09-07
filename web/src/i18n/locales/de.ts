@@ -286,6 +286,10 @@ const de = {
     photoRemove: 'Entfernen',
     photoPendingSave:
       'Warte, bis alle laufenden Foto-Uploads abgeschlossen sind.',
+    photoLimitReached_one:
+      'Ein Foto wurde nicht hinzugefügt, weil das Limit pro Erinnerung erreicht ist.',
+    photoLimitReached_other:
+      '{{count}} Fotos wurden nicht hinzugefügt, weil das Limit pro Erinnerung erreicht ist.',
     visibilityAria: 'Sichtbarkeit',
     sharedTitle: 'Mit Partner geteilt',
     sharedBody:
