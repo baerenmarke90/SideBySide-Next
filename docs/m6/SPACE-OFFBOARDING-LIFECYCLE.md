@@ -1,11 +1,14 @@
 # Space and relationship offboarding lifecycle
 
-**Version:** 1.0  
-**Owner:** #518  
-**Baseline:** `main` at `cf9ec3d79bd9e8cc5a1da298c7003f4e3450731c`  
-**Status:** Phase-1 contract; runtime/client slices must implement this contract before #518 can close.
+**Version:** 1.1  
+**Owner:** #518 / Product Owner #669  
+**Baseline:** `main` at `63b847fafe20864e34160d3d7591cf80025455bb`  
+**Ratified:** 2026-09-07  
+**Status:** V1 Product/Privacy contract ratified; runtime remains server-authoritative and must preserve the frozen deadline semantics below.
 
-This document freezes the M6-B Space/relationship offboarding boundary before public destructive runtime work starts. It reuses the existing `Space`, `Membership`, Invitation, privacy-class, Transfer Bundle, MediaStore, Job/Outbox, notification and client cache/session primitives. It does not create a second relationship model, a breakup-specific export, a parallel queue, or an Account-deletion shortcut.
+This document freezes the M6-B Space/relationship offboarding boundary. It reuses the existing `Space`, `Membership`, Invitation, privacy-class, Transfer Bundle, MediaStore, Job/Outbox, notification and client cache/session primitives. It does not create a second relationship model, a breakup-specific export, a parallel queue, or an Account-deletion shortcut.
+
+Version 1.1 records the explicit Product-Owner decision from #669: V1 has no reconnect of ended Spaces, zero-active retention is a fixed 30-day product/privacy policy shared by Self-Hosted and Cloud/Managed, entitlements cannot affect it, and each orphaned Space freezes its purge-eligibility deadline when it becomes zero-active so later policy versions apply only prospectively.
 
 ## 1. Non-negotiable invariants
 
@@ -14,7 +17,7 @@ Four concepts remain distinct:
 1. **Leave a Space** ends only the caller's own active Membership.
 2. **Remove a partner** is a stronger privileged/abuse-sensitive action and is not exposed to normal partner clients in V1.
 3. **End/delete a Space** is a Space lifecycle action and is not synonymous with either partner leaving or with Account deletion.
-4. **Delete an Account** is the global #520 lifecycle and is already independent of this contract.
+4. **Delete an Account** is the global #520 lifecycle and is independent of this contract.
 
 Additional invariants:
 
@@ -30,21 +33,21 @@ Additional invariants:
 
 ## 2. Existing authority to reuse
 
-The current code already provides the correct foundations:
+The current code provides the required foundations:
 
 - `relationship.require_membership(...)` resolves only `MembershipStatus.ACTIVE` and returns privacy-safe 404 for foreign or ended Memberships;
 - `relationship.end_membership(...)` preserves the historical Membership row and sets `LEFT` or `REMOVED` plus server-side `ended_at`;
 - `Space` remains the tenant boundary and `Membership` remains the only path from Account to Space data;
 - a couple Space has at most two active partners;
 - Invitation tokens are one-time hashed credentials with row-locked acceptance;
-- #345 Transfer Bundles already define `SHARED` and `PERSONAL` exports with current authorization rechecks;
-- privacy-aware resources already expose `space_id`, `owner_id`, and `privacy_class`;
-- attachment authorization follows the current parent binding and physical deletion already uses retry-safe MediaStore cleanup;
-- Jobs, Outbox, Notification/Push and Reminder paths are the existing asynchronous boundaries to harden rather than replace;
-- Web and Android already have per-Space state/cache invalidation primitives and multi-Space/awaiting-Space states;
-- #520 owns Account-wide deletion and already proves that ended Memberships, owner-private cleanup and stale asynchronous work can be handled without ownership transfer.
-
-The missing work is orchestration and product semantics around *one Membership ending while the Account stays active*.
+- #345 Transfer Bundles define `SHARED` and `PERSONAL` exports with current authorization rechecks;
+- privacy-aware resources expose `space_id`, `owner_id`, and `privacy_class`;
+- attachment authorization follows the current parent binding and physical deletion uses retry-safe MediaStore cleanup;
+- Jobs, Outbox, Notification/Push and Reminder paths remain the asynchronous boundaries to harden rather than replace;
+- Web and Android use per-Space state/cache invalidation primitives and multi-Space/awaiting-Space states;
+- #520 owns Account-wide deletion and proves that ended Memberships, owner-private cleanup and stale asynchronous work can be handled without ownership transfer;
+- `relationship.policy` is the authoritative runtime source for the V1 offboarding retention horizon;
+- `Space.offboarding_purge_at` stores the immutable purge-eligibility promise for an already orphaned Space.
 
 ## 3. V1 command matrix
 
@@ -55,13 +58,13 @@ The missing work is orchestration and product semantics around *one Membership e
 | End the relationship | Represented by the caller leaving their own Membership | It does not revoke the other Account's Membership or delete their data |
 | Delete the whole Space | Separate retention/destruction lifecycle | Never hidden inside the ordinary leave command |
 | Delete Account | #520 | Global Account/data lifecycle; not implemented here |
-| Reconnect an ended Membership | Not supported in V1 | A later explicit same-pair reconnect design may supersede this contract; until then a new relationship uses a new Space |
+| Reconnect an ended Membership/Space | Not supported in V1 | A later same-pair relationship creates a new Space; reconnect needs a new bilateral privacy/product design |
 
 This intentionally favors abuse safety: one partner can always remove *their own* access, but cannot silently remove the other's access or destroy the other's shared-history copy.
 
 ## 4. Authoritative self-exit transition
 
-V1 exposes one server-authoritative self-exit command through the normal authenticated Space API. The exact route follows repository conventions; conceptually:
+V1 exposes one server-authoritative self-exit command through the normal authenticated Space API. Conceptually:
 
 ```text
 POST /api/v1/spaces/{spaceId}/membership/leave
@@ -78,10 +81,11 @@ The backend must:
 3. verify that this exact Account has a Membership in this Space;
 4. if it is `ACTIVE`, transition it to `LEFT` and set `ended_at` from the server clock;
 5. revoke every still-open Invitation for the Space as part of the lifecycle boundary;
-6. make the loss of Space authorization durable before slower privacy/media/cache cleanup is considered complete;
-7. enqueue/reuse existing cleanup work only after that fail-closed transition is durable.
+6. if this transition leaves zero active Memberships, freeze `offboarding_purge_at` from the policy that is authoritative at that transition;
+7. make the loss of Space authorization and any newly frozen deadline durable before slower privacy/media/cache cleanup is considered complete;
+8. enqueue/reuse existing cleanup work only after that fail-closed transition is durable.
 
-A repeated request by the same former member is idempotent: it observes the existing `LEFT` state and does not create a second Membership, second cleanup lifecycle, or second user-visible side effect. A caller that never belonged to the Space still receives the normal privacy-safe not-found result.
+A repeated request by the same former member is idempotent: it observes the existing `LEFT` state and does not create a second Membership, second cleanup lifecycle, second purge deadline, or second user-visible side effect. A caller that never belonged to the Space still receives the normal privacy-safe not-found result.
 
 `REMOVED` is not produced by this self-service command.
 
@@ -89,7 +93,7 @@ A repeated request by the same former member is idempotent: it observes the exis
 
 The accepted transition must serialize with Space-authorized work so a mutation that started with stale authorization cannot commit a new partner-visible effect after exit has become durable.
 
-V1 implementation must use the central Membership authority rather than endpoint-specific flags. The preferred implementation is a shared/read lock (or equivalent authorization epoch) held by normal Space transactions and an exclusive lock for the offboarding transition. At minimum, every mutating/side-effect path must revalidate the Membership under the same serialization boundary immediately before commit/provider effect.
+V1 uses the central Membership authority rather than endpoint-specific flags. Normal Space transactions and the offboarding transition participate in the same serialization boundary, and provider/background effects revalidate current authority before side effects.
 
 The required observable property is:
 
@@ -168,13 +172,21 @@ Once **any** Membership in a Space has ended (`LEFT` or `REMOVED`), the Space is
 - an active member who later has a new partner creates a **new Space**;
 - the new partner receives no old Space ID, history, media, cache, notification, or invitation state.
 
-The current generic `add_member(...)` reactivation behavior is therefore not a public V1 reconnect contract and must be narrowed before the offboarding endpoint ships.
+The runtime history-lock enforcement is part of the V1 contract, not an optional client convention.
 
-### 7.1 Reconnect
+### 7.1 Reconnect — Product Owner ratification
 
-V1 does **not** reactivate an ended Space, even for the exact same former pair. If the same people reconnect, they create a new Space.
+**V1 has no reconnect of an ended Space.** This includes the exact same two former partners.
 
-A future explicit same-pair reconnect feature may supersede this decision only through a new privacy/product contract with deliberate consent from both Accounts. It must never be inferred from an old invitation, Membership ID, or matching Account pair.
+If the same two people later start a new relationship/shared context:
+
+- a new Space is created;
+- the old Space is never reactivated;
+- old and new Spaces are never merged;
+- the old Space remains isolated and follows only its already-frozen offboarding/retention lifecycle;
+- no old Invitation, Membership ID, matching Account pair or historical Space ID can infer consent to reconnect.
+
+A future reconnect feature is a separate product/privacy design. It requires explicit bilateral consent and a deliberate contract for old shared/private data. It is not part of V1 and cannot silently supersede an existing purge deadline.
 
 ## 8. Last active member and whole-Space retention
 
@@ -183,26 +195,52 @@ Ordinary self-exit is not itself a whole-Space hard delete. When the final activ
 ```text
 active_count == 0
 orphaned_at = max(ended Membership.ended_at)
+offboarding_purge_at = orphaned_at + policy_at_zero_active
 ```
 
-No second persisted Space-state model is required for V1; the current ServerAdmin lifecycle surfaces already derive lifecycle state from Membership rows.
+No second persisted Space-state machine is required for V1. Lifecycle state remains derived from Membership rows; only `offboarding_purge_at` is persisted because it is an immutable privacy-policy promise that must survive future policy-version changes.
 
-### 8.1 Bounded V1 retention
+### 8.1 Fixed V1 retention policy — Product Owner ratification
 
-A zero-active Space is inaccessible to normal users immediately and enters a **30-day offboarding retention window**. The window exists to separate the irreversible Membership-access transition from destructive whole-Space cleanup and to make the retention behavior explicit instead of indefinite.
+The authoritative V1 policy is **exactly 30 days** after the Space becomes zero-active.
 
-After 30 days with still zero active Memberships:
+- normal user access ends immediately at zero-active;
+- before `offboarding_purge_at`, whole-Space retention purge is not eligible;
+- at `offboarding_purge_at`, the Space becomes purge-eligible;
+- physical convergence may occur after that instant because the bounded worker runs on a schedule and provider cleanup can retry, but no product rule may intentionally extend the deadline;
+- the authoritative runtime source is `sidebyside.relationship.policy.SPACE_OFFBOARDING_RETENTION`;
+- the value is a fixed Product/Privacy policy, **not** an environment variable, deployment option, ServerAdmin setting, Self-Hosted preference, Cloud override, or entitlement capability.
 
-- a normal existing Job scans/targets the orphaned Space for final shared-data/media purge;
+At the transition to zero-active, the runtime writes `Space.offboarding_purge_at` once. The worker consumes that stored timestamp and does not re-derive it from the current policy. Existing zero-active Spaces predating the persisted field are backfilled using the historical V1 30-day promise.
+
+This freezes future policy-change semantics:
+
+- a later retention version applies prospectively to Spaces that become zero-active under that later version;
+- an already orphaned Space keeps its stored `offboarding_purge_at`;
+- a later longer policy cannot silently extend an already-promised deletion deadline;
+- a later shorter policy cannot silently accelerate an already-promised deletion deadline;
+- changing deployment configuration cannot alter either case because there is no operator retention setting;
+- any deliberate retroactive migration would itself require a new explicit Product/Privacy decision and cannot be inferred from changing the policy constant.
+
+After the frozen deadline is due:
+
+- the existing bounded Job scans/targets the orphaned Space for final shared-data/media purge;
 - Space-owned `SPACE_SHARED` data and remaining Space media are removed through existing domain/MediaStore cleanup primitives;
 - Account-global profile media is **not** Space media and is never purged here. Its authoritative parent is the still-live Account, so an avatar still carrying a Space key is adopted into the Account storage home in the same transaction before the Space row is deleted (#692). The purge therefore still leaves no `Attachment` row referencing a removed Space, and an Account that stayed active elsewhere keeps its current avatar;
 - open Invitations are already revoked and cannot revive the Space;
 - Membership rows remain only as long as required by the purge transaction/reference ordering, then the Space cascade may remove them once no retained Space history requires them;
-- operational backups may still contain historical snapshots under #190's bounded operator retention, but those backups are not a live user-accessible archive.
+- operational backups may still contain historical snapshots under #190's bounded operator retention, but those backups are not a live user-accessible archive and do not change the live purge deadline.
 
-If any future release adds explicit same-pair reconnect, it must define whether/how it can cancel this purge before the retention horizon. V1 has no such cancellation path.
+V1 has no reconnect/cancellation path that can move or cancel this deadline.
 
-The retention constant belongs to the authoritative Space-offboarding domain/configuration boundary and must not be extended by Premium/entitlement state.
+### 8.2 Deployment and entitlement parity
+
+The same policy and persisted deadline semantics apply to:
+
+- Self-Hosted;
+- Cloud/Managed.
+
+Premium, trial, grace, grandfathered status, commercial provider state, entitlement expiry/downgrade, storage tier, or an operator grant cannot delay, cancel or prevent the privacy purge. Retention code does not consult the entitlement service or deployment mode.
 
 ## 9. Sessions, caches, offline state and drafts
 
@@ -258,13 +296,13 @@ After `LEFT` commits:
 - shared media retained for an active partner is not deleted merely because its uploader left;
 - leaving-owner private/unbound media follows section 5.2 and existing retry-safe purge;
 - Account-global profile media stays with the Account and is out of scope for both exit and final purge; its ownership and lifecycle authority are defined in `docs/PROFILES.md`;
-- final orphaned-Space media follows section 8 after the 30-day retention window.
+- final orphaned-Space media follows section 8 after the frozen purge deadline.
 
 No offboarding-specific storage backend is introduced.
 
 ## 12. API/client semantics
 
-The public contract should expose a minimal accepted result containing only lifecycle state needed by clients, for example the ended Membership status and whether another active Space remains. It must not expose another Account's private state or invite a client to decide retention.
+The public contract exposes only lifecycle state needed by clients; clients do not decide retention and do not calculate an independent retention date.
 
 Error behavior:
 
@@ -272,9 +310,9 @@ Error behavior:
 - foreign/non-member Space -> privacy-safe 404;
 - already `LEFT` by the same Account -> idempotent safe result;
 - `REMOVED` former Membership -> no self-service state change; safe ended-state response or repository-standard conflict, without disclosing partner/admin details;
-- Demo behavior follows the normal Demo product contract; if public Demo fixtures must remain stable, the self-exit command must be disabled client-side and rejected server-side before mutation, reusing the authoritative Demo environment primitive rather than hard-coded identities.
+- Demo behavior follows the normal Demo product contract; if public Demo fixtures must remain stable, the self-exit command is disabled client-side and rejected server-side before mutation, reusing the authoritative Demo environment primitive rather than hard-coded identities.
 
-OpenAPI remains canonical and Web/Android generated clients must be regenerated from the real API app.
+OpenAPI remains canonical and Web/Android generated clients follow the real API app.
 
 ## 13. Abuse and safety
 
@@ -287,9 +325,9 @@ OpenAPI remains canonical and Web/Android generated clients must be regenerated 
 - ServerAdmin remains an operations surface, not a relationship-content browser;
 - any future forced removal needs its own authorization/audit policy and must reuse the same Membership/data cleanup semantics rather than direct SQL.
 
-## 14. Business/freemium
+## 14. Business/freemium and deployment parity
 
-All of the following are Core/non-paywallable:
+All of the following are Core/non-paywallable in every deployment model:
 
 - leaving one's own Space;
 - the privacy cleanup caused by exit;
@@ -297,17 +335,18 @@ All of the following are Core/non-paywallable:
 - client cache invalidation and access revocation;
 - orphaned-Space retention/purge.
 
-Premium expiry, entitlement downgrade or provider state cannot delay exit, preserve stale authorization, extend private-data retention, or make essential export a condition of leaving.
+Self-Hosted and Cloud/Managed share the same 30-day V1 privacy policy. Premium expiry, entitlement downgrade, grace/grandfathered state, provider state or operator grants cannot delay exit, preserve stale authorization, extend the frozen retention deadline, prevent purge, or make essential export a condition of leaving.
 
-## 15. Required runtime slices
+## 15. Runtime ownership
 
-The contract is intentionally split before implementation:
+The implementation remains intentionally split by existing domain boundaries:
 
 1. **Backend lifecycle/API**
    - authoritative self-exit orchestration and locking;
    - scoped leaving-owner `OWNER_ONLY` cleanup;
    - invitation revocation/history lock and no implicit Membership reactivation;
-   - Transfer/async/provider revalidation and orphaned-Space retention/purge;
+   - Transfer/async/provider revalidation;
+   - zero-active deadline freezing and orphaned-Space retention/purge;
    - OpenAPI + generated clients + tenant/race/retry tests.
 2. **Web**
    - neutral consequences + optional export + explicit confirmation;
@@ -326,9 +365,9 @@ The contract is intentionally split before implementation:
    - orphaned retention/purge;
    - Web/Android offline cache behavior.
 
-## 16. Acceptance mapping for #518
+## 16. Acceptance mapping for #518 / #669
 
-The runtime is complete only when it proves:
+The V1 contract proves or requires:
 
 - a user can leave their own active Membership without partner consent or Premium;
 - Membership history uses `LEFT`/`REMOVED` rather than hard deletion during the retained Space lifecycle;
@@ -340,10 +379,15 @@ The runtime is complete only when it proves:
 - Account deletion, self-exit and whole-Space purge remain separate lifecycles;
 - Web/Android caches, drafts and pending mutations cannot keep using the exited Space;
 - Push/Reminder/Jobs/Surprise/Recap/Transfer effects revalidate current Membership;
-- stale invitations cannot add/reconnect a partner into relationship-history-locked Space;
-- a new partner always receives a new Space;
-- V1 has no implicit reconnect of a former Membership;
-- zero-active Spaces become inaccessible immediately and are purged after the bounded 30-day retention window;
+- stale invitations cannot add/reconnect a partner into a relationship-history-locked Space;
+- the exact same former pair still receives a new Space if they later reconnect;
+- an ended Space is never reactivated or merged in V1;
+- zero-active Spaces become inaccessible immediately;
+- V1 purge eligibility is exactly the authoritative 30-day boundary: never before, eligible at the boundary;
+- the deadline is frozen on the Space when it becomes zero-active and is not recomputed from future policy versions;
+- already orphaned Spaces therefore cannot receive a silent retroactive extension or shortening;
+- Self-Hosted and Cloud/Managed use the same policy;
+- entitlement state cannot extend or block required privacy cleanup;
 - UX is neutral and non-manipulative;
 - race, cross-Space, former-Membership and offline cases are negative-tested;
 - Web and Android use one server-authoritative contract;
@@ -358,10 +402,14 @@ V1 rejects:
 - transferring private or shared ownership to the remaining partner as a cleanup shortcut;
 - a post-exit export credential/grace token;
 - preserving `ACTIVE` Membership merely so an export/job can finish;
-- reusing an old Space for a new partner;
+- reusing or reactivating an ended Space for a new relationship, including the same former pair;
+- merging a new Space with old relationship history;
 - implicit `add_member()` reactivation of ended Memberships through invitation acceptance;
 - normal partner-to-partner removal;
 - a second queue, breakup archive, storage backend or client-only authorization flag;
-- entitlement-dependent exit or retention.
+- operator-configurable V1 Space-offboarding retention;
+- deployment-specific retention semantics;
+- entitlement-dependent exit or retention;
+- recomputing an already orphaned Space's purge deadline when a later policy version changes.
 
-Any change to these frozen V1 decisions must update this document/owner before runtime silently diverges.
+Any change to these frozen V1 decisions must update the authoritative Product/Privacy decision before runtime silently diverges.

@@ -1,4 +1,4 @@
-"""Bounded final retention for #518 Spaces with no active Memberships."""
+"""Bounded final retention for #518/#669 Spaces with no active Memberships."""
 
 from __future__ import annotations
 
@@ -21,11 +21,17 @@ from sidebyside.attachments.models import (
 from sidebyside.authorization import PrivacyClass
 from sidebyside.core.clock import now
 from sidebyside.domain.events import PublicEventPayload
+from sidebyside.entitlements.models import (
+    EntitlementGrant,
+    EntitlementSourceType,
+    EntitlementStatus,
+    EntitlementTier,
+)
 from sidebyside.identity.models import Account
 from sidebyside.media.local import LocalMediaStore
 from sidebyside.memories.models import Memory, MemoryPayload
 from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship import retention
+from sidebyside.relationship import policy, retention, service
 from sidebyside.relationship.models import Membership, MembershipStatus, Space
 from sidebyside.relationship.service import add_member
 from sidebyside.transfer import service as transfer_service
@@ -48,6 +54,10 @@ def _end_space(session: Session, space_id, *, ended_at) -> None:  # type: ignore
     for membership in memberships:
         membership.status = MembershipStatus.LEFT.value
         membership.ended_at = ended_at
+    space = session.get(Space, space_id)
+    assert space is not None
+    space.offboarding_purge_at = policy.purge_eligible_at(ended_at)
+    session.flush()
 
 
 def _attachment(session: Session, *, owner_id, space_id) -> Attachment:  # type: ignore[no-untyped-def]
@@ -94,7 +104,7 @@ def test_final_retention_purges_only_due_orphaned_space(
     _end_space(
         session,
         due.id,
-        ended_at=instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
     )
     _end_space(session, recent.id, ended_at=instant - timedelta(days=5))
 
@@ -194,16 +204,114 @@ def test_retention_starts_when_last_active_membership_ends(session: Session) -> 
     }
     memberships[owner.id].status = MembershipStatus.LEFT.value
     memberships[owner.id].ended_at = (
-        instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1)
+        instant - policy.SPACE_OFFBOARDING_RETENTION - timedelta(days=1)
     )
+    session.flush()
+
+    assert service.freeze_offboarding_purge_deadline_if_orphaned(session, space.id) is None
+    assert space.offboarding_purge_at is None
+
     memberships[partner.id].status = MembershipStatus.LEFT.value
     memberships[partner.id].ended_at = instant - timedelta(days=5)
     session.flush()
+
+    frozen = service.freeze_offboarding_purge_deadline_if_orphaned(session, space.id)
+    assert frozen == memberships[partner.id].ended_at + policy.SPACE_OFFBOARDING_RETENTION
+    assert space.offboarding_purge_at == frozen
 
     result = retention.purge_due_spaces(session, current_time=instant)
 
     assert result == (0, 0, 0)
     assert session.get(Space, space.id) is not None
+
+
+def test_retention_boundary_is_exact(session: Session) -> None:
+    instant = now()
+    owner = make_account(session, "Anna")
+    space = make_space(session, owner)
+    _end_space(
+        session,
+        space.id,
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION,
+    )
+
+    before = retention.purge_due_spaces(
+        session,
+        current_time=instant - timedelta(microseconds=1),
+    )
+    assert before == (0, 0, 0)
+    assert session.get(Space, space.id) is not None
+
+    at_boundary = retention.purge_due_spaces(session, current_time=instant)
+    assert at_boundary[0] == 1
+    assert session.get(Space, space.id) is None
+
+
+def test_existing_orphan_deadline_is_not_recomputed_when_policy_changes(
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instant = now()
+    owner = make_account(session, "Anna")
+    space = make_space(session, owner)
+    membership = service.require_membership(session, owner, space.id)
+    membership.status = MembershipStatus.LEFT.value
+    membership.ended_at = instant - policy.SPACE_OFFBOARDING_RETENTION
+    session.flush()
+
+    frozen = service.freeze_offboarding_purge_deadline_if_orphaned(session, space.id)
+    assert frozen == instant
+
+    monkeypatch.setattr(policy, "SPACE_OFFBOARDING_RETENTION", timedelta(days=90))
+    assert space.offboarding_purge_at == instant
+    monkeypatch.setattr(policy, "SPACE_OFFBOARDING_RETENTION", timedelta(days=1))
+    assert space.offboarding_purge_at == instant
+
+    # The worker consumes only the frozen timestamp, so neither a later
+    # extension nor shortening silently changes this Space's promise.
+    purged = retention.purge_due_spaces(session, current_time=instant)
+    assert purged[0] == 1
+    assert session.get(Space, space.id) is None
+
+
+def test_premium_entitlement_does_not_delay_privacy_purge(session: Session) -> None:
+    instant = now()
+    owner = make_account(session, "Anna")
+    space = make_space(session, owner)
+    _end_space(
+        session,
+        space.id,
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION,
+    )
+
+    grant = EntitlementGrant(
+        space_id=space.id,
+        account_id=owner.id,
+        source_type=EntitlementSourceType.TEST_FIXTURE.value,
+        external_reference=f"retention-{space.id}",
+        source_event_at=instant,
+        status=EntitlementStatus.ACTIVE.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=instant - timedelta(days=1),
+        effective_until=None,
+        capabilities=None,
+        metadata_={},
+    )
+    session.add(grant)
+    session.flush()
+    grant_id = grant.id
+
+    purged = retention.purge_due_spaces(session, current_time=instant)
+    session.flush()
+
+    assert purged[0] == 1
+    assert session.get(Space, space.id) is None
+    assert (
+        session.execute(
+            select(func.count(EntitlementGrant.id)).where(EntitlementGrant.id == grant_id)
+        ).scalar_one()
+        == 0
+    )
 
 
 class _FailDeleteOnceStore(LocalMediaStore):
@@ -229,7 +337,7 @@ def test_provider_failure_keeps_due_space_retryable(
     _end_space(
         session,
         space.id,
-        ended_at=instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
     )
     attachment = _attachment(session, owner_id=owner.id, space_id=space.id)
     session.flush()

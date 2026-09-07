@@ -25,9 +25,6 @@ from sidebyside.transfer.models import TransferExport, TransferImport
 
 log = logging.getLogger(__name__)
 
-SPACE_OFFBOARDING_RETENTION = timedelta(days=30)
-"""V1 whole-Space retention after the last active Membership ends."""
-
 SCAN_INTERVAL = timedelta(hours=6)
 """Cadence for bounded orphan scanning on the existing durable Job queue."""
 
@@ -75,26 +72,31 @@ def _due_space_ids(
     current_time: datetime,
     limit: int = BATCH_SIZE,
 ) -> list[UUID]:
-    """Find historical Spaces whose derived orphaned_at crossed the V1 horizon."""
-    cutoff = current_time - SPACE_OFFBOARDING_RETENTION
-    active_count = func.count(Membership.id).filter(
-        Membership.status == MembershipStatus.ACTIVE.value
+    """Find zero-active Spaces whose frozen product-policy deadline is due."""
+    active_membership_exists = (
+        select(Membership.id)
+        .where(
+            Membership.space_id == Space.id,
+            Membership.status == MembershipStatus.ACTIVE.value,
+        )
+        .exists()
     )
-    orphaned_at = func.max(Membership.ended_at)
     return list(
         session.execute(
-            select(Membership.space_id)
-            .group_by(Membership.space_id)
-            .having(active_count == 0)
-            .having(orphaned_at.is_not(None))
-            .having(orphaned_at <= cutoff)
-            .order_by(orphaned_at, Membership.space_id)
+            select(Space.id)
+            .where(
+                Space.offboarding_purge_at.is_not(None),
+                Space.offboarding_purge_at <= current_time,
+                ~active_membership_exists,
+            )
+            .order_by(Space.offboarding_purge_at, Space.id)
             .limit(limit)
         ).scalars()
     )
 
 
 def _still_due(
+    space: Space,
     memberships: list[Membership],
     *,
     current_time: datetime,
@@ -105,11 +107,14 @@ def _still_due(
         return False
     if any(membership.status == MembershipStatus.ACTIVE.value for membership in memberships):
         return False
-    ended_at = [membership.ended_at for membership in memberships]
-    if any(value is None for value in ended_at):
+    if any(membership.ended_at is None for membership in memberships):
         return False
-    latest_end = max(value for value in ended_at if value is not None)
-    return latest_end <= current_time - SPACE_OFFBOARDING_RETENTION
+    if space.offboarding_purge_at is None:
+        # A missing frozen deadline is an invariant failure. Do not reconstruct
+        # it from today's policy because that could retroactively alter a prior
+        # Product-Owner promise. Migration/lifecycle repair must make it explicit.
+        return False
+    return space.offboarding_purge_at <= current_time
 
 
 def _purge_space_media(session: Session, *, space_id: UUID) -> tuple[int, int]:
@@ -228,7 +233,7 @@ def _purge_one_space(
             .with_for_update()
         ).scalars()
     )
-    if not _still_due(memberships, current_time=current_time):
+    if not _still_due(space, memberships, current_time=current_time):
         return False, 0, 0
 
     media_purged, media_failures = _purge_space_media(session, space_id=space_id)

@@ -54,6 +54,15 @@ class DurationDisplayMode(StrEnum):
 class Space(IdMixin, TimestampMixin, Base):
     __tablename__ = "spaces"
 
+    # This is a frozen product/privacy promise, not a derived deployment setting.
+    # It is written once when the last active Membership ends so future policy
+    # versions cannot silently extend or shorten an already-promised deadline.
+    offboarding_purge_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+
     memberships: Mapped[list[Membership]] = relationship(
         back_populates="space", cascade="all, delete-orphan"
     )
@@ -147,8 +156,8 @@ class Invitation(IdMixin, TimestampMixin, Base):
     allow somebody to join another Space.
 
     Acceptance happens exactly once: `accepted_at` is the latch. Together
-    with a row lock during acceptance it prevents two concurrent attempts
-    from both succeeding.
+    with a row lock during acceptance it prevents two concurrent attempts from
+    both succeeding.
     """
 
     __tablename__ = "invitations"

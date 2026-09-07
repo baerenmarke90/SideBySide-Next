@@ -35,7 +35,7 @@ from sidebyside.jobs.models import Job
 from sidebyside.media import build_account_storage_key, build_storage_key
 from sidebyside.media.local import LocalMediaStore
 from sidebyside.profiles import service as profile_service
-from sidebyside.relationship import offboarding, retention
+from sidebyside.relationship import offboarding, policy, retention
 from sidebyside.relationship import service as relationship_service
 from sidebyside.relationship.models import Membership, MembershipStatus, Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
@@ -109,6 +109,9 @@ def end_all_memberships(session: Session, space_id, *, ended_at) -> None:  # typ
     for membership in memberships:
         membership.status = MembershipStatus.LEFT.value
         membership.ended_at = ended_at
+    space = session.get(Space, space_id)
+    assert space is not None
+    space.offboarding_purge_at = policy.purge_eligible_at(ended_at)
     session.flush()
 
 
@@ -179,7 +182,7 @@ def test_avatar_survives_final_purge_of_the_space_it_was_uploaded_in(
     end_all_memberships(
         session,
         leaving_space.id,
-        ended_at=instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
     )
 
     purged_spaces, _purged_media, _transfers = retention.purge_due_spaces(
@@ -265,7 +268,7 @@ def test_final_purge_adopts_an_avatar_bound_before_adoption_existed(
     end_all_memberships(
         session,
         legacy_space.id,
-        ended_at=instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
+        ended_at=instant - policy.SPACE_OFFBOARDING_RETENTION - timedelta(days=1),
     )
 
     purged_spaces, purged_media, _transfers = retention.purge_due_spaces(
