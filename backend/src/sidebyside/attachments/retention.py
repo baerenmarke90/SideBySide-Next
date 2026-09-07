@@ -32,7 +32,7 @@ def _resource_binding(
     model: type[Memory] | type[HeartMoment] | type[RelatedPerson],
     parent_id: UUID,
     account_id: UUID,
-    attachment_space_id: UUID,
+    attachment_space_id: UUID | None,
 ) -> OwnerAttachmentBinding:
     row = session.execute(
         select(model.space_id, model.owner_id, model.privacy_class).where(model.id == parent_id)
@@ -45,6 +45,9 @@ def _resource_binding(
 
     parent_space_id, parent_owner_id, privacy_class = row
     if parent_space_id != attachment_space_id:
+        # Account-owned profile media has no Space key, so it can never match a
+        # Space-scoped parent. Reaching this branch means a Space resource claims
+        # media that no longer belongs to any Space, which stays fail-closed.
         return OwnerAttachmentBinding.INCONSISTENT
     if privacy_class == PrivacyClass.SPACE_SHARED.value:
         return OwnerAttachmentBinding.RETAIN_SHARED

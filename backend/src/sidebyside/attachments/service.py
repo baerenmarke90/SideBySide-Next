@@ -48,7 +48,12 @@ from sidebyside.core.errors import (
 )
 from sidebyside.core.ids import parse_id
 from sidebyside.jobs import queue
-from sidebyside.media import build_storage_key, get_media_store, supports_signed_upload
+from sidebyside.media import (
+    build_account_storage_key,
+    build_storage_key,
+    get_media_store,
+    supports_signed_upload,
+)
 
 log = logging.getLogger(__name__)
 
@@ -113,7 +118,31 @@ def _not_ready() -> ConflictError:
 
 
 def storage_key_for(attachment: Attachment, variant: str = ORIGINAL_VARIANT) -> str:
+    """Return the key of the storage home this attachment currently occupies.
+
+    A Space-owned attachment lives under its Space prefix. Account-owned media
+    has no Space and lives under its owner's prefix; ``attachments.account_media``
+    is the only code that moves a row between the two.
+    """
+    if attachment.space_id is None:
+        return build_account_storage_key(attachment.owner_id, attachment.id, variant)
     return build_storage_key(attachment.space_id, attachment.id, variant)
+
+
+def storage_homes_for(attachment: Attachment, variant: str = ORIGINAL_VARIANT) -> list[str]:
+    """Return every key this attachment may ever have occupied.
+
+    One row has at most two possible homes across its life: the Space it was
+    uploaded into, and the Account that adopted it as profile media. Adoption
+    copies before it commits, so a transaction that rolls back after the copy
+    can leave bytes at the Account home of a row that is still Space-owned.
+    Purging both homes keeps that impossible to leak instead of relying on the
+    adoption path never being interrupted.
+    """
+    keys = [build_account_storage_key(attachment.owner_id, attachment.id, variant)]
+    if attachment.space_id is not None:
+        keys.insert(0, build_storage_key(attachment.space_id, attachment.id, variant))
+    return keys
 
 
 def _require_rule(mime_type: str, media_type: MediaType) -> MediaRule:
@@ -459,10 +488,13 @@ def purge(session: Session, attachment: Attachment) -> bool:
     remains DELETE_FAILED for retry and never becomes visible again.
     """
     store = get_media_store()
+    variants = [ORIGINAL_VARIANT]
+    if attachment.has_thumbnail:
+        variants.append(THUMBNAIL_VARIANT)
     try:
-        store.delete(storage_key_for(attachment, ORIGINAL_VARIANT))
-        if attachment.has_thumbnail:
-            store.delete(storage_key_for(attachment, THUMBNAIL_VARIANT))
+        for variant in variants:
+            for storage_key in storage_homes_for(attachment, variant):
+                store.delete(storage_key)
     except OSError:
         attachment.status = AttachmentStatus.DELETE_FAILED.value
         log.warning("attachment purge failed", extra={"attachmentId": str(attachment.id)})

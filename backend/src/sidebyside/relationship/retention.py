@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from sidebyside.attachments import account_media as attachment_account_media
 from sidebyside.attachments import service as attachment_service
 from sidebyside.attachments.models import Attachment, AttachmentStatus
 from sidebyside.core.clock import now
@@ -112,7 +113,19 @@ def _still_due(
 
 
 def _purge_space_media(session: Session, *, space_id: UUID) -> tuple[int, int]:
-    """Purge all remaining Space-backed media through the existing lifecycle."""
+    """Converge all remaining Space-backed media through the existing lifecycle.
+
+    Account-global profile media is the one thing here this Space does not own.
+    Its authoritative parent is the still-live Account, so it is adopted into
+    the Account storage home instead of purged (#692). Adoption clears the row's
+    Space key in this same transaction, so the Space deletion below still leaves
+    no ``Attachment`` referencing a removed Space, and an Account that stays
+    active elsewhere keeps its avatar.
+
+    Avatars bound before adoption existed are Space-owned rows and are collected
+    here; every avatar bound since is already Account-owned and never appears in
+    this query at all.
+    """
     attachments = list(
         session.execute(
             select(Attachment)
@@ -122,8 +135,22 @@ def _purge_space_media(session: Session, *, space_id: UUID) -> tuple[int, int]:
         ).scalars()
     )
     purged = 0
+    adopted = 0
     failures = 0
     for attachment in attachments:
+        try:
+            if attachment_account_media.adopt_if_account_profile(session, attachment):
+                adopted += 1
+                continue
+        except OSError:
+            # Same contract as a failed purge: keep the Space so the next
+            # bounded scan retries instead of destroying a live binding.
+            log.warning(
+                "account profile media adoption failed",
+                extra={"attachmentId": str(attachment.id)},
+            )
+            failures += 1
+            continue
         if attachment.status not in {
             AttachmentStatus.DELETING.value,
             AttachmentStatus.DELETE_FAILED.value,
@@ -134,6 +161,11 @@ def _purge_space_media(session: Session, *, space_id: UUID) -> tuple[int, int]:
         else:
             failures += 1
     session.flush()
+    if adopted:
+        log.info(
+            "account profile media adopted before space purge",
+            extra={"adopted": adopted},
+        )
     return purged, failures
 
 
