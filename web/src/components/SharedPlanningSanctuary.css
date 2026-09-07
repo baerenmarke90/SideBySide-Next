@@ -7,6 +7,22 @@
  * shared planning/list surfaces owned by this phase.
  */
 
+/*
+ * Semantic typography aliases for roles already defined in design/tokens.json.
+ * The current Web adapter exposes font families but not these role metrics yet;
+ * #771 owns the broader adapter hardening beyond this focused Phase-5 slice.
+ */
+:root {
+  --type-heading2-size: 28px;
+  --type-heading2-weight: 700;
+  --type-heading2-tracking: -0.01em;
+  --type-heading2-leading: 1.2;
+  --type-title-size: 18px;
+  --type-title-weight: 600;
+  --type-title-tracking: 0;
+  --type-title-leading: 1.35;
+}
+
 :where(
   .planning-page.planning-sanctuary,
   .planning-page:has(> .planning-facts),
@@ -80,9 +96,10 @@
 
     & h3 {
       font-family: var(--font-ui);
-      font-size: clamp(1.05rem, 1.7vw, 1.18rem);
-      font-weight: 650;
-      line-height: 1.35;
+      font-size: var(--type-title-size);
+      font-weight: var(--type-title-weight);
+      letter-spacing: var(--type-title-tracking);
+      line-height: var(--type-title-leading);
     }
   }
 
@@ -187,9 +204,10 @@
 :where(.planning-page.planning-sanctuary .future-map) .future-map-heading {
   margin-bottom: var(--space-2);
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 3vw, 1.65rem);
-  font-weight: 650;
-  line-height: 1.3;
+  font-size: var(--type-heading2-size);
+  font-weight: var(--type-heading2-weight);
+  letter-spacing: var(--type-heading2-tracking);
+  line-height: var(--type-heading2-leading);
 }
 
 :where(.planning-page.planning-sanctuary .future-map) .future-map-intro {
