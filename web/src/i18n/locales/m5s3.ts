@@ -30,7 +30,8 @@ const m5s3 = {
   },
   overview: {
     soon: 'Bald & Geplant',
-    soonIntro: 'Was schon Form angenommen hat und als Nächstes auf euch wartet.',
+    soonIntro:
+      'Was schon Form angenommen hat und als Nächstes auf euch wartet.',
     soonEmpty:
       'Noch nichts fest geplant. Sobald aus einer Idee ein konkretes Vorhaben wird, findet ihr es hier.',
     someday: 'Wünsche & Ideen',

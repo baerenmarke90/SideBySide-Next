@@ -110,9 +110,7 @@ export function CollectionsOverviewPage({
         {collectionItems.length === 0 &&
         !collections.isLoading &&
         !collections.error ? (
-          <p className="planning-empty">
-            {t('m5s3.collection.emptyOverview')}
-          </p>
+          <p className="planning-empty">{t('m5s3.collection.emptyOverview')}</p>
         ) : (
           <ul className="planning-list">
             {collectionItems.map((collection) => (
