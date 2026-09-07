@@ -7,6 +7,8 @@ const relationshipComponents = {
   couplePresenceWaiting: 'Wartet auf Partner',
   couplePresenceOffline: 'Offline',
   couplePresenceDurationAction: 'Beziehungsdetails ansehen',
+  couplePresenceYouFallback: 'Du',
+  couplePresencePartnerFallback: 'Dein Partner',
 
   thinkingOfYouSendToPartner: 'Lieben Gruß an {{partner}} senden',
   thinkingOfYouAction: 'Ich denk an dich',
