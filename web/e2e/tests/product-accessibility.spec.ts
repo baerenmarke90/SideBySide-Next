@@ -212,6 +212,13 @@ async function signIn(page: Page): Promise<void> {
   await page.getByRole('button', { name: de.login.submit }).click();
 }
 
+async function navigateWithinApp(page: Page, path: string): Promise<void> {
+  await page.evaluate((nextPath) => {
+    window.history.pushState({}, '', nextPath);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, path);
+}
+
 test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean', async ({
   page,
 }) => {
@@ -412,7 +419,7 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
     fullPage: true,
   });
 
-  await page.goto('/more/collections');
+  await navigateWithinApp(page, '/more/collections');
   await expect(
     page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
   ).toBeVisible();
@@ -423,7 +430,7 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
     fullPage: true,
   });
 
-  await page.goto('/more/places');
+  await navigateWithinApp(page, '/more/places');
   await expect(
     page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
   ).toBeVisible();
@@ -461,7 +468,7 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
     fullPage: true,
   });
 
-  await page.goto('/more/collections');
+  await navigateWithinApp(page, '/more/collections');
   await expect(
     page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
   ).toBeVisible();
@@ -472,7 +479,7 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
     fullPage: true,
   });
 
-  await page.goto('/more/places');
+  await navigateWithinApp(page, '/more/places');
   await expect(
     page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
   ).toBeVisible();
@@ -483,7 +490,7 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
     fullPage: true,
   });
 
-  await page.goto('/plan');
+  await navigateWithinApp(page, '/plan');
   await expect(
     page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
   ).toBeVisible();
