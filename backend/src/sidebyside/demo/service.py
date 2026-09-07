@@ -26,6 +26,7 @@ from sidebyside.collections import service as collection_service
 from sidebyside.comments import service as comment_service
 from sidebyside.comments.models import CommentTarget
 from sidebyside.config import Environment
+from sidebyside.db.locks import lock_subject
 from sidebyside.demo.assets import (
     DemoAssetCatalog,
     import_demo_asset,
@@ -67,6 +68,39 @@ from sidebyside.wishes import service as wish_service
 
 PRIVATE_CANARY_LEA = "CANARY-PRIVATE-LEA-7421"
 PRIVATE_CANARY_ALEX = "CANARY-PRIVATE-ALEX-9134"
+
+_CANONICAL_DATASET_LOCK = "canonical_demo_dataset"
+_CANONICAL_DATASET_SUBJECT = "canonical"
+
+
+def _lock_canonical_demo_dataset(session: Session) -> None:
+    """Serialize canonical demo create/ensure/reset mutations until commit.
+
+    Every supported entry point -- CLI ``create``/``ensure``/``reset`` and the
+    periodic reset worker -- reaches the reserved Lea/Alex dataset only
+    through :func:`create_demo_space` or :func:`reset_demo_space`. Acquiring
+    the lock here, before either function reads the reserved accounts or
+    their Space membership, is therefore enough to cover every caller: no
+    individual caller has to remember to take it (#690).
+
+    A PostgreSQL advisory transaction lock provides the cross-process
+    boundary the previous scheduler-only advisory lock (``demo.reset``) did
+    not: that lock only ever guarded *scheduling bookkeeping* (whether a
+    pending/running reset Job already exists), not the dataset mutation
+    itself, so a manual CLI reset could still race a scheduled one. Held for
+    the rest of the transaction, this one also serializes the MediaStore
+    side effects `_detach_and_purge_media` performs -- they are not
+    transactional, so only mutual exclusion (not the DB transaction) keeps
+    two overlapping resets from racing the same provider objects.
+
+    Lock ordering matches ``auth.demo_authority``'s documented contract: the
+    periodic reset acquires the auth authority lock first, then reaches this
+    one through `reset_demo_space`, then the scheduler lock through
+    `schedule_next` -- auth-authority -> dataset -> scheduler. The CLI only
+    ever takes this lock, a strict subset of that same order, so no caller
+    can form a cycle.
+    """
+    lock_subject(session, _CANONICAL_DATASET_LOCK, _CANONICAL_DATASET_SUBJECT)
 
 
 @dataclass(frozen=True)
@@ -810,6 +844,7 @@ def create_demo_space(
 ) -> DemoSeedResult:
     """Create the canonical demo dataset once; repeat calls are idempotent."""
     _ensure_allowed(environment)
+    _lock_canonical_demo_dataset(session)
     assets = load_and_validate_assets()
     lea, alex = _existing_accounts(session)
     if lea is None or alex is None:
@@ -926,6 +961,7 @@ def reset_demo_space(
 ) -> DemoSeedResult:
     """Replace only the verified canonical demo Space with a fresh scenario."""
     _ensure_allowed(environment)
+    _lock_canonical_demo_dataset(session)
     assets = load_and_validate_assets()
     lea, alex = _existing_accounts(session)
     if lea is None or alex is None:

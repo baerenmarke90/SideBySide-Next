@@ -124,9 +124,10 @@ def run_demo_reset(session: Session, payload: dict[str, Any]) -> None:
     # reset can continue and is then swept by _clear_demo_auth_state. A proof
     # operation arriving after this point waits until reset commits and is
     # therefore unambiguously post-reset. Keep this before reset_demo_space so
-    # future canonical-dataset serialization (#690) follows the documented
-    # auth-authority -> dataset -> scheduler ordering rather than creating a
-    # reverse edge through token/session cleanup.
+    # canonical-dataset serialization (#690, reset_demo_space's own
+    # _lock_canonical_demo_dataset) follows the documented auth-authority ->
+    # dataset -> scheduler ordering rather than creating a reverse edge
+    # through token/session cleanup.
     lock_demo_auth_authority(session)
 
     result = reset_demo_space(
