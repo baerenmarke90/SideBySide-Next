@@ -13,7 +13,7 @@ export default {
   consequenceAccess:
     'Du kannst diesen gemeinsamen Bereich danach nicht mehr öffnen.',
   consequenceAccount:
-    'Dein SideBySide-Konto bleibt bestehen. Andere aktive gemeinsame Bereiche bleiben ebenfalls verfügbar.',
+    'Dein eimir.-Konto bleibt bestehen. Andere aktive gemeinsame Bereiche bleiben ebenfalls verfügbar.',
   consequencePrivate:
     'Deine nur für dich bestimmten Daten in diesem Bereich werden nach der festgelegten Datenschutzregel entfernt.',
   consequenceShared:

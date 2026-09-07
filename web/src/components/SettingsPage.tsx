@@ -54,15 +54,21 @@ export function SettingsPage(props: SettingsPageProps) {
       <SettingsIndex />
 
       <div className="settings-sections">
-        {/* 1. Appearance */}
-        <div id="settings-appearance" className="settings-section">
-          <ProfileAppearancePanel id="settings-appearance-panel" />
+        {/* Relationship context comes before device and account configuration. */}
+        <div
+          id="settings-connection"
+          className="settings-section settings-connection-block"
+        >
+          <RelationshipSettingsSection
+            spacesApi={spacesApi}
+            spaceId={props.spaceId}
+          />
+          <PartnerConnectionPanel {...props} />
         </div>
 
-        {/* 2. Notifications */}
         <section
           id="settings-notifications"
-          className="form-card settings-section"
+          className="form-card settings-section settings-functional-panel"
           aria-labelledby="settings-notifications-heading"
         >
           <div className="settings-section-head">
@@ -87,43 +93,52 @@ export function SettingsPage(props: SettingsPageProps) {
           </div>
         </section>
 
-        {/* 3. Account-level actions. Partner invitation is reused here when authoritative state permits it. */}
         <div
-          id="settings-account"
-          className="settings-section settings-account-block"
+          id="settings-appearance"
+          className="settings-section settings-appearance-block"
         >
-          <AccountSettingsPanel
-            apiBaseUrl={props.apiBaseUrl}
-            accessToken={props.accessToken}
-            demoMode={demoMode}
-          />
-          <PartnerConnectionPanel {...props} />
+          <ProfileAppearancePanel id="settings-appearance-panel" />
         </div>
 
-        {/* 4. Relationship configuration and relationship offboarding stay separate from Account deletion. */}
         <div
-          id="settings-connection"
-          className="settings-section settings-connection-block"
+          id="settings-data"
+          className="settings-section settings-data-block"
         >
-          <RelationshipSettingsSection
-            spacesApi={spacesApi}
-            spaceId={props.spaceId}
-          />
-          <SpaceOffboardingPanel
-            spacesApi={spacesApi}
-            spaceId={props.spaceId}
-            demoMode={demoMode}
-          />
-        </div>
-
-        {/* 5. Data & Portability */}
-        <div id="settings-data" className="settings-section">
           <TransferPanel
             apiBaseUrl={props.apiBaseUrl}
             accessToken={props.accessToken}
             spaceId={props.spaceId}
           />
         </div>
+
+        {/* Space exit and Account deletion remain distinct flows inside one clearly labelled sensitive zone. */}
+        <section
+          id="settings-account"
+          className="settings-section settings-sensitive-zone"
+          aria-labelledby="settings-sensitive-heading"
+        >
+          <div className="settings-sensitive-head">
+            <p className="eyebrow">
+              {t('profileIdentity.settingsSensitiveEyebrow')}
+            </p>
+            <h2 id="settings-sensitive-heading">
+              {t('profileIdentity.settingsSensitiveTitle')}
+            </h2>
+            <p>{t('profileIdentity.settingsSensitiveIntro')}</p>
+          </div>
+          <div className="settings-sensitive-grid">
+            <SpaceOffboardingPanel
+              spacesApi={spacesApi}
+              spaceId={props.spaceId}
+              demoMode={demoMode}
+            />
+            <AccountSettingsPanel
+              apiBaseUrl={props.apiBaseUrl}
+              accessToken={props.accessToken}
+              demoMode={demoMode}
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

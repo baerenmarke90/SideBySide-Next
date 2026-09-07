@@ -6,12 +6,14 @@ export function SettingsIndex() {
 
   return (
     <nav
-      className="form-card settings-index"
+      className="settings-index"
       aria-label={t('profileIdentity.settingsTitle')}
     >
       <ul className="settings-links">
         <li>
-          <a href="#settings-appearance">{t('theme.label')}</a>
+          <a href="#settings-connection">
+            {t('profileIdentity.settingsRelationship')}
+          </a>
         </li>
         <li>
           <a href="#settings-notifications">
@@ -19,15 +21,15 @@ export function SettingsIndex() {
           </a>
         </li>
         <li>
-          <a href="#settings-account">{t('accountSettings.title')}</a>
-        </li>
-        <li>
-          <a href="#settings-connection">
-            {t('profileIdentity.settingsRelationship')}
-          </a>
+          <a href="#settings-appearance">{t('theme.label')}</a>
         </li>
         <li>
           <a href="#settings-data">{t('profileIdentity.settingsData')}</a>
+        </li>
+        <li>
+          <a href="#settings-account">
+            {t('profileIdentity.settingsSensitiveTitle')}
+          </a>
         </li>
       </ul>
     </nav>

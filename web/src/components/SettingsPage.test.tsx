@@ -69,39 +69,53 @@ function renderSettingsPageFixture(): string {
 }
 
 describe('SettingsPage', () => {
-  it('renders settings header, index, and five dedicated configuration sections', () => {
+  it('renders relationship context first and keeps sensitive actions at the end', () => {
     const html = renderSettingsPageFixture();
 
     expect(html).toContain('settings-page');
     expect(html).toContain('Einstellungen');
     expect(html).toContain('settings-index');
-    expect(html).toContain('href="#settings-account"');
 
-    expect(html).toContain('id="settings-appearance"');
-    expect(html).toContain('theme-control');
+    expect(html).toContain('id="settings-connection"');
+    expect(html).toContain('relationship-settings-title');
+    expect(html).toContain('name="relationshipStartedOn"');
+    expect(html).toContain('name="showRelationshipDuration"');
 
     expect(html).toContain('id="settings-notifications"');
     expect(html).toContain('anniversary-reminder-form');
     expect(html).toContain('name="anniversaryReminderEnabled"');
     expect(html).toContain('href="/more/notifications"');
 
-    expect(html).toContain('id="settings-account"');
-    expect(html).toContain('account-settings-panel');
-    expect(html).toContain('account-danger-zone');
-    expect(html).toContain(accountSettings.deleteAction);
-
-    expect(html).toContain('id="settings-connection"');
-    expect(html).toContain('relationship-settings-title');
-    expect(html).toContain('name="relationshipStartedOn"');
-    expect(html).toContain('name="showRelationshipDuration"');
-    expect(html).toContain('space-offboarding-panel');
-    expect(html).toContain(spaceOffboarding.action);
+    expect(html).toContain('id="settings-appearance"');
+    expect(html).toContain('theme-control');
 
     expect(html).toContain('id="settings-data"');
     expect(html).toContain('id="data-transfer"');
+
+    expect(html).toContain('id="settings-account"');
+    expect(html).toContain('settings-sensitive-zone');
+    expect(html).toContain('account-settings-panel');
+    expect(html).toContain('account-danger-zone');
+    expect(html).toContain('<h3 id="account-settings-title">Account</h3>');
+    expect(html).toContain(`<h4>${accountSettings.dangerTitle}</h4>`);
+    expect(html).toContain(accountSettings.deleteAction);
+    expect(html).toContain('space-offboarding-panel');
+    expect(html).toContain(spaceOffboarding.action);
+
+    const connectionIndex = html.indexOf('id="settings-connection"');
+    const notificationsIndex = html.indexOf('id="settings-notifications"');
+    const appearanceIndex = html.indexOf('id="settings-appearance"');
+    const dataIndex = html.indexOf('id="settings-data"');
+    const accountIndex = html.indexOf('id="settings-account"');
+
+    expect(connectionIndex).toBeGreaterThanOrEqual(0);
+    expect(notificationsIndex).toBeGreaterThan(connectionIndex);
+    expect(appearanceIndex).toBeGreaterThan(notificationsIndex);
+    expect(dataIndex).toBeGreaterThan(appearanceIndex);
+    expect(accountIndex).toBeGreaterThan(dataIndex);
   });
 
-  it('keeps private area and partner identity out of Settings while Account deletion stays separate from relationship exit', () => {
+  it('keeps Account, Space, and private-area semantics separate with canonical consumer branding', () => {
     const html = renderSettingsPageFixture();
 
     expect(html).not.toContain('id="settings-privacy"');
@@ -109,11 +123,9 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Mein Bereich');
     expect(html).not.toContain('partner-identity-title');
 
-    const accountIndex = html.indexOf('id="settings-account"');
-    const connectionIndex = html.indexOf('id="settings-connection"');
-    expect(accountIndex).toBeGreaterThanOrEqual(0);
-    expect(connectionIndex).toBeGreaterThan(accountIndex);
     expect(html).toContain(accountSettings.deleteAction);
     expect(html).toContain(spaceOffboarding.action);
+    expect(html).toContain('eimir.');
+    expect(html).not.toContain('SideBySide');
   });
 });

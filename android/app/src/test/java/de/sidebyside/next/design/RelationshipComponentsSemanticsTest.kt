@@ -101,4 +101,36 @@ class RelationshipComponentsSemanticsTest {
             .assertWidthIsAtLeast(48.dp)
             .assertHeightIsAtLeast(48.dp)
     }
+
+    @Test
+    fun couplePresenceAdaptsToCompactMode() {
+        composeRule.setContent {
+            SideBySideTheme {
+                CouplePresence(
+                    spaceName = "Wir & Lea",
+                    userName = "Alex",
+                    partnerName = "Lea",
+                    relationshipDuration = "2 Jahre zusammen",
+                    onDurationClick = {},
+                    unboxed = true,
+                    isCompact = true,
+                    actionContent = {
+                        ThinkingOfYouButton(
+                            partnerName = "Lea",
+                            isCompact = true,
+                            onClick = {},
+                        )
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Wir & Lea").assertIsDisplayed()
+        composeRule.onNodeWithText("2 Jahre zusammen").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            context.getString(R.string.relationship_thinking_of_you_send, "Lea"),
+        ).assertIsDisplayed()
+            .assertWidthIsAtLeast(48.dp)
+            .assertHeightIsAtLeast(48.dp)
+    }
 }
