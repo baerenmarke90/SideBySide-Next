@@ -1,0 +1,66 @@
+diff --git a/android/app/src/test/java/de/sidebyside/next/activity/ActivityTest.kt b/android/app/src/test/java/de/sidebyside/next/activity/ActivityTest.kt
+index 0b2382d..b7d5a8c 100644
+--- a/android/app/src/test/java/de/sidebyside/next/activity/ActivityTest.kt
++++ b/android/app/src/test/java/de/sidebyside/next/activity/ActivityTest.kt
+@@ -74,6 +74,8 @@ class ActivityTest {
+         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+ 
+         signIn(model)
++        model.selectSpace(SPACE)
++        advanceUntilIdle()
+         model.loadActivity()
+         advanceUntilIdle()
+         assertTrue(model.uiState.value.activity.isNotEmpty())
+diff --git a/android/app/src/test/java/de/sidebyside/next/privatearea/PrivateNoteTest.kt b/android/app/src/test/java/de/sidebyside/next/privatearea/PrivateNoteTest.kt
+index 9e9967f..a487bd3 100644
+--- a/android/app/src/test/java/de/sidebyside/next/privatearea/PrivateNoteTest.kt
++++ b/android/app/src/test/java/de/sidebyside/next/privatearea/PrivateNoteTest.kt
+@@ -136,6 +136,8 @@ class PrivateNoteTest {
+         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+ 
+         signIn(model)
++        model.selectSpace(SPACE)
++        advanceUntilIdle()
+         model.loadPrivateNotes()
+         advanceUntilIdle()
+         assertTrue(model.uiState.value.privateNotes.isNotEmpty())
+diff --git a/android/app/src/test/java/de/sidebyside/next/reference/SpaceOffboardingTest.kt b/android/app/src/test/java/de/sidebyside/next/reference/SpaceOffboardingTest.kt
+index 23bcb46..a8c69b4 100644
+--- a/android/app/src/test/java/de/sidebyside/next/reference/SpaceOffboardingTest.kt
++++ b/android/app/src/test/java/de/sidebyside/next/reference/SpaceOffboardingTest.kt
+@@ -47,6 +47,8 @@ class SpaceOffboardingTest {
+ 
+             model.signIn("someone@example.test", "secret")
+             advanceUntilIdle()
++            model.selectSpace(SPACE_A)
++            advanceUntilIdle()
+             assertEquals(SPACE_A, model.uiState.value.activeSpaceId)
+             val generationBeforeExit = model.storyGeneration
+ 
+@@ -73,6 +75,8 @@ class SpaceOffboardingTest {
+ 
+             model.signIn("someone@example.test", "secret")
+             advanceUntilIdle()
++            model.selectSpace(SPACE_A)
++            advanceUntilIdle()
+             model.leaveActiveSpace()
+             advanceUntilIdle()
+ 
+@@ -97,6 +101,8 @@ class SpaceOffboardingTest {
+ 
+             model.signIn("someone@example.test", "secret")
+             advanceUntilIdle()
++            model.selectSpace(SPACE_A)
++            advanceUntilIdle()
+             model.leaveActiveSpace()
+             advanceUntilIdle()
+ 
+@@ -125,6 +131,8 @@ class SpaceOffboardingTest {
+ 
+         model.signIn("someone@example.test", "secret")
+         advanceUntilIdle()
++        model.selectSpace(SPACE_A)
++        advanceUntilIdle()
+         model.leaveActiveSpace()
+         advanceUntilIdle()
+ 
