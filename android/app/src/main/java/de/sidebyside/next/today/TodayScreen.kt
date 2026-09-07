@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -35,6 +37,7 @@ import de.sidebyside.next.design.ThinkingOfYouButton
 import de.sidebyside.next.design.ThinkingOfYouState
 import de.sidebyside.next.design.VisibilityBadge
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.shell.MediumWidthThreshold
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStateKind
 import de.sidebyside.next.shell.UiStatePanel
@@ -43,6 +46,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.delay
 import sidebyside.api.models.DashboardItem
 import sidebyside.api.models.DashboardItemType
 import sidebyside.api.models.DashboardRelationshipDuration
@@ -80,10 +84,29 @@ fun TodayScreen(
     onOpenDurationDetails: (() -> Unit)? = null,
     onInvitePartner: (() -> Unit)? = null,
     onOpenMemory: ((UUID) -> Unit)? = null,
+    userName: String? = null,
+    onAcknowledgeThinkingOfYou: (() -> Unit)? = null,
+    isCompact: Boolean? = null,
 ) {
     if (dashboard == null) {
         problem?.let { UiStatePanel(problem = it, modifier = modifier) }
         return
+    }
+
+    val resolvedUserName = userName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.activity_you)
+    val isCompactWidth = isCompact ?: (LocalConfiguration.current.screenWidthDp.dp < MediumWidthThreshold)
+
+    LaunchedEffect(gestureSent) {
+        if (gestureSent) {
+            delay(2500L)
+            onAcknowledgeThinkingOfYou?.invoke()
+        }
+    }
+
+    DisposableEffect(onAcknowledgeThinkingOfYou) {
+        onDispose {
+            onAcknowledgeThinkingOfYou?.invoke()
+        }
     }
 
     val partnerName = dashboard.space.partner?.displayName
@@ -104,17 +127,18 @@ fun TodayScreen(
         item(key = "couple-presence") {
             CouplePresence(
                 spaceName = spaceTitle,
-                userName = stringResource(R.string.demo_persona_lea),
+                userName = resolvedUserName,
                 partnerName = partnerName,
                 presenceState = if (partnerName != null) PartnerPresenceState.CONNECTED else PartnerPresenceState.WAITING,
                 relationshipDuration = dashboard.relationshipDuration?.let { togetherForText(it) },
                 onDurationClick = onOpenDurationDetails,
                 onInviteClick = onInvitePartner,
                 unboxed = true,
+                isCompact = isCompactWidth,
                 actionContent = {
                     ThinkingOfYouButton(
                         partnerName = partnerName,
-                        isCompact = false,
+                        isCompact = isCompactWidth,
                         enabled = !busy,
                         externalState = when {
                             gestureSent -> ThinkingOfYouState.SENT

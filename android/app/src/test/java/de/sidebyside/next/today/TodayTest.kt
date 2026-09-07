@@ -112,6 +112,14 @@ class TodayTest {
     }
 
     @Test
+    fun signedInAccountProvidesDisplayNameToUiState() = runTest(dispatcher) {
+        val api = TodayApi(dashboard = dashboard())
+        val model = signedIn(api)
+
+        assertEquals("Lea", model.uiState.value.accountDisplayName)
+    }
+
+    @Test
     fun beingToldToSlowDownIsItsOwnStateRatherThanAFailure() = runTest(dispatcher) {
         val api = TodayApi(
             dashboard = dashboard(),

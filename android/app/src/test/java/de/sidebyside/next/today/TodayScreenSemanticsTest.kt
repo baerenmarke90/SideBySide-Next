@@ -1,18 +1,25 @@
 package de.sidebyside.next.today
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -129,6 +136,158 @@ class TodayScreenSemanticsTest {
 
         composeRule.onNodeWithText("Anniversary dinner reservation").assertIsDisplayed()
         composeRule.onNodeWithText("Sunday breakfast in bed").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun displaysCouplePresenceWithAuthenticatedUserName() {
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        composeRule.setContent {
+            SideBySideTheme {
+                TodayScreen(
+                    dashboard = dashboard,
+                    busy = false,
+                    problem = null,
+                    gestureSent = false,
+                    onSendThinkingOfYou = {},
+                    onOpenActivity = {},
+                    userName = "Philipp",
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(
+            context.getString(R.string.relationship_partner_pair_connected, "Philipp", "Alex"),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun fallsBackToDefaultUserLabelWhenUserNameIsNull() {
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        composeRule.setContent {
+            SideBySideTheme {
+                TodayScreen(
+                    dashboard = dashboard,
+                    busy = false,
+                    problem = null,
+                    gestureSent = false,
+                    onSendThinkingOfYou = {},
+                    onOpenActivity = {},
+                    userName = null,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(
+            context.getString(
+                R.string.relationship_partner_pair_connected,
+                context.getString(R.string.activity_you),
+                "Alex",
+            ),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun thinkingOfYouSentStateResetsAfterConfirmationInterval() {
+        var acknowledged = false
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            SideBySideTheme {
+                TodayScreen(
+                    dashboard = dashboard,
+                    busy = false,
+                    problem = null,
+                    gestureSent = true,
+                    onSendThinkingOfYou = {},
+                    onOpenActivity = {},
+                    onAcknowledgeThinkingOfYou = { acknowledged = true },
+                )
+            }
+        }
+
+        assertFalse("Should not acknowledge immediately", acknowledged)
+        composeRule.mainClock.advanceTimeBy(2600L)
+        assertTrue("Should acknowledge after confirmation interval", acknowledged)
+    }
+
+    @Test
+    fun thinkingOfYouAcknowledgesOnDisposeForNavigation() {
+        var acknowledged = false
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        var isScreenActive by mutableStateOf(true)
+
+        composeRule.setContent {
+            SideBySideTheme {
+                if (isScreenActive) {
+                    TodayScreen(
+                        dashboard = dashboard,
+                        busy = false,
+                        problem = null,
+                        gestureSent = true,
+                        onSendThinkingOfYou = {},
+                        onOpenActivity = {},
+                        onAcknowledgeThinkingOfYou = { acknowledged = true },
+                    )
+                }
+            }
+        }
+
+        assertFalse("Should not acknowledge prior to dispose", acknowledged)
+        isScreenActive = false
+        composeRule.waitForIdle()
+        assertTrue("Should acknowledge on dispose when leaving screen", acknowledged)
+    }
+
+    @Test
+    fun compactMastheadAdaptsThinkingOfYouForNarrowWidth() {
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        composeRule.setContent {
+            SideBySideTheme {
+                TodayScreen(
+                    dashboard = dashboard,
+                    busy = false,
+                    problem = null,
+                    gestureSent = false,
+                    onSendThinkingOfYou = {},
+                    onOpenActivity = {},
+                    isCompact = true,
+                )
+            }
+        }
+
+        // Accessibility content description remains present and touch target meets >=48dp
+        composeRule.onNodeWithContentDescription(
+            context.getString(R.string.relationship_thinking_of_you_send, "Alex"),
+        ).assertIsDisplayed()
+            .assertWidthIsAtLeast(48.dp)
+            .assertHeightIsAtLeast(48.dp)
+
+        // In compact mode, the textual label is omitted from UI to give space to couple presence
+        composeRule.onNodeWithText(
+            context.getString(R.string.relationship_thinking_of_you_default),
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun expandedMastheadDisplaysFullThinkingOfYouLabel() {
+        val dashboard = sampleDashboard(partnerName = "Alex")
+        composeRule.setContent {
+            SideBySideTheme {
+                TodayScreen(
+                    dashboard = dashboard,
+                    busy = false,
+                    problem = null,
+                    gestureSent = false,
+                    onSendThinkingOfYou = {},
+                    onOpenActivity = {},
+                    isCompact = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.relationship_thinking_of_you_default),
+        ).assertIsDisplayed()
     }
 
     private fun render(dashboard: DashboardView) {

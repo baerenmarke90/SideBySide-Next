@@ -54,6 +54,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.sidebyside.next.account.AccountSettingsContent
 import de.sidebyside.next.demo.DemoBanner
+import de.sidebyside.next.demo.DemoPersona
 import de.sidebyside.next.invitation.AwaitingSpaceScreen
 import de.sidebyside.next.invitation.InvitationsScreen
 import de.sidebyside.next.design.MinimumTouchTarget
@@ -1133,14 +1134,29 @@ private fun DemoShell(
         when (destination) {
             AppDestination.Today -> {
                 LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadToday() }
+                val userName = if (state.demoMode) {
+                    when (state.demoPersona) {
+                        DemoPersona.Alex -> stringResource(R.string.demo_persona_alex)
+                        else -> stringResource(R.string.demo_persona_lea)
+                    }
+                } else {
+                    state.profile.self?.displayName?.takeIf { it.isNotBlank() }
+                        ?: state.accountDisplayName?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.activity_you)
+                }
                 TodayScreen(
                     dashboard = state.dashboard,
                     busy = state.todayBusy,
                     problem = state.todayProblem,
                     gestureSent = state.thinkingOfYouSent,
                     onSendThinkingOfYou = viewModel::sendThinkingOfYou,
-                    onOpenActivity = { navController.navigate(ACTIVITY_ROUTE) },
+                    onAcknowledgeThinkingOfYou = viewModel::acknowledgeThinkingOfYou,
+                    onOpenActivity = {
+                        viewModel.acknowledgeThinkingOfYou()
+                        navController.navigate(ACTIVITY_ROUTE)
+                    },
                     cachedAt = state.todayCachedAt,
+                    userName = userName,
                 )
             }
 
