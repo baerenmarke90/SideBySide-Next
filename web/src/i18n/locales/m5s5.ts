@@ -48,6 +48,10 @@ const m5s5 = {
       sharedContent: 'Aktivitäten',
       editorial: 'Rückblick',
     },
+    keepsake: {
+      kicker: 'Aus eurer Geschichte',
+      recentTitle: 'Ein Moment von euch',
+    },
     contextSlot: {
       kicker: 'Heute im Blick',
       dueTodayKicker: 'Heute',
