@@ -104,6 +104,29 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({ id: SPACE_ID, createdAt: TEST_NOW, partners: [] });
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        version: 1,
+        relationshipStartedOn: null,
+        showRelationshipDuration: false,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profile-preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
     if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
       await fulfillJson({ serverAdmin: false });
       return;
