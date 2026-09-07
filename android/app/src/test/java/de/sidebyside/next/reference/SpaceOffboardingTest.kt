@@ -47,6 +47,8 @@ class SpaceOffboardingTest {
 
             model.signIn("someone@example.test", "secret")
             advanceUntilIdle()
+            model.selectSpace(SPACE_A)
+            advanceUntilIdle()
             assertEquals(SPACE_A, model.uiState.value.activeSpaceId)
             val generationBeforeExit = model.storyGeneration
 
@@ -73,6 +75,8 @@ class SpaceOffboardingTest {
 
             model.signIn("someone@example.test", "secret")
             advanceUntilIdle()
+            model.selectSpace(SPACE_A)
+            advanceUntilIdle()
             model.leaveActiveSpace()
             advanceUntilIdle()
 
@@ -96,6 +100,8 @@ class SpaceOffboardingTest {
             val model = model(api)
 
             model.signIn("someone@example.test", "secret")
+            advanceUntilIdle()
+            model.selectSpace(SPACE_A)
             advanceUntilIdle()
             model.leaveActiveSpace()
             advanceUntilIdle()
@@ -124,6 +130,8 @@ class SpaceOffboardingTest {
         val model = model(api)
 
         model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+        model.selectSpace(SPACE_A)
         advanceUntilIdle()
         model.leaveActiveSpace()
         advanceUntilIdle()

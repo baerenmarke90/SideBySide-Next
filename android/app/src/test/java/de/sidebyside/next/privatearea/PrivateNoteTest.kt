@@ -136,6 +136,8 @@ class PrivateNoteTest {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
 
         signIn(model)
+        model.selectSpace(SPACE)
+        advanceUntilIdle()
         model.loadPrivateNotes()
         advanceUntilIdle()
         assertTrue(model.uiState.value.privateNotes.isNotEmpty())
