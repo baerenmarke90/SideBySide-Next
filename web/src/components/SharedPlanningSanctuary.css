@@ -79,7 +79,7 @@
     }
 
     & h3 {
-      font-family: var(--font-display);
+      font-family: var(--font-ui);
       font-size: clamp(1.05rem, 1.7vw, 1.18rem);
       font-weight: 650;
       line-height: 1.35;
@@ -133,7 +133,7 @@
     border-color: var(--color-brand-strong);
     background: var(--color-brand-strong);
     color: var(--color-on-accent);
-    box-shadow: 0 6px 18px var(--color-shadow-brand);
+    box-shadow: var(--shadow-soft);
 
     &:hover {
       border-color: var(--color-brand-strong);
