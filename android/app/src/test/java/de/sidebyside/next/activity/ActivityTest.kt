@@ -74,6 +74,8 @@ class ActivityTest {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
 
         signIn(model)
+        model.selectSpace(SPACE)
+        advanceUntilIdle()
         model.loadActivity()
         advanceUntilIdle()
         assertTrue(model.uiState.value.activity.isNotEmpty())
