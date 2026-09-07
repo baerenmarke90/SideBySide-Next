@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,9 +50,11 @@ fun PartnerAvatarPair(
     } else {
         stringResource(R.string.relationship_partner_pair_waiting, userName)
     }
+    val inviteLabel = stringResource(R.string.relationship_partner_pair_invite)
+    val shouldMerge = partnerName != null || onInviteClick == null
 
     Box(
-        modifier = modifier.semantics(mergeDescendants = true) {
+        modifier = modifier.semantics(mergeDescendants = shouldMerge) {
             contentDescription = description
         },
         contentAlignment = Alignment.CenterStart,
@@ -82,16 +85,21 @@ fun PartnerAvatarPair(
                     modifier = Modifier
                         .offset(x = (-size * 0.28f))
                         .size(size)
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .clip(CircleShape)
                         .background(SideBySideTheme.colors.brandSurface)
                         .border(1.5.dp, SideBySideTheme.colors.brand, CircleShape)
                         .then(
                             if (onInviteClick != null) {
-                                Modifier.clickable(
-                                    role = Role.Button,
-                                    onClickLabel = stringResource(R.string.relationship_partner_pair_invite),
-                                    onClick = onInviteClick,
-                                )
+                                Modifier
+                                    .semantics {
+                                        contentDescription = inviteLabel
+                                    }
+                                    .clickable(
+                                        role = Role.Button,
+                                        onClickLabel = inviteLabel,
+                                        onClick = onInviteClick,
+                                    )
                             } else Modifier,
                         ),
                     contentAlignment = Alignment.Center,
