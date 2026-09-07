@@ -88,7 +88,9 @@ describe('AppShell', () => {
   it('keeps the landing destination first in primary navigation', () => {
     const primaryNavigation = desktopPrimaryNavigation(renderShell('/story'));
 
-    expect(primaryNavigation.indexOf('href="/today"')).toBeGreaterThanOrEqual(0);
+    expect(primaryNavigation.indexOf('href="/today"')).toBeGreaterThanOrEqual(
+      0,
+    );
     expect(primaryNavigation.indexOf('href="/today"')).toBeLessThan(
       primaryNavigation.indexOf('href="/story"'),
     );
