@@ -296,6 +296,25 @@ New patterns are documented first as a contract/decision. A local special case i
 - Web and Android pass the same flow examples against the same API mock.
 - Manifest status and documentation match the shipped state.
 
+## 15. Presentation and runtime source governance
+
+Per Issue #675, pull requests affecting presentation, brand identity, or
+design tokens are subject to the mandatory Product Design / UX review gate,
+even when they do not modify components inside `web/src` or Android UI packages.
+
+The authoritative presentation/runtime source graph is evaluated by
+`scripts/classify_product_design_paths.py` and includes:
+
+- `design/tokens.json` and design-system machine-readable assets under `design/**`;
+- Web runtime presentation assets: `web/public/**` (favicons, touch icons, fonts, entry scripts);
+- Web entry point: `web/index.html`;
+- Web client source: `web/src/**` (excluding contract-generated OpenAPI clients in `web/src/api/generated/**`);
+- Android UI source and resources: `android/app/src/main/java/**`, `android/app/src/main/res/**`.
+
+New design-system or runtime presentation sources must be registered in
+`USER_FACING_PATTERNS` in `scripts/classify_product_design_paths.py` and covered
+by `scripts/test_classify_product_design_paths.py`.
+
 ## Related documents
 
 - [Design Tokens](../design/tokens.json)
