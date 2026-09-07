@@ -15,6 +15,10 @@ import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.TimeZone
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -141,10 +145,13 @@ class PlanScreenTest {
     }
 
     @Test
-    fun schedulingRequiresADateBeforeSubmitEnablesAndSendsIt() {
+    fun schedulingRequiresDateAndTimeBeforeSubmitEnablesAndSendsBoth() {
         val plan = aPlan(PlanStatus.IDEA)
-        var scheduled: Pair<UUID, String>? = null
-        render(plans = listOf(plan), onSchedule = { id, startOn -> scheduled = id to startOn })
+        var scheduled: Triple<UUID, String, String>? = null
+        render(
+            plans = listOf(plan),
+            onSchedule = { id, startOn, startAt -> scheduled = Triple(id, startOn, startAt) },
+        )
 
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule))
             .performScrollTo()
@@ -155,10 +162,41 @@ class PlanScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule_date_hint))
             .performTextInput("2026-09-20")
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm))
+            .assertIsNotEnabled()
+
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_time_hint))
+            .performTextInput("18:30")
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm))
             .assertIsEnabled()
             .performClick()
 
-        assertEquals(plan.id to "2026-09-20", scheduled)
+        assertEquals(Triple(plan.id, "2026-09-20", "18:30"), scheduled)
+    }
+
+    @Test
+    fun scheduledPlanShowsThePersistedLocalDateAndTime() {
+        val previousZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+            val plan = aPlan(PlanStatus.PLANNED).copy(
+                plannedStart = OffsetDateTime.parse("2026-12-20T18:30:00+01:00"),
+            )
+            val locale = context.resources.configuration.locales[0]
+            val expected = plan.plannedStart!!
+                .atZoneSameInstant(ZoneId.systemDefault())
+                .format(
+                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT)
+                        .withLocale(locale),
+                )
+
+            render(plans = listOf(plan))
+
+            composeRule.onNodeWithText(
+                context.getString(R.string.plan_scheduled_for, expected),
+            ).assertExists()
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
     }
 
     @Test
@@ -191,7 +229,7 @@ class PlanScreenTest {
         onRemoveWish: (UUID) -> Unit = {},
         onCreatePlan: (String, String, UUID?) -> Unit = { _, _, _ -> },
         onEditPlan: (UUID, String, String, UUID?) -> Unit = { _, _, _, _ -> },
-        onSchedule: (UUID, String) -> Unit = { _, _ -> },
+        onSchedule: (UUID, String, String) -> Unit = { _, _, _ -> },
         onUnschedule: (UUID) -> Unit = {},
         onComplete: (UUID, String) -> Unit = { _, _ -> },
     ) {

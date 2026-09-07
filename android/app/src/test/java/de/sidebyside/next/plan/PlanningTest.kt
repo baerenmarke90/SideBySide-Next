@@ -5,8 +5,12 @@ import de.sidebyside.next.reference.ReferenceApiException
 import de.sidebyside.next.reference.ReferenceConfig
 import de.sidebyside.next.reference.ReferenceContract
 import de.sidebyside.next.reference.ReferenceViewModel
+import de.sidebyside.next.reference.planScheduleStart
 import de.sidebyside.next.shell.UiStateKind
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -218,11 +222,13 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.schedulePlan(PLAN, "2026-09-20")
+        model.schedulePlan(PLAN, "2026-09-20", "18:30")
         advanceUntilIdle()
 
         assertEquals(listOf(7), api.scheduleVersions)
-        assertEquals(LocalDate.of(2026, 9, 20), api.schedules.single().plannedStart.toLocalDate())
+        val scheduledStart = api.schedules.single().plannedStart
+        assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
+        assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
         assertTrue(api.completions.isEmpty())
     }
 
@@ -233,10 +239,37 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.schedulePlan(PLAN, "not a date")
+        model.schedulePlan(PLAN, "not a date", "18:30")
         advanceUntilIdle()
 
         assertTrue(api.schedules.isEmpty())
+    }
+
+    @Test
+    fun schedulingAnUnparseableTimeSendsNothing() = runTest(dispatcher) {
+        val api = PlanningApi(plans = listOf(aPlan(PlanStatus.IDEA)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.schedulePlan(PLAN, "2026-09-20", "not a time")
+        advanceUntilIdle()
+
+        assertTrue(api.schedules.isEmpty())
+    }
+
+    @Test
+    fun selectedScheduleUsesTimezoneRulesForTheSelectedDate() {
+        val zone = ZoneId.of("Europe/Berlin")
+        val time = LocalTime.of(18, 30)
+
+        val summer = planScheduleStart(LocalDate.of(2026, 9, 20), time, zone)
+        val winter = planScheduleStart(LocalDate.of(2026, 12, 20), time, zone)
+
+        assertEquals(time, summer.toLocalTime())
+        assertEquals(time, winter.toLocalTime())
+        assertEquals(ZoneOffset.ofHours(2), summer.offset)
+        assertEquals(ZoneOffset.ofHours(1), winter.offset)
     }
 
     @Test
@@ -288,7 +321,7 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.schedulePlan(PLAN, "2026-09-20")
+        model.schedulePlan(PLAN, "2026-09-20", "18:30")
         advanceUntilIdle()
 
         assertEquals(UiStateKind.Conflict, model.uiState.value.planningProblem?.kind)
