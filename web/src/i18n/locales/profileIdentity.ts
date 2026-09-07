@@ -1,7 +1,7 @@
 const profileIdentity = {
   title: 'Dein Profil',
   intro:
-    'Hier legst du fest, wie du für deinen Partner in SideBySide angezeigt wirst.',
+    'Hier legst du fest, wie du für deinen Partner in eimir. sichtbar bist.',
   previewLabel: 'Vorschau für deinen Partner',
   displayNameLabel: 'Anzeigename',
   displayNameHelp:
@@ -12,7 +12,7 @@ const profileIdentity = {
   saved: 'Profil wurde gespeichert.',
   avatarLabel: 'Profilbild',
   avatarHelp:
-    'Wähle ein Bild aus. Ohne Profilbild verwendet SideBySide automatisch deine Initialen.',
+    'Wähle ein Bild aus. Ohne Profilbild verwendet eimir. automatisch deine Initialen.',
   chooseAvatar: 'Profilbild auswählen',
   changeAvatar: 'Bild ändern',
   partnerVisibilityNote: 'Dies ist das Profil, das dein Partner sieht.',
@@ -28,17 +28,17 @@ const profileIdentity = {
     'Das Profilbild konnte nicht geladen werden. Die Initialen werden stattdessen angezeigt.',
   partnerTitle: 'Dein Partner',
   partnerIntro:
-    'So wird dein Partner aktuell in SideBySide dargestellt. Änderungen am eigenen Profil erscheinen hier automatisch.',
+    'So ist dein Partner aktuell in eimir. sichtbar. Änderungen am eigenen Profil erscheinen hier automatisch.',
   settingsTitle: 'Einstellungen',
   settingsIntro:
     'Hier verwaltest du deine persönlichen App-Einstellungen, Verbindungen und Daten.',
   settingsPageIntro:
-    'Verwalte Darstellung, Benachrichtigungen, gemeinsame Bereiche und Datenexport.',
+    'Eure Verbindung zuerst, danach Benachrichtigungen, Darstellung, Daten und sensible Aktionen.',
   settingsIdentity: 'Profilbild und Anzeigename',
   settingsRelationship: 'Partner und Verbindung',
   settingsNotifications: 'Benachrichtigungen',
   settingsNotificationsIntro:
-    'Hier legst du fest, wie SideBySide dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
+    'Lege fest, wie eimir. dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
   settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
   anniversaryReminderTitle: 'Jahrestag-Erinnerung',
   anniversaryReminderIntro:
@@ -57,8 +57,12 @@ const profileIdentity = {
   anniversaryReminderLoading: 'Einstellungen werden geladen …',
   settingsPrivacy: 'Privater Bereich',
   settingsData: 'Daten und Portabilität',
+  settingsSensitiveEyebrow: 'Mit Bedacht',
+  settingsSensitiveTitle: 'Sensible Aktionen',
+  settingsSensitiveIntro:
+    'Den gemeinsamen Bereich zu verlassen und dein Konto zu löschen sind getrennte Aktionen. Prüfe die jeweiligen Folgen, bevor du fortfährst.',
   appearanceIntro:
-    'Wähle, ob SideBySide der Systemeinstellung folgen oder dauerhaft hell beziehungsweise dunkel dargestellt werden soll.',
+    'Wähle, ob eimir. der Systemeinstellung folgen oder dauerhaft hell beziehungsweise dunkel dargestellt werden soll.',
 } as const;
 
 export default profileIdentity;

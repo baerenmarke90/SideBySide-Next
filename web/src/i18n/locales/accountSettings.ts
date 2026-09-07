@@ -1,8 +1,8 @@
 export default {
   title: 'Account',
   intro:
-    'Hier verwaltest du Aktionen, die dein persönliches SideBySide-Konto betreffen. Beziehung und gemeinsamer Bereich bleiben davon getrennt.',
-  dangerEyebrow: 'Danger Zone',
+    'Hier verwaltest du Aktionen, die dein persönliches eimir.-Konto betreffen. Beziehung und gemeinsamer Bereich bleiben davon getrennt.',
+  dangerEyebrow: 'Sensible Aktion',
   dangerTitle: 'Konto löschen',
   dangerIntro:
     'Die Kontolöschung betrifft dein persönliches Konto. Sie ist nicht dasselbe wie den gemeinsamen Bereich zu verlassen oder eine Beziehung zu beenden.',

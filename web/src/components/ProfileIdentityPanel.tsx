@@ -19,6 +19,7 @@ import { useTranslation } from '../i18n';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
+import { VisibilityBadge } from './VisibilityBadge';
 import './ProfileIdentityPanel.css';
 
 function uploadStatusKey(phase: DraftUploadPhase | null): string | null {
@@ -220,9 +221,12 @@ export function ProfileIdentityPanel({
           <div className="profile-identity-details">
             <div className="profile-identity-name-row">
               <h2 className="profile-identity-display-name">{visibleName}</h2>
-              <span className="profile-identity-visibility-badge">
-                ♥ {t('profileIdentity.partnerVisibilityNote')}
-              </span>
+              <VisibilityBadge
+                visibility="SHARED"
+                size="small"
+                customLabel={t('profileIdentity.partnerVisibilityNote')}
+                className="profile-identity-visibility-badge"
+              />
             </div>
 
             <div className="profile-identity-actions-row">
