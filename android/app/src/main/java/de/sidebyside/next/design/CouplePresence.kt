@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -123,32 +124,37 @@ fun CouplePresence(
                         overflow = TextOverflow.Ellipsis,
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    FlowRow(
+                        verticalArrangement = Arrangement.spacedBy(0.dp),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp),
                         modifier = Modifier.padding(top = 2.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(statusColor),
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        Text(
-                            text = displayStatus,
-                            style = SideBySideTheme.typography.bodySmall,
-                            color = SideBySideTheme.colors.textSecondary,
-                        )
-
-                        if (relationshipDuration != null) {
-                            Text(
-                                text = " · ",
-                                style = SideBySideTheme.typography.bodySmall,
-                                color = SideBySideTheme.colors.border,
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(statusColor),
                             )
 
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            Text(
+                                text = displayStatus,
+                                style = SideBySideTheme.typography.bodySmall,
+                                color = SideBySideTheme.colors.textSecondary,
+                            )
+
+                            if (relationshipDuration != null) {
+                                Text(
+                                    text = " · ",
+                                    style = SideBySideTheme.typography.bodySmall,
+                                    color = SideBySideTheme.colors.border,
+                                )
+                            }
+                        }
+
+                        if (relationshipDuration != null) {
                             Text(
                                 text = relationshipDuration,
                                 style = SideBySideTheme.typography.bodySmall,
@@ -163,7 +169,9 @@ fun CouplePresence(
                                             onClick = onDurationClick,
                                         )
                                         .padding(horizontal = 4.dp, vertical = 12.dp)
-                                } else Modifier,
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
