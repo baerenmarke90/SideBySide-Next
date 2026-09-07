@@ -18,6 +18,14 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       REPOSITORY: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify classifier unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest scripts.test_classify_product_design_paths
+
       - name: Detect client UI changes
         id: ui
         shell: bash
@@ -27,14 +35,10 @@ jobs:
           files="$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')"
           printf '%s\n' "$files"
 
-          # Generated OpenAPI clients are contract artifacts, not product UI.
-          # They may live below web/src but must not force a visual-design review
-          # when an API-only change regenerates them.
-          ui_files="$(
-            grep -E '^(web/src/|android/app/src/main/java/|android/app/src/main/res/)' <<< "$files" \
-              | grep -Ev '^web/src/api/generated/' \
-              || true
-          )"
+          # Presentation and runtime design sources classified according to Issue #675:
+          # includes design/tokens.json, design/**, web/public/**, web/index.html,
+          # web/src/** (excluding web/src/api/generated/**), android/app/src/main/java/**, android/app/src/main/res/**.
+          ui_files="$(python3 scripts/classify_product_design_paths.py <<< "$files")"
 
           if [ -n "$ui_files" ]; then
             printf 'User-facing client paths changed:\n%s\n' "$ui_files"
