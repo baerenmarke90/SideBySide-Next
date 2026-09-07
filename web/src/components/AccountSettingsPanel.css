@@ -3,8 +3,8 @@
   gap: var(--space-3);
 }
 
-.account-settings-panel > h2,
-.account-danger-copy > h3,
+.account-settings-panel > h3,
+.account-danger-copy > h4,
 .account-settings-panel > p,
 .account-danger-copy > p {
   margin: 0;
