@@ -1,7 +1,9 @@
 package de.sidebyside.next.today
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -13,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -20,11 +23,17 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import de.sidebyside.next.design.SideBySideDisplayFamily
+import de.sidebyside.next.design.CouplePresence
 import de.sidebyside.next.design.MinimumTouchTarget
+import de.sidebyside.next.design.PartnerPresenceState
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.design.ThinkingOfYouButton
+import de.sidebyside.next.design.ThinkingOfYouState
+import de.sidebyside.next.design.VisibilityBadge
 import de.sidebyside.next.reference.R
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStateKind
@@ -33,6 +42,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import java.util.UUID
 import sidebyside.api.models.DashboardItem
 import sidebyside.api.models.DashboardItemType
 import sidebyside.api.models.DashboardRelationshipDuration
@@ -67,6 +77,9 @@ fun TodayScreen(
     modifier: Modifier = Modifier,
     /** Non-null only while [dashboard] is a stale M2-D18 cache fallback. */
     cachedAt: java.time.Instant? = null,
+    onOpenDurationDetails: (() -> Unit)? = null,
+    onInvitePartner: (() -> Unit)? = null,
+    onOpenMemory: ((UUID) -> Unit)? = null,
 ) {
     if (dashboard == null) {
         problem?.let { UiStatePanel(problem = it, modifier = modifier) }
@@ -74,6 +87,9 @@ fun TodayScreen(
     }
 
     val partnerName = dashboard.space.partner?.displayName
+    val spaceTitle = partnerName?.let {
+        "${stringResource(R.string.destination_today)} & $it"
+    } ?: stringResource(R.string.destination_today)
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -82,65 +98,86 @@ fun TodayScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step5),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.today_title),
-                style = MaterialTheme.typography.headlineMedium.copy(fontFamily = SideBySideDisplayFamily),
-                color = SideBySideTheme.colors.textPrimary,
-                modifier = Modifier.semantics { heading() },
-            )
-        }
+        cachedAt?.let { item(key = "cached-banner") { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
-        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
-
-        item {
-            Button(
-                onClick = onOpenActivity,
-                modifier = Modifier.heightIn(min = MinimumTouchTarget),
-            ) {
-                Text(stringResource(R.string.today_open_activity))
-            }
-        }
-
-        // One hero card, matching the Web layout: the duration line and the
-        // gesture live together as one surface, not two. The duration line
-        // itself is absent when the couple has not set a start date or has
-        // turned it off — nothing is shown rather than "0 Tage" — but the
-        // gesture below it is unconditional either way.
-        item {
-            TodayHero(
-                duration = dashboard.relationshipDuration,
+        // Direction B Living Sanctuary: unboxed couple presence masthead
+        item(key = "couple-presence") {
+            CouplePresence(
+                spaceName = spaceTitle,
+                userName = stringResource(R.string.demo_persona_lea),
                 partnerName = partnerName,
-                busy = busy,
-                sent = gestureSent,
-                problem = problem,
-                onSend = onSendThinkingOfYou,
+                presenceState = if (partnerName != null) PartnerPresenceState.CONNECTED else PartnerPresenceState.WAITING,
+                relationshipDuration = dashboard.relationshipDuration?.let { togetherForText(it) },
+                onDurationClick = onOpenDurationDetails,
+                onInviteClick = onInvitePartner,
+                unboxed = true,
+                actionContent = {
+                    ThinkingOfYouButton(
+                        partnerName = partnerName,
+                        isCompact = false,
+                        enabled = !busy,
+                        externalState = when {
+                            gestureSent -> ThinkingOfYouState.SENT
+                            busy -> ThinkingOfYouState.SENDING
+                            else -> ThinkingOfYouState.IDLE
+                        },
+                        onClick = onSendThinkingOfYou,
+                    )
+                },
             )
+        }
+
+        if (problem?.kind == UiStateKind.RateLimit) {
+            item(key = "rate-limit-hint") {
+                Text(
+                    text = stringResource(R.string.today_thinking_too_soon),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SideBySideTheme.colors.textSecondary,
+                    modifier = Modifier
+                        .widthIn(max = ReadingMeasure)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
         }
 
         // A problem that is not the gesture's own is reported plainly.
         problem?.takeIf { it.kind != UiStateKind.RateLimit }?.let {
-            item { UiStatePanel(problem = it) }
+            item(key = "problem-panel") { UiStatePanel(problem = it) }
+        }
+
+        // Direction B Keepsake Tapestry: Retrospective elevated directly below masthead as primary editorial focal point
+        dashboard.retrospective?.let { retroItem ->
+            item(key = "retrospective-hero") {
+                RetrospectiveEditorialCard(
+                    item = retroItem,
+                    onOpen = onOpenMemory?.let { open -> { open(retroItem.id) } },
+                )
+            }
         }
 
         section(
             headingRes = R.string.today_upcoming,
             emptyRes = R.string.today_upcoming_empty,
             items = dashboard.upcoming,
+            onOpenItem = onOpenMemory,
         )
 
         section(
             headingRes = R.string.today_recent,
             emptyRes = R.string.today_recent_empty,
             items = dashboard.recentShared,
+            onOpenItem = onOpenMemory,
         )
 
-        dashboard.retrospective?.let { item ->
-            section(
-                headingRes = R.string.today_retrospective,
-                emptyRes = null,
-                items = listOf(item),
-            )
+        item(key = "open-activity") {
+            Button(
+                onClick = onOpenActivity,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.today_open_activity))
+            }
         }
     }
 }
@@ -149,6 +186,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
     headingRes: Int,
     emptyRes: Int?,
     items: List<DashboardItem>,
+    onOpenItem: ((UUID) -> Unit)? = null,
 ) {
     item(key = "heading-$headingRes") {
         Text(
@@ -176,78 +214,80 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
     }
 
     items(count = items.size, key = { index -> "$headingRes-" + items[index].id }) { index ->
-        DashboardCard(items[index])
+        val item = items[index]
+        DashboardCard(
+            item = item,
+            onOpen = onOpenItem?.let { open -> { open(item.id) } },
+        )
     }
 }
 
-/**
- * The day's hero: how long the couple has been together, in the shape they
- * chose, and the "thinking of you" gesture — one surface, matching the Web
- * layout's single `today-hero` header rather than two stacked cards.
- */
 @Composable
-private fun TodayHero(
-    duration: DashboardRelationshipDuration?,
-    partnerName: String?,
-    busy: Boolean,
-    sent: Boolean,
-    problem: UiProblem?,
-    onSend: () -> Unit,
+private fun RetrospectiveEditorialCard(
+    item: DashboardItem,
+    onOpen: (() -> Unit)? = null,
 ) {
-    Surface(
-        shape = RoundedCornerShape(SideBySideTheme.radii.card),
-        color = SideBySideTheme.colors.brandSurface,
-        modifier = Modifier.fillMaxWidth(),
+    val locale: Locale = LocalConfiguration.current.locales[0]
+    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
+    val day = item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+        ?: item.occurredOn
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = ReadingMeasure),
     ) {
-        Column(
-            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        Text(
+            text = stringResource(R.string.today_retrospective),
+            style = MaterialTheme.typography.titleSmall,
+            color = SideBySideTheme.colors.brandStrong,
+            modifier = Modifier.semantics { heading() },
+        )
+
+        Surface(
+            shape = RoundedCornerShape(SideBySideTheme.radii.card),
+            color = SideBySideTheme.colors.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, SideBySideTheme.colors.borderSubtle),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
         ) {
-            // Absent when the couple has not set a start date or has turned
-            // the duration off. Nothing is shown rather than "0 Tage".
-            duration?.let {
+            Column(
+                modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(item.type.labelRes()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SideBySideTheme.colors.brandStrong,
+                    )
+                    VisibilityBadge(isShared = true)
+                }
+
                 Text(
-                    text = togetherForText(it),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = SideBySideTheme.colors.brandStrong,
+                    text = item.titleOrText?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.today_item_untitled),
+                    style = SideBySideTheme.typography.headlineSmall.copy(
+                        fontFamily = SideBySideDisplayFamily,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.widthIn(max = ReadingMeasure),
                 )
-            }
-            Text(
-                text = partnerName
-                    ?.let { stringResource(R.string.today_thinking_hint, it) }
-                    ?: stringResource(R.string.today_thinking_hint_generic),
-                style = MaterialTheme.typography.bodyMedium,
-                color = SideBySideTheme.colors.textSecondary,
-                modifier = Modifier.widthIn(max = ReadingMeasure),
-            )
-            Button(
-                onClick = onSend,
-                enabled = !busy,
-                modifier = Modifier.heightIn(min = MinimumTouchTarget),
-            ) {
-                Text(stringResource(R.string.today_thinking_send))
-            }
-            if (sent) {
-                Text(
-                    text = stringResource(R.string.today_thinking_sent),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SideBySideTheme.colors.success,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-            }
-            // Being told to slow down here is not an error. The generic
-            // rate-limit wording is accurate and cold; this gesture deserves
-            // its own sentence.
-            if (problem?.kind == UiStateKind.RateLimit) {
-                Text(
-                    text = stringResource(R.string.today_thinking_too_soon),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SideBySideTheme.colors.textSecondary,
-                    modifier = Modifier
-                        .widthIn(max = ReadingMeasure)
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-                )
+
+                day?.let {
+                    Text(
+                        text = it.format(dateFormat),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                }
             }
         }
     }
@@ -283,7 +323,10 @@ private fun togetherForText(duration: DashboardRelationshipDuration): String = w
 }
 
 @Composable
-private fun DashboardCard(item: DashboardItem) {
+private fun DashboardCard(
+    item: DashboardItem,
+    onOpen: (() -> Unit)? = null,
+) {
     val locale: Locale = LocalConfiguration.current.locales[0]
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
     val day = item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
@@ -292,17 +335,27 @@ private fun DashboardCard(item: DashboardItem) {
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
         color = SideBySideTheme.colors.surface,
-        modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, SideBySideTheme.colors.borderSubtle),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
     ) {
         Column(
             modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
         ) {
-            Text(
-                text = stringResource(item.type.labelRes()),
-                style = MaterialTheme.typography.labelSmall,
-                color = SideBySideTheme.colors.brandStrong,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(item.type.labelRes()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SideBySideTheme.colors.brandStrong,
+                )
+                VisibilityBadge(isShared = true)
+            }
             Text(
                 // An item can arrive without words; an empty row would look
                 // like a rendering fault rather than like what it is.

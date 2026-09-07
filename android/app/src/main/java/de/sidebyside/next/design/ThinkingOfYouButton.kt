@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -54,9 +55,12 @@ fun ThinkingOfYouButton(
     modifier: Modifier = Modifier,
     isCompact: Boolean = false,
     enabled: Boolean = true,
+    externalState: ThinkingOfYouState? = null,
     onSend: (suspend () -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
-    var buttonState by remember { mutableStateOf(ThinkingOfYouState.IDLE) }
+    var internalState by remember { mutableStateOf(ThinkingOfYouState.IDLE) }
+    val buttonState = externalState ?: internalState
     val coroutineScope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -90,14 +94,19 @@ fun ThinkingOfYouButton(
         label = "ThinkingOfYouContent",
     )
 
-    val actionLabel = if (partnerName != null) {
-        stringResource(R.string.relationship_thinking_of_you_send, partnerName)
-    } else {
-        stringResource(R.string.relationship_thinking_of_you_default)
+    val actionLabel = when (buttonState) {
+        ThinkingOfYouState.IDLE -> if (partnerName != null) {
+            stringResource(R.string.relationship_thinking_of_you_send, partnerName)
+        } else {
+            stringResource(R.string.relationship_thinking_of_you_default)
+        }
+        ThinkingOfYouState.SENDING -> stringResource(R.string.relationship_thinking_of_you_sending)
+        ThinkingOfYouState.SENT -> stringResource(R.string.relationship_thinking_of_you_sent)
     }
 
     Box(
         modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(backgroundColor)
@@ -110,18 +119,24 @@ fun ThinkingOfYouButton(
                 role = Role.Button,
             ) {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                buttonState = ThinkingOfYouState.SENDING
-                coroutineScope.launch {
-                    try {
-                        onSend?.invoke()
-                        buttonState = ThinkingOfYouState.SENT
-                        delay(2500)
-                    } finally {
-                        buttonState = ThinkingOfYouState.IDLE
+                if (onClick != null) {
+                    onClick()
+                } else {
+                    internalState = ThinkingOfYouState.SENDING
+                    coroutineScope.launch {
+                        try {
+                            onSend?.invoke()
+                            internalState = ThinkingOfYouState.SENT
+                            delay(2500)
+                        } catch (e: Exception) {
+                            // Reset gracefully on error without crashing
+                        } finally {
+                            internalState = ThinkingOfYouState.IDLE
+                        }
                     }
                 }
             }
-            .padding(horizontal = if (isCompact) 10.dp else 16.dp, vertical = 10.dp),
+            .padding(horizontal = if (isCompact) 12.dp else 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
