@@ -24,6 +24,7 @@ import {
 import { getNotificationItemTitle } from '../client/notificationTitle';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { DestinationIcon } from './DestinationIcon';
 import { AuthorAvatar } from './PersonIdentity';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -157,14 +158,19 @@ export function SearchProductPage({
         <div className="m4-toolbar-row">
           <div className="field-group m4-search-field">
             <label htmlFor="m4-search-query">{t('m5s5.search.label')}</label>
-            <input
-              id="m4-search-query"
-              type="search"
-              value={draftQuery}
-              onChange={(event) => setDraftQuery(event.currentTarget.value)}
-              placeholder={t('m5s5.search.placeholder')}
-              autoComplete="off"
-            />
+            <div className="m4-search-input-shell">
+              <span className="m4-search-input-icon" aria-hidden="true">
+                <DestinationIcon icon="search" />
+              </span>
+              <input
+                id="m4-search-query"
+                type="search"
+                value={draftQuery}
+                onChange={(event) => setDraftQuery(event.currentTarget.value)}
+                placeholder={t('m5s5.search.placeholder')}
+                autoComplete="off"
+              />
+            </div>
           </div>
           <div className="field-group">
             <label htmlFor="m4-search-kind">{t('m5s5.search.typeLabel')}</label>
@@ -652,7 +658,7 @@ export function NotificationsProductPage({
       />
 
       <section
-        className="layout-panel layout-panel-quiet"
+        className="layout-panel layout-panel-quiet m4-notification-summary-panel"
         aria-labelledby="m4-notification-summary"
       >
         <div className="m4-notification-summary">
