@@ -36,8 +36,10 @@
 
 .thinking-of-you-compact {
   padding: 0.5rem;
-  min-height: 40px;
-  width: 40px;
+  min-height: 44px;
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-pill);
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
@@ -20,9 +20,11 @@ import { ACTIVITY_ROUTE } from '../client/routes';
 import { postSnackbar } from '../client/snackbar';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { CouplePresence } from './CouplePresence';
 import { MemoryPreview } from './MemoryPreview';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
+import { ThinkingOfYouButton } from './ThinkingOfYouButton';
 import { UiState } from './UiState';
 import './TodayPage.css';
 
@@ -488,7 +490,17 @@ function VisualMemoryCard({
           </span>
           {variant === 'retrospective' ? (
             <span className="today-card-retrospective-badge">
-              ✨ {t('m5s5.dashboard.retrospectiveTitle')}
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="retrospective-badge-icon"
+                width="14"
+                height="14"
+                fill="currentColor"
+              >
+                <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1-6.2-4.5-6.2 4.5 2.3-7.1-6.1-4.5h7.6z" />
+              </svg>
+              <span>{t('m5s5.dashboard.retrospectiveTitle')}</span>
             </span>
           ) : null}
         </div>
@@ -512,12 +524,12 @@ function VisualMemoryCard({
 function ThinkingOfYouHero({
   apis,
   spaceId,
+  partnerName,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  partnerName?: string;
 }) {
-  const { t } = useTranslation();
-  const [active, setActive] = useState(false);
   const clientRequestIdRef = useRef<string>('');
 
   const mutation = useMutation({
@@ -529,39 +541,25 @@ function ThinkingOfYouHero({
         }),
       ),
     onSuccess: () => {
-      setActive(true);
       postSnackbar('m5s5.dashboard.thinkingOfYouSent');
-      setTimeout(() => setActive(false), 2500);
     },
     onError: () => {
       postSnackbar('m5s5.common.error');
     },
   });
 
-  function handleClick() {
-    if (active || mutation.isPending) return;
+  const handleSend = async () => {
     clientRequestIdRef.current = crypto.randomUUID();
-    mutation.mutate();
-  }
+    await mutation.mutateAsync();
+  };
 
   return (
-    <button
-      type="button"
-      className={`today-hero-action ${active ? 'sbs-motion-success active' : 'sbs-motion-lift'} ${mutation.isPending ? 'pending' : ''}`}
-      onClick={handleClick}
-      aria-label={t('m5s5.dashboard.thinkingOfYouButton')}
-      aria-busy={mutation.isPending}
+    <ThinkingOfYouButton
+      className="today-hero-action"
+      partnerName={partnerName}
       disabled={mutation.isPending}
-    >
-      <span className="today-hero-icon" aria-hidden="true">
-        {active ? '✨' : '❤️'}
-      </span>
-      <span className="today-hero-text">
-        {active
-          ? t('m5s5.dashboard.thinkingOfYouSent')
-          : t('m5s5.dashboard.thinkingOfYouButton')}
-      </span>
-    </button>
+      onSend={handleSend}
+    />
   );
 }
 
@@ -685,7 +683,15 @@ export function TodayPage({
         !relationshipSignalItem ? (
           <div className="new-space-experience sbs-motion-reveal">
             <div className="new-space-mark" aria-hidden="true">
-              ❤️
+              <svg
+                viewBox="0 0 24 24"
+                width="36"
+                height="36"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
             </div>
             <h1 className="new-space-title">
               {partner
@@ -709,65 +715,73 @@ export function TodayPage({
         ) : (
           <div className="today-content">
             {/* ROLE: Hero / Couple Presence */}
-            <header className="today-hero sbs-motion-reveal">
-              <div className="today-hero-top-row">
-                <div className="today-hero-avatars" aria-hidden="true">
-                  {account ? (
-                    <PersonIdentity
-                      displayName={account.displayName}
-                      imageUrl={userAvatar.avatarUrl}
-                      size="small"
-                      showName={false}
-                      imageAlt={account.displayName}
-                      fallbackAlt={account.displayName}
-                    />
-                  ) : null}
-                  {partner ? (
-                    <PersonIdentity
-                      displayName={partner.displayName}
-                      imageUrl={partnerAvatar.avatarUrl}
-                      size="small"
-                      showName={false}
-                      imageAlt={partner.displayName}
-                      fallbackAlt={partner.displayName}
-                    />
-                  ) : null}
-                </div>
-                <div className="today-hero-badge" aria-hidden="true">
-                  <span className="today-hero-badge-dot" />
-                  <span>{t('m5s5.dashboard.durationTitle')}</span>
-                </div>
-              </div>
-              <h1 className="today-hero-greeting">
-                {partner
+            <CouplePresence
+              className="today-hero sbs-motion-reveal"
+              headingLevel="h1"
+              spaceTitle={
+                partner
                   ? t('m5s5.dashboard.partner', {
                       name: partner.displayName,
                     })
-                  : t('m5s5.dashboard.durationTitle')}
-              </h1>
-              {dashboardQuery.data.relationshipDuration ? (
-                <div className="today-hero-meta-row">
-                  <Link
-                    to="/more/profile#relationship-profile-title"
-                    className="today-hero-subtitle today-hero-duration-link"
-                    title={t('m5s5.dashboard.openRelationshipSettings')}
-                  >
-                    <span className="today-hero-pill-icon" aria-hidden="true">
-                      ★
-                    </span>
-                    <span>
-                      {formatRelationshipDuration(
-                        dashboardQuery.data.relationshipDuration,
-                        t,
-                      )}
-                    </span>
-                  </Link>
+                  : t('m5s5.dashboard.durationTitle')
+              }
+              primaryPerson={{
+                displayName:
+                  account?.displayName ||
+                  t('m5s5.activity.you', { defaultValue: 'Du' }),
+                imageUrl: userAvatar.avatarUrl,
+              }}
+              secondaryPerson={
+                partner
+                  ? {
+                      displayName: partner.displayName,
+                      imageUrl: partnerAvatar.avatarUrl,
+                    }
+                  : null
+              }
+              status={partner ? 'connected' : 'waiting'}
+              relationshipDuration={
+                dashboardQuery.data.relationshipDuration
+                  ? formatRelationshipDuration(
+                      dashboardQuery.data.relationshipDuration,
+                      t,
+                    )
+                  : undefined
+              }
+              durationLinkTo={
+                dashboardQuery.data.relationshipDuration
+                  ? '/more/profile#relationship-profile-title'
+                  : undefined
+              }
+              durationTitle={t('m5s5.dashboard.openRelationshipSettings')}
+              actions={
+                <div className="today-hero-action-container">
+                  <ThinkingOfYouHero
+                    apis={apis}
+                    spaceId={spaceId}
+                    partnerName={partner?.displayName}
+                  />
                 </div>
-              ) : null}
-              <div className="today-hero-action-container">
-                <ThinkingOfYouHero apis={apis} spaceId={spaceId} />
-              </div>
-            </header>
+              }
+            />
+
+            {/* ROLE: Editorial Retrospective Highlight (Heroic Keepsake Focal Point) */}
+            {retrospective ? (
+              <TodayModuleSection
+                className="today-section-retrospective"
+                title={t('m5s5.dashboard.retrospectiveTitle')}
+                kicker={t('m5s5.today.roles.editorial')}
+                animationDelay="100ms"
+              >
+                <div className="today-retrospective-container">
+                  <VisualMemoryCard
+                    item={retrospective}
+                    variant="retrospective"
+                    loadMemoryImage={loadMemoryImage}
+                  />
+                </div>
+              </TodayModuleSection>
+            ) : null}
 
             {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
             {hasContextModules ? (
@@ -832,24 +846,6 @@ export function TodayPage({
                   >
                     {t('m5s5.dashboard.allActivityAction')}
                   </Link>
-                </div>
-              </TodayModuleSection>
-            ) : null}
-
-            {/* ROLE: Editorial Retrospective Highlight */}
-            {retrospective ? (
-              <TodayModuleSection
-                className="today-section-retrospective"
-                title={t('m5s5.dashboard.retrospectiveTitle')}
-                kicker={t('m5s5.today.roles.editorial')}
-                animationDelay="300ms"
-              >
-                <div className="today-retrospective-container">
-                  <VisualMemoryCard
-                    item={retrospective}
-                    variant="retrospective"
-                    loadMemoryImage={loadMemoryImage}
-                  />
                 </div>
               </TodayModuleSection>
             ) : null}

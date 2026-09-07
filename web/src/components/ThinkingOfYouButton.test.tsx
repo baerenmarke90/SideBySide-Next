@@ -33,8 +33,12 @@ describe('ThinkingOfYouButton', () => {
     ).toBeDefined();
   });
 
-  it('transitions to sending and then sent on click', async () => {
-    const onSend = vi.fn().mockResolvedValue(undefined);
+  it('transitions to sending and then sent on click with proper aria-busy and label semantics', async () => {
+    let resolveSend!: () => void;
+    const sendPromise = new Promise<void>((resolve) => {
+      resolveSend = resolve;
+    });
+    const onSend = vi.fn().mockReturnValue(sendPromise);
     render(<ThinkingOfYouButton partnerName="Lea" onSend={onSend} />);
 
     const btn = screen.getByRole('button', {
@@ -43,13 +47,36 @@ describe('ThinkingOfYouButton', () => {
     fireEvent.click(btn);
 
     expect(onSend).toHaveBeenCalledTimes(1);
+    expect(btn.getAttribute('aria-busy')).toBe('true');
+    expect(btn.getAttribute('aria-label')).toBe(
+      relationshipComponents.thinkingOfYouSending,
+    );
+
+    resolveSend();
 
     await waitFor(() => {
-      expect(
-        screen.getByText(relationshipComponents.thinkingOfYouSent),
-      ).toBeDefined();
+      expect(btn.getAttribute('aria-busy')).toBeNull();
+      expect(btn.getAttribute('aria-label')).toBe(
+        relationshipComponents.thinkingOfYouSent,
+      );
+      expect(btn.className).toContain('state-sent');
     });
-    expect(btn.className).toContain('state-sent');
+  });
+
+  it('handles error in onSend gracefully and restores idle state', async () => {
+    const onSend = vi.fn().mockRejectedValue(new Error('Network error'));
+    render(<ThinkingOfYouButton partnerName="Lea" onSend={onSend} />);
+
+    const btn = screen.getByRole('button', {
+      name: expectedPartnerLabel,
+    });
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(btn.getAttribute('aria-busy')).toBeNull();
+      expect(btn.getAttribute('aria-label')).toBe(expectedPartnerLabel);
+      expect(btn.className).toContain('state-idle');
+    });
   });
 
   it('respects disabled state', () => {

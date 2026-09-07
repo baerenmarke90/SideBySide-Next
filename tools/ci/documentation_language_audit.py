@@ -191,6 +191,14 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     Path("docs/decisions/0008-product-ia-harmonization-and-domain-alignment.md"): (
         "Für mich",
     ),
+    Path("docs/design/eimir/DESIGN-CHECKPOINT-PHASE-3.md"): (
+        "Demnächst",
+        "Kürzlich geteilt",
+        "Erinnerung des Tages",
+        "Vor genau einem Jahr",
+        "Mit Lea geteilt",
+        "Nur für mich",
+    ),
     Path("docs/m2/DEMO-SCENARIO.md"): (
         "Sonnenaufgang am See",
         "Unser erster Pastateig",
