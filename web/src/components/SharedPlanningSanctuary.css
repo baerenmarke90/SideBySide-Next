@@ -174,9 +174,8 @@
   background: var(--color-shared-accent);
 }
 
-:where(
-  .planning-page.planning-sanctuary .future-map-stop-someday
-) .future-map-marker {
+:where(.planning-page.planning-sanctuary .future-map-stop-someday)
+  .future-map-marker {
   border-color: var(--color-shared-accent);
   background: var(--color-shared-surface);
 }
