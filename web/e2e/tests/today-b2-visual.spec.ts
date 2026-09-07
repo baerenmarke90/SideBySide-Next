@@ -85,7 +85,8 @@ const RICH_DASHBOARD: DashboardFixture = {
   retrospective: {
     id: 'memory-cabin',
     type: 'MEMORY',
-    titleOrText: 'The morning by the lake when we simply stayed a little longer',
+    titleOrText:
+      'The morning by the lake when we simply stayed a little longer',
     createdAt: '2025-09-07T07:30:00Z',
     occurredOn: '2025-09-07',
     scheduledAt: null,
@@ -259,7 +260,9 @@ async function installAuthorizedApiMocks(
     }
 
     if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
-      await fulfillJson([{ role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' }]);
+      await fulfillJson([
+        { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
+      ]);
       return;
     }
 
@@ -476,12 +479,16 @@ test('B2 no-image state, keyboard flow and 200 percent layout zoom remain usable
   await waitForToday(page, false);
   await expect(page.locator('.today-card-media')).toHaveCount(0);
 
-  const skipLink = page.getByRole('link', { name: de.navigation.skipToContent });
+  const skipLink = page.getByRole('link', {
+    name: de.navigation.skipToContent,
+  });
   await skipLink.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main-content')).toBeFocused();
 
-  const quickCreate = page.locator('.shell-header-create .quick-create-trigger');
+  const quickCreate = page.locator(
+    '.shell-header-create .quick-create-trigger',
+  );
   await quickCreate.focus();
   await expect(quickCreate).toBeFocused();
   await page.keyboard.press('ArrowDown');
