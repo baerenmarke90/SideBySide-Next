@@ -60,7 +60,10 @@
   box-shadow: none;
 }
 
-.settings-connection-block .relationship-settings-section > .settings-section-head h2,
+.settings-connection-block
+  .relationship-settings-section
+  > .settings-section-head
+  h2,
 .settings-connection-block > .page.profile-page .section-head h2 {
   font-family: var(--font-display);
   font-size: clamp(1.45rem, 2.5vw, 1.9rem);
