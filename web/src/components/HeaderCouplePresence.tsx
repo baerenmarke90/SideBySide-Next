@@ -48,19 +48,22 @@ export function HeaderCouplePresence({
     retry: false,
   });
 
-  if (!spaceQuery.data) return null;
+  const partner = spaceQuery.data?.partners.find(
+    (candidate) => candidate.id !== account.id,
+  );
 
-  const partner =
-    spaceQuery.data.partners.find((candidate) => candidate.id !== account.id) ??
-    null;
+  // Only a resolved partner is worth a couple-presence signal: with none, this
+  // would just duplicate the account's own avatar next to a dashed invite
+  // placeholder, which reads as a broken button rather than "no partner yet".
+  if (!partner) return null;
 
   return (
     <PartnerAvatarPair
       className="header-couple-presence"
       primaryPerson={{ displayName: account.displayName }}
-      secondaryPerson={partner ? { displayName: partner.displayName } : null}
+      secondaryPerson={{ displayName: partner.displayName }}
       size="small"
-      status={partner ? 'connected' : 'waiting'}
+      status="connected"
     />
   );
 }

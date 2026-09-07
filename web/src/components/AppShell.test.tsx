@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import navigation from '../i18n/locales/navigation';
+import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { AppShell } from './AppShell';
 
 /** Opening anchor tags, so attribute order in the markup does not matter. */
@@ -252,10 +253,14 @@ describe('AppShell', () => {
       html.indexOf('</header>') + '</header>'.length,
     );
 
+    const connectedLabel = relationshipComponents.partnerAvatarConnected
+      .replace('{{user}}', 'Alex Example')
+      .replace('{{partner}}', 'Sam Example');
+
     expect(header).toContain('header-couple-presence');
     expect(header).toContain('partner-avatar-pair-small');
     expect(header).toContain('status-connected');
-    expect(header).toContain('Alex Example und Sam Example');
+    expect(header).toContain(connectedLabel);
 
     const coupleIndex = header.indexOf('header-couple-presence');
     const profileMenuIndex = header.indexOf('header-profile-menu');
@@ -263,7 +268,7 @@ describe('AppShell', () => {
     expect(profileMenuIndex).toBeGreaterThan(coupleIndex);
   });
 
-  it('shows a waiting state in the couple presence cluster when no partner has joined yet', () => {
+  it('hides the couple presence cluster entirely when no partner can be resolved, rather than a waiting placeholder', () => {
     const html = renderShell('/story', false, 0, [
       { id: 'account-1', displayName: 'Alex Example' },
     ]);
@@ -272,9 +277,8 @@ describe('AppShell', () => {
       html.indexOf('</header>') + '</header>'.length,
     );
 
-    expect(header).toContain('header-couple-presence');
-    expect(header).toContain('status-waiting');
-    expect(header).toContain('Alex Example (Wartet auf Partner)');
+    expect(header).not.toContain('header-couple-presence');
+    expect(header).not.toContain('partner-avatar-waiting');
   });
 
   it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {
