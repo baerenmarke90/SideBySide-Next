@@ -1,0 +1,627 @@
+/* Direction B2 — Living Sanctuary Refined for /today.
+ *
+ * This layer intentionally dissolves the equal-card dashboard rhythm while
+ * retaining the existing domain data, links and privacy semantics.
+ */
+
+.today-page {
+  padding-top: 0;
+}
+
+.today-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Couple presence is the emotional masthead, not a bounded dashboard widget. */
+.today-page .today-hero.couple-presence-card {
+  order: 1;
+  min-height: clamp(14rem, 28vw, 22rem);
+  margin: 0 0 clamp(var(--space-10), 6vw, var(--space-16));
+  border: 0;
+  border-radius: 0;
+  padding: clamp(var(--space-8), 6vw, var(--space-16)) 0;
+  background:
+    radial-gradient(
+      circle at 12% 46%,
+      var(--color-brand-surface),
+      transparent 38%
+    );
+  box-shadow: none;
+  gap: clamp(var(--space-6), 4vw, var(--space-10));
+}
+
+.today-page .today-hero .couple-presence-main {
+  align-items: center;
+  gap: clamp(var(--space-5), 3vw, var(--space-8));
+}
+
+.today-page .today-hero .couple-presence-details {
+  gap: var(--space-2);
+}
+
+.today-page .today-hero .couple-presence-title {
+  max-width: 16ch;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 620;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+}
+
+.today-page .today-hero .couple-presence-meta {
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
+}
+
+.today-page .today-hero .couple-presence-duration-btn,
+.today-page .today-hero-duration-link {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.today-page .today-hero .partner-avatar-pair {
+  border-radius: var(--radius-pill);
+  box-shadow: 0 12px 34px var(--color-shadow-brand);
+}
+
+.today-page .today-hero-action-container {
+  justify-content: flex-start;
+}
+
+.today-page .today-hero-action {
+  min-height: 48px;
+  border: 1px solid var(--color-brand-glow);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  box-shadow: none;
+  font-size: 0.96rem;
+  font-weight: 720;
+  animation: none;
+}
+
+.today-page .today-hero-action:hover {
+  border-color: var(--color-brand);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+/* The page itself provides the rhythm. Context children become independent
+ * editorial beats so the partner signal can sit after the complete planning
+ * horizon rather than beside it as a peer widget.
+ */
+.today-page .today-context-area {
+  display: contents;
+  margin: 0;
+}
+
+.today-page .today-context-area > .today-context-link,
+.today-page .today-context-area > .today-context-card {
+  order: 3;
+}
+
+.today-page .today-context-area > .today-signal-card {
+  order: 5;
+}
+
+.today-page .today-section-keepsake {
+  order: 2;
+}
+
+.today-page .today-section-upcoming {
+  order: 4;
+}
+
+.today-page .today-section-recent {
+  order: 6;
+}
+
+.today-page .new-space-experience {
+  order: 2;
+}
+
+/* Keepsake / visual story focal point. */
+.today-page .today-section-keepsake {
+  margin-bottom: clamp(var(--space-12), 7vw, var(--space-16));
+}
+
+.today-page .today-section-keepsake .today-section-header {
+  margin-bottom: clamp(var(--space-4), 2vw, var(--space-6));
+  padding-left: 0;
+}
+
+.today-page .today-section-keepsake .today-section-kicker {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.today-page .today-section-keepsake .today-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+  font-weight: 620;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.today-page .today-retrospective-container {
+  max-width: none;
+}
+
+.today-page .today-card-shell-retrospective,
+.today-page .today-card-shell-keepsake {
+  width: 100%;
+  max-width: none;
+}
+
+.today-page .today-card-retrospective,
+.today-page .today-card-keepsake {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.today-page .today-card-retrospective.today-card-has-media,
+.today-page .today-card-keepsake.today-card-has-media {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.today-page .today-card-retrospective .today-card-media,
+.today-page .today-card-keepsake .today-card-media {
+  min-height: 0;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.today-page .today-card-retrospective .today-card-content,
+.today-page .today-card-keepsake .today-card-content {
+  max-width: 38rem;
+  padding: var(--space-2) 0;
+}
+
+.today-page .today-card-retrospective .today-card-title,
+.today-page .today-card-keepsake .today-card-title {
+  margin: var(--space-4) 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3.3vw, 2.8rem);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+
+.today-page .today-card-retrospective.today-card-typography-first,
+.today-page .today-card-keepsake.today-card-typography-first {
+  min-height: clamp(14rem, 25vw, 20rem);
+  justify-content: center;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding: clamp(var(--space-6), 5vw, var(--space-12)) 0;
+  background: transparent;
+}
+
+.today-page .today-card-retrospective-badge {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-brand-text);
+}
+
+/* Type is conveyed by icon + text; colored pills are unnecessary chrome here. */
+.today-page .today-card-kind {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 620;
+}
+
+/* Primary planning beat: one clear next thing with editorial weight. */
+.today-page .today-context-link,
+.today-page .today-context-area > .today-context-card {
+  width: min(100%, 58rem);
+  margin-bottom: var(--space-5);
+  border-radius: 0;
+  color: inherit;
+}
+
+.today-page .today-context-card {
+  min-height: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  padding: clamp(var(--space-5), 3vw, var(--space-8)) 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.today-page .today-context-link:hover .today-context-card {
+  border-color: var(--color-border);
+  box-shadow: none;
+  transform: none;
+}
+
+.today-page .today-context-header {
+  justify-content: flex-start;
+  gap: var(--space-4);
+}
+
+.today-page .today-context-kicker {
+  color: var(--color-brand-text);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+}
+
+.today-page .today-context-title {
+  max-width: 28ch;
+  margin: var(--space-3) 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3vw, 2.4rem);
+  font-weight: 610;
+  line-height: 1.16;
+  letter-spacing: -0.03em;
+}
+
+.today-page .today-context-footer {
+  justify-content: flex-start;
+  gap: var(--space-5);
+}
+
+.today-page .today-context-action {
+  color: var(--color-text-secondary);
+  font-weight: 650;
+}
+
+/* Follow-up planning items read as a timeline/list rather than cards. */
+.today-page .today-section-upcoming {
+  width: min(100%, 58rem);
+  margin-bottom: clamp(var(--space-10), 6vw, var(--space-16));
+}
+
+.today-page .today-section-upcoming .today-section-header {
+  margin-bottom: var(--space-2);
+  padding-left: 0;
+}
+
+.today-page .today-section-upcoming .today-section-title {
+  font-size: 0.82rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.today-page .today-stream-upcoming,
+.today-page .today-section-upcoming .today-stream-upcoming {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+.today-page .today-section-upcoming .today-card-shell {
+  width: 100%;
+  max-width: none;
+  flex: none;
+  border-radius: 0;
+}
+
+.today-page .today-section-upcoming .today-card {
+  display: block;
+  min-height: 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  padding: var(--space-4) 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.today-page .today-section-upcoming .today-card-media {
+  display: none;
+}
+
+.today-page .today-section-upcoming .today-card-content {
+  max-width: none;
+  padding: 0;
+}
+
+.today-page .today-section-upcoming .today-card-badges {
+  margin-bottom: var(--space-1);
+}
+
+.today-page .today-section-upcoming .today-card-title {
+  margin: var(--space-1) 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+.today-page .today-section-upcoming .today-card-link:hover .today-card {
+  border-color: var(--color-border);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Relationship signal is a living trace, not a peer dashboard tile. */
+.today-page .today-signal-card {
+  width: min(100%, 50rem);
+  min-height: 0;
+  margin: 0 0 clamp(var(--space-10), 6vw, var(--space-16));
+  border: 0;
+  border-left: 2px solid var(--color-brand-glow);
+  border-radius: 0;
+  padding: var(--space-2) 0 var(--space-2) var(--space-5);
+  background: transparent;
+  box-shadow: none;
+}
+
+.today-page .today-signal-kicker {
+  color: var(--color-text-secondary);
+  letter-spacing: 0.09em;
+}
+
+.today-page .today-signal-message {
+  max-width: 38ch;
+  margin: var(--space-2) 0 var(--space-3);
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.today-page .today-signal-footer {
+  justify-content: flex-start;
+  gap: var(--space-4);
+}
+
+.today-page .today-signal-action {
+  min-height: 44px;
+  border: 0;
+  padding: var(--space-2) 0;
+  background: transparent;
+  color: var(--color-brand-text);
+}
+
+.today-page .today-signal-action:hover {
+  background: transparent;
+  color: var(--color-brand-strong);
+  transform: none;
+}
+
+/* Recent activity is deliberately quiet and single-column. */
+.today-page .today-section-recent {
+  width: min(100%, 62rem);
+  margin-bottom: var(--space-8);
+  padding-top: var(--space-4);
+}
+
+.today-page .today-section-recent .today-section-header {
+  margin-bottom: var(--space-4);
+  padding-left: 0;
+}
+
+.today-page .today-section-recent .today-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  font-weight: 600;
+}
+
+.today-page .today-stream.today-stream-recent {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.today-page .recent-shared-card-link,
+.today-page .recent-shared-card-wrapper {
+  border-radius: 0;
+}
+
+.today-page .recent-shared-card {
+  min-height: 60px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  padding: var(--space-3) 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.today-page .recent-shared-card-link:hover .recent-shared-card {
+  border-color: var(--color-border);
+  box-shadow: none;
+  transform: none;
+}
+
+.today-page .recent-shared-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+}
+
+.today-page .recent-shared-title {
+  white-space: normal;
+  font-size: 0.96rem;
+  font-weight: 620;
+}
+
+.today-page .today-recent-footer {
+  margin-top: var(--space-3);
+}
+
+.today-page .today-recent-activity-link {
+  min-height: 44px;
+  color: var(--color-text-secondary);
+}
+
+/* Sparse/new spaces still begin with couple presence. The invitation below is
+ * intentionally calm so an empty state reads as deliberate, not unfinished.
+ */
+.today-page .new-space-experience {
+  width: min(100%, 44rem);
+  margin: 0 0 var(--space-16);
+  padding: var(--space-8) 0;
+  text-align: left;
+}
+
+.today-page .new-space-mark {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-medium);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  box-shadow: none;
+  animation: none;
+}
+
+.today-page .new-space-mark svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.today-page .new-space-title {
+  max-width: 20ch;
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3.6vw, 2.5rem);
+  font-weight: 610;
+  line-height: 1.18;
+}
+
+.today-page .new-space-body {
+  max-width: 36rem;
+  margin: var(--space-4) 0 var(--space-6);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 760px) {
+  .today-page .today-hero.couple-presence-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .today-page .today-hero .partner-avatar-pair-large .partner-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 1.45rem;
+  }
+
+  .today-page .today-hero .partner-avatar-pair-large .partner-avatar-secondary,
+  .today-page .today-hero .partner-avatar-pair-large .partner-avatar-waiting {
+    margin-left: -1rem;
+  }
+
+  .today-page .today-hero-action-container {
+    justify-content: flex-end;
+  }
+
+  .today-page .today-card-retrospective.today-card-has-media,
+  .today-page .today-card-keepsake.today-card-has-media {
+    grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.85fr);
+    gap: clamp(var(--space-8), 5vw, var(--space-16));
+  }
+}
+
+@media (max-width: 599px) {
+  .today-page .today-hero.couple-presence-card {
+    min-height: 0;
+    margin-bottom: var(--space-10);
+    padding: var(--space-8) 0 var(--space-10);
+    background:
+      radial-gradient(
+        circle at 18% 28%,
+        var(--color-brand-surface),
+        transparent 48%
+      );
+  }
+
+  .today-page .today-hero .couple-presence-main {
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .today-page .today-hero .couple-presence-title {
+    font-size: clamp(1.8rem, 10vw, 2.45rem);
+  }
+
+  .today-page .today-hero .couple-presence-meta {
+    align-items: flex-start;
+    gap: var(--space-1) var(--space-2);
+  }
+
+  .today-page .today-hero .couple-presence-actions,
+  .today-page .today-hero-action-container {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .today-page .today-hero-action {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .today-page .today-section-keepsake,
+  .today-page .today-section-upcoming,
+  .today-page .today-signal-card {
+    margin-bottom: var(--space-10);
+  }
+
+  .today-page .today-card-retrospective .today-card-media,
+  .today-page .today-card-keepsake .today-card-media {
+    border-radius: var(--radius-large);
+  }
+
+  .today-page .today-card-retrospective .today-card-title,
+  .today-page .today-card-keepsake .today-card-title {
+    font-size: clamp(1.5rem, 8vw, 2rem);
+  }
+
+  .today-page .today-context-card {
+    padding-block: var(--space-5);
+  }
+
+  .today-page .today-context-title {
+    font-size: clamp(1.4rem, 7vw, 1.8rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-page .today-hero-action,
+  .today-page .today-card,
+  .today-page .recent-shared-card,
+  .today-page .today-signal-action {
+    transition: none;
+    animation: none;
+  }
+
+  .today-page .today-hero-action:hover,
+  .today-page .today-card-link:hover .today-card,
+  .today-page .recent-shared-card-link:hover .recent-shared-card {
+    transform: none;
+  }
+}
