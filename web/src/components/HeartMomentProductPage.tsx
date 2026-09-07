@@ -386,7 +386,12 @@ export function HeartMomentProductPage({
               <label htmlFor="heart-moment-date">
                 {t('heartMomentProduct.happenedOnLabel')}
               </label>
-              <input id="heart-moment-date" name="happenedOn" type="date" required />
+              <input
+                id="heart-moment-date"
+                name="happenedOn"
+                type="date"
+                required
+              />
             </div>
 
             <details className="immersive-create-details">

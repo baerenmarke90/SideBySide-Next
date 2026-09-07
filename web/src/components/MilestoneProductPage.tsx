@@ -242,7 +242,12 @@ export function MilestoneProductPage({
               <label htmlFor="milestone-date">
                 {t('milestoneProduct.happenedOnLabel')}
               </label>
-              <input id="milestone-date" name="happenedOn" type="date" required />
+              <input
+                id="milestone-date"
+                name="happenedOn"
+                type="date"
+                required
+              />
             </div>
 
             <details className="immersive-create-details">

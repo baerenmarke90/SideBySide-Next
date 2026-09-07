@@ -60,7 +60,12 @@ async function installPlanningApiMocks(
         maintenanceMode: false,
         registrationAvailable: true,
         registrationUnavailableReason: null,
-        auth: { localPassword: true, passkey: true, magicLink: true, oidc: false },
+        auth: {
+          localPassword: true,
+          passkey: true,
+          magicLink: true,
+          oidc: false,
+        },
       });
       return;
     }
@@ -89,7 +94,9 @@ async function installPlanningApiMocks(
     }
 
     if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
-      await fulfillJson([{ role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' }]);
+      await fulfillJson([
+        { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
+      ]);
       return;
     }
 
@@ -286,14 +293,14 @@ test('creating a new Place inline keeps the Plan draft and selects the new Place
   ).toHaveCount(1);
 
   // The Plan draft (title typed before the inline Place create) must survive.
-  await expect(
-    form.getByLabel(m5s3.common.title, { exact: true }),
-  ).toHaveValue('Herbstwochenende im Elsass');
+  await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
+    'Herbstwochenende im Elsass',
+  );
 
   await form.getByRole('button', { name: m5s3.common.save }).click();
-  await expect(
-    form.getByLabel(m5s3.common.title, { exact: true }),
-  ).toHaveValue('');
+  await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
+    '',
+  );
 });
 
 test('an existing Place can still be selected and the no-place default option remains available', async ({
@@ -324,9 +331,9 @@ test('a failed inline Place creation keeps the Plan draft and lets the user retr
   await form.getByRole('button', { name: m5s3.plan.newPlaceSave }).click();
 
   await expect(form.getByRole('alert')).toBeVisible();
-  await expect(
-    form.getByLabel(m5s3.common.title, { exact: true }),
-  ).toHaveValue('Herbstwochenende im Elsass');
+  await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
+    'Herbstwochenende im Elsass',
+  );
   expect(calls.createPlaceCalls).toBe(1);
 
   const placeSelect = form.getByLabel(m5s3.common.place, { exact: true });

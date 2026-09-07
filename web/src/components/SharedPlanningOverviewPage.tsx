@@ -331,8 +331,7 @@ export function SharedPlanningOverviewPage({
                       <button
                         type="button"
                         disabled={
-                          createPlanPlace.isPending ||
-                          !newPlanPlaceName.trim()
+                          createPlanPlace.isPending || !newPlanPlaceName.trim()
                         }
                         onClick={submitNewPlanPlace}
                       >
