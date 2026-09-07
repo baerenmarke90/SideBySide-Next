@@ -530,8 +530,11 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
     // 3. Click Lea -> calls demo entry and redirects to /auth/magic-link?token=...
     await leaButton.click();
 
-    // 4. Verify magic-link callback is processed and app opens (Today dashboard or default route)
-    await expect(page.getByRole('heading', { name: /Alex/i })).toBeVisible({
+    // 4. Verify magic-link callback is processed and app opens (Today dashboard or default route).
+    // Couple Presence is the permanent H1 entry point, even for a sparse/new space.
+    await expect(
+      page.getByRole('heading', { name: /Alex/i, level: 1 }),
+    ).toBeVisible({
       timeout: 10000,
     });
     // DemoEntry person picker is gone

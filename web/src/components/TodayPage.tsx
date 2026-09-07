@@ -122,7 +122,11 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-export type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
+export type TodayCardVariant =
+  | 'upcoming'
+  | 'recent'
+  | 'retrospective'
+  | 'keepsake';
 
 /**
  * Presentation roles for modules composed on the Today orchestration surface.
@@ -443,6 +447,33 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
   return <div className="recent-shared-card-wrapper">{cardInner}</div>;
 }
 
+function TodayAgendaRow({ item }: { item: DashboardItem }) {
+  const { t } = useTranslation();
+  const path = dashboardItemPath(item.type, item.id);
+  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
+  const date = rawDate ? formatUpcomingRelative(rawDate, t) : null;
+  const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
+
+  const rowInner = (
+    <>
+      <span className="today-agenda-icon" aria-hidden="true">
+        <RecentItemTypeIcon type={item.type} />
+      </span>
+      <span className="today-agenda-title">{title}</span>
+      {date ? <span className="today-agenda-date">{date}</span> : null}
+    </>
+  );
+
+  if (path) {
+    return (
+      <Link to={path} className="today-agenda-row today-agenda-row-link">
+        {rowInner}
+      </Link>
+    );
+  }
+  return <div className="today-agenda-row">{rowInner}</div>;
+}
+
 function VisualMemoryCard({
   item,
   variant,
@@ -664,6 +695,26 @@ export function TodayPage({
   const recentShared = dashboardQuery.data?.recentShared ?? [];
   const retrospective = dashboardQuery.data?.retrospective;
 
+  // Heroic Keepsake: prefer the curated retrospective; otherwise fall back to
+  // the most recent real shared photo so the page never leads with an empty slot.
+  const visualRecentSharedItem =
+    !retrospective && loadMemoryImage
+      ? recentShared.find(
+          (item) => item.type === 'MEMORY' && Boolean(item.previewAttachmentId),
+        )
+      : undefined;
+  const recentSharedForTrace = visualRecentSharedItem
+    ? recentShared.filter((item) => item.id !== visualRecentSharedItem.id)
+    : recentShared;
+
+  const isSparse = Boolean(
+    dashboardQuery.data &&
+      upcoming.length === 0 &&
+      recentShared.length === 0 &&
+      !retrospective &&
+      !relationshipSignalItem,
+  );
+
   return (
     <div className="page today-page">
       {dashboardQuery.isLoading && (
@@ -676,181 +727,198 @@ export function TodayPage({
         />
       )}
 
-      {dashboardQuery.data &&
-        (dashboardQuery.data.upcoming.length === 0 &&
-        dashboardQuery.data.recentShared.length === 0 &&
-        !dashboardQuery.data.retrospective &&
-        !relationshipSignalItem ? (
-          <div className="new-space-experience sbs-motion-reveal">
-            <div className="new-space-mark" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                width="36"
-                height="36"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-            </div>
-            <h1 className="new-space-title">
-              {partner
-                ? t('m5s5.dashboard.newSpacePartner', {
+      {dashboardQuery.data ? (
+        <div className="today-content">
+          {/* ROLE: Hero / Couple Presence — the permanent emotional entry point,
+              shown for every space including a new/sparse one. */}
+          <CouplePresence
+            className="today-hero sbs-motion-reveal"
+            headingLevel="h1"
+            spaceTitle={
+              partner
+                ? t('m5s5.dashboard.partner', {
                     name: partner.displayName,
                   })
-                : t('m5s5.dashboard.newSpaceEmpty')}
-            </h1>
-            <p className="new-space-body">
-              {t('m5s5.dashboard.newSpaceIntro')}
-            </p>
-            <div className="new-space-actions">
-              <Link
-                className="button-link primary new-space-cta"
-                to="/story/memories/new"
-              >
-                {t('m5s5.dashboard.newSpaceAction')}
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="today-content">
-            {/* ROLE: Hero / Couple Presence */}
-            <CouplePresence
-              className="today-hero sbs-motion-reveal"
-              headingLevel="h1"
-              spaceTitle={
-                partner
-                  ? t('m5s5.dashboard.partner', {
+                : t('m5s5.dashboard.durationTitle')
+            }
+            primaryPerson={{
+              displayName:
+                account?.displayName ||
+                t('m5s5.activity.you', { defaultValue: 'Du' }),
+              imageUrl: userAvatar.avatarUrl,
+            }}
+            secondaryPerson={
+              partner
+                ? {
+                    displayName: partner.displayName,
+                    imageUrl: partnerAvatar.avatarUrl,
+                  }
+                : null
+            }
+            status={partner ? 'connected' : 'waiting'}
+            relationshipDuration={
+              dashboardQuery.data.relationshipDuration
+                ? formatRelationshipDuration(
+                    dashboardQuery.data.relationshipDuration,
+                    t,
+                  )
+                : undefined
+            }
+            durationLinkTo={
+              dashboardQuery.data.relationshipDuration
+                ? '/more/profile#relationship-profile-title'
+                : undefined
+            }
+            durationTitle={t('m5s5.dashboard.openRelationshipSettings')}
+            actions={
+              <div className="today-hero-action-container">
+                <ThinkingOfYouHero
+                  apis={apis}
+                  spaceId={spaceId}
+                  partnerName={partner?.displayName}
+                />
+              </div>
+            }
+          />
+
+          {isSparse ? (
+            <div className="new-space-experience sbs-motion-reveal">
+              <div className="new-space-mark" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="36"
+                  height="36"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+              </div>
+              <h2 className="new-space-title">
+                {partner
+                  ? t('m5s5.dashboard.newSpacePartner', {
                       name: partner.displayName,
                     })
-                  : t('m5s5.dashboard.durationTitle')
-              }
-              primaryPerson={{
-                displayName:
-                  account?.displayName ||
-                  t('m5s5.activity.you', { defaultValue: 'Du' }),
-                imageUrl: userAvatar.avatarUrl,
-              }}
-              secondaryPerson={
-                partner
-                  ? {
-                      displayName: partner.displayName,
-                      imageUrl: partnerAvatar.avatarUrl,
-                    }
-                  : null
-              }
-              status={partner ? 'connected' : 'waiting'}
-              relationshipDuration={
-                dashboardQuery.data.relationshipDuration
-                  ? formatRelationshipDuration(
-                      dashboardQuery.data.relationshipDuration,
-                      t,
-                    )
-                  : undefined
-              }
-              durationLinkTo={
-                dashboardQuery.data.relationshipDuration
-                  ? '/more/profile#relationship-profile-title'
-                  : undefined
-              }
-              durationTitle={t('m5s5.dashboard.openRelationshipSettings')}
-              actions={
-                <div className="today-hero-action-container">
-                  <ThinkingOfYouHero
-                    apis={apis}
-                    spaceId={spaceId}
-                    partnerName={partner?.displayName}
-                  />
-                </div>
-              }
-            />
-
-            {/* ROLE: Editorial Retrospective Highlight (Heroic Keepsake Focal Point) */}
-            {retrospective ? (
-              <TodayModuleSection
-                className="today-section-retrospective"
-                title={t('m5s5.dashboard.retrospectiveTitle')}
-                kicker={t('m5s5.today.roles.editorial')}
-                animationDelay="100ms"
-              >
-                <div className="today-retrospective-container">
-                  <VisualMemoryCard
-                    item={retrospective}
-                    variant="retrospective"
-                    loadMemoryImage={loadMemoryImage}
-                  />
-                </div>
-              </TodayModuleSection>
-            ) : null}
-
-            {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
-            {hasContextModules ? (
-              <div
-                className={`today-context-area ${
-                  hasBothContextModules
-                    ? 'today-context-dual'
-                    : 'today-context-single'
-                } sbs-motion-reveal`}
-              >
-                {primaryContextItem ? (
-                  <TodayContextualCard item={primaryContextItem} />
-                ) : null}
-                {relationshipSignalItem ? (
-                  <TodayRelationshipSignalCard
-                    partnerName={partnerName}
-                    activityItem={relationshipSignalItem}
-                    partnerAvatarUrl={partnerAvatar.avatarUrl}
-                  />
-                ) : null}
+                  : t('m5s5.dashboard.newSpaceEmpty')}
+              </h2>
+              <p className="new-space-body">
+                {t('m5s5.dashboard.newSpaceIntro')}
+              </p>
+              <div className="new-space-actions">
+                <Link
+                  className="button-link primary new-space-cta"
+                  to="/story/memories/new"
+                >
+                  {t('m5s5.dashboard.newSpaceAction')}
+                </Link>
               </div>
-            ) : null}
-
-            {/* ROLE: Secondary Upcoming (rendered only when > 1 upcoming items exist to avoid duplicating the primary contextual item) */}
-            {secondaryUpcoming.length > 0 ? (
-              <TodayModuleSection
-                className="today-section-upcoming"
-                title={t('m5s5.dashboard.upcomingMoreTitle')}
-                animationDelay="150ms"
-              >
-                <div className="today-stream today-stream-upcoming">
-                  {secondaryUpcoming.map((item: DashboardItem) => (
+            </div>
+          ) : (
+            <>
+              {/* ROLE: Heroic Keepsake — the curated retrospective, or (when
+                  none exists) the most recent real shared photo. */}
+              {retrospective ? (
+                <TodayModuleSection
+                  className="today-section-retrospective"
+                  title={t('m5s5.dashboard.retrospectiveTitle')}
+                  kicker={t('m5s5.today.roles.editorial')}
+                  animationDelay="100ms"
+                >
+                  <div className="today-retrospective-container">
                     <VisualMemoryCard
-                      key={item.id}
-                      item={item}
-                      variant="upcoming"
+                      item={retrospective}
+                      variant="retrospective"
                       loadMemoryImage={loadMemoryImage}
                     />
-                  ))}
-                </div>
-              </TodayModuleSection>
-            ) : null}
+                  </div>
+                </TodayModuleSection>
+              ) : visualRecentSharedItem ? (
+                <TodayModuleSection
+                  className="today-section-retrospective today-section-keepsake"
+                  title={t('m5s5.today.keepsake.title')}
+                  kicker={t('m5s5.today.keepsake.kicker')}
+                  animationDelay="100ms"
+                >
+                  <div className="today-retrospective-container">
+                    <VisualMemoryCard
+                      item={visualRecentSharedItem}
+                      variant="keepsake"
+                      loadMemoryImage={loadMemoryImage}
+                    />
+                  </div>
+                </TodayModuleSection>
+              ) : null}
 
-            {/* ROLE: Shared Story Content Area */}
-            {recentShared.length > 0 ? (
-              <TodayModuleSection
-                className="today-section-recent"
-                title={t('m5s5.dashboard.recentTitle')}
-                kicker={t('m5s5.dashboard.recentKicker')}
-                subline={t('m5s5.dashboard.recentSubline')}
-                animationDelay="200ms"
-              >
-                <div className="today-stream today-stream-recent">
-                  {recentShared.slice(0, 4).map((item: DashboardItem) => (
-                    <RecentSharedItemCard key={item.id} item={item} />
-                  ))}
+              {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
+              {hasContextModules ? (
+                <div
+                  className={`today-context-area ${
+                    hasBothContextModules
+                      ? 'today-context-dual'
+                      : 'today-context-single'
+                  } sbs-motion-reveal`}
+                >
+                  {primaryContextItem ? (
+                    <TodayContextualCard item={primaryContextItem} />
+                  ) : null}
+                  {relationshipSignalItem ? (
+                    <TodayRelationshipSignalCard
+                      partnerName={partnerName}
+                      activityItem={relationshipSignalItem}
+                      partnerAvatarUrl={partnerAvatar.avatarUrl}
+                    />
+                  ) : null}
                 </div>
-                <div className="today-recent-footer">
-                  <Link
-                    to={ACTIVITY_ROUTE}
-                    className="today-recent-activity-link"
-                  >
-                    {t('m5s5.dashboard.allActivityAction')}
-                  </Link>
-                </div>
-              </TodayModuleSection>
-            ) : null}
-          </div>
-        ))}
+              ) : null}
+
+              {/* ROLE: Shared Planning Horizon — calm agenda rows, not a card carousel
+                  (rendered only when > 1 upcoming items exist to avoid duplicating the
+                  primary contextual item). */}
+              {secondaryUpcoming.length > 0 ? (
+                <TodayModuleSection
+                  className="today-section-upcoming"
+                  title={t('m5s5.dashboard.upcomingMoreTitle')}
+                  animationDelay="150ms"
+                >
+                  <div className="today-agenda-list">
+                    {secondaryUpcoming.map((item: DashboardItem) => (
+                      <TodayAgendaRow key={item.id} item={item} />
+                    ))}
+                  </div>
+                </TodayModuleSection>
+              ) : null}
+
+              {/* ROLE: Shared Trace — a quiet list of recent shared moments
+                  (excludes any item already shown above as the Keepsake). */}
+              {recentSharedForTrace.length > 0 ? (
+                <TodayModuleSection
+                  className="today-section-recent"
+                  title={t('m5s5.dashboard.recentTitle')}
+                  kicker={t('m5s5.dashboard.recentKicker')}
+                  subline={t('m5s5.dashboard.recentSubline')}
+                  animationDelay="200ms"
+                >
+                  <div className="today-stream today-stream-recent">
+                    {recentSharedForTrace
+                      .slice(0, 4)
+                      .map((item: DashboardItem) => (
+                        <RecentSharedItemCard key={item.id} item={item} />
+                      ))}
+                  </div>
+                  <div className="today-recent-footer">
+                    <Link
+                      to={ACTIVITY_ROUTE}
+                      className="today-recent-activity-link"
+                    >
+                      {t('m5s5.dashboard.allActivityAction')}
+                    </Link>
+                  </div>
+                </TodayModuleSection>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

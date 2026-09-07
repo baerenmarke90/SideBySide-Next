@@ -289,10 +289,17 @@ test('compact authenticated shell keeps global quick create reachable and access
   await signIn(page);
 
   await expect(page).toHaveURL(/\/today$/);
+  // Couple Presence stays the permanent H1 entry point, even for a sparse space.
+  await expect(
+    page.getByRole('heading', {
+      name: m5s5.dashboard.durationTitle,
+      level: 1,
+    }),
+  ).toBeVisible();
   await expect(
     page.getByRole('heading', {
       name: m5s5.dashboard.newSpaceEmpty,
-      level: 1,
+      level: 2,
     }),
   ).toBeVisible();
 
@@ -375,10 +382,17 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
   await signIn(page);
 
   await expect(page).toHaveURL(/\/today$/);
+  // Couple Presence stays the permanent H1 entry point, even for a sparse space.
+  await expect(
+    page.getByRole('heading', {
+      name: m5s5.dashboard.durationTitle,
+      level: 1,
+    }),
+  ).toBeVisible();
   await expect(
     page.getByRole('heading', {
       name: m5s5.dashboard.newSpaceEmpty,
-      level: 1,
+      level: 2,
     }),
   ).toBeVisible();
   await expect(page.getByText(m5s5.dashboard.newSpaceIntro)).toBeVisible();
@@ -401,7 +415,7 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
   await expect(
     page.getByRole('heading', {
       name: m5s5.dashboard.newSpaceEmpty,
-      level: 1,
+      level: 2,
     }),
   ).toBeVisible();
 
