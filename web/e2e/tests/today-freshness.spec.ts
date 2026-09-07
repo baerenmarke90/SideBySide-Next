@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import m5s3 from '../../src/i18n/locales/m5s3';
 import m5s5 from '../../src/i18n/locales/m5s5';
@@ -73,6 +73,18 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
       await fulfillJson([
         { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
       ]);
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({
+        id: SPACE_ID,
+        createdAt: TEST_NOW,
+        partners: [
+          { id: ACCOUNT_ID, displayName: 'Anna' },
+          { id: PARTNER_ID, displayName: 'Ben' },
+        ],
+      });
       return;
     }
 
