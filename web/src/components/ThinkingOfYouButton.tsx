@@ -42,14 +42,22 @@ export function ThinkingOfYouButton({
       )
     : relationshipComponents.thinkingOfYouAction;
 
+  const currentAccessibleName =
+    state === 'sent'
+      ? relationshipComponents.thinkingOfYouSent
+      : state === 'sending'
+        ? relationshipComponents.thinkingOfYouSending
+        : targetLabel;
+
   return (
     <button
       type="button"
       className={`thinking-of-you-btn thinking-of-you-${variant} state-${state} ${className}`}
       onClick={handleClick}
       disabled={disabled || state === 'sending'}
-      aria-label={targetLabel}
-      title={targetLabel}
+      aria-busy={state === 'sending' ? true : undefined}
+      aria-label={currentAccessibleName}
+      title={currentAccessibleName}
     >
       <span className="thinking-of-you-icon-wrapper" aria-hidden="true">
         {state === 'sent' ? (
@@ -82,7 +90,7 @@ export function ThinkingOfYouButton({
       </span>
 
       {variant === 'full' && (
-        <span className="thinking-of-you-label">
+        <span className="thinking-of-you-label" aria-hidden="true">
           {state === 'sent'
             ? relationshipComponents.thinkingOfYouSent
             : state === 'sending'

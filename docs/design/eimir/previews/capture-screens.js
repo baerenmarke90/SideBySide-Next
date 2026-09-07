@@ -1,7 +1,19 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('../../../../web/e2e/node_modules/playwright');
+let chromium;
+try {
+  chromium = require('playwright').chromium;
+} catch {
+  try {
+    chromium = require('../../../../web/e2e/node_modules/playwright').chromium;
+  } catch {
+    const fallback = require.resolve('playwright', {
+      paths: [path.resolve(__dirname, '../../../../web/e2e/node_modules'), '/Users/philipp/Projekte/SideBySide-Next/web/e2e/node_modules'],
+    });
+    chromium = require(fallback).chromium;
+  }
+}
 
 const ROOT_DIR = path.resolve(__dirname, '../../../../');
 const OUTPUT_DIR = path.resolve(__dirname, '../screenshots');
@@ -29,7 +41,14 @@ const server = http.createServer((req, res) => {
   let reqPath = decodeURIComponent(req.url.split('?')[0]);
   if (reqPath === '/') reqPath = '/docs/design/eimir/previews/direction-a-today.html';
   
-  const filePath = path.join(ROOT_DIR, reqPath);
+  const cleanPath = path.normalize(reqPath).replace(/^(\.\.[\/\\])+/, '');
+  const filePath = path.resolve(ROOT_DIR, '.' + cleanPath);
+  
+  if (!filePath.startsWith(ROOT_DIR)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
   
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });

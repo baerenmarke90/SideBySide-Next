@@ -765,6 +765,24 @@ export function TodayPage({
               }
             />
 
+            {/* ROLE: Editorial Retrospective Highlight (Heroic Keepsake Focal Point) */}
+            {retrospective ? (
+              <TodayModuleSection
+                className="today-section-retrospective"
+                title={t('m5s5.dashboard.retrospectiveTitle')}
+                kicker={t('m5s5.today.roles.editorial')}
+                animationDelay="100ms"
+              >
+                <div className="today-retrospective-container">
+                  <VisualMemoryCard
+                    item={retrospective}
+                    variant="retrospective"
+                    loadMemoryImage={loadMemoryImage}
+                  />
+                </div>
+              </TodayModuleSection>
+            ) : null}
+
             {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
             {hasContextModules ? (
               <div
@@ -828,24 +846,6 @@ export function TodayPage({
                   >
                     {t('m5s5.dashboard.allActivityAction')}
                   </Link>
-                </div>
-              </TodayModuleSection>
-            ) : null}
-
-            {/* ROLE: Editorial Retrospective Highlight */}
-            {retrospective ? (
-              <TodayModuleSection
-                className="today-section-retrospective"
-                title={t('m5s5.dashboard.retrospectiveTitle')}
-                kicker={t('m5s5.today.roles.editorial')}
-                animationDelay="300ms"
-              >
-                <div className="today-retrospective-container">
-                  <VisualMemoryCard
-                    item={retrospective}
-                    variant="retrospective"
-                    loadMemoryImage={loadMemoryImage}
-                  />
                 </div>
               </TodayModuleSection>
             ) : null}
