@@ -159,6 +159,7 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
     if (
       method === 'GET' &&
       [
+        `/api/v1/spaces/${SPACE_ID}/collections`,
         `/api/v1/spaces/${SPACE_ID}/plans`,
         `/api/v1/spaces/${SPACE_ID}/places`,
         `/api/v1/spaces/${SPACE_ID}/wishes`,
@@ -350,9 +351,10 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async ({
-  page,
-}) => {
+test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, and axe-clean', async (
+  { page },
+  testInfo,
+) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
     window.localStorage.setItem('sidebyside.theme', 'system');
@@ -388,12 +390,40 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
 
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-overview-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await page.goto('/more/collections');
+  await expect(
+    page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-collections-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await page.goto('/more/places');
+  await expect(
+    page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-places-compact-dark.png'),
+    fullPage: true,
+  });
+
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async ({
-  page,
-}) => {
+test('planning sanctuary stays accessible in expanded light mode at 200 percent layout zoom', async (
+  { page },
+  testInfo,
+) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
     window.localStorage.setItem('sidebyside.theme', 'system');
@@ -410,7 +440,37 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
   await expect(
     page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath('planning-overview-expanded-light.png'),
+    fullPage: true,
+  });
 
+  await page.goto('/more/collections');
+  await expect(
+    page.getByRole('heading', { name: m5s3.collection.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-collections-expanded-light.png'),
+    fullPage: true,
+  });
+
+  await page.goto('/more/places');
+  await expect(
+    page.getByRole('heading', { name: m5s3.place.heading, level: 1 }),
+  ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-places-expanded-light.png'),
+    fullPage: true,
+  });
+
+  await page.goto('/plan');
+  await expect(
+    page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
+  ).toBeVisible();
   await page.locator('html').evaluate((element) => {
     element.style.zoom = '2';
   });
