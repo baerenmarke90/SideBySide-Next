@@ -145,9 +145,7 @@ def freeze_offboarding_purge_deadline_if_orphaned(
 
     memberships = list(
         session.execute(
-            select(Membership)
-            .where(Membership.space_id == space_id)
-            .order_by(Membership.id)
+            select(Membership).where(Membership.space_id == space_id).order_by(Membership.id)
         ).scalars()
     )
     if not memberships:
