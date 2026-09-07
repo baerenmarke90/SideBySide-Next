@@ -16,12 +16,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Archive source
-        run: tar --exclude=.git -czf sidebyside-source.tar.gz .
+        run: tar --exclude=.git -czf "$RUNNER_TEMP/sidebyside-source.tar.gz" .
 
       - name: Upload source
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: chatgpt-source-${{ github.sha }}
-          path: sidebyside-source.tar.gz
+          path: ${{ runner.temp }}/sidebyside-source.tar.gz
           retention-days: 1
           if-no-files-found: error
