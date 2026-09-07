@@ -301,6 +301,8 @@ private fun ReferenceFlowRoute(
                 problem = state.invitationProblem,
                 onAcceptInvitation = referenceViewModel::acceptInvitation,
                 onSignOut = signOut,
+                spaces = state.availableSpaces,
+                onSelectSpace = referenceViewModel::selectSpace,
             )
         }
         return
