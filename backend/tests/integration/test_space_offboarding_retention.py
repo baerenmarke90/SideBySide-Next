@@ -306,7 +306,12 @@ def test_premium_entitlement_does_not_delay_privacy_purge(session: Session) -> N
 
     assert purged[0] == 1
     assert session.get(Space, space.id) is None
-    assert session.get(EntitlementGrant, grant_id) is None
+    assert (
+        session.execute(
+            select(func.count(EntitlementGrant.id)).where(EntitlementGrant.id == grant_id)
+        ).scalar_one()
+        == 0
+    )
 
 
 class _FailDeleteOnceStore(LocalMediaStore):
