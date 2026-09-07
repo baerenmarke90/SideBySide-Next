@@ -272,7 +272,51 @@ visible until resolved or deliberately discarded.
 - Initials or neutral placeholders are available when no photo exists.
 - Status or role is supplemented with text when relevant.
 
-## 11. Analytics contract
+## 11. Relationship components
+
+These signature building blocks represent the core relationship-first identity of `eimir.`, ensuring that partnership is woven natively into the interface rather than treated as a peripheral profile setting.
+
+### 11.1 PartnerAvatarPair
+
+**Purpose:** Renders the two partners of a shared space as an interconnected unit with overlapping circles and connection state.
+
+- **Anatomy:** Primary user circle, overlapping secondary circle (partner or waiting invitation placeholder), connection status pip.
+- **Variants:** `connected`, `waiting` (partner pending/invitation slot), `offline`.
+- **States:** Default, hover/press on invitation slot, disabled.
+- **Accessibility:** Group container provides a composite accessible description combining user and partner names or announcing pending invitation status. Interactive invitation triggers use `role="button"` and clear accessible labels.
+- **Tokens:** Overlap offset derived from size (`-28%`), border uses `--color-surface` / `SideBySideTheme.colors.surface` for crisp visual separation.
+
+### 11.2 CouplePresence
+
+**Purpose:** Anchors the top of the relationship home view (`/today`), presenting shared space identity, partner presence, and milestone duration.
+
+- **Anatomy:** `PartnerAvatarPair`, space name heading, live status pip with descriptive text, relationship duration link, and optional contextual action slot.
+- **Variants:** `connected` (shared status), `waiting` (brand invitation prompt), `offline` (subtle muted indicator).
+- **Behavior:** Clicking the relationship duration navigates to the relationship milestone details.
+- **Accessibility:** Headings use appropriate levels (`titleLarge`), interactive duration triggers announce their action explicitly.
+- **Tokens:** Container uses `radius-large` / `SideBySideTheme.radii.large`, subtle borders (`borderSubtle`), and elevated surface tokens.
+
+### 11.3 ThinkingOfYouButton
+
+**Purpose:** A tactile, low-friction micro-interaction to send an affectionate impulse to the partner.
+
+- **Anatomy:** Heart glyph (`♥`), state text, tactile press scaling, and confirmation checkmark (`✓`).
+- **Variants:** Standard (text and icon), compact (icon-only for condensed toolbars).
+- **States:** `idle`, `sending` (pulsing animation, disabled interaction), `sent` (optimistic confirmation, transitions back to idle after 2.5s).
+- **Accessibility:** Explicit button role and localized action description. Reduced-motion queries disable heartbeat and spring animations.
+- **Haptics:** Android implementation performs tactile haptic feedback (`LongPress`) on trigger.
+
+### 11.4 VisibilityBadge
+
+**Purpose:** Communicates the exact access and privacy domain of an item (shared space vs. private draft vs. temporary shared view).
+
+- **Anatomy:** Purpose-built vector glyph (interlocking rings, padlock, clock) and localized label.
+- **Variants:** `SPACE_SHARED` / `shared`, `OWNER_ONLY` / `private`, `TEMPORARY_SHARED` / `temporary`.
+- **Sizes:** `small`, `medium`.
+- **Accessibility:** Uses `role="status"` with explicit aria-labels matching privacy terminology. Icons are scalable vector drawings without dependence on platform-specific emoji fonts.
+- **Tokens:** Colors map strictly to semantic token roles (`--color-shared`, `--color-private`, `--color-discovery`).
+
+## 12. Analytics contract
 
 Allowed events include:
 
@@ -291,7 +335,7 @@ direct resource IDs, and other sensitive user content are not allowed.
 Technical/pseudonymized references are transmitted only for a documented
 purpose and never as content characteristics.
 
-## 12. Definition of Done
+## 13. Definition of Done
 
 A shared component is ready when:
 

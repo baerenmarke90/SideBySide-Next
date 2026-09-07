@@ -16,6 +16,7 @@ import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
 import serverAdmin from './locales/serverAdmin';
 import snackbar from './locales/snackbar';
+import relationshipComponents from './locales/relationshipComponents';
 import spaceOffboarding from './locales/spaceOffboarding';
 import storyProducts from './locales/storyProducts';
 
@@ -51,6 +52,7 @@ if (!i18n.isInitialized) {
           profiles,
           serverAdmin,
           spaceOffboarding,
+          ...relationshipComponents,
           ...snackbar,
           ...storyProducts,
         },

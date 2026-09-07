@@ -803,4 +803,20 @@
     <string name="space_offboarding_confirmation_help">Die Eingabe muss genau mit dem angezeigten Text übereinstimmen.</string>
     <string name="space_offboarding_confirm_action">Gemeinsamen Bereich verlassen</string>
     <string name="space_offboarding_pending">Mitgliedschaft wird beendet …</string>
+
+    <!-- Relationship components -->
+    <string name="relationship_partner_pair_connected">%1$s und %2$s</string>
+    <string name="relationship_partner_pair_waiting">%1$s (Wartet auf Partner)</string>
+    <string name="relationship_partner_pair_invite">Partner einladen</string>
+    <string name="relationship_presence_connected">Zusammen verbunden</string>
+    <string name="relationship_presence_waiting">Wartet auf Partner</string>
+    <string name="relationship_presence_offline">Offline</string>
+    <string name="relationship_presence_view_duration">Beziehungsdetails ansehen</string>
+    <string name="relationship_thinking_of_you_send">Lieben Gruß an %1$s senden</string>
+    <string name="relationship_thinking_of_you_default">Ich denk an dich</string>
+    <string name="relationship_thinking_of_you_sending">Wird gesendet …</string>
+    <string name="relationship_thinking_of_you_sent">Gesendet!</string>
+    <string name="relationship_visibility_shared">Mit Partner geteilt</string>
+    <string name="relationship_visibility_private">Nur für mich</string>
+    <string name="relationship_visibility_temporary">Zeitlich geteilt</string>
 </resources>

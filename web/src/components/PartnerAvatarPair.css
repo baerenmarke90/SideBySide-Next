@@ -1,0 +1,115 @@
+.partner-avatar-pair {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.partner-avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.partner-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-subtle);
+  color: var(--color-brand-strong);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--color-surface);
+  overflow: hidden;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.partner-avatar-primary {
+  z-index: 2;
+}
+
+.partner-avatar-secondary {
+  z-index: 1;
+  margin-left: -0.55rem;
+}
+
+.partner-avatar-waiting {
+  z-index: 1;
+  margin-left: -0.55rem;
+  border: 1.5px dashed var(--color-brand);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-strong);
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast),
+    background var(--motion-fast);
+}
+
+.partner-avatar-waiting:hover:not(:disabled) {
+  transform: scale(1.06);
+  background: var(--color-discovery-surface);
+}
+
+.partner-avatar-waiting:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.partner-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* Sizes */
+.partner-avatar-pair-small .partner-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+}
+.partner-avatar-pair-small .partner-avatar-secondary,
+.partner-avatar-pair-small .partner-avatar-waiting {
+  margin-left: -0.45rem;
+}
+
+.partner-avatar-pair-medium .partner-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 0.95rem;
+}
+.partner-avatar-pair-medium .partner-avatar-secondary,
+.partner-avatar-pair-medium .partner-avatar-waiting {
+  margin-left: -0.65rem;
+}
+
+.partner-avatar-pair-large .partner-avatar {
+  width: 58px;
+  height: 58px;
+  font-size: 1.25rem;
+}
+.partner-avatar-pair-large .partner-avatar-secondary,
+.partner-avatar-pair-large .partner-avatar-waiting {
+  margin-left: -0.85rem;
+}
+
+/* Presence pip */
+.partner-presence-pip {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-shared);
+  box-shadow: 0 0 0 2px var(--color-surface);
+  z-index: 3;
+}
+
+.partner-avatar-pair-large .partner-presence-pip {
+  width: 14px;
+  height: 14px;
+  bottom: 2px;
+  right: 2px;
+}
