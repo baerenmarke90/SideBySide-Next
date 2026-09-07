@@ -26,6 +26,7 @@ import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
 import { Snackbar } from './Snackbar';
 import { ThemeControl } from './ThemeControl';
+import './AppShellB2.css';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const { t } = useTranslation();
@@ -158,56 +159,71 @@ export function AppShell({
   const unreadCount = unreadQuery.data?.unreadCount ?? 0;
 
   return (
-    <div className="product-shell">
+    <div className="product-shell product-shell-b2">
       <ThemeControl />
       <a className="skip-link" href="#main-content">
         {t('navigation.skipToContent')}
       </a>
 
-      <header className="app-header product-topbar">
-        <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
-        <div className="header-actions">
-          <span
-            className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}
+      <header className="app-header product-topbar product-topbar-b2">
+        <div className="product-topbar-layout">
+          <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
+
+          <nav
+            className="shell-nav shell-nav-desktop"
+            aria-label={t('navigation.primary')}
           >
-            {isPrivateArea ? (
-              <>
-                <span aria-hidden="true">🔒</span>{' '}
-                {t('privateArea.privacyLabel')}
-              </>
-            ) : (
-              <>
-                <span aria-hidden="true">♥</span> {t('header.sharedArea')}
-              </>
-            )}
-          </span>
-          <NavLink
-            to={SEARCH_ROUTE}
-            className={({ isActive }) =>
-              `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
-            }
-            aria-label={t('navigation.search')}
-            title={t('navigation.search')}
-          >
-            <span className="shell-nav-icon" aria-hidden="true">
-              <DestinationIcon icon="search" />
+            <PrimaryNavigationLinks />
+          </nav>
+
+          <div className="header-actions">
+            <span
+              className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}
+            >
+              {isPrivateArea ? (
+                <>
+                  <span aria-hidden="true">🔒</span>{' '}
+                  {t('privateArea.privacyLabel')}
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">♥</span> {t('header.sharedArea')}
+                </>
+              )}
             </span>
-          </NavLink>
-          <HeaderNotificationsMenu
-            apiBaseUrl={apiBaseUrl}
-            accessToken={accessToken}
-            spaceId={spaceId}
-            unreadCount={unreadCount}
-            currentAccountId={account.id}
-          />
-          <HeaderProfileMenu
-            apiBaseUrl={apiBaseUrl}
-            accessToken={accessToken}
-            account={account}
-            spaceId={spaceId}
-            serverAdmin={serverAdmin}
-            onLogout={logout}
-          />
+
+            <div className="shell-primary-action shell-header-create">
+              <QuickCreateMenu variant="desktop" />
+            </div>
+
+            <NavLink
+              to={SEARCH_ROUTE}
+              className={({ isActive }) =>
+                `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
+              }
+              aria-label={t('navigation.search')}
+              title={t('navigation.search')}
+            >
+              <span className="shell-nav-icon" aria-hidden="true">
+                <DestinationIcon icon="search" />
+              </span>
+            </NavLink>
+            <HeaderNotificationsMenu
+              apiBaseUrl={apiBaseUrl}
+              accessToken={accessToken}
+              spaceId={spaceId}
+              unreadCount={unreadCount}
+              currentAccountId={account.id}
+            />
+            <HeaderProfileMenu
+              apiBaseUrl={apiBaseUrl}
+              accessToken={accessToken}
+              account={account}
+              spaceId={spaceId}
+              serverAdmin={serverAdmin}
+              onLogout={logout}
+            />
+          </div>
         </div>
       </header>
 
@@ -226,17 +242,6 @@ export function AppShell({
       ) : null}
 
       <div className="product-shell-body">
-        <aside className="shell-sidebar">
-          <div className="shell-sidebar-inner">
-            <div className="shell-primary-action">
-              <QuickCreateMenu variant="desktop" />
-            </div>
-            <nav className="shell-nav" aria-label={t('navigation.primary')}>
-              <PrimaryNavigationLinks />
-            </nav>
-          </div>
-        </aside>
-
         <main
           key={location.pathname}
           id="main-content"
