@@ -9,8 +9,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import navigation from '../i18n/locales/navigation';
-import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { AppShell } from './AppShell';
+import { personInitials } from './PersonIdentity';
 
 /** Opening anchor tags, so attribute order in the markup does not matter. */
 function anchorTags(html: string): string[] {
@@ -246,29 +246,26 @@ describe('AppShell', () => {
     expect(html).toContain('Unsere Aktivitäten');
   });
 
-  it('shows a couple presence cluster in the header, separate from the account menu', () => {
+  it('shows only the partner in the header couple presence, never the account a second time', () => {
     const html = renderShell('/story');
     const header = html.slice(
       html.indexOf('<header'),
       html.indexOf('</header>') + '</header>'.length,
     );
 
-    const connectedLabel = relationshipComponents.partnerAvatarConnected
-      .replace('{{user}}', 'Alex Example')
-      .replace('{{partner}}', 'Sam Example');
-
-    expect(header).toContain('header-couple-presence');
-    expect(header).toContain('partner-avatar-pair-small');
-    expect(header).toContain('status-connected');
-    expect(header).toContain(connectedLabel);
-
     const coupleIndex = header.indexOf('header-couple-presence');
     const profileMenuIndex = header.indexOf('header-profile-menu');
     expect(coupleIndex).toBeGreaterThan(-1);
     expect(profileMenuIndex).toBeGreaterThan(coupleIndex);
+
+    const coupleBlock = header.slice(coupleIndex, profileMenuIndex);
+    expect(coupleBlock).toContain('title="Sam Example"');
+    expect(coupleBlock).toContain(personInitials('Sam Example'));
+    expect(coupleBlock).not.toContain('Alex Example');
+    expect(coupleBlock).not.toContain(personInitials('Alex Example'));
   });
 
-  it('hides the couple presence cluster entirely when no partner can be resolved, rather than a waiting placeholder', () => {
+  it('hides the couple presence entirely when no partner can be resolved, rather than a waiting placeholder', () => {
     const html = renderShell('/story', false, 0, [
       { id: 'account-1', displayName: 'Alex Example' },
     ]);
@@ -278,7 +275,6 @@ describe('AppShell', () => {
     );
 
     expect(header).not.toContain('header-couple-presence');
-    expect(header).not.toContain('partner-avatar-waiting');
   });
 
   it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {

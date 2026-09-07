@@ -5,11 +5,13 @@ import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { normalizeClientError } from '../client/problemDetails';
-import { PartnerAvatarPair } from './PartnerAvatarPair';
+import { useTranslation } from '../i18n';
+import { PersonIdentity } from './PersonIdentity';
 
 /**
- * Quiet header signal that both partners share this Space, distinct from the
- * account menu (HeaderProfileMenu) which stays "my account" only.
+ * Quiet header signal that the partner shares this Space. The account's own
+ * avatar already lives in HeaderProfileMenu right next to this, so this only
+ * ever renders the partner — never the account a second time.
  */
 export function HeaderCouplePresence({
   apiBaseUrl,
@@ -22,6 +24,7 @@ export function HeaderCouplePresence({
   account: AccountView;
   spaceId: string;
 }) {
+  const { t } = useTranslation();
   const configuration = useMemo(
     () =>
       new Configuration({
@@ -52,18 +55,21 @@ export function HeaderCouplePresence({
     (candidate) => candidate.id !== account.id,
   );
 
-  // Only a resolved partner is worth a couple-presence signal: with none, this
-  // would just duplicate the account's own avatar next to a dashed invite
-  // placeholder, which reads as a broken button rather than "no partner yet".
+  // Only a resolved partner is worth a couple-presence signal: with none,
+  // there is nothing distinct from the account's own avatar to show.
   if (!partner) return null;
 
   return (
-    <PartnerAvatarPair
-      className="header-couple-presence"
-      primaryPerson={{ displayName: account.displayName }}
-      secondaryPerson={{ displayName: partner.displayName }}
-      size="small"
-      status="connected"
-    />
+    <span className="header-couple-presence" title={partner.displayName}>
+      <PersonIdentity
+        displayName={partner.displayName}
+        size="small"
+        showName={false}
+        imageAlt={t('profileIdentity.imageAlt', { name: partner.displayName })}
+        fallbackAlt={t('profileIdentity.fallbackAlt', {
+          name: partner.displayName,
+        })}
+      />
+    </span>
   );
 }
