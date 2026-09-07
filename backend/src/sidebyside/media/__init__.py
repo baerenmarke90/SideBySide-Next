@@ -13,6 +13,7 @@ from sidebyside.media.base import (
     ByteSource,
     MediaStore,
     StoredObject,
+    build_account_storage_key,
     build_storage_key,
 )
 from sidebyside.media.local import LocalMediaStore
@@ -30,6 +31,7 @@ __all__ = [
     "S3MediaStore",
     "SignedUpload",
     "StoredObject",
+    "build_account_storage_key",
     "build_storage_key",
     "create_signed_upload",
     "get_media_store",

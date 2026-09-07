@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from sidebyside.attachments import binding as attachment_binding
@@ -885,8 +885,31 @@ def _detach_and_purge_media(
             expected_version=heart_moment.version,
         )
 
+    # Account-global profile media is owned by the Account, not by the demo
+    # Space, so deleting the Space no longer removes it (#692). The reset is
+    # the authority that rebuilds a persona's visitor-facing state, so it
+    # detaches and purges the avatar explicitly instead of relying on a Space
+    # cascade that no longer applies.
+    for account in (lea, alex):
+        profile_service.set_profile_attachment(
+            session,
+            contexts[account.id],
+            None,
+        )
+    session.flush()
+
     attachments = list(
-        session.execute(select(Attachment).where(Attachment.space_id == space.id)).scalars()
+        session.execute(
+            select(Attachment).where(
+                or_(
+                    Attachment.space_id == space.id,
+                    and_(
+                        Attachment.space_id.is_(None),
+                        Attachment.owner_id.in_([lea.id, alex.id]),
+                    ),
+                )
+            )
+        ).scalars()
     )
     for attachment in attachments:
         attachment_service.mark_for_deletion(session, attachment)

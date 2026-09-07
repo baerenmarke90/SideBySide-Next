@@ -7,7 +7,16 @@ from enum import StrEnum
 from typing import ClassVar
 from uuid import UUID
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, Integer, SmallInteger, String
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+)
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
@@ -66,9 +75,11 @@ class Attachment(
 ):
     """An uploaded file and its lifecycle state.
 
-    Storage key is deliberately not persisted. It is derived from space and
-    attachment ID by ``media.build_storage_key``; a column would create a
-    second source of truth that could drift, and the contract never exposes it.
+    Storage key is deliberately not persisted. It is derived from the current
+    storage home and the attachment ID by ``service.storage_key_for``; a column
+    would create a second source of truth that could drift, and the contract
+    never exposes it. ``space_id`` decides which home applies, so the row stays
+    the only authority for where its bytes live.
     """
 
     __tablename__ = "attachments"
@@ -76,6 +87,30 @@ class Attachment(
     privacy_absence: ClassVar[ResourceAbsence] = ResourceAbsence(
         "Attachment not found.", "RESOURCE_NOT_FOUND"
     )
+
+    space_id: Mapped[UUID | None] = mapped_column(  # type: ignore[assignment]
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    """The Space that owns this media, or ``NULL`` for Account-owned media.
+
+    This is the single deliberate exception to the mandatory tenant key of
+    ``PrivateResourceMixin``, and it names the authoritative lifecycle parent
+    rather than relaxing tenancy. Account-global profile media (the avatar) has
+    to outlive every individual Space, so it cannot keep a tenant key whose
+    Space retention would cascade the row away; ``attachments.account_media``
+    owns that transfer and moves the provider object to the Account storage
+    home in the same step.
+
+    Nothing about authorization becomes weaker. Every Space-scoped query
+    compares ``space_id`` against the caller's Space, and SQL comparison with
+    ``NULL`` is never true, so an Account-owned row is unreachable through
+    every Space attachment route. Its bytes stay reachable only through the
+    profile-avatar route, which authorizes the subject's profile in the
+    caller's own Space first.
+    """
 
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     media_type: Mapped[str] = mapped_column(String(16), nullable=False)
