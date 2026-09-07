@@ -5,6 +5,7 @@ import {
   type PartnerAvatarPerson,
   type PartnerPresenceStatus,
 } from './PartnerAvatarPair';
+import { firstNameFromDisplayName } from '../client/personalName';
 import relationshipComponents from '../i18n/locales/relationshipComponents';
 import './CouplePresence.css';
 
@@ -49,6 +50,32 @@ export function CouplePresence({
         ? relationshipComponents.couplePresenceWaiting
         : relationshipComponents.couplePresenceOffline;
 
+  const primaryFirstName = firstNameFromDisplayName(
+    primaryPerson.displayName,
+    relationshipComponents.couplePresenceYouFallback,
+  );
+  const secondaryFirstName = secondaryPerson
+    ? firstNameFromDisplayName(
+        secondaryPerson.displayName,
+        relationshipComponents.couplePresencePartnerFallback,
+      )
+    : null;
+  const presenceTitle = secondaryFirstName
+    ? `${primaryFirstName} & ${secondaryFirstName}`
+    : spaceTitle;
+  const heroPrimaryPerson = {
+    ...primaryPerson,
+    displayName: primaryFirstName,
+  };
+  const heroSecondaryPerson = secondaryPerson
+    ? {
+        ...secondaryPerson,
+        displayName:
+          secondaryFirstName ||
+          relationshipComponents.couplePresencePartnerFallback,
+      }
+    : null;
+
   const HeadingTag = headingLevel;
 
   return (
@@ -58,8 +85,8 @@ export function CouplePresence({
     >
       <div className="couple-presence-main">
         <PartnerAvatarPair
-          primaryPerson={primaryPerson}
-          secondaryPerson={secondaryPerson}
+          primaryPerson={heroPrimaryPerson}
+          secondaryPerson={heroSecondaryPerson}
           status={status}
           size="large"
           onInviteClick={onInviteClick}
@@ -67,7 +94,7 @@ export function CouplePresence({
 
         <div className="couple-presence-details">
           <HeadingTag id={titleId} className="couple-presence-title">
-            {spaceTitle}
+            {presenceTitle}
           </HeadingTag>
 
           <div className="couple-presence-meta">

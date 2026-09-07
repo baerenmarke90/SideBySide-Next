@@ -21,13 +21,16 @@ describe('ThinkingOfYouButton', () => {
       'Lea',
     );
 
-  it('renders default idle state with personalized partner label', () => {
-    render(<ThinkingOfYouButton partnerName="Lea" />);
+  it('uses only the partner first name in the personalized idle label', () => {
+    render(<ThinkingOfYouButton partnerName="Lea Winter" />);
 
     const btn = screen.getByRole('button', {
       name: expectedPartnerLabel,
     });
-    expect(btn).toBeDefined();
+    expect(btn.getAttribute('aria-label')).toBe(expectedPartnerLabel);
+    expect(btn.getAttribute('title')).toBe(expectedPartnerLabel);
+    expect(btn.getAttribute('aria-label')).not.toContain('Winter');
+    expect(btn.getAttribute('title')).not.toContain('Winter');
     expect(
       screen.getByText(relationshipComponents.thinkingOfYouAction),
     ).toBeDefined();

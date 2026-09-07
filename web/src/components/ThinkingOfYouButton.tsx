@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { firstNameFromDisplayName } from '../client/personalName';
 import relationshipComponents from '../i18n/locales/relationshipComponents';
 import './ThinkingOfYouButton.css';
 
@@ -35,10 +36,13 @@ export function ThinkingOfYouButton({
     }
   }, [state, disabled, onSend]);
 
-  const targetLabel = partnerName
+  const personalPartnerName = partnerName
+    ? firstNameFromDisplayName(partnerName, '')
+    : '';
+  const targetLabel = personalPartnerName
     ? relationshipComponents.thinkingOfYouSendToPartner.replace(
         '{{partner}}',
-        partnerName,
+        personalPartnerName,
       )
     : relationshipComponents.thinkingOfYouAction;
 
