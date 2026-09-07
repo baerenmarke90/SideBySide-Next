@@ -96,10 +96,10 @@ Typography is self-hosted with zero runtime CDN dependencies.
 
 ## 6. Voice & Tone
 
-- **Perspective:** Speak directly to the couple: *„ihr“*, *„euer“*, *„gemeinsam“*.
+- **Perspective:** Speak directly to the couple (*„ihr“*, *„euer“*, *„gemeinsam“*).
 - **Tone:** Empathetic, calm, respectful, unhurried.
-- **Clarity over cleverness:** Explain actions concretely (e.g. *„Erinnerung festhalten“*, *„Gemeinsam planen“*, *„Nur für mich sichtbar“*).
-- **No artificial pressure:** Never use streaks, guilt mechanics (*„Du hast Lea heute noch nichts geschickt!“*), or manipulative push notifications.
+- **Clarity over cleverness:** Explain actions concretely and empathetically rather than with abstract system terminology.
+- **No artificial pressure:** Never use streaks, guilt mechanics (e.g. "You haven't sent Lea anything today!"), or manipulative push notifications.
 
 ---
 
