@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from 'react';
 import {
   attachmentDraftReducer,
@@ -19,6 +20,15 @@ import {
 } from './memoryAttachmentDraft';
 import type { ReferenceApis } from './referenceFlow';
 
+/**
+ * How many automatic draft uploads run at once (#701). A small, fixed queue
+ * width, not a security boundary -- the backend's 20-attachment/500MiB
+ * limits remain authoritative regardless of this value. Bounding it also
+ * bounds READY-status polling, since polling only ever runs for the
+ * currently in-flight uploads.
+ */
+const MAX_CONCURRENT_UPLOADS = 3;
+
 export interface AttachmentDraftOptions {
   apis: ReferenceApis;
   apiBaseUrl: string;
@@ -27,6 +37,13 @@ export interface AttachmentDraftOptions {
   accountId: string;
   fetchApi?: typeof fetch;
   uploadAttachmentFn?: typeof uploadMemoryDraftAttachment;
+  /**
+   * Caller-computed remaining capacity (`MAX_MEMORY_ATTACHMENTS -
+   * alreadyBoundAttachmentCount`). Files beyond this never start a server
+   * upload. Defaults to unlimited for callers that enforce their own cap
+   * natively (e.g. a single-file picker).
+   */
+  maxAttachments?: number;
 }
 
 export function formatAttachmentDraftContextKey(
@@ -110,6 +127,7 @@ export function useAttachmentDrafts({
   accountId,
   fetchApi = fetch,
   uploadAttachmentFn = uploadMemoryDraftAttachment,
+  maxAttachments = Number.POSITIVE_INFINITY,
 }: AttachmentDraftOptions) {
   const contextKey = formatAttachmentDraftContextKey(accountId, spaceId);
   const committedContextKey = useRef(contextKey);
@@ -118,6 +136,15 @@ export function useAttachmentDrafts({
   const previewUrls = useRef(new Map<string, string>());
   const uploads = useRef(new Map<string, AbortController>());
   const mounted = useRef(true);
+  // Bounded automatic-upload orchestration (#701): draftCount tracks
+  // reserved capacity synchronously (state/`items` only updates on the next
+  // render), queue holds drafts accepted but not yet started, and
+  // activeUploads counts uploads currently running so pump() never starts
+  // more than MAX_CONCURRENT_UPLOADS at once.
+  const draftCount = useRef(0);
+  const queue = useRef<Array<{ id: string; file: File }>>([]);
+  const activeUploads = useRef(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
 
   const [store, dispatch] = useReducer(attachmentDraftStoreReducer, {
     contextKey,
@@ -130,6 +157,10 @@ export function useAttachmentDrafts({
       committedContextKey.current = contextKey;
       currentGeneration.current += 1;
       abortAndRevoke(uploads.current, previewUrls.current);
+      draftCount.current = 0;
+      queue.current = [];
+      activeUploads.current = 0;
+      setRejectedCount(0);
       dispatch({
         type: 'reset_context',
         contextKey,
@@ -152,7 +183,24 @@ export function useAttachmentDrafts({
     committedContextKey.current === contextKey;
   const items = isCurrentContext ? store.items : [];
 
-  const startUpload = useCallback(
+  // `pump` and `runUpload` are mutually recursive (pump starts queued
+  // uploads; each upload's completion calls pump again to start the next
+  // one). runUploadRef breaks the circular useCallback dependency.
+  const runUploadRef = useRef<(id: string, file: File) => void>(() => {});
+
+  const pump = useCallback(() => {
+    while (
+      activeUploads.current < MAX_CONCURRENT_UPLOADS &&
+      queue.current.length > 0
+    ) {
+      const next = queue.current.shift();
+      if (!next) break;
+      activeUploads.current += 1;
+      runUploadRef.current(next.id, next.file);
+    }
+  }, []);
+
+  const runUpload = useCallback(
     (id: string, file: File) => {
       uploads.current.get(id)?.abort();
       const controller = new AbortController();
@@ -227,9 +275,33 @@ export function useAttachmentDrafts({
               error: errorMessage(error),
             },
           });
+        })
+        .finally(() => {
+          // Release the queue slot even for a removed/aborted/stale-context
+          // draft: the slot belongs to the upload lifecycle, not to whether
+          // its result was still relevant.
+          activeUploads.current = Math.max(0, activeUploads.current - 1);
+          pump();
         });
     },
-    [accessToken, apiBaseUrl, apis, fetchApi, spaceId, uploadAttachmentFn],
+    [
+      accessToken,
+      apiBaseUrl,
+      apis,
+      fetchApi,
+      pump,
+      spaceId,
+      uploadAttachmentFn,
+    ],
+  );
+  runUploadRef.current = runUpload;
+
+  const enqueue = useCallback(
+    (id: string, file: File) => {
+      queue.current.push({ id, file });
+      pump();
+    },
+    [pump],
   );
 
   const addFiles = useCallback(
@@ -237,10 +309,19 @@ export function useAttachmentDrafts({
       if (!files) return;
       const currentContext = committedContextKey.current;
       const currentGen = currentGeneration.current;
-      for (const file of Array.from(files)) {
+      const selected = Array.from(files);
+      const remainingCapacity = Math.max(
+        0,
+        maxAttachments - draftCount.current,
+      );
+      const accepted = selected.slice(0, remainingCapacity);
+      setRejectedCount(selected.length - accepted.length);
+
+      for (const file of accepted) {
         const id = globalThis.crypto.randomUUID();
         const previewUrl = URL.createObjectURL(file);
         previewUrls.current.set(id, previewUrl);
+        draftCount.current += 1;
         dispatch({
           type: 'draft_action',
           contextKey: currentContext,
@@ -257,20 +338,22 @@ export function useAttachmentDrafts({
             },
           },
         });
-        startUpload(id, file);
+        enqueue(id, file);
       }
     },
-    [startUpload],
+    [enqueue, maxAttachments],
   );
 
   const cancel = useCallback((id: string) => {
     uploads.current.get(id)?.abort();
     uploads.current.delete(id);
+    queue.current = queue.current.filter((item) => item.id !== id);
   }, []);
 
   const remove = useCallback(
     (id: string) => {
       cancel(id);
+      draftCount.current = Math.max(0, draftCount.current - 1);
       const previewUrl = previewUrls.current.get(id);
       if (previewUrl) {
         try {
@@ -291,13 +374,17 @@ export function useAttachmentDrafts({
   );
 
   const retry = useCallback(
-    (draft: AttachmentDraft) => startUpload(draft.id, draft.file),
-    [startUpload],
+    (draft: AttachmentDraft) => enqueue(draft.id, draft.file),
+    [enqueue],
   );
 
   const clear = useCallback(() => {
     currentGeneration.current += 1;
     abortAndRevoke(uploads.current, previewUrls.current);
+    draftCount.current = 0;
+    queue.current = [];
+    activeUploads.current = 0;
+    setRejectedCount(0);
     dispatch({
       type: 'reset_context',
       contextKey: committedContextKey.current,
@@ -317,6 +404,7 @@ export function useAttachmentDrafts({
     clear,
     readyIds,
     hasPending,
+    rejectedCount,
     contextKey,
     generation: currentGeneration.current,
   };
