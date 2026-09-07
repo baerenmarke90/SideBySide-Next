@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PartnerAvatarPair,
@@ -39,6 +39,9 @@ export function CouplePresence({
   headingLevel = 'h2',
   className = '',
 }: CouplePresenceProps) {
+  const generatedId = useId();
+  const titleId = `couple-presence-title-${generatedId}`;
+
   const defaultStatusText =
     status === 'connected'
       ? relationshipComponents.couplePresenceConnected
@@ -51,7 +54,7 @@ export function CouplePresence({
   return (
     <section
       className={`couple-presence-card ${className}`}
-      aria-labelledby="couple-presence-title"
+      aria-labelledby={titleId}
     >
       <div className="couple-presence-main">
         <PartnerAvatarPair
@@ -63,10 +66,7 @@ export function CouplePresence({
         />
 
         <div className="couple-presence-details">
-          <HeadingTag
-            id="couple-presence-title"
-            className="couple-presence-title"
-          >
+          <HeadingTag id={titleId} className="couple-presence-title">
             {spaceTitle}
           </HeadingTag>
 
