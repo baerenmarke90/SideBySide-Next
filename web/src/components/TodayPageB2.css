@@ -66,6 +66,10 @@
   box-shadow: 0 12px 34px var(--color-shadow-brand);
 }
 
+.today-page .today-hero .partner-avatar {
+  color: var(--color-brand-text);
+}
+
 .today-page .today-hero-action-container {
   justify-content: flex-start;
 }
