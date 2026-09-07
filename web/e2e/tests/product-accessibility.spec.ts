@@ -213,10 +213,24 @@ async function signIn(page: Page): Promise<void> {
 }
 
 async function navigateWithinApp(page: Page, path: string): Promise<void> {
-  await page.evaluate((nextPath) => {
-    window.history.pushState({}, '', nextPath);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
+  if (path === '/plan') {
+    await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+    return;
+  }
+
+  await page.getByRole('link', { name: navigation.more, exact: true }).click();
+  await expect(page).toHaveURL(/\/more$/);
+
+  if (path === '/more/collections') {
+    await page.getByRole('link', { name: de.more.collections.title }).click();
+    return;
+  }
+  if (path === '/more/places') {
+    await page.getByRole('link', { name: de.more.places.title }).click();
+    return;
+  }
+
+  throw new Error(`Unsupported in-app test destination: ${path}`);
 }
 
 test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean', async ({
