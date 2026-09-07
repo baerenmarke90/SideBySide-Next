@@ -108,25 +108,32 @@ jobs:
                   raise SystemExit(f"PlanScreen context changed: {old}")
               screen = screen.replace(old, new, 1)
 
-          date_field = """                    OutlinedTextField(
-                          value = startOn,
-                          onValueChange = { startOn = it },
-                          label = { Text(stringResource(R.string.plan_schedule_date_hint)) },
-                          singleLine = true,
-                          modifier = Modifier.fillMaxWidth(),
-                      )
-          """
-          fields = date_field + """                    OutlinedTextField(
-                          value = startAt,
-                          onValueChange = { startAt = it },
-                          label = { Text(stringResource(R.string.plan_schedule_time_hint)) },
-                          singleLine = true,
-                          modifier = Modifier.fillMaxWidth(),
-                      )
-          """
-          if date_field not in screen:
-              raise SystemExit("Plan schedule date-field context changed")
-          screen = screen.replace(date_field, fields, 1)
+          date_field_pattern = re.compile(
+              r"(?P<field>^                    OutlinedTextField\(\n"
+              r"                        value = startOn,\n"
+              r"                        onValueChange = \{ startOn = it \},\n"
+              r"                        label = \{ Text\(stringResource\(R\.string\.plan_schedule_date_hint\)\) \},\n"
+              r"                        singleLine = true,\n"
+              r"                        modifier = Modifier\.fillMaxWidth\(\),\n"
+              r"                    \))",
+              re.MULTILINE,
+          )
+          time_field = (
+              "                    OutlinedTextField(\n"
+              "                        value = startAt,\n"
+              "                        onValueChange = { startAt = it },\n"
+              "                        label = { Text(stringResource(R.string.plan_schedule_time_hint)) },\n"
+              "                        singleLine = true,\n"
+              "                        modifier = Modifier.fillMaxWidth(),\n"
+              "                    )"
+          )
+          screen, count = date_field_pattern.subn(
+              lambda match: match.group("field") + "\n" + time_field,
+              screen,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f"Expected one Plan schedule date field, got {count}")
 
           date_formatter = "val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)"
           if date_formatter not in screen:
