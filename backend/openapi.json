@@ -1487,6 +1487,16 @@
       },
       "DashboardView": {
         "properties": {
+          "keepsake": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "recentShared": {
             "items": {
               "$ref": "#/components/schemas/DashboardItem"
@@ -1529,6 +1539,7 @@
           "space",
           "relationshipDuration",
           "retrospective",
+          "keepsake",
           "upcoming",
           "recentShared"
         ],

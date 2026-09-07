@@ -164,104 +164,41 @@
   animation: heart-sparkle 0.6s ease-out;
 }
 
-/* Context Area: Primary Contextual Slot & Relationship Signal */
-.today-context-area {
+/* Shared Planning Horizon (calm agenda) + Relationship Signal */
+.today-planning-area {
   margin-bottom: var(--space-8);
 }
 
-.today-context-dual {
+.today-planning-dual {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
 }
 
 @media (min-width: 840px) {
-  .today-context-dual {
-    grid-template-columns: 1.15fr 0.85fr;
+  .today-planning-dual {
+    grid-template-columns: 1.4fr 1fr;
     align-items: stretch;
   }
 }
 
-.today-context-single {
+.today-planning-single {
   display: block;
 }
 
-.today-context-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  border-radius: var(--radius-card);
-}
-
-.today-context-link:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.today-context-card {
-  height: 100%;
+.today-planning-agenda {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: var(--space-5);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: 0 4px 16px var(--color-shadow-soft);
-  transition:
-    transform var(--motion-duration-medium) var(--motion-easing-lift),
-    border-color var(--motion-fast),
-    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
 }
 
-.today-context-link:hover .today-context-card {
-  transform: translateY(-2px);
-  border-color: var(--color-brand-glow);
-}
-
-.today-context-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.today-context-kicker {
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-brand-text);
-}
-
-.today-context-title {
-  margin: var(--space-1) 0 var(--space-3);
-  font-family: var(--font-ui);
-  font-size: 1.2rem;
-  font-weight: 750;
-  line-height: 1.35;
+.today-planning-heading {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-2);
   color: var(--color-text);
-}
-
-.today-context-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.today-context-date {
-  font-weight: 600;
-}
-
-.today-context-action {
-  font-weight: 700;
-  color: var(--color-brand);
+  font-family: var(--font-ui);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
 .today-signal-card {
@@ -399,18 +336,16 @@
   scroll-snap-align: start;
 }
 
-.today-card-shell-upcoming {
-  flex-basis: min(340px, 82vw);
-}
-
 .today-card-shell-retrospective,
 .today-card-shell-keepsake {
   flex-basis: min(340px, 80vw);
   width: 100%;
 }
 
+/* The Keepsake/retrospective is the page's photographic focal point, so it
+   uses the full available page width instead of a narrow inset column. */
 .today-retrospective-container {
-  max-width: 44rem;
+  width: 100%;
 }
 
 .today-section-keepsake .today-section-title {
@@ -485,20 +420,6 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-}
-
-@media (min-width: 860px) {
-  .today-stream-upcoming {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-    gap: var(--space-4);
-    overflow: visible;
-  }
-
-  .today-stream-upcoming .today-card-shell {
-    flex: none;
-    width: auto;
-  }
 }
 
 .today-stream.today-stream-recent {
@@ -709,22 +630,6 @@
   max-width: 100%;
 }
 
-.today-card-upcoming {
-  min-height: 140px;
-  padding: var(--space-4) var(--space-5);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.today-card-upcoming .today-card-title {
-  max-width: 24ch;
-  font-family: var(--font-ui);
-  font-size: clamp(1.1rem, 2vw, 1.28rem);
-  font-weight: 700;
-  margin: var(--space-2) 0;
-}
-
 .today-card-link:hover .today-card {
   transform: translateY(-3px);
   border-color: var(--color-brand-glow);
@@ -804,110 +709,45 @@
   height: 1.05rem;
 }
 
-/* Semantic type badges */
+/* Semantic type badges — reuse the shared brand/shared/technical/discovery/
+   private design tokens (docs/DESIGN-PRINCIPLES.md §3.1) instead of inventing
+   a page-local rainbow palette. Each token already carries a correct dark-mode
+   value, so no per-kind dark override is needed here. */
+.today-kind-heart_moment,
+.today-kind-anniversary {
+  background: var(--color-brand-surface);
+  border-color: var(--color-brand-glow);
+  color: var(--color-brand-text);
+}
+
 .today-kind-birthday {
-  background: #fef3c722;
-  border-color: #f59e0b44;
-  color: #b45309;
-}
-:root[data-theme="dark"] .today-kind-birthday {
-  background: #78350f25;
-  border-color: #f59e0b55;
-  color: #fcd34d;
-}
-
-.today-kind-anniversary,
-.today-kind-heart_moment {
-  background: #ffe4e628;
-  border-color: #f43f5e44;
-  color: #be123c;
-}
-:root[data-theme="dark"] .today-kind-anniversary,
-:root[data-theme="dark"] .today-kind-heart_moment {
-  background: #88133728;
-  border-color: #f43f5e55;
-  color: #fda4af;
-}
-
-.today-kind-milestone {
-  background: #fef9c328;
-  border-color: #eab30844;
-  color: #a16207;
-}
-:root[data-theme="dark"] .today-kind-milestone {
-  background: #713f1228;
-  border-color: #eab30855;
-  color: #fde047;
+  background: var(--color-private-surface-soft);
+  border-color: var(--color-private-surface-soft);
+  color: var(--color-private);
 }
 
 .today-kind-plan,
 .today-kind-important_date {
-  background: #e0e7ff28;
-  border-color: #6366f144;
-  color: #4338ca;
-}
-:root[data-theme="dark"] .today-kind-plan,
-:root[data-theme="dark"] .today-kind-important_date {
-  background: #312e8128;
-  border-color: #6366f155;
-  color: #a5b4fc;
+  background: var(--color-technical-surface);
+  border-color: var(--color-technical-surface);
+  color: var(--color-technical);
 }
 
-.today-kind-chapter {
-  background: #ede9fe28;
-  border-color: #8b5cf644;
-  color: #6d28d9;
-}
-:root[data-theme="dark"] .today-kind-chapter {
-  background: #4c1d9528;
-  border-color: #8b5cf655;
-  color: #c4b5fd;
-}
-
+.today-kind-memory,
+.today-kind-chapter,
 .today-kind-collection,
-.today-kind-collection_item {
-  background: #ccfbf128;
-  border-color: #14b8a644;
-  color: #0f766e;
-}
-:root[data-theme="dark"] .today-kind-collection,
-:root[data-theme="dark"] .today-kind-collection_item {
-  background: #134e4a28;
-  border-color: #14b8a655;
-  color: #5eead4;
+.today-kind-collection_item,
+.today-kind-milestone {
+  background: var(--color-shared-surface);
+  border-color: var(--color-shared-border);
+  color: var(--color-shared-accent);
 }
 
-.today-kind-wish {
-  background: #fce7f328;
-  border-color: #ec489944;
-  color: #be185d;
-}
-:root[data-theme="dark"] .today-kind-wish {
-  background: #83184328;
-  border-color: #ec489955;
-  color: #f472b6;
-}
-
-.today-kind-memory {
-  background: #e0f2fe28;
-  border-color: #0ea5e944;
-  color: #0369a1;
-}
-:root[data-theme="dark"] .today-kind-memory {
-  background: #0c4a6e28;
-  border-color: #0ea5e955;
-  color: #7dd3fc;
-}
-
+.today-kind-wish,
 .today-kind-place {
-  background: #d1fae528;
-  border-color: #10b98144;
-  color: #047857;
-}
-:root[data-theme="dark"] .today-kind-place {
-  background: #064e3b28;
-  border-color: #10b98155;
-  color: #6ee7b7;
+  background: var(--color-discovery-surface-soft);
+  border-color: var(--color-discovery-surface-soft);
+  color: var(--color-discovery);
 }
 
 .today-card-retrospective-badge {
@@ -942,6 +782,18 @@
   .today-card-keepsake.today-card-has-media {
     grid-template-columns: 1.15fr 1fr;
     align-items: center;
+  }
+}
+
+@media (min-width: 1100px) {
+  .today-card-retrospective.today-card-has-media,
+  .today-card-keepsake.today-card-has-media {
+    grid-template-columns: 1.5fr 1fr;
+  }
+
+  .today-card-retrospective .today-card-media,
+  .today-card-keepsake .today-card-media {
+    min-height: 320px;
   }
 }
 
@@ -1105,14 +957,12 @@
   }
 
   .today-card-shell,
-  .today-card-shell-upcoming,
   .today-card-shell-retrospective,
   .today-card-shell-keepsake {
     flex-basis: min(300px, 84vw);
   }
 
-  .today-card,
-  .today-card-upcoming {
+  .today-card {
     min-height: 190px;
     padding: var(--space-5);
   }

@@ -219,10 +219,8 @@ const de = {
     streamAll: 'Alle in der Zeitleiste ansehen →',
     featuredHighlight: 'Besonderer Moment',
     featuredKicker: 'Aus euren Momenten',
-    milestonesKicker: 'Gemeinsam erreicht',
     milestonesTitle: 'Meilensteine & gemeinsame Schritte',
     milestonesDesc: 'Große und kleine Stationen eurer gemeinsamen Geschichte.',
-    chaptersKicker: 'Unsere Reise',
     chaptersTitle: 'Kapitel unserer Geschichte',
     chaptersDesc:
       'Gemeinsame Erlebnisse und Reisen nach Lebensabschnitten bündeln.',

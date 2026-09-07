@@ -805,6 +805,7 @@ private class TodayApi : FakeReferenceContract() {
             throw it
         }
         return DashboardView(
+            keepsake = null,
             recentShared = emptyList(),
             relationshipDuration = null,
             retrospective = null,

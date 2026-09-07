@@ -323,6 +323,7 @@ class TodayScreenSemanticsTest {
             )
         }
         return DashboardView(
+            keepsake = null,
             recentShared = recent,
             relationshipDuration = duration,
             retrospective = retrospective,

@@ -269,7 +269,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   expect(dashboardRequestCount).toBe(1);
 
   // Step 2: Navigate to plan details via in-app UI click (NO page.reload())
-  await page.locator('a.today-context-link').click();
+  await page.getByRole('link', { name: /Later October trip/ }).click();
   await expect(page).toHaveURL(new RegExp(`/plan/plans/${PLAN_ID}$`));
   await expect(
     page.getByRole('heading', {
@@ -297,13 +297,9 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   // Step 4: Verify Dashboard query was automatically refetched (poll until React Query refetch completes)
   await expect.poll(() => dashboardRequestCount).toBeGreaterThanOrEqual(2);
 
-  // Step 5: Verify earlier item is now visible in the primary context slot
-  await expect(
-    page.getByRole('heading', {
-      name: 'Earlier September outing',
-      level: 3,
-    }),
-  ).toBeVisible();
+  // Step 5: Verify the rescheduled item is now visible in the Shared Planning
+  // Horizon agenda, and the stale title is gone
+  await expect(page.getByText('Earlier September outing')).toBeVisible();
   await expect(page.getByText('Later October trip')).toHaveCount(0);
 
   // Step 6: Verify no unexpected network requests occurred

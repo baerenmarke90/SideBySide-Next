@@ -99,6 +99,67 @@ export function storyItemPresentation(
   }
 }
 
+export type TapestryRole = 'media' | 'note' | 'milestone' | 'text';
+
+/**
+ * The Discover tapestry gives each content type a distinct physical role
+ * (#790): a photo Memory is image-first, a Heart Moment reads as a note, a
+ * Milestone is a compact marker, and a Memory without media falls back to a
+ * quiet text card.
+ */
+export function tapestryItemRole(item: StoryItem): TapestryRole {
+  if (item.kind === 'MEMORY') {
+    return item.memory.attachments.length > 0 ? 'media' : 'text';
+  }
+  if (item.kind === 'HEART_MOMENT') return 'note';
+  return 'milestone';
+}
+
+/**
+ * Relative weights approximating each role's real rendered height, used to
+ * balance the tapestry's columns. A photo tile reads roughly as tall as three
+ * or four milestone markers, so pure item-count balancing would leave a
+ * media-heavy column much taller than the others.
+ */
+const TAPESTRY_ROLE_WEIGHT: Record<TapestryRole, number> = {
+  media: 7,
+  note: 2,
+  text: 2,
+  milestone: 1,
+};
+
+export function tapestryRoleWeight(role: TapestryRole): number {
+  return TAPESTRY_ROLE_WEIGHT[role];
+}
+
+/**
+ * Greedy shortest-column-first distribution. CSS multi-column's built-in
+ * balancing can leave a trailing column mostly empty once a few tall,
+ * break-inside-avoid photo tiles are mixed with short items (verified against
+ * the real canonical demo dataset), which reproduces exactly the "large
+ * unintended dead zone" #790 asks to remove. Assigning each entry to the
+ * currently lightest column keeps the columns close to equal height without
+ * requiring real DOM measurement.
+ */
+export function distributeIntoTapestryColumns<T>(
+  entries: readonly T[],
+  columnCount: number,
+  weightOf: (entry: T) => number,
+): T[][] {
+  const count = Math.max(1, Math.floor(columnCount));
+  const columns: T[][] = Array.from({ length: count }, () => []);
+  const columnWeights = new Array(count).fill(0);
+  for (const entry of entries) {
+    let lightest = 0;
+    for (let i = 1; i < count; i++) {
+      if (columnWeights[i] < columnWeights[lightest]) lightest = i;
+    }
+    columns[lightest].push(entry);
+    columnWeights[lightest] += weightOf(entry);
+  }
+  return columns;
+}
+
 export function formatStoryDate(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     day: '2-digit',

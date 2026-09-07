@@ -122,11 +122,7 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-export type TodayCardVariant =
-  | 'upcoming'
-  | 'recent'
-  | 'retrospective'
-  | 'keepsake';
+export type TodayCardVariant = 'recent' | 'retrospective' | 'keepsake';
 
 /**
  * Presentation roles for modules composed on the Today orchestration surface.
@@ -180,58 +176,6 @@ export function TodayModuleSection({
       <div className="today-section-body">{children}</div>
     </section>
   );
-}
-
-function TodayContextualCard({ item }: { item: DashboardItem }) {
-  const { t } = useTranslation();
-  const path = dashboardItemPath(item.type, item.id);
-  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
-  const date = rawDate ? formatUpcomingRelative(rawDate, t) : null;
-
-  const kicker =
-    item.type === 'PLAN'
-      ? t('m5s5.today.contextSlot.upcomingPlanKicker')
-      : item.type === 'IMPORTANT_DATE' ||
-          item.type === 'BIRTHDAY' ||
-          item.type === 'ANNIVERSARY'
-        ? t('m5s5.today.contextSlot.importantDateKicker')
-        : t('m5s5.today.contextSlot.kicker');
-
-  const content = (
-    <div className="today-context-card sbs-motion-lift">
-      <div className="today-context-header">
-        <span className="today-context-kicker">{kicker}</span>
-        <span
-          className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
-        >
-          <span className="today-type-icon" aria-hidden="true">
-            <RecentItemTypeIcon type={item.type} />
-          </span>
-          <span>{t(`m5s5.kind.${item.type}`)}</span>
-        </span>
-      </div>
-      <h3 className="today-context-title">
-        {item.titleOrText || t('m5s5.dashboard.itemFallback')}
-      </h3>
-      <div className="today-context-footer">
-        {date ? <span className="today-context-date">{date}</span> : null}
-        {path ? (
-          <span className="today-context-action">
-            {t('m5s5.today.contextSlot.viewDetails')} →
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-
-  if (path) {
-    return (
-      <Link to={path} className="today-context-link">
-        {content}
-      </Link>
-    );
-  }
-  return content;
 }
 
 function TodayRelationshipSignalCard({
@@ -486,11 +430,7 @@ function VisualMemoryCard({
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
   const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
-  const date = rawDate
-    ? variant === 'upcoming'
-      ? formatUpcomingRelative(rawDate, t)
-      : formatDate(rawDate)
-    : null;
+  const date = rawDate ? formatDate(rawDate) : null;
 
   const previewAttachmentId = item.previewAttachmentId;
   const hasMedia = Boolean(previewAttachmentId && loadMemoryImage);
@@ -666,11 +606,11 @@ export function TodayPage({
     partnerProfileQuery.data?.profileAttachmentId,
   );
 
-  // 1. Primary Contextual Slot (0 or 1 item):
-  // Deterministically selects the earliest upcoming item. If empty, the slot disappears.
+  // 1. Shared Planning Horizon: every upcoming item, in the same calm agenda
+  // language (compact date-block rows). The Design Principles orchestration
+  // invariant requires this to stay one coherent module rather than promoting
+  // the first item into its own dashboard-style status card.
   const upcoming = dashboardQuery.data?.upcoming ?? [];
-  const primaryContextItem = upcoming.length > 0 ? upcoming[0] : null;
-  const secondaryUpcoming = upcoming.length > 1 ? upcoming.slice(1) : [];
 
   // 2. Relationship Signal Slot (0 or 1 item):
   // Curated partner interaction (e.g. partner commented on a shared memory).
@@ -686,25 +626,27 @@ export function TodayPage({
         )
       : undefined;
 
-  const hasContextModules = Boolean(
-    primaryContextItem || relationshipSignalItem,
+  const hasPlanningModules = Boolean(
+    upcoming.length > 0 || relationshipSignalItem,
   );
-  const hasBothContextModules = Boolean(
-    primaryContextItem && relationshipSignalItem,
+  const hasBothPlanningModules = Boolean(
+    upcoming.length > 0 && relationshipSignalItem,
   );
   const recentShared = dashboardQuery.data?.recentShared ?? [];
   const retrospective = dashboardQuery.data?.retrospective;
 
-  // Heroic Keepsake: prefer the curated retrospective; otherwise fall back to
-  // the most recent real shared photo so the page never leads with an empty slot.
-  const visualRecentSharedItem =
+  // Heroic Keepsake: a first-class server role (Dashboard.keepsake), not a
+  // client-side scan of the recency-limited recentShared list. That keeps the
+  // page's emotional focal point stable even when recent non-memory activity
+  // would otherwise crowd every visual memory out of recentShared. The curated
+  // retrospective still takes priority when one exists for today.
+  const serverKeepsake = dashboardQuery.data?.keepsake;
+  const keepsakeItem =
     !retrospective && loadMemoryImage
-      ? recentShared.find(
-          (item) => item.type === 'MEMORY' && Boolean(item.previewAttachmentId),
-        )
+      ? (serverKeepsake ?? undefined)
       : undefined;
-  const recentSharedForTrace = visualRecentSharedItem
-    ? recentShared.filter((item) => item.id !== visualRecentSharedItem.id)
+  const recentSharedForTrace = keepsakeItem
+    ? recentShared.filter((item) => item.id !== keepsakeItem.id)
     : recentShared;
 
   const isSparse = Boolean(
@@ -712,7 +654,8 @@ export function TodayPage({
       upcoming.length === 0 &&
       recentShared.length === 0 &&
       !retrospective &&
-      !relationshipSignalItem,
+      !relationshipSignalItem &&
+      !serverKeepsake,
   );
 
   return (
@@ -832,7 +775,7 @@ export function TodayPage({
                     />
                   </div>
                 </TodayModuleSection>
-              ) : visualRecentSharedItem ? (
+              ) : keepsakeItem ? (
                 <TodayModuleSection
                   className="today-section-retrospective today-section-keepsake"
                   title={t('m5s5.today.keepsake.title')}
@@ -841,7 +784,7 @@ export function TodayPage({
                 >
                   <div className="today-retrospective-container">
                     <VisualMemoryCard
-                      item={visualRecentSharedItem}
+                      item={keepsakeItem}
                       variant="keepsake"
                       loadMemoryImage={loadMemoryImage}
                     />
@@ -849,17 +792,29 @@ export function TodayPage({
                 </TodayModuleSection>
               ) : null}
 
-              {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
-              {hasContextModules ? (
+              {/* ROLE: Shared Planning Horizon (calm agenda rows, every upcoming
+                  item in the same visual language) + Relationship Signal. Both
+                  are optional and share one two-zone area on wide screens so the
+                  first upcoming item never becomes its own dashboard-style card. */}
+              {hasPlanningModules ? (
                 <div
-                  className={`today-context-area ${
-                    hasBothContextModules
-                      ? 'today-context-dual'
-                      : 'today-context-single'
+                  className={`today-planning-area ${
+                    hasBothPlanningModules
+                      ? 'today-planning-dual'
+                      : 'today-planning-single'
                   } sbs-motion-reveal`}
                 >
-                  {primaryContextItem ? (
-                    <TodayContextualCard item={primaryContextItem} />
+                  {upcoming.length > 0 ? (
+                    <div className="today-planning-agenda">
+                      <h2 className="today-planning-heading">
+                        {t('m5s5.dashboard.upcomingTitle')}
+                      </h2>
+                      <div className="today-agenda-list">
+                        {upcoming.map((item: DashboardItem) => (
+                          <TodayAgendaRow key={item.id} item={item} />
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                   {relationshipSignalItem ? (
                     <TodayRelationshipSignalCard
@@ -869,23 +824,6 @@ export function TodayPage({
                     />
                   ) : null}
                 </div>
-              ) : null}
-
-              {/* ROLE: Shared Planning Horizon — calm agenda rows, not a card carousel
-                  (rendered only when > 1 upcoming items exist to avoid duplicating the
-                  primary contextual item). */}
-              {secondaryUpcoming.length > 0 ? (
-                <TodayModuleSection
-                  className="today-section-upcoming"
-                  title={t('m5s5.dashboard.upcomingMoreTitle')}
-                  animationDelay="150ms"
-                >
-                  <div className="today-agenda-list">
-                    {secondaryUpcoming.map((item: DashboardItem) => (
-                      <TodayAgendaRow key={item.id} item={item} />
-                    ))}
-                  </div>
-                </TodayModuleSection>
               ) : null}
 
               {/* ROLE: Shared Trace — a quiet list of recent shared moments

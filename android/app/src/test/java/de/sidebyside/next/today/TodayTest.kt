@@ -176,6 +176,7 @@ private fun dashboard(
         startedOn = LocalDate.of(2025, 7, 1),
     ),
 ) = DashboardView(
+    keepsake = null,
     recentShared = emptyList(),
     relationshipDuration = duration,
     retrospective = null,

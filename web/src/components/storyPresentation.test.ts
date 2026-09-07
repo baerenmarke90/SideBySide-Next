@@ -1,10 +1,13 @@
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import { i18n } from '../i18n';
 import {
+  distributeIntoTapestryColumns,
   formatStoryDate,
   groupStoryItems,
   resolveStoryKindLabel,
   storyItemPresentation,
+  tapestryItemRole,
+  tapestryRoleWeight,
 } from './storyPresentation';
 
 function memory(
@@ -38,6 +41,18 @@ function heart(id: string, date: string): StoryItem {
       emotion: 'GRATEFUL',
       author: { id: 'author-2', displayName: 'Ben' },
       attachment: null,
+    },
+  } as unknown as StoryItem;
+}
+
+function milestone(id: string, date: string, title: string): StoryItem {
+  return {
+    kind: 'MILESTONE',
+    effectiveDate: new Date(`${date}T00:00:00Z`),
+    milestone: {
+      id,
+      title,
+      author: { id: 'author-1', displayName: 'Anna' },
     },
   } as unknown as StoryItem;
 }
@@ -103,5 +118,71 @@ describe('storyItemPresentation', () => {
     expect(resolveStoryKindLabel('milestone', i18n.t)).toBe('Meilenstein');
     expect(resolveStoryKindLabel('memory', i18n.t)).toBe('Erinnerung');
     expect(resolveStoryKindLabel('heartMoment', i18n.t)).toBe('Herzmoment');
+  });
+});
+
+describe('tapestryItemRole', () => {
+  it('gives Memory + media, Heart Moment, Milestone, and text-only Memory distinct roles (#790)', () => {
+    expect(tapestryItemRole(memory('m-1', '2026-08-26', 'Am See', 1))).toBe(
+      'media',
+    );
+    expect(tapestryItemRole(memory('m-2', '2026-08-26', 'Notiz', 0))).toBe(
+      'text',
+    );
+    expect(tapestryItemRole(heart('h-1', '2026-08-12'))).toBe('note');
+    expect(
+      tapestryItemRole(milestone('ms-1', '2026-08-01', 'Eingezogen')),
+    ).toBe('milestone');
+  });
+});
+
+describe('distributeIntoTapestryColumns', () => {
+  it('keeps columns close to equal weight instead of filling the first column first (regression #790)', () => {
+    // 7 heavy "media" entries and 5 light "milestone" entries: naive
+    // sequential/count-based filling would leave a much lighter last column.
+    const entries = [
+      ...Array.from({ length: 7 }, (_, i) => ({
+        id: `media-${i}`,
+        role: 'media' as const,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `milestone-${i}`,
+        role: 'milestone' as const,
+      })),
+    ];
+
+    const columns = distributeIntoTapestryColumns(entries, 3, (entry) =>
+      tapestryRoleWeight(entry.role),
+    );
+
+    expect(columns).toHaveLength(3);
+    expect(columns.flat()).toHaveLength(entries.length);
+
+    const columnWeights = columns.map((column) =>
+      column.reduce((sum, entry) => sum + tapestryRoleWeight(entry.role), 0),
+    );
+    const spread = Math.max(...columnWeights) - Math.min(...columnWeights);
+    // The heaviest single item (a "media" entry) bounds how close a greedy
+    // algorithm can get; anything wider than that would indicate the old
+    // "dump items into the first column" behavior returned.
+    expect(spread).toBeLessThanOrEqual(tapestryRoleWeight('media'));
+  });
+
+  it('preserves original order within each column and never drops or duplicates entries', () => {
+    const entries = [1, 2, 3, 4, 5, 6];
+    const columns = distributeIntoTapestryColumns(entries, 2, () => 1);
+
+    expect(columns.flat().slice().sort()).toEqual(entries);
+    for (const column of columns) {
+      const sorted = [...column].sort((a, b) => a - b);
+      expect(column).toEqual(sorted);
+    }
+  });
+
+  it('degrades to a single column (plain order, no reshuffling) on mobile', () => {
+    const entries = ['a', 'b', 'c', 'd'];
+    const columns = distributeIntoTapestryColumns(entries, 1, () => 1);
+
+    expect(columns).toEqual([entries]);
   });
 });

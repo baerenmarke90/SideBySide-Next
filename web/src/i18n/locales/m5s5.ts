@@ -38,12 +38,10 @@ const m5s5 = {
     itemFallback: 'Gemeinsamer Eintrag',
     thinkingOfYouButton: 'Ich denke an dich',
     thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
-    upcomingMoreTitle: 'Weitere anstehende Momente',
   },
   today: {
     roles: {
       hero: 'Paar-Präsenz',
-      context: 'Aktueller Kontext',
       relationshipSignal: 'Bei euch passiert',
       sharedContent: 'Aktivitäten',
       editorial: 'Rückblick',
@@ -51,14 +49,6 @@ const m5s5 = {
     keepsake: {
       kicker: 'Euer Moment',
       title: 'Zuletzt gemeinsam festgehalten',
-    },
-    contextSlot: {
-      kicker: 'Heute im Blick',
-      dueTodayKicker: 'Heute',
-      reminderKicker: 'Erinnerung',
-      upcomingPlanKicker: 'Als Nächstes geplant',
-      importantDateKicker: 'Besonderer Tag',
-      viewDetails: 'Details ansehen',
     },
     relationshipSignal: {
       kicker: 'Bei euch passiert',

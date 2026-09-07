@@ -86,8 +86,71 @@ describe('StoryProductPage', () => {
     expect(html).toContain('momente-discover-page');
     expect(html).toContain('momente-hero-highlight');
     expect(html).toContain('Summer Lake Vacation');
-    expect(html).toContain('momente-stream-track');
+    expect(html).toContain('momente-tapestry');
     expect(html).toContain('I love you more each day');
+  });
+
+  it('renders Discover as an asymmetric tapestry, not a fixed-width horizontal carousel of equal cards (regression #790)', () => {
+    const html = renderStoryPage('/story', {
+      items: [
+        {
+          kind: 'MEMORY',
+          effectiveDate: new Date('2026-08-26T00:00:00Z'),
+          memory: {
+            id: 'mem-1',
+            title: 'Summer Lake Vacation',
+            notes: 'Wonderful sunset together',
+            occurredOn: new Date('2026-08-26T00:00:00Z'),
+            createdAt: new Date('2026-08-26T00:00:00Z'),
+            attachments: [{ id: 'att-1', mediaType: 'image/jpeg' }],
+            author: { id: 'author-1', displayName: 'Alex' },
+            creator: { id: 'author-1', displayName: 'Alex' },
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+          },
+        },
+        {
+          kind: 'HEART_MOMENT',
+          effectiveDate: new Date('2026-08-25T00:00:00Z'),
+          heartMoment: {
+            id: 'heart-1',
+            text: 'I love you more each day',
+            createdAt: new Date('2026-08-25T00:00:00Z'),
+            author: { id: 'author-2', displayName: 'Taylor' },
+            creator: { id: 'author-2', displayName: 'Taylor' },
+          },
+        },
+        {
+          kind: 'MILESTONE',
+          effectiveDate: new Date('2026-08-01T00:00:00Z'),
+          milestone: {
+            id: 'milestone-1',
+            title: 'First apartment together',
+            body: null,
+            createdAt: new Date('2026-08-01T00:00:00Z'),
+            author: { id: 'author-1', displayName: 'Alex' },
+            creator: { id: 'author-1', displayName: 'Alex' },
+          },
+        },
+      ],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    // No fixed-width horizontal carousel contract remains
+    expect(html).not.toContain('momente-stream-track');
+    expect(html).not.toContain('momente-stream-card');
+
+    // The asymmetric multi-column tapestry replaces it
+    expect(html).toContain('momente-tapestry"');
+
+    // Each content type keeps a distinct presentation role, not one shared
+    // equal-sized card shell (regression #790)
+    expect(html).toContain('momente-tapestry-media');
+    expect(html).toContain('momente-tapestry-note');
+    expect(html).toContain('momente-tapestry-milestone');
+    // The Heart Moment renders as a quoted note, not a titled card
+    expect(html).toContain('momente-tapestry-quote');
+    expect(html).toContain('First apartment together');
   });
 
   it('renders timeline view when requested via query parameter', () => {

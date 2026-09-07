@@ -34,6 +34,7 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
+ * @param keepsake 
  * @param recentShared 
  * @param relationshipDuration 
  * @param retrospective 
@@ -43,6 +44,9 @@ import kotlinx.serialization.Contextual
 @Serializable
 
 data class DashboardView (
+
+    @SerialName(value = "keepsake")
+    val keepsake: DashboardItem?,
 
     @SerialName(value = "recentShared")
     val recentShared: kotlin.collections.List<DashboardItem>,

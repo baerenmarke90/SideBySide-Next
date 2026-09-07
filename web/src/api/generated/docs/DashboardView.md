@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`keepsake` | [DashboardItem](DashboardItem.md)
 `recentShared` | [Array&lt;DashboardItem&gt;](DashboardItem.md)
 `relationshipDuration` | [DashboardRelationshipDuration](DashboardRelationshipDuration.md)
 `retrospective` | [DashboardItem](DashboardItem.md)
@@ -19,6 +20,7 @@ import type { DashboardView } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "keepsake": null,
   "recentShared": null,
   "relationshipDuration": null,
   "retrospective": null,
