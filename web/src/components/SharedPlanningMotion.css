@@ -9,16 +9,12 @@
   }
 }
 
-:where(
-  .planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal
-) {
+:where(.planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal) {
   animation-name: eimir-planning-reveal;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(
-    .planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal
-  ) {
+  :where(.planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal) {
     animation: none;
     opacity: 1;
     transform: none;
