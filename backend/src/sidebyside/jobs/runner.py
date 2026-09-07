@@ -16,6 +16,7 @@ import socket
 import time
 from types import FrameType
 
+from sidebyside.attachments import account_media
 from sidebyside.attachments import cleanup as media_cleanup
 from sidebyside.config import get_settings
 from sidebyside.db.session import unit_of_work
@@ -86,6 +87,7 @@ def main() -> None:
 
     maintenance.register_handlers()
     media_cleanup.register_handlers()
+    account_media.register_handlers()
     push_delivery.register_handlers()
     reminder_runtime.register_handlers()
     demo_reset.register_handlers()

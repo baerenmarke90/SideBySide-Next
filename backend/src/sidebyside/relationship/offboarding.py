@@ -108,6 +108,11 @@ def _prepare_owner_media_cleanup(session: Session, *, account_id: UUID, space_id
     partner, while the Account-profile avatar must survive because self-exit
     does not delete the Account. Any other surviving private/foreign binding is
     an invariant violation and fails closed before Membership exit commits.
+
+    An avatar bound since #692 is Account-owned and has no Space key, so it is
+    not even a candidate here. The ``ACCOUNT_PROFILE`` branch still covers rows
+    bound under the earlier Space-scoped contract; final retention adopts those
+    into the Account storage home before the Space is removed.
     """
     attachments = list(
         session.execute(

@@ -136,6 +136,13 @@ def _detail(attachment: Attachment) -> AttachmentDetail:
 
 
 def _content_path(space_id: UUID, attachment_id: UUID) -> str:
+    """Build the Space-scoped streaming path for an attachment.
+
+    The caller's authorized Space is used rather than the row's own key: every
+    route reaching this point already proved that both are the same Space, and
+    Account-owned profile media has no Space key at all and is never served
+    here.
+    """
     return f"/api/v1/spaces/{space_id}/attachments/{attachment_id}/content"
 
 
@@ -188,7 +195,7 @@ def create_attachment_upload(
     return UploadDescriptor(
         attachment=_detail(attachment),
         method="STREAM",
-        upload_url=_content_path(attachment.space_id, attachment.id),
+        upload_url=_content_path(authorization.space_id, attachment.id),
         required_headers={"Content-Type": "application/octet-stream"},
     )
 
@@ -313,7 +320,7 @@ def create_attachment_read_access(
 
     return ReadDescriptor(
         method="STREAM",
-        url=_content_path(attachment.space_id, attachment.id),
+        url=_content_path(authorization.space_id, attachment.id),
     )
 
 

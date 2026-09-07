@@ -39,17 +39,40 @@ class StoredObject:
     content_type: str
 
 
+def _validate_variant(variant: str) -> str:
+    if "/" in variant or ".." in variant:
+        raise ValueError("Invalid variant.")
+    return variant
+
+
 def build_storage_key(space_id: UUID, attachment_id: UUID, variant: str = "original") -> str:
-    """Build the storage location.
+    """Build the storage location of Space-owned media.
 
         spaces/{spaceUuid}/attachments/{attachmentUuid}/original
 
     The path is derived exclusively from UUIDs. The original filename remains
     metadata and never becomes part of the path.
     """
-    if "/" in variant or ".." in variant:
-        raise ValueError("Invalid variant.")
-    return f"spaces/{space_id}/attachments/{attachment_id}/{variant}"
+    return f"spaces/{space_id}/attachments/{attachment_id}/{_validate_variant(variant)}"
+
+
+def build_account_storage_key(
+    account_id: UUID, attachment_id: UUID, variant: str = "original"
+) -> str:
+    """Build the storage location of Account-owned media.
+
+        accounts/{accountUuid}/attachments/{attachmentUuid}/original
+
+    Account-global profile media outlives any single Space, so it cannot live
+    under a Space prefix whose whole subtree disappears with Space retention.
+    The prefix names the owning Account instead; the same UUID-only path rules
+    apply.
+
+    A storage location is not an authorization statement. Reads keep running
+    through the owning domain rule, which is why this prefix never appears in a
+    URL or in a capability.
+    """
+    return f"accounts/{account_id}/attachments/{attachment_id}/{_validate_variant(variant)}"
 
 
 class MediaStore(ABC):
@@ -69,6 +92,21 @@ class MediaStore(ABC):
 
     @abstractmethod
     def exists(self, storage_key: str) -> bool: ...
+
+    def copy(self, source_key: str, target_key: str, content_type: str) -> StoredObject:
+        """Copy one object to a second key inside the same store.
+
+        Concrete rather than abstract, and deliberately built from the existing
+        ``open``/``put`` pair: every adapter then supports relocation without a
+        second provider-specific code path, while a store with a native
+        server-side copy can still override this.
+
+        Overwriting an existing target is intended. Relocation has to stay
+        idempotent under retry, so a partial earlier attempt is replaced instead
+        of being treated as a conflict.
+        """
+        with self.open(source_key) as source:
+            return self.put(target_key, source, content_type)
 
     @abstractmethod
     def create_read_url(self, storage_key: str, expires_in: timedelta) -> str | None:

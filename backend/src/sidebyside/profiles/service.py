@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
+from sidebyside.attachments import account_media as attachment_account_media
 from sidebyside.attachments import binding as attachment_binding
 from sidebyside.attachments import service as attachment_service
 from sidebyside.attachments.models import Attachment, MediaType
@@ -144,6 +145,12 @@ def _set_profile_attachment_for_account(
     The boolean reports whether presentation identity actually changed.
     Keeping the Account clean during the attachment flushes lets the
     caller advance the Account-global version exactly once afterwards.
+
+    Binding also transfers media ownership: the new avatar is adopted into the
+    Account storage home so its lifecycle no longer depends on the Space it was
+    uploaded into (#692). That is why an unchanged binding returns before the
+    Space-scoped candidate validation runs — the current avatar is Account-owned
+    by then and would no longer be a candidate in any Space.
     """
     current = session.execute(
         select(attachment_binding.AccountProfileAttachment).where(
@@ -162,6 +169,9 @@ def _set_profile_attachment_for_account(
             session.flush()
         return None, True
 
+    if current is not None and current.attachment_id == attachment_id:
+        return session.get(Attachment, current.attachment_id), False
+
     candidates = attachment_binding.lock_for_binding(session, [attachment_id])
     candidate = attachment_binding.ensure_bindable(
         candidates.get(attachment_id),
@@ -173,9 +183,6 @@ def _set_profile_attachment_for_account(
             "A profile avatar must be an image.",
             ProfileErrorCode.AVATAR_IMAGE_REQUIRED,
         )
-
-    if current is not None and current.attachment_id == candidate.id:
-        return candidate, False
 
     attachment_binding.ensure_unlinked(
         session,
@@ -199,6 +206,10 @@ def _set_profile_attachment_for_account(
     if previous is not None:
         attachment_service.mark_for_deletion(session, previous)
         session.flush()
+
+    # Adopt last: every rejection above has already happened, so the copy runs
+    # only for a binding this transaction really intends to keep.
+    attachment_account_media.adopt(session, candidate)
     return candidate, True
 
 
@@ -265,8 +276,9 @@ def update_profile_identity(
             # demo reset cannot rebuild: it resolves its reserved personas by
             # address and then refuses to run unless each still carries its
             # canonical name. The avatar above stays mutable because the reset
-            # purges the Space it lives in. An unchanged name is not a
-            # mutation, so a combined save that keeps it is still accepted.
+            # detaches and purges the personas' profile media explicitly. An
+            # unchanged name is not a mutation, so a combined save that keeps it
+            # is still accepted.
             canonical.ensure_account_identity_mutable(session, account)
         account.display_name = requested_name
 

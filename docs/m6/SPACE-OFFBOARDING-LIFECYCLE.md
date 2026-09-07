@@ -195,6 +195,7 @@ After 30 days with still zero active Memberships:
 
 - a normal existing Job scans/targets the orphaned Space for final shared-data/media purge;
 - Space-owned `SPACE_SHARED` data and remaining Space media are removed through existing domain/MediaStore cleanup primitives;
+- Account-global profile media is **not** Space media and is never purged here. Its authoritative parent is the still-live Account, so an avatar still carrying a Space key is adopted into the Account storage home in the same transaction before the Space row is deleted (#692). The purge therefore still leaves no `Attachment` row referencing a removed Space, and an Account that stayed active elsewhere keeps its current avatar;
 - open Invitations are already revoked and cannot revive the Space;
 - Membership rows remain only as long as required by the purge transaction/reference ordering, then the Space cascade may remove them once no retained Space history requires them;
 - operational backups may still contain historical snapshots under #190's bounded operator retention, but those backups are not a live user-accessible archive.
@@ -256,6 +257,7 @@ After `LEFT` commits:
 - client media caches for the exited Space are invalidated when the client observes the transition;
 - shared media retained for an active partner is not deleted merely because its uploader left;
 - leaving-owner private/unbound media follows section 5.2 and existing retry-safe purge;
+- Account-global profile media stays with the Account and is out of scope for both exit and final purge; its ownership and lifecycle authority are defined in `docs/PROFILES.md`;
 - final orphaned-Space media follows section 8 after the 30-day retention window.
 
 No offboarding-specific storage backend is introduced.
