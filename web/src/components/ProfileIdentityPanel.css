@@ -22,6 +22,10 @@
     text-align: left;
     gap: var(--space-6);
   }
+
+  .profile-identity-visibility-badge {
+    align-self: flex-start;
+  }
 }
 
 .profile-identity-avatar-col {
@@ -57,11 +61,10 @@
 }
 
 .profile-identity-visibility-badge {
-  max-width: 42ch;
-  color: var(--color-text-secondary);
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.5;
+  align-self: center;
+  max-width: min(42ch, 100%);
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .profile-identity-actions-row {
