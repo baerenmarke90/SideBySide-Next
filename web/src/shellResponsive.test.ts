@@ -46,7 +46,9 @@ describe('responsive app shell source', () => {
   });
 
   it('keeps the medium-width header from forcing icon-heavy navigation', () => {
-    expect(b2Css).toContain('@media (min-width: 960px) and (max-width: 1120px)');
+    expect(b2Css).toContain(
+      '@media (min-width: 960px) and (max-width: 1120px)',
+    );
     expect(b2Css).toMatch(
       /\.shell-nav-desktop \.shell-nav-icon\s*\{[^}]*display:\s*none/s,
     );
