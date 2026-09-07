@@ -1082,14 +1082,19 @@ code {
   }
 }
 
-/* Reusable Motion Semantics */
+/* Reusable Motion Semantics.
+   Transform-only: an opacity fade here would, for the animation's whole
+   duration, composite every descendant's text color toward the page
+   background — including on every SPA navigation, since AppShell remounts
+   `.product-main` per route (`key={location.pathname}`). That transient
+   blend can drop already-borderline token pairs below WCAG AA contrast, as
+   real rendered pixels, not just a test artifact (#790/#791 axe follow-up).
+   Slide-only keeps the reveal motion without ever touching opacity. */
 @keyframes sbs-reveal {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
