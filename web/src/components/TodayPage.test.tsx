@@ -63,7 +63,7 @@ describe('TodayPage', () => {
     expect(html).toContain('today-card-badges');
   });
 
-  it('renders welcoming new-space experience when there are no items yet', () => {
+  it('renders welcoming new-space experience when there are no items yet, without hiding the couple presence hero', () => {
     const html = renderTodayPage({
       space: {
         id: 'space-1',
@@ -75,13 +75,17 @@ describe('TodayPage', () => {
       retrospective: null,
     });
 
+    // Couple Presence remains the permanent H1 entry point, even for a sparse space
+    expect(html).toContain('today-hero');
+    expect(html).toContain('couple-presence-title');
+
     expect(html).toContain('new-space-experience');
     expect(html).toContain('new-space-mark');
     expect(html).toContain('Marie');
     expect(html).toContain('href="/story/memories/new"');
   });
 
-  it('renders image-first card when previewAttachmentId is present and typography-first card when absent', () => {
+  it('renders secondary upcoming items as calm agenda rows with title and date, not a card carousel', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -96,6 +100,44 @@ describe('TodayPage', () => {
           scheduledAt: new Date('2026-09-02T10:00:00Z'),
         },
         {
+          id: 'plan-secondary',
+          type: 'PLAN',
+          titleOrText: 'Second Excursion',
+          scheduledAt: new Date('2026-09-10T12:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage apis={{} as M4ProductApis} spaceId="space-1" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('today-agenda-list');
+    expect(html).toContain('today-agenda-row');
+    expect(html).toContain('today-agenda-title');
+    expect(html).toContain('today-agenda-date');
+    expect(html).toContain('Second Excursion');
+
+    // No card-carousel markup for the secondary agenda
+    expect(html).not.toContain('today-stream-upcoming');
+  });
+
+  it('renders the most recent real shared photo as the Heroic Keepsake when no retrospective exists, and filters it out of the Shared Trace below', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [
+        {
           id: 'mem-photo',
           type: 'MEMORY',
           titleOrText: 'Photo Memory',
@@ -109,7 +151,6 @@ describe('TodayPage', () => {
           occurredOn: new Date('2026-08-30T12:00:00Z'),
         },
       ],
-      recentShared: [],
       retrospective: null,
     });
 
@@ -127,10 +168,43 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
+    // The photo becomes the large editorial Keepsake focal point
+    expect(html).toContain('today-section-keepsake');
     expect(html).toContain('today-card-has-media');
-    expect(html).toContain('today-card-typography-first');
     expect(html).toContain('Photo Memory');
+
+    // It is not duplicated further down in the Shared Trace
+    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const traceIndex = html.indexOf('today-section-recent');
+    const photoOccurrences = html.split('Photo Memory').length - 1;
+    expect(photoOccurrences).toBe(1);
+    expect(keepsakeIndex).toBeGreaterThan(-1);
+
+    // The text-only memory still appears as a quiet Shared Trace row
+    expect(traceIndex).toBeGreaterThan(-1);
     expect(html).toContain('Text Memory');
+  });
+
+  it('omits the Heroic Keepsake fallback when no loadMemoryImage is supplied', () => {
+    const html = renderTodayPage({
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-photo',
+          type: 'MEMORY',
+          titleOrText: 'Photo Memory',
+          occurredOn: new Date('2026-09-01T12:00:00Z'),
+          previewAttachmentId: 'att-123',
+        },
+      ],
+      retrospective: null,
+    });
+
+    expect(html).not.toContain('today-section-keepsake');
+    expect(html).toContain('today-section-recent');
+    expect(html).toContain('Photo Memory');
   });
 
   it('renders compact recent activity cards and secondary all-activity action', () => {
