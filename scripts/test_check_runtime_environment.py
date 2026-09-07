@@ -7,11 +7,15 @@ import unittest
 
 from scripts.check_runtime_environment import (
     check_dotenv_to_rendered,
+    check_production_source_identity,
     check_rendered_to_running,
     parse_container_environment,
 )
 
 INSTANCE_ID = "11111111-2222-4333-8444-555555555555"
+REVISION = "1234567890abcdef1234567890abcdef12345678"
+OTHER_REVISION = "abcdef1234567890abcdef1234567890abcdef12"
+REPOSITORY = "https://github.com/baerenmarke90/SideBySide-Next.git"
 
 
 def rendered(
@@ -28,6 +32,33 @@ def rendered(
         "api": dict(common),
         "worker": dict(common),
         "demo-init": dict(common),
+    }
+
+
+def source_config(
+    revision: str = REVISION,
+    *,
+    backend_ref: str | None = None,
+    web_ref: str | None = None,
+    build_revision: str | None = None,
+) -> dict[str, object]:
+    backend_ref = revision if backend_ref is None else backend_ref
+    web_ref = revision if web_ref is None else web_ref
+    build_revision = revision if build_revision is None else build_revision
+
+    def build(subdir: str, ref: str) -> dict[str, object]:
+        context = f"{REPOSITORY}#{ref}:{subdir}" if ref else f"./{subdir}"
+        return {"context": context, "args": {"SBS_BUILD_REVISION": build_revision}}
+
+    backend_build = build("backend", backend_ref)
+    return {
+        "services": {
+            "migrate": {"build": dict(backend_build)},
+            "demo-init": {"build": dict(backend_build)},
+            "api": {"build": dict(backend_build)},
+            "worker": {"build": dict(backend_build)},
+            "web": {"build": build("web", web_ref)},
+        }
     }
 
 
@@ -80,6 +111,71 @@ class DotenvToRenderedTest(unittest.TestCase):
             sum("differs from env file for SBS_ENVIRONMENT" in problem for problem in problems),
             3,
         )
+
+
+class ProductionSourceIdentityTest(unittest.TestCase):
+    def test_accepts_one_full_sha_for_all_production_builds(self) -> None:
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "production"}, source_config(), rendered()
+        )
+        self.assertEqual(problems, [])
+
+    def test_development_may_use_main(self) -> None:
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "development"},
+            source_config(backend_ref="main", web_ref="main", build_revision="main"),
+            rendered(environment="development"),
+        )
+        self.assertEqual(problems, [])
+
+    def test_rendered_production_override_still_requires_immutable_source(self) -> None:
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "development"},
+            source_config(backend_ref="main", web_ref="main", build_revision="main"),
+            rendered(environment="production"),
+        )
+        self.assertGreater(len(problems), 0)
+
+    def test_rejects_mutable_or_incomplete_source_refs(self) -> None:
+        for ref in ("main", "release/1.0", "v1.0.0", REVISION[:12], ""):
+            with self.subTest(ref=ref or "blank/default"):
+                problems = check_production_source_identity(
+                    {"SBS_ENVIRONMENT": "production"},
+                    source_config(backend_ref=ref, web_ref=ref, build_revision=ref),
+                    rendered(),
+                )
+                self.assertGreater(len(problems), 0)
+
+    def test_rejects_mismatched_backend_and_web_refs(self) -> None:
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "production"},
+            source_config(web_ref=OTHER_REVISION),
+            rendered(),
+        )
+        self.assertIn(
+            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA",
+            problems,
+        )
+
+    def test_rejects_mismatched_declared_revision(self) -> None:
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "production"},
+            source_config(build_revision=OTHER_REVISION),
+            rendered(),
+        )
+        self.assertIn(
+            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA",
+            problems,
+        )
+
+    def test_rejects_uppercase_sha(self) -> None:
+        uppercase = REVISION.upper()
+        problems = check_production_source_identity(
+            {"SBS_ENVIRONMENT": "production"},
+            source_config(backend_ref=uppercase, web_ref=uppercase, build_revision=uppercase),
+            rendered(),
+        )
+        self.assertGreater(len(problems), 0)
 
 
 class RenderedToRunningTest(unittest.TestCase):

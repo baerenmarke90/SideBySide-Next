@@ -108,6 +108,65 @@ jobs:
             (.services["demo-init"].environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
           ' /tmp/runtime-guard-compose.json
 
+      - name: Arcane Production source identity is immutable
+        run: |
+          set -euo pipefail
+          revision=$(git rev-parse HEAD)
+          short_revision=${revision:0:12}
+          other_revision=0000000000000000000000000000000000000000
+          repository=https://github.com/baerenmarke90/SideBySide-Next.git
+
+          cp .env.example .env-production-source-guard
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-production-source-guard
+          sed -i 's/^SBS_ENVIRONMENT=.*/SBS_ENVIRONMENT=production/' .env-production-source-guard
+          sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-source-guard
+          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-source-guard
+          cat >>.env-production-source-guard <<EOF
+          SBS_BACKEND_BUILD_CONTEXT=${repository}#${revision}:backend
+          SBS_WEB_BUILD_CONTEXT=${repository}#${revision}:web
+          SBS_BUILD_REVISION=${revision}
+          EOF
+
+          python3 scripts/check_runtime_environment.py \
+            --env-file .env-production-source-guard \
+            --profile self-hosted
+
+          expect_rejected() {
+            label=$1
+            shift
+            if env "$@" python3 scripts/check_runtime_environment.py \
+              --env-file .env-production-source-guard \
+              --profile self-hosted; then
+              echo "Runtime guard accepted unsafe Production source identity: $label"
+              exit 1
+            fi
+          }
+
+          expect_rejected main \
+            "SBS_BACKEND_BUILD_CONTEXT=${repository}#main:backend" \
+            "SBS_WEB_BUILD_CONTEXT=${repository}#main:web" \
+            "SBS_BUILD_REVISION=main"
+          expect_rejected branch \
+            "SBS_BACKEND_BUILD_CONTEXT=${repository}#release/test:backend" \
+            "SBS_WEB_BUILD_CONTEXT=${repository}#release/test:web" \
+            "SBS_BUILD_REVISION=release/test"
+          expect_rejected tag \
+            "SBS_BACKEND_BUILD_CONTEXT=${repository}#v1.0.0:backend" \
+            "SBS_WEB_BUILD_CONTEXT=${repository}#v1.0.0:web" \
+            "SBS_BUILD_REVISION=v1.0.0"
+          expect_rejected short-sha \
+            "SBS_BACKEND_BUILD_CONTEXT=${repository}#${short_revision}:backend" \
+            "SBS_WEB_BUILD_CONTEXT=${repository}#${short_revision}:web" \
+            "SBS_BUILD_REVISION=${short_revision}"
+          expect_rejected blank-default \
+            "SBS_BACKEND_BUILD_CONTEXT=" \
+            "SBS_WEB_BUILD_CONTEXT=" \
+            "SBS_BUILD_REVISION="
+          expect_rejected backend-web-mismatch \
+            "SBS_WEB_BUILD_CONTEXT=${repository}#${other_revision}:web"
+          expect_rejected declared-revision-mismatch \
+            "SBS_BUILD_REVISION=${other_revision}"
+
       - name: Production dotenv must carry the deletion authority
         run: |
           set -euo pipefail
