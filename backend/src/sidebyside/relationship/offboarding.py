@@ -228,6 +228,10 @@ def leave_space(session: Session, account: Account, space_id: UUID) -> LeaveSpac
     media cleanup chain, and this Space's Transfer retention is shortened to now
     so existing Transfer cleanup removes stale server-side artifacts. Shared
     media and the still-live Account profile remain untouched.
+
+    If this exit removes the final active Membership, the V1 product-policy
+    purge deadline is frozen on the Space in the same transaction. It is not
+    recomputed later by the retention worker.
     """
     _ensure_self_exit_allowed()
     membership = _membership_for_update(
@@ -251,6 +255,8 @@ def leave_space(session: Session, account: Account, space_id: UUID) -> LeaveSpac
     _prepare_owner_media_cleanup(session, account_id=account.id, space_id=space_id)
     _shorten_owner_transfer_retention(session, account_id=account.id, space_id=space_id)
     service.end_membership(membership)
+    session.flush()
+    service.freeze_offboarding_purge_deadline_if_orphaned(session, space_id)
     session.flush()
     return LeaveSpaceResult(
         membership=membership,

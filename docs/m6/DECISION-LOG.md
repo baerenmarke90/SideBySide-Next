@@ -27,6 +27,7 @@ that classification.
 | M6-D12 | No new orchestration/queue/backup/export platform is introduced without Reuse-before-build evidence and demonstrated need. | FROZEN | repository governance |
 | M6-D13 | Commercial entitlements are Space/couple-scoped, downgrade is strictly non-destructive, Self-Hosted is offline-resilient, and domain gating uses normalized capabilities. | FROZEN | #262, `FREEMIUM-FEATURE-MATRIX.md` v1.1, ADR 0006 |
 | M6-D14 | V1 Space offboarding is self-exit only for normal clients: `ACTIVE -> LEFT`, no partner removal, no implicit reconnect, and a new relationship always receives a new Space. | FROZEN | #518, `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 |
+| M6-D15 | V1 ended Spaces are never reconnected/reactivated; zero-active retention is exactly 30 days as a fixed Product/Privacy policy shared by Self-Hosted and Cloud/Managed; entitlements cannot affect cleanup; each zero-active Space freezes its purge deadline so future policy versions are prospective only. | FROZEN PRODUCT/PRIVACY POLICY | Product Owner, 2026-09-07, #669, `SPACE-OFFBOARDING-LIFECYCLE.md` v1.1 |
 
 ## Blocking decisions
 
@@ -54,7 +55,7 @@ The frozen contract requires:
 - reuse of the existing session, Membership, Job/Outbox, MediaStore cleanup and #345 portability primitives;
 - stale side effects to fail closed against current deletion state and authorization;
 - a minimal forward-only deletion reconciliation journal outside the point-in-time application database so #190 restores predating deletion cannot reactivate the Account before API/worker startup;
-- #518 to remain authoritative for orphaned-Space retention/destruction and deliberate reconnect semantics.
+- #518/#669 to remain authoritative for orphaned-Space retention/destruction and deliberate reconnect semantics.
 
 ### M6-B03 — Cloud/Managed launch topology
 
@@ -88,7 +89,7 @@ one.
 
 ### M6-B05 — Space/relationship offboarding lifecycle
 
-**Status:** `FROZEN / RESOLVED` by `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 under #518. Runtime/client implementation and final G5 evidence remain open.
+**Status:** `FROZEN / RATIFIED / RESOLVED` by `SPACE-OFFBOARDING-LIFECYCLE.md` v1.1 under #518/#669. Product Owner ratification: 2026-09-07, policy version 1.0. Final integrated G5 evidence remains owned by #524.
 
 The frozen V1 contract requires:
 
@@ -97,11 +98,23 @@ The frozen V1 contract requires:
 - the leaving Account's Space-scoped `OWNER_ONLY` data is deleted rather than stranded as inaccessible ghost data; #345 `PERSONAL` export is the optional pre-exit portability path;
 - pending/running Transfer work does not gain post-exit authorization and no special breakup archive/grace credential is added;
 - a Space with any ended Membership is relationship-history locked: stale invitations cannot add a new partner and ordinary `add_member()` cannot reactivate an ended Membership;
-- V1 has no reconnect; a new or renewed relationship creates a new Space;
-- zero-active Spaces are inaccessible immediately and enter a bounded 30-day retention window before existing cleanup primitives purge the orphaned shared Space;
+- V1 has **no reconnect**, including for the same former pair; any later relationship creates a new Space and the old Space is never reactivated or merged;
+- zero-active Spaces are inaccessible immediately and become purge-eligible after **exactly 30 days**;
+- the 30-day horizon is a fixed V1 Product/Privacy policy, not operator/deployment configuration;
+- Self-Hosted and Cloud/Managed use the same retention semantics;
+- Premium/entitlement state cannot extend, cancel, delay or prevent required privacy cleanup;
+- the purge-eligibility timestamp is frozen on the Space when it becomes zero-active, so later retention-policy versions apply prospectively only;
+- already orphaned Spaces keep their existing deletion deadline: no silent retroactive extension and no silent retroactive shortening;
 - account sessions remain valid after leaving one Space while Web/Android clear only the exited Space state/cache/drafts and move to another active Space or the existing awaiting-Space state;
 - membership-sensitive jobs/provider effects must revalidate current authorization at the side-effect boundary;
 - exit, privacy cleanup and essential portability remain non-paywallable.
+
+**Product/Privacy rationale (2026-09-07):**
+
+- No reconnect is deliberate because reattaching old relationship history and private/shared data requires a new bilateral-consent design rather than inference from former Memberships.
+- Thirty days preserves the already-frozen bounded offboarding window while ensuring immediate access revocation and a finite live-data lifecycle; it is owned by the product/privacy contract rather than deployment convenience or storage economics.
+- Freezing each orphaned Space's deadline makes the promise auditable and prevents a later policy edit from silently moving an already-communicated deletion date in either direction.
+- Commercial entitlements and operating model are orthogonal to privacy cleanup; neither can create a longer-lived relationship archive.
 
 ## Before-release decisions
 

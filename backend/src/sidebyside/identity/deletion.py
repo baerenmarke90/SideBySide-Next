@@ -36,7 +36,11 @@ from sidebyside.identity.models import (
 )
 from sidebyside.profiles.models import PartnerProfile
 from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
-from sidebyside.relationship.service import end_membership, lock_space
+from sidebyside.relationship.service import (
+    end_membership,
+    freeze_offboarding_purge_deadline_if_orphaned,
+    lock_space,
+)
 
 DELETED_ACCOUNT_DISPLAY_NAME = "Deleted account"
 DELETED_ACCOUNT_LOCALE = "de-DE"
@@ -103,6 +107,14 @@ def _enforce_fail_closed(
         # Preserve the accepted deletion instant as the historical membership
         # end rather than recording the later restore/replay time.
         membership.ended_at = deletion.accepted_at
+
+    # If Account deletion removed the final active Membership, freeze the same
+    # #518/#669 Space privacy deadline used by ordinary self-exit. This does not
+    # change Account-deletion semantics; it only hands the now-orphaned Space to
+    # its existing lifecycle authority with the original accepted timestamp.
+    session.flush()
+    for space_id in space_ids:
+        freeze_offboarding_purge_deadline_if_orphaned(session, space_id)
 
     # Every Space whose Membership just ended is history-locked. Revoke all of
     # its still-open Invitations, not just tokens created by the deleted Account.
