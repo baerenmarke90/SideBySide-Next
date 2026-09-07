@@ -182,3 +182,49 @@ def test_successful_projection_retry_clears_failure_diagnostic(
     assert engagement_service.project_pending(session) == 1
     assert row.processed_at is not None
     assert row.last_error is None
+
+
+def test_unexpected_projection_failure_never_persists_private_content(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#695: private product content embedded in exception prose (e.g. a memory
+    body echoed by a provider error) must not reach `last_error` either."""
+    private_content = "DIAGNOSTIC-CANARY-PRIVATE-NOTE-9B71 never told anyone about this"
+
+    def failing_projection(_session: Session, _event: OutboxEvent) -> None:
+        raise RuntimeError(f"failed to render payload: {private_content!r}")
+
+    monkeypatch.setattr(engagement_service, "project_event", failing_projection)
+
+    row = outbox_service.record(session, _projection_event())
+    session.flush()
+
+    assert engagement_service.project_pending(session) == 1
+    assert row.last_error == "RuntimeError"
+    assert private_content not in row.last_error
+    assert "DIAGNOSTIC-CANARY-PRIVATE-NOTE-9B71" not in row.last_error
+
+
+def test_unexpected_projection_failure_never_persists_presigned_url_secret(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#695: a signed/presigned URL's query secret must not reach `last_error`
+    even when it only ever appears inside exception text."""
+    presigned_url = (
+        "https://storage.example.com/bucket/object"
+        "?X-Amz-Signature=DIAGNOSTIC-CANARY-SIG-4E20&X-Amz-Credential=abcd1234"
+    )
+
+    def failing_projection(_session: Session, _event: OutboxEvent) -> None:
+        raise RuntimeError(f"upload failed for {presigned_url}")
+
+    monkeypatch.setattr(engagement_service, "project_event", failing_projection)
+
+    row = outbox_service.record(session, _projection_event())
+    session.flush()
+
+    assert engagement_service.project_pending(session) == 1
+    assert row.last_error == "RuntimeError"
+    assert presigned_url not in row.last_error
+    assert "DIAGNOSTIC-CANARY-SIG-4E20" not in row.last_error
+    assert "abcd1234" not in row.last_error
