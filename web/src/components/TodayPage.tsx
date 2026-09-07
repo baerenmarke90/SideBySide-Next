@@ -224,7 +224,7 @@ function TodayContextualCard({ item }: { item: DashboardItem }) {
   const content = (
     <div className="today-context-card sbs-motion-lift">
       <div className="today-context-header">
-        <span className="today-context-kicker">{kicker}</span>
+        <h2 className="today-context-kicker">{kicker}</h2>
         <span
           className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
         >
@@ -234,9 +234,9 @@ function TodayContextualCard({ item }: { item: DashboardItem }) {
           <span>{t(`m5s5.kind.${item.type}`)}</span>
         </span>
       </div>
-      <h2 className="today-context-title">
+      <h3 className="today-context-title">
         {item.titleOrText || t('m5s5.dashboard.itemFallback')}
-      </h2>
+      </h3>
       <div className="today-context-footer">
         {date ? <span className="today-context-date">{date}</span> : null}
         {path ? (
@@ -653,13 +653,13 @@ export function TodayPage({
               <div className="new-space-mark" aria-hidden="true">
                 <span>e.</span>
               </div>
-              <h1 className="new-space-title">
+              <h2 className="new-space-title">
                 {partner
                   ? t('m5s5.dashboard.newSpacePartner', {
                       name: partner.displayName,
                     })
                   : t('m5s5.dashboard.newSpaceEmpty')}
-              </h1>
+              </h2>
               <p className="new-space-body">
                 {t('m5s5.dashboard.newSpaceIntro')}
               </p>
