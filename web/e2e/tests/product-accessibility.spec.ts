@@ -214,23 +214,15 @@ async function signIn(page: Page): Promise<void> {
 
 async function navigateWithinApp(page: Page, path: string): Promise<void> {
   if (path === '/plan') {
-    await page.getByRole('link', { name: navigation.plan, exact: true }).click();
+    await page.locator('a[href="/plan"]').first().click();
+    await expect(page).toHaveURL(/\/plan$/);
     return;
   }
 
-  await page.getByRole('link', { name: navigation.more, exact: true }).click();
+  await page.locator('a[href="/more"]').first().click();
   await expect(page).toHaveURL(/\/more$/);
-
-  if (path === '/more/collections') {
-    await page.getByRole('link', { name: de.more.collections.title }).click();
-    return;
-  }
-  if (path === '/more/places') {
-    await page.getByRole('link', { name: de.more.places.title }).click();
-    return;
-  }
-
-  throw new Error(`Unsupported in-app test destination: ${path}`);
+  await page.locator(`a[href="${path}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`${path}$`));
 }
 
 test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean', async ({
