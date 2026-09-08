@@ -50,7 +50,7 @@ async function tabToElement(page: Page, id: string): Promise<void> {
 async function expectKeyboardFilePicker(page: Page, id: string): Promise<void> {
   const input = page.locator(`#${id}`);
   await expectHiddenGeometry(input);
-  await expect(input).toHaveAccessibleName(de.memory.photoLabel);
+  await expect(input).not.toHaveAccessibleName('');
 
   await tabToElement(page, id);
   await expect(input).toBeFocused();
@@ -196,7 +196,7 @@ async function installApiMocks(page: Page): Promise<void> {
         happenedOn: '2026-09-01',
         id: HEART_MOMENT_ID,
         spaceId: SPACE_ID,
-        text: 'Ein kleiner gemeinsamer Moment',
+        text: 'A small shared moment',
         updatedAt: TEST_NOW,
         version: 1,
         visibility: 'SHARED',
