@@ -1,0 +1,274 @@
+/*
+ * WCAG 2.2 SC 1.4.10 product-content reflow.
+ *
+ * Root CSS zoom changes the usable inline size without changing viewport media
+ * queries. Product layouts therefore need to collapse from the space they
+ * actually receive, not only from window width. The shell remains viewport-
+ * responsive; the product surface is the containment boundary for content
+ * layout decisions.
+ */
+.product-main {
+  container-name: product-content;
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.today-page,
+.m4-product-page,
+.profile-page,
+.settings-page,
+.private-area-page,
+.product-editor-page,
+.momente-discover-page,
+.story-timeline {
+  min-width: 0;
+}
+
+/* Existing <= 760px compact contracts, keyed to available product width. */
+@container product-content (max-width: 47.5rem) {
+  /* Today: undo desktop-only split layouts when the content column is narrow. */
+  .today-hero.couple-presence-card {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: var(--space-6) 0 var(--space-6);
+  }
+
+  .today-hero-action-container {
+    justify-content: center;
+  }
+
+  .today-planning-dual,
+  .today-card-retrospective.today-card-has-media,
+  .today-card-keepsake.today-card-has-media {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .today-card-retrospective .today-card-media,
+  .today-card-keepsake .today-card-media {
+    min-height: 220px;
+  }
+
+  /* Momente: hero/tapestry must follow the content column, not window width. */
+  .momente-hero-link.has-media {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .momente-tapestry {
+    flex-direction: column;
+  }
+
+  .momente-tapestry-column {
+    width: 100%;
+    max-width: none;
+    flex: 1 1 auto;
+  }
+
+  .momente-archive-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Timeline filter: mirror the established mobile funnel interaction. */
+  .story-filter-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    align-self: flex-start;
+    height: 2.5rem;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-raised, var(--color-surface));
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .story-filter-bar {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .story-filter-bar.story-filter-bar-open {
+    display: flex;
+  }
+
+  .story-filter-group {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .story-filter-reset-header-action {
+    align-self: flex-start;
+    height: auto;
+    padding: var(--space-1) 0;
+  }
+
+  .story-card-footer {
+    flex-direction: column;
+  }
+
+  /* Activity/notifications: remove desktop flex bases from compact toolbars. */
+  .m4-toolbar-row,
+  .m4-notification-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .m4-toolbar-row > .field-group,
+  .m4-toolbar-row > .m4-search-field {
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .m4-toolbar-submit,
+  .m4-toolbar-submit button {
+    width: 100%;
+  }
+
+  /* Profile: mirror the existing compact identity and inline-edit layout. */
+  .profile-identity-hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-identity-visibility-badge {
+    align-self: center;
+  }
+
+  .profile-name-input-group {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .relationship-preview-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-relationship-compact {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .preference-modal-submit-row {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .preference-modal-submit-row > * {
+    flex: 1;
+  }
+
+  /* Settings and data transfer share the same two-column compact contract. */
+  .settings-sensitive-grid,
+  .transfer-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-sensitive-grid > .space-offboarding-panel,
+  .settings-sensitive-grid > .account-settings-panel,
+  .transfer-columns > section,
+  .transfer-columns > section:first-child,
+  .transfer-columns > section + section {
+    padding-inline: 0;
+  }
+
+  .settings-sensitive-grid > .account-settings-panel,
+  .transfer-columns > section + section {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border-subtle);
+    border-left: 0;
+  }
+
+  /* Private area: mirror the established <=760px stacked form/card layout. */
+  .private-area-context,
+  .private-area-field-grid,
+  .private-area-meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .private-area-context {
+    align-items: start;
+  }
+
+  .private-area-inline-form,
+  .private-area-delete-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .private-area-actions {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .private-area-actions > button:not(.list-entry-icon-button),
+  .private-area-inline-form > button,
+  .private-area-delete-confirmation button {
+    width: 100%;
+  }
+
+  .private-area-actions > .list-entry-icon-button {
+    width: 2.75rem;
+  }
+}
+
+/* Existing <= 620px attachment draft contract, keyed to available width. */
+@container product-content (max-width: 38.75rem) {
+  .attachment-draft-item {
+    grid-template-columns: 5rem minmax(0, 1fr);
+  }
+
+  .attachment-preview-wrap {
+    width: 5rem;
+  }
+
+  .attachment-draft-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+/* Existing <= 599px form action contract, keyed to available width. */
+@container product-content (max-width: 37.4375rem) {
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .form-actions > * {
+    width: 100%;
+  }
+
+  .file-picker small {
+    max-width: 13rem;
+  }
+
+  .immersive-sharing-note {
+    flex-wrap: wrap;
+  }
+
+  .immersive-sharing-note p {
+    min-width: 0;
+    flex: 1 1 12rem;
+  }
+}
+
+/* Intrinsic card minima: only collapse when the content is actually narrower. */
+@container product-content (max-width: 17.5rem) {
+  .people-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .people-card,
+  .immersive-create-card,
+  .immersive-create-media,
+  .immersive-create-details {
+    min-width: 0;
+  }
+}
