@@ -22,6 +22,9 @@ function readSource(relativePath: string): string {
 describe('shared hidden file input helper', () => {
   const stylesCss = readSource('./styles.css');
   const storyMediaCss = readSource('./story-media.css');
+  const attachmentDraftPickerSource = readSource(
+    './components/AttachmentDraftPicker.tsx',
+  );
   const profileIdentitySource = readSource(
     './components/ProfileIdentityPanel.tsx',
   );
@@ -38,6 +41,18 @@ describe('shared hidden file input helper', () => {
       /input\.visually-hidden-input\s*\{[^}]*width: 1px;[^}]*min-height: 0;[^}]*border: 0;[^}]*padding: 0;/s,
     );
     expect(storyMediaCss).not.toContain('!important');
+  });
+
+  it('lets the shared picker shrink inside compact grid editors', () => {
+    expect(attachmentDraftPickerSource).toContain(
+      'className="field-group attachment-draft-picker"',
+    );
+    expect(storyMediaCss).toMatch(
+      /\.attachment-draft-picker\s*\{[^}]*min-width: 0;/s,
+    );
+    expect(storyMediaCss).toMatch(
+      /\.file-picker > span:not\(\.file-picker-icon\)\s*\{[^}]*min-width: 0;/s,
+    );
   });
 
   it('preserves a visible focus proxy for keyboard-operated upload pickers', () => {
