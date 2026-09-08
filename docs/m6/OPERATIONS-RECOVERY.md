@@ -87,8 +87,17 @@ Backup/restore is not a reason to leave live application data indefinitely.
   request re-applies deletion/tombstone/reconciliation so a restore does not silently
   resurrect active personal data.
 
+The forward Account-deletion journal used for that reconciliation is **minimal
+pseudonymous recovery metadata**: content-free and data-minimized, but not
+identity-free because its stable Account UUID and acceptance timestamp remain
+account-linkable in the system/recovery context. It is recovery-sensitive authority
+state and must be protected independently of point-in-time database/media backups.
+
 Historical backup retention remains an operator policy and must be bounded and
-protected. Do not expose old backups as a user-accessible archive.
+protected. Do not expose old backups as a user-accessible archive. Journal
+retention remains bounded by the supported pre-deletion backup horizon plus the
+operator's documented safety margin; a newer journal must never be rolled back to
+match an older application snapshot.
 
 ## 4. Recovery units by operating model
 
@@ -98,9 +107,12 @@ Required recovery units remain:
 
 1. PostgreSQL;
 2. `LocalMediaStore` durable data or the configured S3 provider recovery unit;
-3. protected configuration/secrets required to decrypt/validate/operate the
-   instance;
-4. exact known-good application release identity.
+3. the newest validated forward Account-deletion journal as a separately
+   protected, recovery-sensitive authority unit; it is not part of the coordinated
+   point-in-time PostgreSQL/media archive;
+4. protected configuration/secrets required to decrypt/validate/operate the
+   instance, including the stable deletion-authority instance UUID;
+5. exact known-good application release identity.
 
 Operators may use established tools such as restic/rclone outside Core, but Core
 does not depend on one backup vendor/tool merely to be restorable.
@@ -115,12 +127,12 @@ selected managed platform:
    choice (`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` §3.3): object-storage
    versioning/snapshot/export for `s3`, or volume-level backup/snapshot for a
    `local` persistent volume;
-3. the #520 self-service Account-deletion journal's shared-volume durability,
-   included in the same recovery-point discipline as the database (§3.5/§6 of
-   the topology contract — this unit does not exist in the generic Self-Hosted
-   list above because Self-Hosted already treats it as part of the single-host
-   protected volume set);
-4. managed secret/config recovery;
+3. the #520 self-service Account-deletion journal as a separately protected
+   forward-only recovery authority: preserve the newest validated journal, do not
+   roll it back to the database/media recovery point, and replay it before writers
+   resume;
+4. managed secret/config recovery, including the stable deletion-authority
+   instance UUID;
 5. #519 immutable release identity;
 6. coordination expectations between database and media recovery points.
 

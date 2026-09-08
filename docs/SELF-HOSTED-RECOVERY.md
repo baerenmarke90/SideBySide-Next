@@ -20,7 +20,7 @@ A recoverable instance consists of four independently protected units:
 |---|---|---|
 | PostgreSQL | PostgreSQL 17 `pg_dump --format=custom`; restored with `pg_restore --single-transaction` | yes |
 | `LocalMediaStore` | exact durable object set from the private Compose `media_data` volume | yes |
-| forward Account-deletion journal | newest validated forward-only state from the private `deletion_journal_data` volume; protected independently and never rolled back with a point-in-time database backup | no |
+| forward Account-deletion journal (minimal pseudonymous recovery metadata) | newest validated forward-only state from the private `deletion_journal_data` volume; protected independently and never rolled back with a point-in-time database backup | no |
 | configuration and secrets | operator secret/configuration backup, including the stable deletion-authority instance UUID | no |
 
 The archive contains every PostgreSQL row. This includes all accounts, tenants,
@@ -38,6 +38,13 @@ validated journal independently, keep its `SBS_ACCOUNT_DELETION_INSTANCE_ID` wit
 the operator configuration, and never replace a newer journal with an older
 snapshot. The binding operational rules are in
 [`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
+
+Privacy classification is explicit: the journal is content-free and data-minimized,
+but it is not identity-free or PII-free. A tombstone's stable Account UUID and
+irreversible acceptance timestamp remain account-linkable in the system/recovery
+context. Treat the journal as protected, recovery-sensitive authority state even
+though it contains no email address, display name, Space/partner identifier,
+token, credential, `ProtectedPayload`, `OWNER_ONLY`, or relationship content.
 
 The helper quiesces the normal writers by stopping API and worker, takes the
 database dump, resolves the durable media set from that stable database, archives
@@ -74,9 +81,10 @@ from the data archive:
 - any external backup encryption keys and restore instructions.
 
 Protect the forward deletion journal separately from both this configuration
-backup and the coordinated PostgreSQL/media archive. It is deletion-safety state,
-not a normal point-in-time snapshot. Retain it until every application backup that
-predates its accepted tombstones can no longer be restored.
+backup and the coordinated PostgreSQL/media archive. It is recovery-sensitive
+deletion-safety state, not a normal point-in-time snapshot. Retain it until every
+application backup that predates its accepted tombstones can no longer be
+restored, including the operator's documented safety margin.
 
 Do not place this material inside the SideBySide archive. Do not store the archive
 next to an unencrypted copy of its decryption key. The one-time bootstrap token is

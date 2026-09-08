@@ -168,6 +168,13 @@ and explicitly assigns Cloud/Managed the obligation to provide an equivalent
 provider-neutral durability contract rather than inventing different Domain
 semantics.
 
+Privacy classification is the same as Self-Hosted: the journal is **minimal
+pseudonymous recovery metadata**. It is content-free and data-minimized, but its
+stable Account UUID and irreversible acceptance timestamp remain account-linkable
+in the system/recovery context. The shared volume is therefore protected,
+recovery-sensitive authority state rather than ordinary non-personal operational
+metadata.
+
 The journal implementation is a single hash-chained append-only file per
 `SBS_ACCOUNT_DELETION_INSTANCE_ID`, guarded by `fcntl` advisory locking. A
 self-service deletion request can land on any `api` replica. Therefore:
@@ -373,11 +380,13 @@ topology:
    Production bucket for `s3`, or the operator's own volume-level
    backup/snapshot mechanism for the Production media volume for `local`
    (the same recovery unit Self-Hosted already treats as protected data).
-3. **Deletion-journal volume (§3.5)** — included in the same recovery-point
-   discipline as the database; a database restore without the matching journal
-   state (or vice versa) is treated as an inconsistent recovery point and must be
-   reconciled before the application resumes traffic, exactly as
-   `ACCOUNT-DELETION-RETENTION.md` §7.2 requires.
+3. **Deletion-journal volume (§3.5)** — a separately protected forward-only
+   recovery authority containing minimal pseudonymous recovery metadata. Recover
+   the newest validated journal for the configured instance UUID; never roll it
+   back to the database/media recovery timestamp. A restored database must replay
+   that journal before application writers resume, and a missing, corrupt, or
+   older substituted journal fails closed as defined by
+   `ACCOUNT-DELETION-RETENTION.md` §7.2-§7.3.
 4. **Managed secrets/config** — recovered through the platform's own
    secret-store backup/versioning, or re-provisioned from the operator's protected
    secret-management process; secrets are never recovered from application
@@ -434,6 +443,8 @@ as the canonical Compose contract.
   are never handed to the application process;
 - database and object storage are never publicly reachable (§3.2, §3.4);
 - secrets stay outside images/source/release manifests/SBOM (§3.6);
+- the deletion journal remains protected, recovery-sensitive pseudonymous metadata
+  even though it contains no relationship/private content (§3.5);
 - backup, log and metrics data receive the same sensitivity treatment as
   Production data — `#189` redaction already strips ProtectedPayload/`OWNER_ONLY`/
   tokens/signed URLs from logs, and that same log stream is what any managed
