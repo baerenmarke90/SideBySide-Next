@@ -8,7 +8,7 @@ from sqlalchemy import func, select, union_all
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext
-from sidebyside.story.service import StoryKind, _KIND_RANK, _leg
+from sidebyside.story.service import _KIND_RANK, StoryKind, _leg
 
 
 @dataclass(frozen=True)
