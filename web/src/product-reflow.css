@@ -250,8 +250,25 @@
   }
 }
 
-/* Existing <= 599px form action contract, keyed to available width. */
+/* Existing <= 599px page/action contracts, keyed to available width. */
 @container product-content (max-width: 37.4375rem) {
+  .page-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .page-heading-action,
+  .page-heading-action .button-link,
+  .page-heading-action button {
+    width: 100%;
+  }
+
+  .page-heading-action .button-link,
+  .page-heading-action button {
+    justify-content: center;
+  }
+
   .form-actions {
     align-items: stretch;
     flex-direction: column-reverse;
