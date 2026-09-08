@@ -310,7 +310,7 @@ test('Milestone Create defaults the date to local today and stays typeable', asy
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`Memory Detail keeps a floated, enlarged drop cap on the body paragraph (${colorScheme})`, async ({
+  test(`Memory Detail keeps an inline, enlarged drop cap on the body paragraph (${colorScheme})`, async ({
     page,
   }, testInfo) => {
     await page.emulateMedia({ colorScheme });
@@ -338,12 +338,18 @@ for (const colorScheme of ['light', 'dark'] as const) {
         const style = getComputedStyle(el);
         return {
           float: style.float,
+          display: style.display,
           fontSize: Number.parseFloat(style.fontSize),
         };
       }),
     ]);
-    expect(letterStyle.float).toBe('left');
-    expect(letterStyle.fontSize).toBeGreaterThan(bodyFontSize * 1.5);
+    // Deliberately not a classic floated drop cap: it stays part of the
+    // normal inline text flow (no reserved column, no text wrapping around
+    // it) so the word it starts always reads as one unit.
+    expect(letterStyle.float).toBe('none');
+    expect(letterStyle.display).toBe('inline');
+    expect(letterStyle.fontSize).toBeGreaterThan(bodyFontSize * 1.2);
+    expect(letterStyle.fontSize).toBeLessThan(bodyFontSize * 2);
 
     await page.screenshot({
       path: testInfo.outputPath(`memory-detail-drop-cap-${colorScheme}.png`),
@@ -360,11 +366,57 @@ for (const colorScheme of ['light', 'dark'] as const) {
   });
 }
 
+/**
+ * Measures the drop-cap letter's box and the immediately following text's
+ * position for one memory, at whatever viewport is currently set.
+ */
+async function measureDropCapGap(
+  page: Page,
+  memoryCase: (typeof DROP_CAP_CASES)[number],
+): Promise<{ letterBox: { x: number; width: number }; restX: number }> {
+  await page.goto(`/story/memories/${memoryCase.id}`);
+  await expect(
+    page.getByRole('heading', { name: memoryCase.title }),
+  ).toBeVisible();
+
+  const letter = page.locator('.drop-cap-letter');
+  await expect(letter).toHaveText(memoryCase.body[0]);
+
+  const [letterBox, restRect] = await Promise.all([
+    letter.boundingBox(),
+    page.locator('.memory-detail-body').evaluate((el) => {
+      // The rest of the text is a plain text node right after the letter
+      // span; measure its first character via a Range so we can compare
+      // its left edge against the drop cap's right edge.
+      const range = document.createRange();
+      const textNode = Array.from(el.childNodes).find(
+        (node) => node.nodeType === Node.TEXT_NODE,
+      );
+      if (!textNode) return null;
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 1);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.x };
+    }),
+  ]);
+  if (!letterBox || !restRect) {
+    throw new Error(
+      `Drop cap or body text did not render for ${memoryCase.title}.`,
+    );
+  }
+  return { letterBox, restX: restRect.x };
+}
+
+// Desktop and mobile deliberately share the same inline drop-cap logic (see
+// MemoryProductPage.css) — only the font-size scales between them — so one
+// parametrized check covers both: the letter must stay flush against the
+// rest of its word ("Mitten", not "M itten") at every breakpoint.
 for (const viewport of [
-  { name: 'desktop', width: 1440, height: 900 },
-  { name: 'mobile', width: 390, height: 844 },
+  { name: 'desktop 1440px', width: 1440, height: 900 },
+  { name: 'desktop 1920px', width: 1920, height: 1080 },
+  { name: 'mobile 390px', width: 390, height: 844 },
 ] as const) {
-  test(`Memory Detail drop cap keeps a uniform, non-overlapping width across S/W/A/M initials (${viewport.name})`, async ({
+  test(`Memory Detail drop cap stays flush against the rest of its word for S/W/A/M initials (${viewport.name})`, async ({
     page,
   }) => {
     await installApiMocks(page);
@@ -372,59 +424,16 @@ for (const viewport of [
     await signIn(page);
     await page.setViewportSize(viewport);
 
-    const widths: number[] = [];
     for (const memoryCase of DROP_CAP_CASES) {
-      await page.goto(`/story/memories/${memoryCase.id}`);
-      await expect(
-        page.getByRole('heading', { name: memoryCase.title }),
-      ).toBeVisible();
-
-      const letter = page.locator('.drop-cap-letter');
-      const expectedFirst = memoryCase.body[0];
-      await expect(letter).toHaveText(expectedFirst);
-
-      const [letterBox, restBox] = await Promise.all([
-        letter.boundingBox(),
-        page.locator('.memory-detail-body').evaluate((el) => {
-          // The rest of the text is a plain text node after the letter
-          // span; measure it via a Range so we can compare its left edge
-          // against the drop cap's right edge.
-          const range = document.createRange();
-          const textNode = Array.from(el.childNodes).find(
-            (node) => node.nodeType === Node.TEXT_NODE,
-          );
-          if (!textNode) return null;
-          range.setStart(textNode, 0);
-          range.setEnd(textNode, 1);
-          const rect = range.getBoundingClientRect();
-          return {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-          };
-        }),
-      ]);
-      if (!letterBox || !restBox) {
-        throw new Error(
-          `Drop cap or body text did not render for ${memoryCase.title}.`,
-        );
-      }
-
-      widths.push(letterBox.width);
+      const { letterBox, restX } = await measureDropCapGap(page, memoryCase);
       // The following text must start at or after the drop cap's right
-      // edge — never underneath/overlapping it.
-      expect(restBox.x).toBeGreaterThanOrEqual(
-        letterBox.x + letterBox.width - 1,
-      );
-
+      // edge (never underneath/overlapping it), and the gap itself must
+      // read as normal inline text spacing, not the initial standing apart
+      // from the rest of its own word as a separate character.
+      const gap = restX - (letterBox.x + letterBox.width);
+      expect(gap).toBeGreaterThanOrEqual(-1);
+      expect(gap).toBeLessThanOrEqual(3);
       await expectNoHorizontalOverflow(page);
     }
-
-    const [minWidth, maxWidth] = [Math.min(...widths), Math.max(...widths)];
-    // Same fixed-width gutter regardless of letter (S vs. the wider W/M) —
-    // a couple of px of anti-aliasing/glyph-metric slack is fine, a whole
-    // extra letter's worth of width is the regression this guards against.
-    expect(maxWidth - minWidth).toBeLessThanOrEqual(3);
   });
 }
