@@ -40,7 +40,9 @@ async function tabToElement(page: Page, id: string): Promise<void> {
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
     await page.keyboard.press('Tab');
-    const activeId = await page.evaluate(() => document.activeElement?.id ?? '');
+    const activeId = await page.evaluate(
+      () => document.activeElement?.id ?? '',
+    );
     if (activeId === id) return;
   }
 
@@ -183,8 +185,7 @@ async function installApiMocks(page: Page): Promise<void> {
 
     if (
       method === 'GET' &&
-      pathname ===
-        `/api/v1/spaces/${SPACE_ID}/heart-moments/${HEART_MOMENT_ID}`
+      pathname === `/api/v1/spaces/${SPACE_ID}/heart-moments/${HEART_MOMENT_ID}`
     ) {
       await fulfillJson({
         attachment: null,
