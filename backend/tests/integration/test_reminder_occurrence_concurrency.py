@@ -100,9 +100,7 @@ def _seed_generated_plan_reminder(maker):  # type: ignore[no-untyped-def]
 def _occurrence_jobs(session, occurrence_id):  # type: ignore[no-untyped-def]
     return [
         job
-        for job in session.execute(
-            select(Job).where(Job.kind == runtime.OCCURRENCE_JOB)
-        ).scalars()
+        for job in session.execute(select(Job).where(Job.kind == runtime.OCCURRENCE_JOB)).scalars()
         if job.payload.get("occurrenceId") == str(occurrence_id)
     ]
 
