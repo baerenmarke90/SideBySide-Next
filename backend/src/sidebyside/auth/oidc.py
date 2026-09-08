@@ -508,14 +508,13 @@ def _mark_consumed(session: Session, *, request_id: UUID) -> None:
 
 
 def _keep_state_consumed(session: Session, request: OidcAuthRequest) -> None:
-    """Keep the state redeemed although this callback will roll back.
+    """Keep the state redeemed if this callback later rolls back.
 
     ``_open_request`` marks the state consumed, but a rejected callback rolls
     the whole request transaction back and would return the state to the pool.
-    By this point the authorization code has already been exchanged at the
-    provider, so a retry can no longer be a legitimate continuation of the
-    flow. Leaving the state redeemable would preserve nothing except a window
-    for repeating the rejected attempt.
+    Call this only after a successful authorization-code exchange. From that
+    point a retry can no longer be a legitimate continuation of the flow, so
+    the state must remain spent even when later validation rejects the callback.
     """
     schedule_after_rollback(session, partial(_mark_consumed, request_id=request.id))
 
@@ -542,7 +541,6 @@ def _complete_link(
     if identity is not None and identity.account_id != target_id:
         # Fail before resolving the target account so the rejection is the same
         # response regardless of the state of either account.
-        _keep_state_consumed(session, request)
         log.info(
             "oidc link rejected because the identity belongs to another account",
             extra={"connection": connection_id},
@@ -590,6 +588,10 @@ def complete(
     discovery = discover(configured)
 
     response = _exchange_code(configured, discovery, code=code, request=request)
+    # The provider has accepted the authorization code. Any later rejection
+    # cannot legitimately retry this browser flow, so preserve state redemption
+    # if the outer request transaction rolls back.
+    _keep_state_consumed(session, request)
     claims = _verified_claims(
         configured,
         discovery,
