@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PrivateAreaApi } from '../api/generated/apis/PrivateAreaApi';
 import { privateAreaQueryKeys } from '../client/privateArea';
 import { i18n } from '../i18n';
+import de from '../i18n/locales/de';
 import {
   PrivateCollectionDetailPage,
   PrivateCollectionEditPage,
@@ -203,7 +204,7 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    const editBtn = screen.getByRole('button', { name: 'Bearbeiten' });
+    const editBtn = screen.getByRole('button', { name: de.common.edit });
     fireEvent.click(editBtn);
 
     const input = screen.getByRole('textbox', {
@@ -238,7 +239,9 @@ describe('PrivateCollectionsPage', () => {
         }),
       ).toBeNull();
     });
-    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: de.common.edit }),
+    ).toBeDefined();
 
     expect(
       screen.queryByRole('button', {
@@ -296,7 +299,9 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: de.common.edit }),
+    );
     const input = screen.getByRole('textbox', {
       name: /titel|privatearea\.collections\.titlelabel/i,
     });
@@ -307,7 +312,7 @@ describe('PrivateCollectionsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: 'Wird gespeichert …' }),
+        screen.getByRole('button', { name: de.common.saving }),
       ).toBeDefined();
     });
 
@@ -317,7 +322,9 @@ describe('PrivateCollectionsPage', () => {
       version: 2,
     });
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeDefined();
+      expect(
+        screen.getByRole('button', { name: de.common.edit }),
+      ).toBeDefined();
     });
   });
 });
