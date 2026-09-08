@@ -88,6 +88,30 @@ class PlaceTest {
     }
 
     @Test
+    fun addingWithNonNumericCoordinatesMakesNoCall() = runTest(dispatcher) {
+        val api = PlaceApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.addPlace("A place", "", "", "abc", "def")
+        advanceUntilIdle()
+
+        assertTrue(api.created.isEmpty())
+    }
+
+    @Test
+    fun addingWithOutOfRangeCoordinatesMakesNoCall() = runTest(dispatcher) {
+        val api = PlaceApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.addPlace("A place", "", "", "999", "999")
+        advanceUntilIdle()
+
+        assertTrue(api.created.isEmpty())
+    }
+
+    @Test
     fun addingWithBothCoordinatesBlankSendsNoCoordinates() = runTest(dispatcher) {
         val api = PlaceApi()
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
