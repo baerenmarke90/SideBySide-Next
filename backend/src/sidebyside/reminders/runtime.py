@@ -453,9 +453,7 @@ def _lock_reminder(session: Session, reminder_id: UUID) -> Reminder | None:
 def _current_account(session: Session, account_id: UUID) -> Account | None:
     """Reload account state after a planner may have waited on its Reminder lock."""
     return session.execute(
-        select(Account)
-        .where(Account.id == account_id)
-        .execution_options(populate_existing=True)
+        select(Account).where(Account.id == account_id).execution_options(populate_existing=True)
     ).scalar_one_or_none()
 
 
