@@ -286,9 +286,13 @@ ALLOWED_LEGACY_INPUT = "Aktueller `main`"
 # domain-content fixtures. Keeping the exception value-based rather than
 # excluding whole test files still audits their engineering prose.
 ALLOWED_LOCALIZED_TEXTS = (
+    " im Park.",
+    " war der Tag.",
     "Al dente mit Salbei",
+    "Am Abend saßen wir noch lange draußen und haben über die letzten Monate gesprochen.",
     "Am See",
     "Anmeldung fehlgeschlagen.",
+    "ber den Dächern.",
     "Bild auswählen",
     "Danke für den schönen Abend.",
     "Danke, dass du heute für mich da warst.",
@@ -303,10 +307,13 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Keine Einträge",
     "Kino-Abend mit Popcorn",
     "Konzert im Herbst",
+    "Mitten in der Nacht sind wir aufgewacht, weil es draußen so heftig gewittert hat.",
     "Noch keine Einträge in eurer Story.",
     "Pfingstrosen im Juni",
     "Picknick im Grünen",
+    "Samstagmorgen war der Himmel klar und wir haben lange gefrühstückt, bevor wir losgezogen sind.",
     "Scharf mit Koriander",
+    "Über den Dächern.",
     "von Alex",
     "von Lea",
     "von Sam",

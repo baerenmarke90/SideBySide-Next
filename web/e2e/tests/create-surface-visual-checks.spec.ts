@@ -11,6 +11,33 @@ const MEMORY_TITLE = 'Ein ruhiger Sonntagmorgen';
 const MEMORY_BODY =
   'Wir haben lange geschlafen und dann gemeinsam Pfannkuchen gemacht.';
 
+// Covers the initials the drop cap must stay visually controlled for: a
+// narrow letter (S), and the widest common German-copy letters (W, M) plus
+// one more (A) — the width-consistency regression the real drop-cap element
+// exists to fix.
+const DROP_CAP_CASES = [
+  {
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    title: 'S wie Anfang',
+    body: 'Samstagmorgen war der Himmel klar und wir haben lange gefrühstückt, bevor wir losgezogen sind.',
+  },
+  {
+    id: MEMORY_ID,
+    title: MEMORY_TITLE,
+    body: MEMORY_BODY,
+  },
+  {
+    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    title: 'A wie Anfang',
+    body: 'Am Abend saßen wir noch lange draußen und haben über die letzten Monate gesprochen.',
+  },
+  {
+    id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    title: 'M wie Anfang',
+    body: 'Mitten in der Nacht sind wir aufgewacht, weil es draußen so heftig gewittert hat.',
+  },
+] as const;
+
 function localToday(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -153,33 +180,36 @@ async function installApiMocks(page: Page): Promise<void> {
       return;
     }
 
-    if (
-      method === 'GET' &&
-      pathname === `/api/v1/spaces/${SPACE_ID}/memories/${MEMORY_ID}`
-    ) {
-      await fulfillJson({
-        attachments: [],
-        author: { accountId: ACCOUNT_ID, displayName: 'Anna' },
-        authorId: ACCOUNT_ID,
-        body: MEMORY_BODY,
-        capabilities: { canEdit: true, canDelete: true },
-        createdAt: TEST_NOW,
-        happenedOn: TEST_NOW,
-        id: MEMORY_ID,
-        spaceId: SPACE_ID,
-        title: MEMORY_TITLE,
-        updatedAt: TEST_NOW,
-        version: 1,
-      });
-      return;
-    }
+    for (const memoryCase of DROP_CAP_CASES) {
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/memories/${memoryCase.id}`
+      ) {
+        await fulfillJson({
+          attachments: [],
+          author: { accountId: ACCOUNT_ID, displayName: 'Anna' },
+          authorId: ACCOUNT_ID,
+          body: memoryCase.body,
+          capabilities: { canEdit: true, canDelete: true },
+          createdAt: TEST_NOW,
+          happenedOn: TEST_NOW,
+          id: memoryCase.id,
+          spaceId: SPACE_ID,
+          title: memoryCase.title,
+          updatedAt: TEST_NOW,
+          version: 1,
+        });
+        return;
+      }
 
-    if (
-      method === 'GET' &&
-      pathname === `/api/v1/spaces/${SPACE_ID}/memories/${MEMORY_ID}/comments`
-    ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
-      return;
+      if (
+        method === 'GET' &&
+        pathname ===
+          `/api/v1/spaces/${SPACE_ID}/memories/${memoryCase.id}/comments`
+      ) {
+        await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+        return;
+      }
     }
 
     await fulfillJson(
@@ -294,24 +324,26 @@ for (const colorScheme of ['light', 'dark'] as const) {
     ).toBeVisible();
 
     const body = page.locator('.memory-detail-body');
+    const letter = body.locator('.drop-cap-letter');
     await expect(body).toBeVisible();
-    await expect(body).toHaveClass(/drop-cap/);
+    await expect(letter).toBeVisible();
+    await expect(letter).toHaveText('W');
+    // The rest of the paragraph's real text must be unaffected — the split
+    // is purely visual, not a rewording or duplication of the content.
     await expect(body).toHaveText(MEMORY_BODY);
 
-    const [bodyFontSize, firstLetterStyle] = await Promise.all([
+    const [bodyFontSize, letterStyle] = await Promise.all([
       body.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize)),
-      body.evaluate((el) => {
-        const style = getComputedStyle(el, '::first-letter');
+      letter.evaluate((el) => {
+        const style = getComputedStyle(el);
         return {
           float: style.float,
           fontSize: Number.parseFloat(style.fontSize),
         };
       }),
     ]);
-    // The drop cap must actually render as a floated, enlarged glyph — not
-    // just carry the class name with no visible effect.
-    expect(firstLetterStyle.float).toBe('left');
-    expect(firstLetterStyle.fontSize).toBeGreaterThan(bodyFontSize * 1.5);
+    expect(letterStyle.float).toBe('left');
+    expect(letterStyle.fontSize).toBeGreaterThan(bodyFontSize * 1.5);
 
     await page.screenshot({
       path: testInfo.outputPath(`memory-detail-drop-cap-${colorScheme}.png`),
@@ -325,5 +357,74 @@ for (const colorScheme of ['light', 'dark'] as const) {
       element.style.zoom = '2';
     });
     await expectNoHorizontalOverflow(page);
+  });
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+] as const) {
+  test(`Memory Detail drop cap keeps a uniform, non-overlapping width across S/W/A/M initials (${viewport.name})`, async ({
+    page,
+  }) => {
+    await installApiMocks(page);
+    await page.goto('/today');
+    await signIn(page);
+    await page.setViewportSize(viewport);
+
+    const widths: number[] = [];
+    for (const memoryCase of DROP_CAP_CASES) {
+      await page.goto(`/story/memories/${memoryCase.id}`);
+      await expect(
+        page.getByRole('heading', { name: memoryCase.title }),
+      ).toBeVisible();
+
+      const letter = page.locator('.drop-cap-letter');
+      const expectedFirst = memoryCase.body[0];
+      await expect(letter).toHaveText(expectedFirst);
+
+      const [letterBox, restBox] = await Promise.all([
+        letter.boundingBox(),
+        page.locator('.memory-detail-body').evaluate((el) => {
+          // The rest of the text is a plain text node after the letter
+          // span; measure it via a Range so we can compare its left edge
+          // against the drop cap's right edge.
+          const range = document.createRange();
+          const textNode = Array.from(el.childNodes).find(
+            (node) => node.nodeType === Node.TEXT_NODE,
+          );
+          if (!textNode) return null;
+          range.setStart(textNode, 0);
+          range.setEnd(textNode, 1);
+          const rect = range.getBoundingClientRect();
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          };
+        }),
+      ]);
+      if (!letterBox || !restBox) {
+        throw new Error(
+          `Drop cap or body text did not render for ${memoryCase.title}.`,
+        );
+      }
+
+      widths.push(letterBox.width);
+      // The following text must start at or after the drop cap's right
+      // edge — never underneath/overlapping it.
+      expect(restBox.x).toBeGreaterThanOrEqual(
+        letterBox.x + letterBox.width - 1,
+      );
+
+      await expectNoHorizontalOverflow(page);
+    }
+
+    const [minWidth, maxWidth] = [Math.min(...widths), Math.max(...widths)];
+    // Same fixed-width gutter regardless of letter (S vs. the wider W/M) —
+    // a couple of px of anti-aliasing/glyph-metric slack is fine, a whole
+    // extra letter's worth of width is the regression this guards against.
+    expect(maxWidth - minWidth).toBeLessThanOrEqual(3);
   });
 }

@@ -43,33 +43,39 @@
 }
 
 /*
- * ::first-letter (not a DOM-split span) so the browser's own Unicode-aware
- * "first letter" boundary applies instead of a naive string-index split,
- * which would risk breaking a surrogate pair, combining mark, or emoji at
- * the start of a memory. `line-height: 1` removes the half-leading offset
- * that is the usual cause of a float drop cap looking sunken/raised/shifted
- * relative to the body baseline. Where the engine implements the CSS
- * `initial-letter` property (Chromium, Safari) it takes over and computes
- * the correct multi-line baseline alignment natively instead of the
- * hand-tuned font-size/line-height fallback below. Sized to read as a
- * compact editorial initial — about two lines tall and close to the
- * following text — rather than a separate decorative element.
+ * A real element (see splitFirstGrapheme + <span class="drop-cap-letter">
+ * in MemoryProductPage.tsx), not ::first-letter/initial-letter: the pseudo
+ * element's box has no settable width, so a wide glyph like "W" or "M"
+ * reserves however much horizontal space it naturally needs, narrowing the
+ * text column beside it and producing uneven wraps compared to a narrow
+ * glyph like "S". A fixed `width` here (in `em`, so it scales with the
+ * glyph's own font-size) gives every initial the same footprint, with
+ * `text-align: center` keeping a narrower letter visually centered in it —
+ * the same "reserved gutter" a print drop cap uses regardless of letter.
+ * `line-height: 1` removes the half-leading offset that is the usual cause
+ * of a float drop cap looking sunken/raised/shifted relative to the body
+ * baseline. splitFirstGrapheme keeps the actual paragraph text unchanged
+ * (no visual/audible duplication) — it only wraps the same first grapheme
+ * cluster in its own span instead of leaving it inline.
  */
-.memory-detail-body.drop-cap::first-letter {
+.drop-cap-letter {
+  display: block;
   float: left;
+  width: 1.1em;
   line-height: 1;
   font-family: var(--font-display);
   font-size: 2.6rem;
   font-weight: 700;
   margin-right: 0.3rem;
   color: var(--color-brand);
+  text-align: center;
   text-transform: uppercase;
 }
 
-@supports (initial-letter: 1.7) or (-webkit-initial-letter: 1.7) {
-  .memory-detail-body.drop-cap::first-letter {
-    -webkit-initial-letter: 1.7 2;
-    initial-letter: 1.7 2;
+@media (max-width: 640px) {
+  .drop-cap-letter {
+    font-size: 1.9rem;
+    margin-right: 0.25rem;
   }
 }
 
