@@ -5,6 +5,8 @@ const de = {
     refresh: 'Aktualisieren',
     refreshing: 'Aktualisiert …',
     backToStart: 'Zur Startseite',
+    edit: 'Bearbeiten',
+    saving: 'Wird gespeichert …',
   },
   navigation: {
     skipToContent: 'Zum Inhalt springen',
