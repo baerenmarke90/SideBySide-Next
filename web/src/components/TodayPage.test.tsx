@@ -372,7 +372,7 @@ describe('TodayPage', () => {
     expect(html).toContain('Photo Memory');
   });
 
-  it('renders compact recent activity cards and secondary all-activity action', () => {
+  it('renders a compact shared-life trace (not activity-log cards) and secondary all-activity action', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -426,13 +426,22 @@ describe('TodayPage', () => {
     // Renders section with distinct kicker and heading (no duplicate wording)
     expect(html).toContain(m5s5.dashboard.recentKicker);
     expect(html).toContain(m5s5.dashboard.recentTitle);
-    expect(html).toContain(m5s5.dashboard.recentSubline);
+    // The descriptive subline read as redundant activity-log copy and was
+    // removed per Product Owner review; the section no longer renders one.
+    expect(html).not.toContain('today-section-subline');
 
-    // Renders compact items
-    expect(html).toContain('recent-shared-card');
+    // Renders as flowing inline trace entries, not activity-log/database
+    // record cards (icon-badge + heading + kind/date subtitle stacked in a
+    // vertical list).
+    expect(html).toContain('today-trace-entry');
+    expect(html).not.toContain('recent-shared-card');
     expect(html).toContain('Summer Chapter');
-    expect(html).toContain(m5s5.kind.CHAPTER);
     expect(html).toContain('Rainy Day Movies');
+
+    // Type is still available to assistive tech, just not as its own
+    // visible badge next to an already type-specific icon.
+    expect(html).toContain('sr-only');
+    expect(html).toContain(m5s5.kind.CHAPTER);
     expect(html).toContain(m5s5.kind.COLLECTION);
 
     // Slices to max 4 items

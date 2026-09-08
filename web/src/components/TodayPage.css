@@ -451,55 +451,44 @@
   color: var(--color-text-secondary);
 }
 
-/* Quiet editorial shared trace (#790/#791): generous whitespace between
-   entries instead of repeated full-width separator rows, so this reads as a
-   restrained relationship trace rather than an activity/spreadsheet table.
-   Full Activity access remains a secondary link below. */
+/* Shared-life trace (#790/#791 third follow-up): the previous per-item
+   icon-badge + heading + kind/date subtitle, stacked one per row, was a
+   textbook activity-feed/log affordance regardless of border or spacing -
+   the DOM shape itself (avatar, record name, type, timestamp) is what read
+   as a database record. Entries are now plain inline text (no per-item
+   card/border/background) that wrap left-to-right like a flowing editorial
+   caption, so the section uses the available desktop width instead of
+   sitting as a narrow left-aligned column with dead space beside it, and
+   doesn't read as a database record repeated four times. Full Activity
+   access remains a secondary link below. */
 .today-stream.today-stream-recent {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  flex-flow: row wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
   overflow: visible;
   scroll-snap-type: none;
   margin: 0;
   padding: 0;
 }
 
-.recent-shared-card-link {
-  text-decoration: none;
+.today-trace-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
   color: inherit;
-  display: block;
+  text-decoration: none;
   border-radius: var(--radius-medium);
 }
 
-.recent-shared-card-link:focus-visible {
+.today-trace-entry-static {
+  cursor: default;
+}
+
+.today-trace-entry:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
-}
-
-.recent-shared-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  background: transparent;
-  box-shadow: none;
-  transition: transform var(--motion-fast);
-}
-
-.recent-shared-card-link:hover .recent-shared-card {
-  transform: translateX(2px);
-}
-
-.recent-shared-icon {
-  width: 1.85rem;
-  height: 1.85rem;
-  margin-top: 0.15rem;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--color-brand-surface);
-  color: var(--color-brand-text);
 }
 
 .recent-type-icon {
@@ -512,34 +501,43 @@
   stroke-linejoin: round;
 }
 
-.recent-shared-copy {
-  min-width: 0;
-  display: grid;
-  gap: 0.2rem;
-}
-
-.recent-shared-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 650;
-  color: var(--color-text);
-  line-height: 1.4;
-  /* A quiet snippet, not a table cell: real titles read in full. */
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.recent-shared-meta {
-  display: flex;
+/* Type is still conveyed (the icon shape differs per kind), just not as its
+   own bold, brand-colored badge - that redundant field next to an
+   already-typed icon is what made this read as structured record metadata
+   instead of a quiet personal trace. */
+.today-trace-icon {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: 0.82rem;
+  flex: 0 0 auto;
   color: var(--color-text-secondary);
 }
 
-.recent-shared-meta-sep {
-  opacity: 0.6;
+.today-trace-icon .recent-type-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.today-trace-text {
+  font-family: var(--font-ui);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.today-trace-entry:hover .today-trace-text {
+  text-decoration: underline;
+}
+
+.today-trace-sep {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.today-trace-time {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .today-recent-footer {
@@ -1013,8 +1011,7 @@
   }
 
   .today-hero-action,
-  .today-agenda-row-link,
-  .recent-shared-card-link .recent-shared-card {
+  .today-agenda-row-link {
     transition: none;
   }
 }
