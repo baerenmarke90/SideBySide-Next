@@ -296,6 +296,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.goto(`/story/heart-moments/${HEART_MOMENT_ID}/edit`);
     await expect(
       page.getByRole('heading', {
+        level: 1,
         name: storyProducts.heartMomentProduct.editHeading,
       }),
     ).toBeVisible();
