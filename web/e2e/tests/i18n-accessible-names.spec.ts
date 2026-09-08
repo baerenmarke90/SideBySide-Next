@@ -154,7 +154,7 @@ async function installPlanDetailMocks(page: Page): Promise<string[]> {
         capabilities: { canComment: false, canDelete: true, canEdit: true },
         createdAt: TEST_NOW,
         createdBy: ACCOUNT_ID,
-        creator: { accountId: ACCOUNT_ID, displayName: 'Anna' },
+        creator: { displayName: 'Anna', id: ACCOUNT_ID },
         description: 'A quiet weekend together.',
         experiencedOn: null,
         id: PLAN_ID,
