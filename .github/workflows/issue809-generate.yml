@@ -25,7 +25,9 @@ jobs:
           python-version: '3.13.7'
 
       - name: Apply bounded source edits
-        run: python3 tools/issue809_apply.py
+        run: |
+          sed -i "s#../client/dashboardQuery'#../client/dashboardQueries'#" tools/issue809_apply.py
+          python3 tools/issue809_apply.py
 
       - name: Install locked backend environment
         run: |
