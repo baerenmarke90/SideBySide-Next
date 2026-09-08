@@ -1,8 +1,22 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+type NodeFs = {
+  readFileSync(path: URL, encoding: 'utf8'): string;
+};
+
+type NodeProcess = {
+  getBuiltinModule(name: 'fs'): NodeFs;
+};
+
 function readSource(relativePath: string): string {
-  return readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+  const processRef = (
+    globalThis as typeof globalThis & { process?: NodeProcess }
+  ).process;
+  if (!processRef)
+    throw new Error('Node process API is unavailable in the test run.');
+  return processRef
+    .getBuiltinModule('fs')
+    .readFileSync(new URL(relativePath, import.meta.url), 'utf8');
 }
 
 describe('shared hidden file input helper', () => {
