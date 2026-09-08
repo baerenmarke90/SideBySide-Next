@@ -481,6 +481,11 @@ class ReferenceViewModel(
     /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
     private var lastSearchQuery: String? = null
     private var lastSearchKind: SearchKind? = null
+    /**
+     * Changes whenever a first-page search supersedes the previous search identity.
+     * Session generation alone is insufficient because query/filter changes stay in the same session.
+     */
+    private var searchGeneration: Long = 0
 
     /** Kept across a failed attempt so a retry is the same gesture, not a second one. */
     private var pendingGestureId: java.util.UUID? = null
@@ -4622,15 +4627,28 @@ class ReferenceViewModel(
         val spaceId = activeSpaceId ?: return
         val operationEpoch = sessionEpoch
         val trimmed = query.trim()
+        val requestGeneration = ++searchGeneration
 
-        mutate { it.copy(searchBusy = true, searchProblem = null) }
+        // The new first page owns the search identity immediately. Clearing the old
+        // cursor prevents load-more from pairing Search B with Search A's cursor
+        // while Search B is still in flight.
+        searchCursor = null
+        lastSearchQuery = trimmed
+        lastSearchKind = kind
+        mutate {
+            it.copy(
+                searchBusy = true,
+                searchProblem = null,
+                searchHasMore = false,
+                searchLoadingMore = false,
+            )
+        }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
             runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    lastSearchQuery = trimmed
-                    lastSearchKind = kind
+                    if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onSuccess
                     searchCursor = page.nextCursor
                     mutate {
                         it.copy(
@@ -4642,6 +4660,7 @@ class ReferenceViewModel(
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onFailure
                     mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
                 }
         }
@@ -4653,15 +4672,18 @@ class ReferenceViewModel(
         val spaceId = activeSpaceId ?: return
         val cursor = searchCursor ?: return
         val query = lastSearchQuery ?: return
+        val kind = lastSearchKind
         if (_uiState.value.searchLoadingMore) return
         val operationEpoch = sessionEpoch
+        val requestGeneration = searchGeneration
 
         mutate { it.copy(searchLoadingMore = true) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, lastSearchKind, cursor) }
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, kind, cursor) }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    if (!isCurrentSearch(requestGeneration, query, kind)) return@onSuccess
                     searchCursor = page.nextCursor
                     mutate {
                         it.copy(
@@ -4672,7 +4694,10 @@ class ReferenceViewModel(
                     }
                 }
                 .onFailure {
-                    if (isCurrentSession(operationEpoch, currentSession)) {
+                    if (
+                        isCurrentSession(operationEpoch, currentSession) &&
+                        isCurrentSearch(requestGeneration, query, kind)
+                    ) {
                         mutate { it.copy(searchLoadingMore = false) }
                     }
                 }
@@ -4680,6 +4705,7 @@ class ReferenceViewModel(
     }
 
     fun clearSearch() {
+        searchGeneration += 1
         searchCursor = null
         lastSearchQuery = null
         lastSearchKind = null
@@ -5615,6 +5641,9 @@ class ReferenceViewModel(
 
     private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
         sessionEpoch == epoch && session === currentSession
+
+    private fun isCurrentSearch(generation: Long, query: String, kind: SearchKind?): Boolean =
+        searchGeneration == generation && lastSearchQuery == query && lastSearchKind == kind
 
     private fun publishDrafts(
         status: UiMessage? = draftStatus(),
