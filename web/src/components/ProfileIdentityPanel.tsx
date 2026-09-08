@@ -274,6 +274,8 @@ export function ProfileIdentityPanel({
                 className="profile-identity-file-input visually-hidden-input"
                 type="file"
                 accept="image/*"
+                aria-label={t('profileIdentity.changeAvatar')}
+                tabIndex={-1}
                 disabled={pending}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
