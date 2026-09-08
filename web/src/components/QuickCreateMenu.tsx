@@ -9,13 +9,13 @@ import {
 } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  CHAPTER_CREATE_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   MEMORY_CREATE_ROUTE,
   MILESTONE_CREATE_ROUTE,
   MORE_COLLECTIONS_ROUTE,
   MORE_PLACES_ROUTE,
   MORE_PRIVATE_ROUTE,
-  STORY_CHAPTERS_ROUTE,
   appRoutePath,
   type AppRouteIcon,
 } from '../client/routes';
@@ -54,7 +54,7 @@ const MOMENTE_TARGETS: readonly QuickCreateTarget[] = [
   },
   {
     labelKey: 'navigation.quickCreateChapter',
-    to: `${STORY_CHAPTERS_ROUTE}#chapter-title`,
+    to: CHAPTER_CREATE_ROUTE,
     icon: 'chapter',
     tone: 'story',
   },

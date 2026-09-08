@@ -54,6 +54,7 @@ import { createServerAdminApis } from './client/serverAdmin';
 import {
   ACTIVITY_ROUTE,
   appRoutePath,
+  CHAPTER_CREATE_ROUTE,
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
@@ -93,6 +94,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
 import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
+import { ChapterCreatePage } from './components/ChapterCreatePage';
 import { ChapterProductPage } from './components/ChapterProductPage';
 import { ChaptersOverviewPage } from './components/ChaptersOverviewPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
@@ -587,6 +589,10 @@ function AuthenticatedApp({
           <Route
             path="/plan/chapters"
             element={<Navigate replace to={STORY_CHAPTERS_ROUTE} />}
+          />
+          <Route
+            path={CHAPTER_CREATE_ROUTE}
+            element={<ChapterCreatePage {...planningProductProps} />}
           />
           <Route
             path={CHAPTER_DETAIL_ROUTE_PATTERN}
