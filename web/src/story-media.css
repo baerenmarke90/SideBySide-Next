@@ -44,6 +44,12 @@ input.visually-hidden-input {
   padding: 0;
 }
 
+/* The picker wrapper can be a grid item on edit surfaces. Let it shrink below
+ * its intrinsic copy width; the visible picker then owns truncation itself. */
+.attachment-draft-picker {
+  min-width: 0;
+}
+
 /* Allow the visible picker copy to shrink inside the flex row so its existing
  * nowrap/ellipsis treatment owns long format text instead of widening the page. */
 .file-picker > span:not(.file-picker-icon) {
