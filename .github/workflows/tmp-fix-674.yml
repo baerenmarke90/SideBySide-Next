@@ -24,224 +24,168 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
+          def replace_function(text: str, signature: str, replacement: str) -> str:
+              start = text.index(signature)
+              brace = text.index('{', start)
+              depth = 0
+              end = None
+              for index in range(brace, len(text)):
+                  char = text[index]
+                  if char == '{':
+                      depth += 1
+                  elif char == '}':
+                      depth -= 1
+                      if depth == 0:
+                          end = index + 1
+                          break
+              if end is None:
+                  raise SystemExit(f'Could not find end of {signature}')
+              return text[:start] + replacement + text[end:]
+
           vm_path = Path('android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt')
           vm = vm_path.read_text()
 
           old_members = '''    /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
-              private var lastSearchQuery: String? = null
-              private var lastSearchKind: SearchKind? = null
-          '''.replace('              ', '')
+    private var lastSearchQuery: String? = null
+    private var lastSearchKind: SearchKind? = null
+'''
           new_members = '''    /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
-              private var lastSearchQuery: String? = null
-              private var lastSearchKind: SearchKind? = null
-              /**
-               * Changes whenever a first-page search supersedes the previous search identity.
-               * Session generation alone is insufficient because query/filter changes stay in the same session.
-               */
-              private var searchGeneration: Long = 0
-          '''.replace('              ', '')
+    private var lastSearchQuery: String? = null
+    private var lastSearchKind: SearchKind? = null
+    /**
+     * Changes whenever a first-page search supersedes the previous search identity.
+     * Session generation alone is insufficient because query/filter changes stay in the same session.
+     */
+    private var searchGeneration: Long = 0
+'''
           if vm.count(old_members) != 1:
               raise SystemExit('Expected exactly one search member block')
           vm = vm.replace(old_members, new_members, 1)
 
-          old_search = '''    fun search(query: String, kind: SearchKind? = null) {
-              if (query.isBlank()) {
-                  clearSearch()
-                  return
-              }
-              val api = contract ?: return
-              val currentSession = session ?: return
-              val spaceId = activeSpaceId ?: return
-              val operationEpoch = sessionEpoch
-              val trimmed = query.trim()
+          vm = replace_function(
+              vm,
+              '    fun search(query: String, kind: SearchKind? = null) {',
+              '''    fun search(query: String, kind: SearchKind? = null) {
+        if (query.isBlank()) {
+            clearSearch()
+            return
+        }
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+        val trimmed = query.trim()
+        val requestGeneration = ++searchGeneration
 
-              mutate { it.copy(searchBusy = true, searchProblem = null) }
-              viewModelScope.launch {
-                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
-                      .onSuccess { page ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                          lastSearchQuery = trimmed
-                          lastSearchKind = kind
-                          searchCursor = page.nextCursor
-                          mutate {
-                              it.copy(
-                                  searchResults = page.items,
-                                  searchBusy = false,
-                                  searchHasMore = page.nextCursor != null,
-                              )
-                          }
-                      }
-                      .onFailure { throwable ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
-                          mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
-                      }
-              }
-          }
+        // The new first page owns the search identity immediately. Clearing the old
+        // cursor prevents load-more from pairing Search B with Search A's cursor
+        // while Search B is still in flight.
+        searchCursor = null
+        lastSearchQuery = trimmed
+        lastSearchKind = kind
+        mutate {
+            it.copy(
+                searchBusy = true,
+                searchProblem = null,
+                searchHasMore = false,
+                searchLoadingMore = false,
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onSuccess
+                    searchCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            searchResults = page.items,
+                            searchBusy = false,
+                            searchHasMore = page.nextCursor != null,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onFailure
+                    mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
+                }
+        }
+    }''',
+          )
 
-              fun loadMoreSearch() {
-              val api = contract ?: return
-              val currentSession = session ?: return
-              val spaceId = activeSpaceId ?: return
-              val cursor = searchCursor ?: return
-              val query = lastSearchQuery ?: return
-              if (_uiState.value.searchLoadingMore) return
-              val operationEpoch = sessionEpoch
+          vm = replace_function(
+              vm,
+              '    fun loadMoreSearch() {',
+              '''    fun loadMoreSearch() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = searchCursor ?: return
+        val query = lastSearchQuery ?: return
+        val kind = lastSearchKind
+        if (_uiState.value.searchLoadingMore) return
+        val operationEpoch = sessionEpoch
+        val requestGeneration = searchGeneration
 
-              mutate { it.copy(searchLoadingMore = true) }
-              viewModelScope.launch {
-                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, lastSearchKind, cursor) }
-                      .onSuccess { page ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                          searchCursor = page.nextCursor
-                          mutate {
-                              it.copy(
-                                  searchResults = it.searchResults + page.items,
-                                  searchHasMore = page.nextCursor != null,
-                                  searchLoadingMore = false,
-                              )
-                          }
-                      }
-                      .onFailure {
-                          if (isCurrentSession(operationEpoch, currentSession)) {
-                              mutate { it.copy(searchLoadingMore = false) }
-                          }
-                      }
-              }
-          }
+        mutate { it.copy(searchLoadingMore = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, kind, cursor) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    if (!isCurrentSearch(requestGeneration, query, kind)) return@onSuccess
+                    searchCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            searchResults = it.searchResults + page.items,
+                            searchHasMore = page.nextCursor != null,
+                            searchLoadingMore = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    if (
+                        isCurrentSession(operationEpoch, currentSession) &&
+                        isCurrentSearch(requestGeneration, query, kind)
+                    ) {
+                        mutate { it.copy(searchLoadingMore = false) }
+                    }
+                }
+        }
+    }''',
+          )
 
-              fun clearSearch() {
-              searchCursor = null
-              lastSearchQuery = null
-              lastSearchKind = null
-              mutate {
-                  it.copy(
-                      searchResults = emptyList(),
-                      searchBusy = false,
-                      searchProblem = null,
-                      searchHasMore = false,
-                      searchLoadingMore = false,
-                  )
-              }
-          }
-          '''.replace('              ', '')
-          new_search = '''    fun search(query: String, kind: SearchKind? = null) {
-              if (query.isBlank()) {
-                  clearSearch()
-                  return
-              }
-              val api = contract ?: return
-              val currentSession = session ?: return
-              val spaceId = activeSpaceId ?: return
-              val operationEpoch = sessionEpoch
-              val trimmed = query.trim()
-              val requestGeneration = ++searchGeneration
-
-              // The new first page owns the search identity immediately. Clearing the
-              // old cursor prevents load-more from pairing Search B with Search A's cursor
-              // while Search B is still in flight.
-              searchCursor = null
-              lastSearchQuery = trimmed
-              lastSearchKind = kind
-              mutate {
-                  it.copy(
-                      searchBusy = true,
-                      searchProblem = null,
-                      searchHasMore = false,
-                      searchLoadingMore = false,
-                  )
-              }
-              viewModelScope.launch {
-                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
-                      .onSuccess { page ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                          if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onSuccess
-                          searchCursor = page.nextCursor
-                          mutate {
-                              it.copy(
-                                  searchResults = page.items,
-                                  searchBusy = false,
-                                  searchHasMore = page.nextCursor != null,
-                              )
-                          }
-                      }
-                      .onFailure { throwable ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
-                          if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onFailure
-                          mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
-                      }
-              }
-          }
-
-              fun loadMoreSearch() {
-              val api = contract ?: return
-              val currentSession = session ?: return
-              val spaceId = activeSpaceId ?: return
-              val cursor = searchCursor ?: return
-              val query = lastSearchQuery ?: return
-              val kind = lastSearchKind
-              if (_uiState.value.searchLoadingMore) return
-              val operationEpoch = sessionEpoch
-              val requestGeneration = searchGeneration
-
-              mutate { it.copy(searchLoadingMore = true) }
-              viewModelScope.launch {
-                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, kind, cursor) }
-                      .onSuccess { page ->
-                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                          if (!isCurrentSearch(requestGeneration, query, kind)) return@onSuccess
-                          searchCursor = page.nextCursor
-                          mutate {
-                              it.copy(
-                                  searchResults = it.searchResults + page.items,
-                                  searchHasMore = page.nextCursor != null,
-                                  searchLoadingMore = false,
-                              )
-                          }
-                      }
-                      .onFailure {
-                          if (
-                              isCurrentSession(operationEpoch, currentSession) &&
-                              isCurrentSearch(requestGeneration, query, kind)
-                          ) {
-                              mutate { it.copy(searchLoadingMore = false) }
-                          }
-                      }
-              }
-          }
-
-              fun clearSearch() {
-              searchGeneration += 1
-              searchCursor = null
-              lastSearchQuery = null
-              lastSearchKind = null
-              mutate {
-                  it.copy(
-                      searchResults = emptyList(),
-                      searchBusy = false,
-                      searchProblem = null,
-                      searchHasMore = false,
-                      searchLoadingMore = false,
-                  )
-              }
-          }
-          '''.replace('              ', '')
-          if vm.count(old_search) != 1:
-              raise SystemExit('Expected exactly one search method block')
-          vm = vm.replace(old_search, new_search, 1)
+          vm = replace_function(
+              vm,
+              '    fun clearSearch() {',
+              '''    fun clearSearch() {
+        searchGeneration += 1
+        searchCursor = null
+        lastSearchQuery = null
+        lastSearchKind = null
+        mutate {
+            it.copy(
+                searchResults = emptyList(),
+                searchBusy = false,
+                searchProblem = null,
+                searchHasMore = false,
+                searchLoadingMore = false,
+            )
+        }
+    }''',
+          )
 
           old_helper = '''    private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
-              sessionEpoch == epoch && session === currentSession
-          '''.replace('              ', '')
+        sessionEpoch == epoch && session === currentSession
+'''
           new_helper = '''    private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
-              sessionEpoch == epoch && session === currentSession
+        sessionEpoch == epoch && session === currentSession
 
-              private fun isCurrentSearch(generation: Long, query: String, kind: SearchKind?): Boolean =
-              searchGeneration == generation && lastSearchQuery == query && lastSearchKind == kind
-          '''.replace('              ', '')
+    private fun isCurrentSearch(generation: Long, query: String, kind: SearchKind?): Boolean =
+        searchGeneration == generation && lastSearchQuery == query && lastSearchKind == kind
+'''
           if vm.count(old_helper) != 1:
               raise SystemExit('Expected exactly one session helper block')
           vm = vm.replace(old_helper, new_helper, 1)
@@ -263,167 +207,177 @@ jobs:
               )
 
           marker = '''    @Test
-              fun aResultPageWithoutANextCursorReportsNoMore() = runTest(dispatcher) {
-          '''.replace('              ', '')
+    fun aResultPageWithoutANextCursorReportsNoMore() = runTest(dispatcher) {
+'''
           tests = '''    @Test
-              fun staleFirstPageFromOlderKindCannotReplaceNewerSearch() = runTest(dispatcher) {
-              val api = ControllableSearchApi()
-              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
-              val currentResult = searchResult("A gift by the sea")
+    fun staleFirstPageFromOlderKindCannotReplaceNewerSearch() = runTest(dispatcher) {
+        val api = ControllableSearchApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+        val currentResult = searchResult("A gift by the sea")
 
-              signIn(model)
-              model.search("sea", SearchKind.MEMORY)
-              runCurrent()
-              val staleFirstPage = api.calls.single()
+        signIn(model)
+        model.search("sea", SearchKind.MEMORY)
+        runCurrent()
+        val staleFirstPage = api.calls.single()
 
-              model.search("sea", SearchKind.GIFT_IDEA)
-              runCurrent()
-              val currentFirstPage = api.calls.last()
-              currentFirstPage.response.complete(SearchPage(items = listOf(currentResult), nextCursor = "gift-page-2"))
-              runCurrent()
+        model.search("sea", SearchKind.GIFT_IDEA)
+        runCurrent()
+        val currentFirstPage = api.calls.last()
+        currentFirstPage.response.complete(
+            SearchPage(items = listOf(currentResult), nextCursor = "gift-page-2"),
+        )
+        runCurrent()
 
-              assertEquals(listOf(currentResult), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchHasMore)
+        assertEquals(listOf(currentResult), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchHasMore)
 
-              staleFirstPage.response.complete(
-                  SearchPage(items = listOf(searchResult("Old memory result")), nextCursor = null),
-              )
-              advanceUntilIdle()
+        staleFirstPage.response.complete(
+            SearchPage(items = listOf(searchResult("Old memory result")), nextCursor = null),
+        )
+        advanceUntilIdle()
 
-              assertEquals(listOf(currentResult), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchHasMore)
+        assertEquals(listOf(currentResult), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchHasMore)
 
-              model.loadMoreSearch()
-              runCurrent()
-              val currentPagination = api.calls.last()
-              assertEquals("sea", currentPagination.query)
-              assertEquals(SearchKind.GIFT_IDEA, currentPagination.kind)
-              assertEquals("gift-page-2", currentPagination.cursor)
-              currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
-              advanceUntilIdle()
-          }
+        model.loadMoreSearch()
+        runCurrent()
+        val currentPagination = api.calls.last()
+        assertEquals("sea", currentPagination.query)
+        assertEquals(SearchKind.GIFT_IDEA, currentPagination.kind)
+        assertEquals("gift-page-2", currentPagination.cursor)
+        currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
+        advanceUntilIdle()
+    }
 
-              @Test
-              fun staleLoadMoreIsIgnoredWhenItFinishesBeforeNewFirstPage() = runTest(dispatcher) {
-              val api = ControllableSearchApi()
-              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
-              val oldFirst = searchResult("Old first page")
-              val newFirst = searchResult("New first page")
+    @Test
+    fun staleLoadMoreIsIgnoredWhenItFinishesBeforeNewFirstPage() = runTest(dispatcher) {
+        val api = ControllableSearchApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+        val oldFirst = searchResult("Old first page")
+        val newFirst = searchResult("New first page")
 
-              signIn(model)
-              model.search("old")
-              runCurrent()
-              api.calls[0].response.complete(SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"))
-              advanceUntilIdle()
+        signIn(model)
+        model.search("old")
+        runCurrent()
+        api.calls[0].response.complete(
+            SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"),
+        )
+        advanceUntilIdle()
 
-              model.loadMoreSearch()
-              runCurrent()
-              val staleLoadMore = api.calls[1]
-              model.search("new")
-              runCurrent()
-              val currentFirstPage = api.calls[2]
+        model.loadMoreSearch()
+        runCurrent()
+        val staleLoadMore = api.calls[1]
+        model.search("new")
+        runCurrent()
+        val currentFirstPage = api.calls[2]
 
-              staleLoadMore.response.complete(
-                  SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
-              )
-              runCurrent()
+        staleLoadMore.response.complete(
+            SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
+        )
+        runCurrent()
 
-              assertEquals(listOf(oldFirst), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchBusy)
-              assertTrue(!model.uiState.value.searchHasMore)
-              assertTrue(!model.uiState.value.searchLoadingMore)
+        assertEquals(listOf(oldFirst), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchBusy)
+        assertTrue(!model.uiState.value.searchHasMore)
+        assertTrue(!model.uiState.value.searchLoadingMore)
 
-              currentFirstPage.response.complete(SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"))
-              advanceUntilIdle()
+        currentFirstPage.response.complete(
+            SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"),
+        )
+        advanceUntilIdle()
 
-              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchHasMore)
-          }
+        assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchHasMore)
+    }
 
-              @Test
-              fun staleLoadMoreIsIgnoredWhenNewFirstPageFinishesFirst() = runTest(dispatcher) {
-              val api = ControllableSearchApi()
-              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
-              val oldFirst = searchResult("Old first page")
-              val newFirst = searchResult("New first page")
+    @Test
+    fun staleLoadMoreIsIgnoredWhenNewFirstPageFinishesFirst() = runTest(dispatcher) {
+        val api = ControllableSearchApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+        val oldFirst = searchResult("Old first page")
+        val newFirst = searchResult("New first page")
 
-              signIn(model)
-              model.search("old")
-              runCurrent()
-              api.calls[0].response.complete(SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"))
-              advanceUntilIdle()
+        signIn(model)
+        model.search("old")
+        runCurrent()
+        api.calls[0].response.complete(
+            SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"),
+        )
+        advanceUntilIdle()
 
-              model.loadMoreSearch()
-              runCurrent()
-              val staleLoadMore = api.calls[1]
-              model.search("new")
-              runCurrent()
-              val currentFirstPage = api.calls[2]
-              currentFirstPage.response.complete(SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"))
-              runCurrent()
+        model.loadMoreSearch()
+        runCurrent()
+        val staleLoadMore = api.calls[1]
+        model.search("new")
+        runCurrent()
+        val currentFirstPage = api.calls[2]
+        currentFirstPage.response.complete(
+            SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"),
+        )
+        runCurrent()
 
-              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchHasMore)
+        assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchHasMore)
 
-              staleLoadMore.response.complete(
-                  SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
-              )
-              advanceUntilIdle()
+        staleLoadMore.response.complete(
+            SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
+        )
+        advanceUntilIdle()
 
-              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
-              assertTrue(model.uiState.value.searchHasMore)
+        assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+        assertTrue(model.uiState.value.searchHasMore)
 
-              model.loadMoreSearch()
-              runCurrent()
-              val currentPagination = api.calls.last()
-              assertEquals("new-page-2", currentPagination.cursor)
-              currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
-              advanceUntilIdle()
-          }
+        model.loadMoreSearch()
+        runCurrent()
+        val currentPagination = api.calls.last()
+        assertEquals("new-page-2", currentPagination.cursor)
+        currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
+        advanceUntilIdle()
+    }
 
-          '''.replace('              ', '')
+'''
           if test.count(marker) != 1:
               raise SystemExit('Expected exactly one test insertion marker')
           test = test.replace(marker, tests + marker, 1)
 
           api_marker = 'private class SearchApi(\n'
           controllable = '''private data class PendingSearchCall(
-              val query: String,
-              val kind: SearchKind?,
-              val cursor: String?,
-              val response: CompletableDeferred<SearchPage>,
-          )
+    val query: String,
+    val kind: SearchKind?,
+    val cursor: String?,
+    val response: CompletableDeferred<SearchPage>,
+)
 
-              private class ControllableSearchApi : FakeReferenceContract() {
-              val calls = mutableListOf<PendingSearchCall>()
+private class ControllableSearchApi : FakeReferenceContract() {
+    val calls = mutableListOf<PendingSearchCall>()
 
-              override suspend fun signIn(email: String, password: String): SessionView = SessionView(
-                  account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
-                  tokens = TokenView(
-                      accessExpiresAt = OffsetDateTime.now(),
-                      accessToken = "access",
-                      refreshExpiresAt = OffsetDateTime.now(),
-                      refreshToken = "refresh",
-                  ),
-              )
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
 
-              override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
-                  listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
 
-              override suspend fun search(
-                  spaceId: UUID,
-                  accessToken: String,
-                  query: String,
-                  kind: SearchKind?,
-                  cursor: String?,
-              ): SearchPage {
-                  val response = CompletableDeferred<SearchPage>()
-                  calls += PendingSearchCall(query = query, kind = kind, cursor = cursor, response = response)
-                  return response.await()
-              }
-          }
+    override suspend fun search(
+        spaceId: UUID,
+        accessToken: String,
+        query: String,
+        kind: SearchKind?,
+        cursor: String?,
+    ): SearchPage {
+        val response = CompletableDeferred<SearchPage>()
+        calls += PendingSearchCall(query = query, kind = kind, cursor = cursor, response = response)
+        return response.await()
+    }
+}
 
-          '''.replace('              ', '')
+'''
           if test.count(api_marker) != 1:
               raise SystemExit('Expected exactly one SearchApi marker')
           test = test.replace(api_marker, controllable + api_marker, 1)
