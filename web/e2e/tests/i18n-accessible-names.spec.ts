@@ -222,14 +222,17 @@ test('plan detail edit action exposes translated accessible copy, never a raw ke
   await expect(editButton).toHaveAttribute('aria-label', 'Bearbeiten');
   await expect(editButton).toHaveAttribute('title', 'Bearbeiten');
 
-  const rawDottedLabels = await page.locator('[aria-label]').evaluateAll((elements) =>
-    elements
-      .map((element) => element.getAttribute('aria-label'))
-      .filter(
-        (label): label is string =>
-          Boolean(label) && /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+$/.test(label),
-      ),
-  );
+  const rawDottedLabels = await page
+    .locator('[aria-label]')
+    .evaluateAll((elements) =>
+      elements
+        .map((element) => element.getAttribute('aria-label'))
+        .filter(
+          (label): label is string =>
+            Boolean(label) &&
+            /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+$/.test(label),
+        ),
+    );
   expect(rawDottedLabels).toEqual([]);
   expect(unexpectedRequests).toEqual([]);
 });
