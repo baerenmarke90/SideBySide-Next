@@ -210,3 +210,218 @@ test('Timeline attachment-count meta ("2 Fotos") matches the surrounding seconda
 
   expect(mediaLabelStyle).toEqual(dateStyle);
 });
+
+const CAPABILITIES_ALL = CAPABILITIES;
+
+function memoryItem(
+  id: string,
+  title: string,
+  happenedOn: string,
+  photos: number,
+) {
+  return {
+    kind: 'MEMORY',
+    effectiveDate: happenedOn,
+    memory: {
+      id,
+      title,
+      happenedOn,
+      createdAt: happenedOn,
+      author: LEA,
+      capabilities: CAPABILITIES_ALL,
+      attachments: Array.from({ length: photos }, (_, index) => ({
+        id: `${id}-a${index}`,
+        position: index,
+        status: 'READY',
+        mediaType: 'IMAGE',
+        mimeType: 'image/jpeg',
+        hasThumbnail: true,
+        width: 800,
+        height: 800,
+        size: 1,
+      })),
+    },
+  };
+}
+
+/**
+ * One card per attachment shape the Timeline can render, so the footer's
+ * single base authority is exercised against all of them (#795).
+ */
+const FOOTER_VARIANTS = [
+  memoryItem('mem-none', 'Ein ruhiger Sonntagmorgen', '2026-08-28', 0),
+  memoryItem('mem-one', 'Ein Jahr in unserer Wohnung', '2026-08-27', 1),
+  memoryItem('mem-many', 'Ein Wochenende am Wasser', '2026-08-24', 3),
+  {
+    kind: 'HEART_MOMENT',
+    effectiveDate: '2026-08-22',
+    heartMoment: {
+      id: 'hm-1',
+      text: 'Kurz an dich gedacht.',
+      emotion: 'LOVED',
+      happenedOn: '2026-08-22',
+      createdAt: '2026-08-22',
+      author: LEA,
+      capabilities: CAPABILITIES_ALL,
+      attachment: {
+        id: 'hm-1-a',
+        position: 0,
+        status: 'READY',
+        mediaType: 'IMAGE',
+        mimeType: 'image/jpeg',
+        hasThumbnail: true,
+        width: 800,
+        height: 800,
+        size: 1,
+      },
+    },
+  },
+  {
+    kind: 'MILESTONE',
+    effectiveDate: '2026-08-20',
+    milestone: {
+      id: 'ms-1',
+      title: 'Drei Jahre',
+      happenedOn: '2026-08-20',
+      createdAt: '2026-08-20',
+      author: LEA,
+      capabilities: CAPABILITIES_ALL,
+    },
+  },
+];
+
+async function installFooterVariants(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === `/api/v1/spaces/${SPACE_ID}/timeline`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: FOOTER_VARIANTS,
+          hasMore: false,
+          nextCursor: null,
+        }),
+      });
+    },
+  );
+}
+
+async function openTimeline(page: Page): Promise<void> {
+  await page.goto('/story?tab=timeline');
+  await signIn(page);
+  await page.goto('/story?tab=timeline');
+  await page.waitForSelector('.story-card-footer');
+}
+
+/**
+ * `.story-card-footer` used to be declared as a base rule in four places
+ * (`styles.css`, `StoryProductPages.css`, `StoryListPolish.css` and a Memory
+ * Detail media query in `MemoryProductPage.css`). They had equal or
+ * overlapping specificity, so load order rather than intent decided the
+ * rendered footer. #795 consolidated that onto one owner; this guards it.
+ */
+test('the Timeline card footer has exactly one unconditional base rule (#795)', async ({
+  page,
+}) => {
+  await installMocks(page);
+  await installFooterVariants(page);
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await openTimeline(page);
+
+  const baseRules = await page.evaluate(() => {
+    const found: string[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try {
+        rules = (sheet as CSSStyleSheet).cssRules;
+      } catch {
+        continue;
+      }
+      // Only top-level rules count as the base; media-query variants are a
+      // legitimate part of the single owner's responsive behaviour.
+      for (const rule of Array.from(rules)) {
+        if (
+          rule instanceof CSSStyleRule &&
+          rule.selectorText.trim() === '.story-card-footer'
+        ) {
+          found.push(rule.cssText);
+        }
+      }
+    }
+    return found;
+  });
+
+  expect(baseRules).toHaveLength(1);
+});
+
+test('Timeline footer metadata stays coherent across attachment shapes (#795)', async ({
+  page,
+}) => {
+  await installMocks(page);
+  await installFooterVariants(page);
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await openTimeline(page);
+
+  const footers = await page.evaluate(() => {
+    const read = (el: Element) => {
+      const cs = getComputedStyle(el);
+      return {
+        color: cs.color,
+        fontSize: cs.fontSize,
+        fontWeight: cs.fontWeight,
+      };
+    };
+    return Array.from(document.querySelectorAll('.story-card-footer')).map(
+      (footer) => {
+        const time = footer.querySelector('time');
+        const mediaLabel = footer.querySelector('.media-label');
+        return {
+          base: read(footer),
+          borderTop: getComputedStyle(footer).borderTopWidth,
+          time: time ? read(time) : null,
+          mediaLabel: mediaLabel ? read(mediaLabel) : null,
+        };
+      },
+    );
+  });
+
+  expect(footers).toHaveLength(FOOTER_VARIANTS.length);
+
+  // Every card resolves the same footer base, whatever it contains.
+  const bases = new Set(footers.map((footer) => JSON.stringify(footer.base)));
+  expect(bases.size).toBe(1);
+  for (const footer of footers) {
+    expect(footer.borderTop).toBe('1px');
+    // Date and attachment count read as one muted metadata pair.
+    if (footer.mediaLabel) expect(footer.mediaLabel).toEqual(footer.time);
+  }
+
+  // The Memory without attachments states no count at all.
+  expect(footers[0].mediaLabel).toBeNull();
+  expect(footers[1].mediaLabel).not.toBeNull();
+  expect(footers[2].mediaLabel).not.toBeNull();
+});
+
+/**
+ * The compact stacked footer used to come from a Memory Detail media query
+ * that reached the Timeline by accident. It is intended behaviour, so the
+ * single owner now states it (#795).
+ */
+test('Timeline footer stacks on compact widths (#795)', async ({ page }) => {
+  await installMocks(page);
+  await installFooterVariants(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openTimeline(page);
+
+  const layout = await page
+    .locator('.story-card-footer')
+    .first()
+    .evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { flexDirection: cs.flexDirection, flexWrap: cs.flexWrap };
+    });
+
+  expect(layout.flexDirection).toBe('column');
+  expect(layout.flexWrap).toBe('wrap');
+});
