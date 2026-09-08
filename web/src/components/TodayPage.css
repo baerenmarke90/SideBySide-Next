@@ -451,22 +451,29 @@
   color: var(--color-text-secondary);
 }
 
-/* Shared-life trace (#790/#791 fourth follow-up): the previous per-item
-   icon-badge + heading + kind/date subtitle, stacked one per row, was a
-   textbook activity-feed/log affordance regardless of border or spacing -
-   the DOM shape itself (avatar, record name, type, timestamp) is what read
-   as a database record. A plain inline text trace (tried in the third
-   follow-up) removed the log feel but went too far the other way - no
+/* Shared-life trace (#790/#791 fourth/fifth follow-up): the previous
+   per-item icon-badge + heading + kind/date subtitle, stacked one per row,
+   was a textbook activity-feed/log affordance regardless of border or
+   spacing - the DOM shape itself (avatar, record name, type, timestamp) is
+   what read as a database record. A plain inline text trace (tried in the
+   third follow-up) removed the log feel but went too far the other way - no
    surface at all reads as an unstyled fragment, not a deliberately composed
    part of the page. Each entry is instead a small, soft mini-tile - reusing
    the compact bordered-surface convention already approved for the
    Shared Planning Horizon (.today-agenda-row) and the Momente archive
    entries (.momente-archive-link) - wrapped several-per-row so the section
    uses the available desktop width instead of sitting as a narrow column
-   with dead space beside it. Sized and colored more quietly than the
-   Shared Planning Horizon tiles (smaller padding/type scale, a muted
-   rather than brand-colored icon) so the section stays clearly secondary
-   to Today's primary content. Full Activity access remains a link below. */
+   with dead space beside it. The fourth follow-up capped these tiles at a
+   smaller flex-basis/max-width than .today-agenda-row directly above them
+   (170px/13rem vs. 220px/18rem), which both broke the two sections'
+   shared rhythm and truncated ordinary titles that had room to fit. The
+   fifth follow-up matches .today-agenda-row's exact width numbers instead -
+   a tile row immediately below another tile row growing to a different cap
+   is what read as "worse/tighter", not an inherent property of a smaller
+   tile. Secondary weight relative to the Shared Planning Horizon still
+   comes through padding, type scale, and a muted rather than brand-colored
+   icon - not from an artificially narrow box. Full Activity access remains
+   a link below. */
 .today-stream.today-stream-recent {
   display: flex;
   flex-direction: column;
@@ -507,8 +514,8 @@
 
 @media (min-width: 640px) {
   .today-recent-tile {
-    flex: 1 1 170px;
-    max-width: 13rem;
+    flex: 1 1 220px;
+    max-width: 18rem;
   }
 }
 

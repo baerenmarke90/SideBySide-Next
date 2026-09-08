@@ -11,6 +11,32 @@ function daysAgo(n: number): string {
   return new Date(Date.now() - n * 24 * 3600 * 1000).toISOString();
 }
 
+function inDays(n: number): string {
+  return new Date(Date.now() + n * 24 * 3600 * 1000).toISOString();
+}
+
+/**
+ * A few "Demnächst" items too, so tests can compare the "Zuletzt bei euch"
+ * mini-tile width directly against the Shared Planning Horizon tile width
+ * on the same viewport (#791 fifth follow-up: they must share one rhythm).
+ */
+const UPCOMING_ITEMS = [
+  { id: 'p1', type: 'PLAN', titleOrText: 'Wanderung', scheduledAt: inDays(2) },
+  {
+    id: 'p2',
+    type: 'PLAN',
+    titleOrText: 'Kino-Abend mit Popcorn',
+    scheduledAt: inDays(4),
+  },
+  { id: 'p3', type: 'PLAN', titleOrText: 'Brunch', scheduledAt: inDays(7) },
+  {
+    id: 'p4',
+    type: 'PLAN',
+    titleOrText: 'Wochenendtrip an die Ostsee',
+    scheduledAt: inDays(12),
+  },
+];
+
 /**
  * Reproduces the real-demo composition complaint (#790/#791 fourth
  * follow-up): four recent shared items of different kinds, mirroring the
@@ -147,7 +173,7 @@ async function installMocks(page: Page): Promise<void> {
         },
         relationshipDuration: { daysTogether: 250, startedOn: '2026-01-01' },
         retrospective: null,
-        upcoming: [],
+        upcoming: UPCOMING_ITEMS,
         recentShared: RECENT_SHARED_ITEMS,
       });
       return;
@@ -203,10 +229,40 @@ test('Today "Zuletzt bei euch" renders as small bordered mini-tiles, not activit
     nodes.map((node) => node.getBoundingClientRect()),
   );
   for (const rect of rects) {
-    expect(rect.width).toBeLessThan(260);
+    expect(rect.width).toBeLessThan(320);
   }
   const tops = rects.map((rect) => rect.top);
   expect(new Set(tops).size).toBeLessThan(tops.length);
+
+  // Matches the Shared Planning Horizon ("Demnächst") tile width directly
+  // above (#791 fifth follow-up): an earlier round capped these tiles
+  // narrower than that reference section, which read as a mismatched,
+  // "worse" rhythm even though both use the same bordered-tile pattern.
+  const agendaWidth = await page
+    .locator('.today-agenda-row')
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().width);
+  for (const rect of rects) {
+    expect(Math.abs(rect.width - agendaWidth)).toBeLessThan(1);
+  }
+
+  // Ordinary titles must not be truncated just because the box is small -
+  // only a genuinely long title (a free-text Heart Moment message) may
+  // still ellipsize, matching the one long "Demnächst" title that
+  // legitimately truncates on the same viewport.
+  const titleOverflow = await page
+    .locator('.today-recent-tile-title')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        text: node.textContent,
+        truncated: node.scrollWidth > node.clientWidth + 1,
+      })),
+    );
+  const truncatedTitles = titleOverflow.filter((t) => t.truncated);
+  expect(truncatedTitles).toHaveLength(1);
+  expect(truncatedTitles[0]?.text).toContain(
+    'Danke, dass du heute für mich da warst.',
+  );
 
   // Type is still available to assistive tech, but not as a separate
   // visible badge next to an already type-specific icon.
