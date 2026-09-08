@@ -24,6 +24,7 @@ import './components/RelatedPeoplePage.css';
 import './components/StoryProductPages.css';
 import './components/SharedPlanningSanctuary.css';
 import './components/SharedPlanningMotion.css';
+import './product-reflow.css';
 
 initializeTheme();
 
