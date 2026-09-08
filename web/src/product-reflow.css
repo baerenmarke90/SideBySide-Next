@@ -24,12 +24,24 @@
 .private-area-page,
 .product-editor-page,
 .momente-discover-page,
-.story-timeline {
+.story-timeline,
+.story-surface {
   min-width: 0;
 }
 
 /* Existing <= 760px compact contracts, keyed to available product width. */
 @container product-content (max-width: 47.5rem) {
+  /* Shared section headers must be able to place their action on a new line
+     instead of making a grid item's min-content width wider than the page. */
+  .section-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .section-head > * {
+    min-width: 0;
+  }
+
   /* Today: undo desktop-only split layouts when the content column is narrow. */
   .today-hero.couple-presence-card {
     flex-direction: column;
