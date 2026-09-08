@@ -35,6 +35,15 @@
   font-size: 0.82rem;
 }
 
+/* Keep hidden file inputs under the shared accessibility helper instead of
+ * inheriting visible text-control geometry from the global form selector. */
+input.visually-hidden-input {
+  width: 1px;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+}
+
 .visually-hidden-input:focus-visible + .file-picker {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
