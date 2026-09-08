@@ -300,13 +300,16 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Eure Story beginnt hier.",
     "Filmabend auf dem Sofa",
     "Keine Einträge",
+    "Kino-Abend mit Popcorn",
     "Konzert im Herbst",
     "Noch keine Einträge in eurer Story.",
     "Pfingstrosen im Juni",
     "Picknick im Grünen",
     "Scharf mit Koriander",
     "von Alex",
+    "von Lea",
     "von Sam",
+    "Wochenendtrip an die Ostsee",
 )
 
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}

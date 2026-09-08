@@ -137,7 +137,7 @@ describe('StoryList', () => {
       </MemoryRouter>,
     );
 
-    // The visible "von {name}" attribution text is first-name-only. (The
+    // The visible byAuthor attribution text is first-name-only. (The
     // avatar's own aria-label is a separate, pre-existing accessibility
     // label unrelated to this fix and out of #791's scope, which is why
     // this doesn't assert on "Alex Winter" absence overall.)
