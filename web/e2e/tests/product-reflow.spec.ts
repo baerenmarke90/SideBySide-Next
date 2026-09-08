@@ -541,9 +541,7 @@ test('representative layout families keep their accepted normal viewport reflow'
         if (width === 320 || width === 1440) {
           await expectNoWcagViolations(page);
           await page.screenshot({
-            path: testInfo.outputPath(
-              `shell-today-story-summary-${width}.png`,
-            ),
+            path: testInfo.outputPath(`shell-today-story-summary-${width}.png`),
             fullPage: true,
           });
         }
