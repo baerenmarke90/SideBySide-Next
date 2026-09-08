@@ -111,6 +111,21 @@ describe('storyItemPresentation', () => {
     });
   });
 
+  it('shows only the first name on relationship-facing surfaces, never the full display name (#791 second follow-up)', () => {
+    const item = {
+      kind: 'MEMORY',
+      effectiveDate: new Date('2026-08-26T00:00:00Z'),
+      memory: {
+        id: 'm-full-name',
+        title: 'Am See',
+        author: { id: 'author-3', displayName: 'Alex Winter' },
+        attachments: [],
+      },
+    } as unknown as StoryItem;
+
+    expect(storyItemPresentation(item, i18n.t).author).toBe('Alex');
+  });
+
   it('maps all story kind enums to human readable localized labels without raw translation keys', () => {
     expect(resolveStoryKindLabel('MILESTONE', i18n.t)).toBe('Meilenstein');
     expect(resolveStoryKindLabel('MEMORY', i18n.t)).toBe('Erinnerung');
@@ -184,5 +199,31 @@ describe('distributeIntoTapestryColumns', () => {
     const columns = distributeIntoTapestryColumns(entries, 1, () => 1);
 
     expect(columns).toEqual([entries]);
+  });
+
+  it('never folds a sparse, weight-skewed month all the way down to one column (#791 second follow-up)', () => {
+    // 1 heavy "media" item + 2 light "milestone" markers: the balance-ratio
+    // fold previously walked 3 -> 2 -> 1 for this exact shape, turning the
+    // whole band into a single narrow feed instead of a photo column next
+    // to a packed marker column.
+    const entries = [
+      { id: 'media-1', role: 'media' as const },
+      { id: 'milestone-1', role: 'milestone' as const },
+      { id: 'milestone-2', role: 'milestone' as const },
+    ];
+
+    const columns = distributeIntoTapestryColumns(entries, 3, (entry) =>
+      tapestryRoleWeight(entry.role),
+    );
+    const nonEmptyColumns = columns.filter((column) => column.length > 0);
+
+    expect(nonEmptyColumns).toHaveLength(2);
+    expect(columns.flat()).toHaveLength(entries.length);
+  });
+
+  it('still collapses to one column when only one entry exists, since there is nothing to spread', () => {
+    const columns = distributeIntoTapestryColumns(['only'], 3, () => 1);
+
+    expect(columns.filter((column) => column.length > 0)).toHaveLength(1);
   });
 });

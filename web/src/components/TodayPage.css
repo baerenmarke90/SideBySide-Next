@@ -358,20 +358,31 @@
   max-width: 100%;
 }
 
-/* Shared Planning Horizon: each upcoming item is its own compact, bounded
-   surface (#790/#791 follow-up) rather than a shared-border row list, which
-   read as a table/spreadsheet next to eimir.'s other relationship-first
-   surfaces. Reuses the same bordered/radius/surface conventions already
-   approved for the Momente archive entries (.momente-archive-link). */
+/* Shared Planning Horizon (#790/#791 follow-up): a full-width bordered row
+   is still a table row once the container is wider than its content - the
+   title sits far left, the date far right, and nearly all of the box is
+   empty. Each item is instead a compact tile (icon + stacked title/date,
+   like the Momente archive entries' icon + copy convention) that wraps into
+   as many columns as the available width allows, instead of stretching one
+   item across the whole row. Below the tablet breakpoint the tiles stay
+   full-width and stacked - narrow phone widths don't have room for more
+   than one anyway, so this keeps mobile's already-approved presentation. */
 .today-agenda-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
+@media (min-width: 640px) {
+  .today-agenda-list {
+    flex-flow: row wrap;
+    gap: var(--space-3);
+  }
+}
+
 .today-agenda-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border-subtle);
@@ -379,6 +390,14 @@
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .today-agenda-row {
+    flex: 1 1 220px;
+    max-width: 18rem;
+  }
 }
 
 .today-agenda-row-link {
@@ -409,9 +428,13 @@
   color: var(--color-brand-text);
 }
 
-.today-agenda-title {
-  flex: 1 1 auto;
+.today-agenda-copy {
   min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.today-agenda-title {
   font-family: var(--font-ui);
   font-size: 1rem;
   font-weight: 650;
@@ -422,7 +445,6 @@
 }
 
 .today-agenda-date {
-  flex: 0 0 auto;
   font-family: var(--font-ui);
   font-size: 0.85rem;
   font-weight: 600;

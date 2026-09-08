@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
@@ -364,20 +364,43 @@ test('Momente Discover tapestry stays dense, chronological, and axe-clean on des
     'Wochenendtrip nach Trier',
   ]);
 
-  // No column may be left far lighter than the heaviest one in the same
-  // band - that reads as a large dead zone next to a tall photo tile.
-  const bandGaps = await page
+  // A band with 2+ items must never collapse to a single column (#791
+  // second follow-up): an earlier balance-ratio fold walked a 1-photo +
+  // 2-milestone month all the way down to one column, which read as a
+  // narrow single-column feed instead of a tapestry. Only a band with
+  // exactly one real item (nothing to spread across columns, e.g. "Mai
+  // 2026"/"April 2026" below) may legitimately render one column.
+  const bandColumnInfo = await page
     .locator('.momente-tapestry-band')
     .evaluateAll((bands) =>
       bands.map((band) => {
-        const heights = [
-          ...band.querySelectorAll('.momente-tapestry-column'),
-        ].map((column) => column.getBoundingClientRect().height);
-        return Math.max(...heights) - Math.min(...heights);
+        const columns = [...band.querySelectorAll('.momente-tapestry-column')];
+        return {
+          columnCount: columns.length,
+          itemCount: band.querySelectorAll('.momente-tapestry-item').length,
+          heights: columns.map(
+            (column) => column.getBoundingClientRect().height,
+          ),
+        };
       }),
     );
-  for (const gap of bandGaps) {
-    expect(gap).toBeLessThan(150);
+  for (const { columnCount, itemCount } of bandColumnInfo) {
+    if (itemCount >= 2) {
+      expect(columnCount).toBeGreaterThanOrEqual(2);
+    }
+  }
+
+  // A lone heavy photo weighed against one or two short one-line milestone
+  // markers can never be height-balanced - that residual gap is the
+  // tapestry's intentional asymmetry, not a bug, as long as the column
+  // count itself isn't collapsed (checked above). This is a generous sanity
+  // ceiling for a true regression (e.g. an unbounded-width column), not a
+  // tight balance target: the worst realistic shape in this fixture (one
+  // capped-width photo column opposite a single short marker) measures well
+  // under it.
+  for (const { heights } of bandColumnInfo) {
+    const gap = Math.max(...heights) - Math.min(...heights);
+    expect(gap).toBeLessThan(500);
   }
 
   const dimensions = await page.evaluate(() => ({

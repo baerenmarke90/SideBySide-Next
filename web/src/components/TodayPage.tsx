@@ -410,8 +410,10 @@ function TodayAgendaRow({ item }: { item: DashboardItem }) {
       <span className="today-agenda-icon" aria-hidden="true">
         <RecentItemTypeIcon type={item.type} />
       </span>
-      <span className="today-agenda-title">{title}</span>
-      {date ? <span className="today-agenda-date">{date}</span> : null}
+      <span className="today-agenda-copy">
+        <span className="today-agenda-title">{title}</span>
+        {date ? <span className="today-agenda-date">{date}</span> : null}
+      </span>
     </>
   );
 

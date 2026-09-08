@@ -1,6 +1,23 @@
 import type { TFunction } from 'i18next';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import type { StoryKind } from '../api/generated/models/StoryKind';
+import { firstNameFromDisplayName } from '../client/personalName';
+import relationshipComponents from '../i18n/locales/relationshipComponents';
+
+/**
+ * Relationship-facing surfaces show first names only, never full
+ * first+last display names (#791 second follow-up). This is the same
+ * first-name resolution #786 already applies to the Hero; #794 will later
+ * extend it to a viewer-specific nickname before falling back to the first
+ * name, so every call site funnels through this one helper rather than each
+ * reading `.displayName` directly.
+ */
+export function storyAuthorLabel(displayName: string): string {
+  return firstNameFromDisplayName(
+    displayName,
+    relationshipComponents.couplePresencePartnerFallback,
+  );
+}
 
 export interface StoryPresentation {
   kindLabel: string;
@@ -75,7 +92,7 @@ export function storyItemPresentation(
       return {
         kindLabel,
         title: item.memory.title,
-        author: item.memory.author.displayName,
+        author: storyAuthorLabel(item.memory.author.displayName),
         mediaLabel: count > 0 ? t('story.photos', { count }) : undefined,
       };
     }
@@ -84,7 +101,7 @@ export function storyItemPresentation(
         kindLabel,
         title: compactText(item.heartMoment.text),
         preview: emotionLabel(item.heartMoment.emotion, t),
-        author: item.heartMoment.author.displayName,
+        author: storyAuthorLabel(item.heartMoment.author.displayName),
         mediaLabel: item.heartMoment.attachment
           ? t('story.photos', { count: 1 })
           : undefined,
@@ -94,7 +111,7 @@ export function storyItemPresentation(
       return {
         kindLabel,
         title: item.milestone.title,
-        author: item.milestone.author.displayName,
+        author: storyAuthorLabel(item.milestone.author.displayName),
       };
   }
 }
@@ -168,6 +185,16 @@ function greedyDistribute<T>(
  * each marker alone opposite the photo. Below this fraction of the heaviest
  * column's weight, fold back to one fewer column (which packs the light
  * entries together instead) rather than accept the gap.
+ *
+ * This must never fold all the way down to a single column while there are
+ * still 2+ entries to spread (#791 second follow-up): the ratio check is a
+ * balance heuristic, not a mandate to flatten the tapestry. An earlier
+ * version had no floor, so a 1-photo + 2-milestone month folded 3 -> 2 -> 1,
+ * turning that whole band into the same narrow single-column feed this
+ * surface must not be. Two items with a real weight mismatch (one photo, one
+ * short marker) still can't be balanced by any column count - that residual
+ * gap is accepted as the tapestry's intentional asymmetry, not "dead space",
+ * as long as it never collapses the column count itself.
  */
 const TAPESTRY_MIN_COLUMN_BALANCE_RATIO = 0.3;
 
@@ -176,9 +203,10 @@ export function distributeIntoTapestryColumns<T>(
   columnCount: number,
   weightOf: (entry: T) => number,
 ): T[][] {
+  const minCount = entries.length >= 2 ? 2 : 1;
   let count = Math.max(1, Math.floor(columnCount));
   let columns = greedyDistribute(entries, count, weightOf);
-  while (count > 1) {
+  while (count > minCount) {
     const weights = columns.map((column) =>
       column.reduce((sum, entry) => sum + weightOf(entry), 0),
     );
