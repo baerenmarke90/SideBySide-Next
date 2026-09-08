@@ -1,5 +1,5 @@
 import type { DashboardSharedStorySummary } from '../api/generated/models/DashboardSharedStorySummary';
-import { useTranslation } from '../i18n';
+import { resolvedLocale, useTranslation } from '../i18n';
 import './SharedStorySummary.css';
 
 interface SharedStorySummaryProps {
@@ -23,6 +23,7 @@ export function SharedStorySummary({ summary }: SharedStorySummaryProps) {
   const { t } = useTranslation();
   if (!sharedStorySummaryIsEligible(summary)) return null;
 
+  const numberFormat = new Intl.NumberFormat(resolvedLocale());
   const metrics = [
     {
       key: 'memories',
@@ -52,7 +53,7 @@ export function SharedStorySummary({ summary }: SharedStorySummaryProps) {
       <dl className="shared-story-summary-values">
         {metrics.map((metric) => (
           <div className="shared-story-summary-metric" key={metric.key}>
-            <dd>{metric.value.toLocaleString('de-DE')}</dd>
+            <dd>{numberFormat.format(metric.value)}</dd>
             <dt>{metric.label}</dt>
           </div>
         ))}
