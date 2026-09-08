@@ -64,7 +64,11 @@ function flattenResourceKeys(
 ): Set<string> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     for (const [segment, child] of Object.entries(value)) {
-      flattenResourceKeys(child, prefix ? `${prefix}.${segment}` : segment, keys);
+      flattenResourceKeys(
+        child,
+        prefix ? `${prefix}.${segment}` : segment,
+        keys,
+      );
     }
   } else if (prefix) {
     keys.add(prefix);
