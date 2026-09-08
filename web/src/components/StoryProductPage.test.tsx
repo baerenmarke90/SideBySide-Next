@@ -153,6 +153,50 @@ describe('StoryProductPage', () => {
     expect(html).toContain('First apartment together');
   });
 
+  it('shows only the first name in Discover attribution, never the full display name (#791 second follow-up)', () => {
+    const html = renderStoryPage('/story', {
+      items: [
+        {
+          kind: 'MEMORY',
+          effectiveDate: new Date('2026-08-26T00:00:00Z'),
+          memory: {
+            id: 'mem-1',
+            title: 'Summer Lake Vacation',
+            notes: 'Wonderful sunset together',
+            occurredOn: new Date('2026-08-26T00:00:00Z'),
+            createdAt: new Date('2026-08-26T00:00:00Z'),
+            attachments: [{ id: 'att-1', mediaType: 'image/jpeg' }],
+            author: { id: 'author-1', displayName: 'Alex Winter' },
+            creator: { id: 'author-1', displayName: 'Alex Winter' },
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+          },
+        },
+        {
+          kind: 'HEART_MOMENT',
+          effectiveDate: new Date('2026-08-25T00:00:00Z'),
+          heartMoment: {
+            id: 'heart-1',
+            text: 'I love you more each day',
+            createdAt: new Date('2026-08-25T00:00:00Z'),
+            author: { id: 'author-2', displayName: 'Lea Sommer' },
+            creator: { id: 'author-2', displayName: 'Lea Sommer' },
+          },
+        },
+      ],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    // The visible byAuthor attribution text is first-name-only. (The
+    // avatar's own aria-label is a separate, pre-existing accessibility
+    // label unrelated to this fix and out of #791's scope, which is why
+    // this doesn't assert on "Alex Winter"/"Lea Sommer" absence overall.)
+    expect(html).toContain('von Alex</span>');
+    expect(html).toContain('von Lea</span>');
+    expect(html).not.toContain('von Alex Winter');
+    expect(html).not.toContain('von Lea Sommer');
+  });
+
   it('renders timeline view when requested via query parameter', () => {
     const html = renderStoryPage('/story?tab=timeline', {
       items: [

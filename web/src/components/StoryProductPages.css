@@ -793,6 +793,19 @@
   gap: var(--space-4);
 }
 
+/* Above the single-column mobile breakpoint (see TAPESTRY_TABLET_QUERY),
+   bound each column's width instead of letting `flex: 1 1 0` force it to
+   consume an equal 1/N share of the full row. Sparse bands render fewer
+   (non-empty) columns, so an equal-share column would balloon toward the
+   full page width - the "Karten zu groß" case with a single item in a
+   month. Capping the width keeps a lone column tapestry-scaled instead. */
+@media (min-width: 640px) {
+  .momente-tapestry-column {
+    flex: 1 1 300px;
+    max-width: 26rem;
+  }
+}
+
 .momente-tapestry-item {
   border-radius: var(--radius-card);
   color: inherit;
@@ -822,7 +835,12 @@
 
 .momente-tapestry-media-frame {
   width: 100%;
-  aspect-ratio: 4 / 5;
+  /* Was 4/5 (tall portrait): at a media tile's real column width that read
+     as an oversized, dominant card and, combined with the much shorter
+     note/milestone tiles the weighted column balancer places beside it,
+     produced large dead space under the shorter column (#790/#791
+     follow-up). Square keeps photos prominent without that height. */
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: var(--color-surface-subtle);
 }

@@ -48,6 +48,7 @@ import {
   formatStoryDate,
   groupStoryItems,
   resolveStoryKindLabel,
+  storyAuthorLabel,
   storyItemKey,
   storyItemPresentation,
   tapestryItemRole,
@@ -543,7 +544,9 @@ export function StoryProductPage({
                         />
                         <span>
                           {t('story.byAuthor', {
-                            author: featuredAuthor.displayName,
+                            author: storyAuthorLabel(
+                              featuredAuthor.displayName,
+                            ),
                           })}
                         </span>
                       </span>
@@ -701,7 +704,9 @@ export function StoryProductPage({
                                         />
                                         <span>
                                           {t('story.byAuthor', {
-                                            author: entry.author.displayName,
+                                            author: storyAuthorLabel(
+                                              entry.author.displayName,
+                                            ),
                                           })}
                                         </span>
                                       </span>

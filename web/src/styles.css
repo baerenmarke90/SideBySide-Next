@@ -191,12 +191,8 @@ summary:focus-visible,
  * Text-entry controls share one surface. A native select otherwise renders at
  * its own size and reads as a different control class next to text inputs.
  * Checkboxes and radios are sized separately; they are not full-width fields.
- * File inputs are excluded too: they render as a visually-hidden trigger for
- * a styled <label> (see .visually-hidden-input), and this rule's higher
- * specificity would otherwise override that input's intentional 1px/clipped
- * box, letting its geometry leak past its container on narrow viewports.
  */
-input:not([type="checkbox"], [type="radio"], [type="file"]),
+input:not([type="checkbox"], [type="radio"]),
 select,
 textarea {
   width: 100%;
@@ -775,9 +771,20 @@ code {
   font-size: 0.78rem;
 }
 
+/* Attachment-count meta (e.g. "2 Fotos") reads as quiet secondary metadata,
+   matching the muted date/author text beside it (#791 second follow-up) -
+   the brand-colored, bold treatment made the count look like an emphasized
+   display number rather than plain metadata. Typography is set explicitly
+   in the more specific `.story-card-link .story-card-footer .media-label`
+   rule (StoryListPolish.css), matching the neighboring `time` element's own
+   explicit override, rather than inherited here: two conflicting base
+   `.story-card-footer` rules exist (this file and StoryProductPages.css)
+   with different colors/sizes, so plain inheritance would depend on which
+   of those wins the cascade instead of reliably matching `time`. */
 .media-label {
-  color: var(--color-shared);
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
   white-space: nowrap;
 }
 
@@ -1209,7 +1216,6 @@ code {
 .immersive-sharing-note .sharing-icon {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -1253,22 +1259,6 @@ code {
 .immersive-create-title:focus {
   outline: none;
   border-bottom-color: var(--color-brand);
-}
-
-.immersive-create-title-multiline {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-large);
-  background: var(--color-surface-subtle);
-  font-size: clamp(1.05rem, 2.2vw, 1.25rem);
-  font-weight: 500;
-  line-height: 1.5;
-  padding: var(--space-4);
-  min-height: 6.5rem;
-  resize: vertical;
-}
-
-.immersive-create-title-multiline:focus {
-  border-color: var(--color-brand);
 }
 
 .immersive-create-media {

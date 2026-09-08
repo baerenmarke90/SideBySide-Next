@@ -113,6 +113,38 @@ describe('StoryList', () => {
     expect(html).toContain('von Alex');
   });
 
+  it('shows only the first name in Timeline attribution, never the full display name (#791 second follow-up)', () => {
+    const item = StoryItemFromJSON({
+      kind: 'MEMORY',
+      effectiveDate: '2026-08-26',
+      memory: {
+        attachments: [],
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'Alex Winter',
+        },
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: '2026-08-26T08:00:00Z',
+        happenedOn: '2026-08-26',
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'Strandspaziergang',
+      },
+    });
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+      </MemoryRouter>,
+    );
+
+    // The visible byAuthor attribution text is first-name-only. (The
+    // avatar's own aria-label is a separate, pre-existing accessibility
+    // label unrelated to this fix and out of #791's scope, which is why
+    // this doesn't assert on "Alex Winter" absence overall.)
+    expect(html).toContain('von Alex</span>');
+    expect(html).not.toContain('von Alex Winter');
+  });
+
   it('announces an empty story as a status', () => {
     const html = renderToStaticMarkup(
       <StoryList items={[]} loadMemoryImage={loadMemoryImage} />,

@@ -358,44 +358,46 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
   const typeLabel = t(`m5s5.kind.${item.type}`);
   const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
 
-  const cardInner = (
-    <div className="recent-shared-card sbs-motion-lift">
-      <div
-        className={`recent-shared-icon today-kind-${item.type.toLowerCase()}`}
+  const tileInner = (
+    <>
+      <span
+        className={`today-recent-tile-icon today-kind-${item.type.toLowerCase()}`}
         aria-hidden="true"
       >
         <RecentItemTypeIcon type={item.type} />
-      </div>
-      <div className="recent-shared-copy">
-        <h3 className="recent-shared-title">{title}</h3>
-        <div className="recent-shared-meta">
-          <span className="recent-shared-kind">{typeLabel}</span>
-          {recency ? (
-            <>
-              <span className="recent-shared-meta-sep" aria-hidden="true">
-                ·
-              </span>
-              <time
-                className="recent-shared-date"
-                dateTime={rawDate?.toISOString()}
-              >
-                {recency}
-              </time>
-            </>
-          ) : null}
-        </div>
-      </div>
-    </div>
+      </span>
+      <span className="today-recent-tile-copy">
+        {/* Type stays available to assistive tech (it's still meaningful
+            context) but isn't a separate visible field - a redundant text
+            label next to an already type-specific icon is what made each
+            entry read as a database record (icon, name, type, date) rather
+            than a warm shared-life trace (#790/#791 fourth follow-up). */}
+        <span className="sr-only">{typeLabel}: </span>
+        <span className="today-recent-tile-title">{title}</span>
+        {recency ? (
+          <time
+            className="today-recent-tile-date"
+            dateTime={rawDate?.toISOString()}
+          >
+            {recency}
+          </time>
+        ) : null}
+      </span>
+    </>
   );
 
   if (path) {
     return (
-      <Link to={path} className="recent-shared-card-link">
-        {cardInner}
+      <Link to={path} className="today-recent-tile">
+        {tileInner}
       </Link>
     );
   }
-  return <div className="recent-shared-card-wrapper">{cardInner}</div>;
+  return (
+    <span className="today-recent-tile today-recent-tile-static">
+      {tileInner}
+    </span>
+  );
 }
 
 function TodayAgendaRow({ item }: { item: DashboardItem }) {
@@ -410,8 +412,10 @@ function TodayAgendaRow({ item }: { item: DashboardItem }) {
       <span className="today-agenda-icon" aria-hidden="true">
         <RecentItemTypeIcon type={item.type} />
       </span>
-      <span className="today-agenda-title">{title}</span>
-      {date ? <span className="today-agenda-date">{date}</span> : null}
+      <span className="today-agenda-copy">
+        <span className="today-agenda-title">{title}</span>
+        {date ? <span className="today-agenda-date">{date}</span> : null}
+      </span>
     </>
   );
 
@@ -879,7 +883,6 @@ export function TodayPage({
                   className="today-section-recent"
                   title={t('m5s5.dashboard.recentTitle')}
                   kicker={t('m5s5.dashboard.recentKicker')}
-                  subline={t('m5s5.dashboard.recentSubline')}
                   animationDelay="200ms"
                 >
                   <div className="today-stream today-stream-recent">

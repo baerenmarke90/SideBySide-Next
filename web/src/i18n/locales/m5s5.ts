@@ -32,7 +32,6 @@ const m5s5 = {
     upcomingEmpty: 'Gerade steht nichts Gemeinsames bevor.',
     recentKicker: 'Aktivitäten',
     recentTitle: 'Zuletzt bei euch',
-    recentSubline: 'Gemeinsame Aktivitäten und Änderungen auf einen Blick.',
     allActivityAction: 'Alle Aktivitäten ansehen →',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     itemFallback: 'Gemeinsamer Eintrag',
