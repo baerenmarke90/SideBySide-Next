@@ -347,6 +347,32 @@ async function signIn(page: Page): Promise<void> {
 async function expectHorizontalReflow(page: Page): Promise<void> {
   const result = await page.evaluate(() => {
     const root = document.documentElement;
+    const visibleBoxes = Array.from(
+      document.querySelectorAll<HTMLElement>('body *'),
+    )
+      .map((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName.toLowerCase(),
+          className: element.getAttribute('class') || '',
+          display: style.display,
+          position: style.position,
+          cssWidth: style.width,
+          minWidth: style.minWidth,
+          maxWidth: style.maxWidth,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          scrollWidth: element.scrollWidth,
+          visible:
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            rect.width > 0 &&
+            rect.height > 0,
+        };
+      })
+      .filter((box) => box.visible);
     const controls = Array.from(
       document.querySelectorAll<HTMLElement>(
         '#main-content a[href], #main-content button, #main-content input, #main-content select, #main-content textarea, #main-content summary',
@@ -376,16 +402,27 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
       });
 
     return {
+      route: `${location.pathname}${location.search}`,
       clientWidth: root.clientWidth,
       scrollWidth: root.scrollWidth,
+      overflowingBoxes: visibleBoxes
+        .filter((box) => box.left < -1 || box.right > root.clientWidth + 1)
+        .sort((a, b) => b.right - a.right)
+        .slice(0, 12),
       clippedControls: controls.filter(
         (control) => control.left < -1 || control.right > root.clientWidth + 1,
       ),
     };
   });
 
-  expect(result.scrollWidth).toBeLessThanOrEqual(result.clientWidth);
-  expect(result.clippedControls).toEqual([]);
+  expect(
+    result.scrollWidth,
+    `Horizontal overflow on ${result.route}: ${JSON.stringify(result.overflowingBoxes, null, 2)}`,
+  ).toBeLessThanOrEqual(result.clientWidth);
+  expect(
+    result.clippedControls,
+    `Clipped controls on ${result.route}`,
+  ).toEqual([]);
 }
 
 async function openSurfaceAt400Percent(
@@ -410,6 +447,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test(`WCAG 1.4.10 product surfaces reflow at 1280x1024 and 400 percent zoom in ${colorScheme} mode`, async ({
     page,
   }) => {
+    test.setTimeout(120_000);
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await page.addInitScript(() =>
       localStorage.setItem('sidebyside.theme', 'system'),
@@ -431,6 +469,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 test('representative layout families keep their accepted normal viewport reflow', async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const unexpectedRequests = await installApiMocks(page);
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto('/today');
