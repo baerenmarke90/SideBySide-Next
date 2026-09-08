@@ -23,7 +23,7 @@ export function AttachmentDraftPicker({
   const { t } = useTranslation();
 
   return (
-    <div className="field-group">
+    <div className="field-group attachment-draft-picker">
       <label htmlFor={id}>{t('memory.photoLabel')}</label>
       <input
         className="visually-hidden-input"

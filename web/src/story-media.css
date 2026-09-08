@@ -35,6 +35,27 @@
   font-size: 0.82rem;
 }
 
+/* Keep hidden file inputs under the shared accessibility helper instead of
+ * inheriting visible text-control geometry from the global form selector. */
+input.visually-hidden-input {
+  width: 1px;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+}
+
+/* The picker wrapper can be a grid item on edit surfaces. Let it shrink below
+ * its intrinsic copy width; the visible picker then owns truncation itself. */
+.attachment-draft-picker {
+  min-width: 0;
+}
+
+/* Allow the visible picker copy to shrink inside the flex row so its existing
+ * nowrap/ellipsis treatment owns long format text instead of widening the page. */
+.file-picker > span:not(.file-picker-icon) {
+  min-width: 0;
+}
+
 .visually-hidden-input:focus-visible + .file-picker {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;

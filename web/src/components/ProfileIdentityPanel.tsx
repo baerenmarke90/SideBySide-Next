@@ -189,7 +189,7 @@ export function ProfileIdentityPanel({
       id="profile-identity-settings"
       aria-labelledby="profile-identity-title"
     >
-      <div className="visually-hidden">
+      <div className="sr-only">
         <h2 id="profile-identity-title">{t('profileIdentity.title')}</h2>
       </div>
 
@@ -271,9 +271,11 @@ export function ProfileIdentityPanel({
               <input
                 ref={fileInputRef}
                 id="profile-avatar-file"
-                className="profile-identity-file-input visually-hidden"
+                className="profile-identity-file-input visually-hidden-input"
                 type="file"
                 accept="image/*"
+                aria-label={t('profileIdentity.changeAvatar')}
+                tabIndex={-1}
                 disabled={pending}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
