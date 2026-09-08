@@ -29,9 +29,9 @@ def read_shared_story_counts(
     before the aggregate sees them, so both active partners receive identical
     shared-story counts and private rows cannot influence totals.
     """
-    combined = union_all(
-        *(_leg(kind, context, year=None) for kind in StoryKind)
-    ).subquery("shared_story_counts")
+    combined = union_all(*(_leg(kind, context, year=None) for kind in StoryKind)).subquery(
+        "shared_story_counts"
+    )
     rows = session.execute(
         select(combined.c.kind_rank, func.count())
         .group_by(combined.c.kind_rank)
