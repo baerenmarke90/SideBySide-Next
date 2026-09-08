@@ -242,21 +242,6 @@
   justify-content: center;
 }
 
-/* The global text-control selector also matches file inputs. Reassert the
- * intentionally clipped geometry with higher, create-surface specificity. */
-.immersive-create-card input[type="file"].visually-hidden-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  min-height: 0;
-  margin: -1px;
-  border: 0;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 @media (max-width: 640px) {
   .memory-actions {
     align-items: stretch;
