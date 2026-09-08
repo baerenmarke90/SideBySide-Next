@@ -71,7 +71,8 @@ export function selectUpcomingPlans(
         plan.plannedStart.getTime() >= nowMs,
     )
     .sort((left, right) => {
-      const leftStart = left.plannedStart?.getTime() ?? Number.POSITIVE_INFINITY;
+      const leftStart =
+        left.plannedStart?.getTime() ?? Number.POSITIVE_INFINITY;
       const rightStart =
         right.plannedStart?.getTime() ?? Number.POSITIVE_INFINITY;
       if (leftStart !== rightStart) return leftStart - rightStart;
