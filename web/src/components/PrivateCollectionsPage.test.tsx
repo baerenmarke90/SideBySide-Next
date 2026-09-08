@@ -239,9 +239,7 @@ describe('PrivateCollectionsPage', () => {
         }),
       ).toBeNull();
     });
-    expect(
-      screen.getByRole('button', { name: de.common.edit }),
-    ).toBeDefined();
+    expect(screen.getByRole('button', { name: de.common.edit })).toBeDefined();
 
     expect(
       screen.queryByRole('button', {
@@ -299,9 +297,7 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(
-      screen.getByRole('button', { name: de.common.edit }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: de.common.edit }));
     const input = screen.getByRole('textbox', {
       name: /titel|privatearea\.collections\.titlelabel/i,
     });
