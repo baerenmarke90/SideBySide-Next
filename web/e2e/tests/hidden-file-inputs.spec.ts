@@ -235,9 +235,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await signIn(page);
 
     await page.goto('/more/profile');
-    const changeAvatar = page.getByRole('button', {
-      name: profileIdentity.changeAvatar,
-    });
+    const changeAvatar = page
+      .locator('.profile-identity-actions-row button')
+      .filter({ hasText: profileIdentity.changeAvatar });
     await expect(changeAvatar).toBeVisible();
     await changeAvatar.focus();
     await expect(changeAvatar).toBeFocused();
