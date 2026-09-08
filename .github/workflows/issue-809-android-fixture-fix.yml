@@ -1,0 +1,70 @@
+name: Issue 809 Android fixture fix
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/issue-809-android-fixture-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/809-shared-story-summary
+          fetch-depth: 0
+
+      - name: Update DashboardView test fixtures
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path("android/app/src/test/java/de/sidebyside/next/cache/ProductReadCacheViewModelTest.kt"),
+              Path("android/app/src/test/java/de/sidebyside/next/reference/SpaceContextTest.kt"),
+              Path("android/app/src/test/java/de/sidebyside/next/today/TodayScreenSemanticsTest.kt"),
+              Path("android/app/src/test/java/de/sidebyside/next/today/TodayTest.kt"),
+          ]
+
+          for path in files:
+              text = path.read_text()
+              marker = "            retrospective = null,\n            space = DashboardSpaceSummary"
+              if path.name == "TodayScreenSemanticsTest.kt":
+                  marker = "            retrospective = retrospective,\n            space = DashboardSpaceSummary"
+              if path.name == "TodayTest.kt":
+                  marker = "    retrospective = null,\n    space = DashboardSpaceSummary"
+
+              if text.count(marker) != 1:
+                  raise SystemExit(f"Expected exactly one DashboardView fixture marker in {path}, found {text.count(marker)}")
+
+              indent = "    " if path.name == "TodayTest.kt" else "            "
+              retrospective_line = marker.split("\n", 1)[0]
+              space_line = marker.split("\n", 1)[1]
+              replacement = (
+                  retrospective_line
+                  + "\n"
+                  + indent
+                  + "sharedStorySummary = sidebyside.api.models.DashboardSharedStorySummary("
+                  + "heartMoments = 0, memories = 0, milestones = 0),\n"
+                  + space_line
+              )
+              path.write_text(text.replace(marker, replacement))
+          PY
+          git diff --check
+
+      - name: Commit fixture fix and remove helper workflow
+        run: |
+          rm .github/workflows/issue-809-android-fixture-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/test/java/de/sidebyside/next/cache/ProductReadCacheViewModelTest.kt \
+                  android/app/src/test/java/de/sidebyside/next/reference/SpaceContextTest.kt \
+                  android/app/src/test/java/de/sidebyside/next/today/TodayScreenSemanticsTest.kt \
+                  android/app/src/test/java/de/sidebyside/next/today/TodayTest.kt \
+                  .github/workflows/issue-809-android-fixture-fix.yml
+          git commit -m "test(android): update DashboardView fixtures for #809"
+          git push origin HEAD:feat/809-shared-story-summary
