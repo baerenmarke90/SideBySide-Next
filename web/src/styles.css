@@ -759,26 +759,15 @@ code {
   font-size: 0.9rem;
 }
 
-.story-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 0.7rem;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-}
-
 /* Attachment-count meta (e.g. "2 Fotos") reads as quiet secondary metadata,
    matching the muted date/author text beside it (#791 second follow-up) -
    the brand-colored, bold treatment made the count look like an emphasized
-   display number rather than plain metadata. Typography is set explicitly
-   in the more specific `.story-card-link .story-card-footer .media-label`
-   rule (StoryListPolish.css), matching the neighboring `time` element's own
-   explicit override, rather than inherited here: two conflicting base
-   `.story-card-footer` rules exist (this file and StoryProductPages.css)
-   with different colors/sizes, so plain inheritance would depend on which
-   of those wins the cascade instead of reliably matching `time`. */
+   display number rather than plain metadata. Typography is still set
+   explicitly in `.story-card-link .story-card-footer .media-label`
+   (StoryListPolish.css) so the count and the neighbouring `time` state the
+   same muted role side by side. Since #795 that is a deliberate distinction
+   from the footer base rather than a workaround: the base now has a single
+   owner in StoryProductPages.css. */
 .media-label {
   display: inline-flex;
   align-items: center;
@@ -1051,12 +1040,6 @@ code {
   .story-card-meta time {
     width: 100%;
     margin-left: 0;
-  }
-
-  .story-card-footer {
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-3);
   }
 
   .form-actions {
