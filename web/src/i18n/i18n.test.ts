@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import de from './locales/de';
 import { DEFAULT_LOCALE, i18n, resolvedLocale } from './index';
 
 const sourceFiles = import.meta.glob(
@@ -84,13 +85,22 @@ describe('web i18n', () => {
   });
 
   it('resolves shared edit and saving copy', () => {
-    expect(i18n.t('common.edit')).toBe('Bearbeiten');
-    expect(i18n.t('common.saving')).toBe('Wird gespeichert …');
+    expect(i18n.t('common.edit')).toBe(de.common.edit);
+    expect(i18n.t('common.saving')).toBe(de.common.saving);
   });
 
   it('uses locale plural rules for photo counts', () => {
     expect(i18n.t('story.photos', { count: 1 })).toBe('1 Foto');
     expect(i18n.t('story.photos', { count: 2 })).toBe('2 Fotos');
+  });
+
+  it('collects literal translation calls without treating dynamic keys as static', () => {
+    const keys = collectStaticTranslationKeys(
+      'sample.tsx',
+      `t('common.edit'); t(\`m5s3.plan.status.\${status}\`); i18n.t('common.saving');`,
+    ).map(({ key }) => key);
+
+    expect(keys).toEqual(['common.edit', 'common.saving']);
   });
 
   it('defines every statically referenced translation key', () => {
