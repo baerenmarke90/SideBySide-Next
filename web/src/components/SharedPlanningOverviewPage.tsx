@@ -19,6 +19,12 @@ import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { formatUpcomingRelative } from '../client/formatRecency';
+import {
+  loadPlanningOverviewPlans,
+  selectIdeaPlans,
+  selectUpcomingPlans,
+} from '../client/planningOverview';
 import { normalizeClientError } from '../client/problemDetails';
 import { planDetailPath, wishDetailPath } from '../client/routes';
 import {
@@ -54,6 +60,17 @@ function statusLabel(
   status: string,
 ): string {
   return t(`m5s3.${domain}.status.${status}`);
+}
+
+function upcomingPlanMeta(
+  t: ReturnType<typeof useTranslation>['t'],
+  plan: PlanDetail,
+): string | null {
+  if (!plan.plannedStart) return null;
+  const date = formatUpcomingRelative(plan.plannedStart, t);
+  return plan.sourceWishId
+    ? `${date} · ${t('m5s3.wish.status.PLANNED')}`
+    : date;
 }
 
 function PlanningCard({
@@ -331,10 +348,11 @@ export function SharedPlanningOverviewPage({
 
   const plans = useInfiniteQuery({
     queryKey: ['m5-s3', 'plans', spaceId],
-    queryFn: ({ pageParam }) =>
-      apiCall(() =>
-        apis.plans.listPlans({ spaceId, cursor: pageParam, limit: PAGE_SIZE }),
-      ),
+    queryFn: () =>
+      apiCall(async () => ({
+        items: await loadPlanningOverviewPlans(apis, spaceId),
+        nextCursor: null,
+      })),
     initialPageParam: null as string | null,
     getNextPageParam: nextCursor<PlanDetail>,
     retry: false,
@@ -401,6 +419,8 @@ export function SharedPlanningOverviewPage({
 
   const wishItems = wishes.data?.pages.flatMap((page) => page.items) ?? [];
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
+  const upcomingPlans = selectUpcomingPlans(planItems);
+  const ideaPlans = selectIdeaPlans(planItems);
 
   function submitWish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -467,32 +487,20 @@ export function SharedPlanningOverviewPage({
                 onRetry={() => void plans.refetch()}
               />
             ) : null}
-            {!plans.isLoading && !plans.error && planItems.length === 0 ? (
+            {!plans.isLoading && !plans.error && upcomingPlans.length === 0 ? (
               <p className="planning-empty">{t('m5s3.overview.soonEmpty')}</p>
             ) : null}
-            {planItems.length > 0 ? (
+            {upcomingPlans.length > 0 ? (
               <ul className="planning-list">
-                {planItems.map((plan) => (
+                {upcomingPlans.map((plan) => (
                   <PlanningCard
                     key={plan.id}
                     title={plan.title}
-                    meta={statusLabel(t, 'plan', plan.status)}
+                    meta={upcomingPlanMeta(t, plan)}
                     to={planDetailPath(plan.id)}
                   />
                 ))}
               </ul>
-            ) : null}
-            {plans.hasNextPage ? (
-              <button
-                type="button"
-                className="tertiary compact-action"
-                onClick={() => void plans.fetchNextPage()}
-                disabled={plans.isFetchingNextPage}
-              >
-                {plans.isFetchingNextPage
-                  ? t('m5s3.common.loadingMore')
-                  : t('m5s3.common.loadMore')}
-              </button>
             ) : null}
             <details className="planning-create">
               <summary id="plan-title">{t('m5s3.plan.create')}</summary>
@@ -619,7 +627,7 @@ export function SharedPlanningOverviewPage({
               {t('m5s3.overview.somedayIntro')}
             </p>
 
-            {wishes.isLoading ? (
+            {wishes.isLoading || plans.isLoading ? (
               <UiState kind="loading" title={t('states.loading.title')} />
             ) : null}
             {wishes.error ? (
@@ -628,19 +636,38 @@ export function SharedPlanningOverviewPage({
                 onRetry={() => void wishes.refetch()}
               />
             ) : null}
-            {!wishes.isLoading && !wishes.error && wishItems.length === 0 ? (
+            {plans.error ? (
+              <ProblemState
+                error={plans.error}
+                onRetry={() => void plans.refetch()}
+              />
+            ) : null}
+            {!wishes.isLoading &&
+            !plans.isLoading &&
+            !wishes.error &&
+            !plans.error &&
+            wishItems.length === 0 &&
+            ideaPlans.length === 0 ? (
               <p className="planning-empty">
                 {t('m5s3.overview.somedayEmpty')}
               </p>
             ) : null}
-            {wishItems.length > 0 ? (
+            {wishItems.length > 0 || ideaPlans.length > 0 ? (
               <ul className="planning-list">
                 {wishItems.map((wish) => (
                   <PlanningCard
-                    key={wish.id}
+                    key={`wish-${wish.id}`}
                     title={wish.title}
                     meta={statusLabel(t, 'wish', wish.status)}
                     to={wishDetailPath(wish.id)}
+                  />
+                ))}
+                {ideaPlans.map((plan) => (
+                  <PlanningCard
+                    key={`plan-${plan.id}`}
+                    title={plan.title}
+                    meta={statusLabel(t, 'plan', plan.status)}
+                    to={planDetailPath(plan.id)}
                   />
                 ))}
               </ul>
