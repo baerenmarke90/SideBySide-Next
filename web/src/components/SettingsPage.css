@@ -88,6 +88,28 @@
   margin-bottom: var(--space-4);
 }
 
+.dashboard-settings-list {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 42rem;
+  margin-top: var(--space-5);
+}
+
+.dashboard-settings-list .form-checkbox-label {
+  min-height: 44px;
+}
+
+.dashboard-settings-list .form-checkbox-label > span {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.dashboard-settings-list .form-checkbox-label small {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
 .anniversary-reminder-form {
   display: grid;
   gap: var(--space-4);

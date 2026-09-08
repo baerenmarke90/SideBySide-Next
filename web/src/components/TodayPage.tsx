@@ -30,7 +30,10 @@ import { CouplePresence } from './CouplePresence';
 import { MemoryPreview } from './MemoryPreview';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
-import { SharedStorySummary } from './SharedStorySummary';
+import {
+  SharedStorySummary,
+  sharedStorySummaryIsEligible,
+} from './SharedStorySummary';
 import { ThinkingOfYouButton } from './ThinkingOfYouButton';
 import { UiState } from './UiState';
 import './TodayPage.css';
@@ -604,10 +607,14 @@ export function TodayPage({
     retry: false,
   });
 
+  const sharedStorySummaryEligible = dashboardQuery.data?.sharedStorySummary
+    ? sharedStorySummaryIsEligible(dashboardQuery.data.sharedStorySummary)
+    : false;
   const dashboardPreferencesQuery = useQuery({
     queryKey: dashboardPreferencesQueryKey(spaceId),
     queryFn: () =>
       apiCall(() => apis.dashboard.listDashboardModulePreferences({ spaceId })),
+    enabled: sharedStorySummaryEligible,
     retry: false,
   });
 
@@ -715,11 +722,13 @@ export function TodayPage({
       !serverKeepsake,
   );
   const sharedStorySummaryVisible =
-    dashboardPreferencesQuery.data?.items.some(
+    sharedStorySummaryEligible &&
+    (dashboardPreferencesQuery.data?.items.some(
       (item) =>
         item.moduleKey === DashboardModuleKey.SHARED_STORY_SUMMARY &&
         item.visible,
-    ) ?? false;
+    ) ??
+      false);
 
   return (
     <div className="page today-page">
