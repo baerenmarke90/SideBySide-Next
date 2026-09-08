@@ -73,7 +73,7 @@ These inputs reduce duplicated work but do not waive the integrated G5 checks.
 | G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` | `PASS` — live incident drill produced sanitized logs/correlation IDs throughout, no secret/ProtectedPayload leakage (report §6) |
 | G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` | `PASS` — full database-readiness-loss drill executed live with real timestamps (report §6) |
 | G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` | `PASS` — verified against merged code/tests when #518 closed this session; `test_space_offboarding*.py` family green in CI (report §8) |
-| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
+| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and minimal pseudonymous recovery-metadata classification; #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
 | G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` | `PASS` — ADR-0006 + Feature Matrix v1.1 authoritative; launch channel declared (`ENTITLEMENT-BOUNDARY.md` §7.1) |
 | G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` | `PASS` for `ADMIN_GRANT` (grant/downgrade/audit exercised live end to end); `NOT_APPLICABLE` for `GOOGLE_PLAY`/`CLOUD_STRIPE`/`SELF_HOSTED_KEY` (report §7) |
 | G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` | `PASS` — live cross-tenant probe (404) and ServerAdmin content-boundary check both confirmed (report §8) |
@@ -143,6 +143,12 @@ The final report must explicitly show that launch operations do **not** weaken:
   receipts/license secrets and raw provider payloads;
 - Demo/Development/Production data and secret isolation.
 
+Deletion-journal evidence follows the same minimization rule: do not record raw
+private payloads, email addresses, tokens, credentials, or relationship content.
+The journal itself is not classified as ordinary non-personal metadata merely
+because those fields are absent; its stable Account UUID and acceptance timestamp
+remain pseudonymous/account-linkable recovery metadata.
+
 No G5 criterion can be waived by classifying a trust/data-rights gap as Premium or
 post-launch polish.
 
@@ -178,8 +184,11 @@ usable restore for the supported launch topology and show:
 - previous-known-good release selection;
 - rollback vs. forward-fix vs. restore decision;
 - post-recovery health/revision smoke;
-- deletion reconciliation when the restored snapshot predates an Account deletion
-  required by #520.
+- deletion reconciliation through the newest protected forward journal when the
+  restored snapshot predates an Account deletion required by #520;
+- the journal classified as **minimal pseudonymous recovery metadata**: content-free
+  and data-minimized, but account-linkable and recovery-sensitive rather than
+  identity-free operational metadata.
 
 Record measured recovery timing honestly; do not infer an untested SLA/RPO/RTO.
 
