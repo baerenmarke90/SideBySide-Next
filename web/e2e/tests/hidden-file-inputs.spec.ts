@@ -17,11 +17,38 @@ const VIEWPORTS = [
 ] as const;
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const dimensions = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  const dimensions = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const scrollWidth = document.documentElement.scrollWidth;
+    const offenders = Array.from(document.body.querySelectorAll('*'))
+      .flatMap((element) => {
+        if (!(element instanceof HTMLElement)) return [];
+        const rect = element.getBoundingClientRect();
+        if (rect.left >= -0.5 && rect.right <= clientWidth + 0.5) return [];
+        const style = getComputedStyle(element);
+        return [
+          {
+            tag: element.tagName.toLowerCase(),
+            id: element.id,
+            className: element.className,
+            left: Math.round(rect.left * 10) / 10,
+            right: Math.round(rect.right * 10) / 10,
+            width: Math.round(rect.width * 10) / 10,
+            display: style.display,
+            position: style.position,
+            minWidth: style.minWidth,
+            whiteSpace: style.whiteSpace,
+          },
+        ];
+      })
+      .sort((left, right) => right.right - left.right)
+      .slice(0, 12);
+    return { clientWidth, scrollWidth, offenders };
+  });
+  expect(
+    dimensions.scrollWidth,
+    `Horizontal overflow offenders: ${JSON.stringify(dimensions.offenders)}`,
+  ).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 
 async function expectHiddenGeometry(input: Locator): Promise<void> {
