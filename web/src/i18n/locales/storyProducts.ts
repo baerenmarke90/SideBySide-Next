@@ -17,6 +17,8 @@ const storyProducts = {
     newest: 'Neueste zuerst',
     oldest: 'Älteste zuerst',
     apply: 'Filter anwenden',
+    toggleButton: 'Filter',
+    toggleButtonActive: 'Filter, aktive Auswahl',
     reset: 'Zurücksetzen',
     removeFilter: 'Filter entfernen',
     noMatches: 'Keine Momente für diese Auswahl',

@@ -43,6 +43,12 @@ import {
 export interface DashboardView {
     /**
      * 
+     * @type {DashboardItem}
+     * @memberof DashboardView
+     */
+    keepsake: DashboardItem | null;
+    /**
+     * 
      * @type {Array<DashboardItem>}
      * @memberof DashboardView
      */
@@ -67,6 +73,12 @@ export interface DashboardView {
     space: DashboardSpaceSummary;
     /**
      * 
+     * @type {Date}
+     * @memberof DashboardView
+     */
+    thinkingOfYouAvailableAt: Date | null;
+    /**
+     * 
      * @type {Array<DashboardItem>}
      * @memberof DashboardView
      */
@@ -77,10 +89,12 @@ export interface DashboardView {
  * Check if a given object implements the DashboardView interface.
  */
 export function instanceOfDashboardView(value: object): value is DashboardView {
+    if (!('keepsake' in value) || value['keepsake'] === undefined) return false;
     if (!('recentShared' in value) || value['recentShared'] === undefined) return false;
     if (!('relationshipDuration' in value) || value['relationshipDuration'] === undefined) return false;
     if (!('retrospective' in value) || value['retrospective'] === undefined) return false;
     if (!('space' in value) || value['space'] === undefined) return false;
+    if (!('thinkingOfYouAvailableAt' in value) || value['thinkingOfYouAvailableAt'] === undefined) return false;
     if (!('upcoming' in value) || value['upcoming'] === undefined) return false;
     return true;
 }
@@ -95,10 +109,12 @@ export function DashboardViewFromJSONTyped(json: any, ignoreDiscriminator: boole
     }
     return {
         
+        'keepsake': DashboardItemFromJSON(json['keepsake']),
         'recentShared': ((json['recentShared'] as Array<any>).map(DashboardItemFromJSON)),
         'relationshipDuration': DashboardRelationshipDurationFromJSON(json['relationshipDuration']),
         'retrospective': DashboardItemFromJSON(json['retrospective']),
         'space': DashboardSpaceSummaryFromJSON(json['space']),
+        'thinkingOfYouAvailableAt': (json['thinkingOfYouAvailableAt'] == null ? null : new Date(json['thinkingOfYouAvailableAt'])),
         'upcoming': ((json['upcoming'] as Array<any>).map(DashboardItemFromJSON)),
     };
 }
@@ -114,10 +130,12 @@ export function DashboardViewToJSONTyped(value?: DashboardView | null, ignoreDis
 
     return {
         
+        'keepsake': DashboardItemToJSON(value['keepsake']),
         'recentShared': ((value['recentShared'] as Array<any>).map(DashboardItemToJSON)),
         'relationshipDuration': DashboardRelationshipDurationToJSON(value['relationshipDuration']),
         'retrospective': DashboardItemToJSON(value['retrospective']),
         'space': DashboardSpaceSummaryToJSON(value['space']),
+        'thinkingOfYouAvailableAt': value['thinkingOfYouAvailableAt'] == null ? value['thinkingOfYouAvailableAt'] : value['thinkingOfYouAvailableAt'].toISOString(),
         'upcoming': ((value['upcoming'] as Array<any>).map(DashboardItemToJSON)),
     };
 }

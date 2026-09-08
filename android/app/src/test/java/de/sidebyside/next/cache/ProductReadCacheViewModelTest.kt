@@ -805,10 +805,12 @@ private class TodayApi : FakeReferenceContract() {
             throw it
         }
         return DashboardView(
+            keepsake = null,
             recentShared = emptyList(),
             relationshipDuration = null,
             retrospective = null,
             space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
+            thinkingOfYouAvailableAt = null,
             upcoming = emptyList(),
         )
     }

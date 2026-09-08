@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
+  fireEvent,
   render,
   screen,
-  fireEvent,
   waitFor,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -106,5 +107,62 @@ describe('ThinkingOfYouButton', () => {
     expect(
       screen.queryByText(relationshipComponents.thinkingOfYouAction),
     ).toBeNull();
+  });
+
+  it('uses the exact product copy "Ich denke an dich", not "Ich denk an dich" (regression #790/#791)', () => {
+    expect(relationshipComponents.thinkingOfYouAction).toBe(
+      'Ich denke an dich',
+    );
+  });
+
+  it('disables the control and shows the server-authoritative remaining time during cooldown', () => {
+    const onSend = vi.fn();
+    const cooldownUntil = new Date(Date.now() + 29 * 60_000);
+    render(
+      <ThinkingOfYouButton
+        partnerName="Lea"
+        onSend={onSend}
+        cooldownUntil={cooldownUntil}
+      />,
+    );
+
+    const expectedLabel = relationshipComponents.thinkingOfYouCooldown.replace(
+      '{{minutes}}',
+      '29',
+    );
+    const btn = screen.getByRole('button', {
+      name: expectedLabel,
+    }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.className).toContain('state-cooldown');
+
+    fireEvent.click(btn);
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('restores the normal action automatically once the cooldown expires, without a page reload', () => {
+    vi.useFakeTimers();
+    try {
+      const cooldownUntil = new Date(Date.now() + 60_000);
+      render(
+        <ThinkingOfYouButton partnerName="Lea" cooldownUntil={cooldownUntil} />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: /Wieder möglich/ }),
+      ).toBeDefined();
+
+      // Advance past both the cooldown expiry and the button's own
+      // remaining-time refresh tick.
+      act(() => {
+        vi.advanceTimersByTime(90_000);
+      });
+
+      expect(
+        screen.getByRole('button', { name: expectedPartnerLabel }),
+      ).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -32,18 +32,17 @@ const m5s5 = {
     upcomingEmpty: 'Gerade steht nichts Gemeinsames bevor.',
     recentKicker: 'Aktivitäten',
     recentTitle: 'Zuletzt bei euch',
-    recentSubline: 'Gemeinsame Aktivitäten und Änderungen auf einen Blick.',
     allActivityAction: 'Alle Aktivitäten ansehen →',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     itemFallback: 'Gemeinsamer Eintrag',
     thinkingOfYouButton: 'Ich denke an dich',
     thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
-    upcomingMoreTitle: 'Weitere anstehende Momente',
+    thinkingOfYouCooldownBlocked:
+      'Du hast gerade schon ein Zeichen geschickt. In {{minutes}} Minuten kannst du wieder „Ich denke an dich“ senden.',
   },
   today: {
     roles: {
       hero: 'Paar-Präsenz',
-      context: 'Aktueller Kontext',
       relationshipSignal: 'Bei euch passiert',
       sharedContent: 'Aktivitäten',
       editorial: 'Rückblick',
@@ -51,14 +50,6 @@ const m5s5 = {
     keepsake: {
       kicker: 'Euer Moment',
       title: 'Zuletzt gemeinsam festgehalten',
-    },
-    contextSlot: {
-      kicker: 'Heute im Blick',
-      dueTodayKicker: 'Heute',
-      reminderKicker: 'Erinnerung',
-      upcomingPlanKicker: 'Als Nächstes geplant',
-      importantDateKicker: 'Besonderer Tag',
-      viewDetails: 'Details ansehen',
     },
     relationshipSignal: {
       kicker: 'Bei euch passiert',

@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import type { M4ProductApis } from '../client/m4Product';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
+import type { M4ProductApis } from '../client/m4Product';
 import { i18n } from '../i18n';
 import m5s5 from '../i18n/locales/m5s5';
+import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
 function renderTodayPage(dashboardData: unknown): string {
@@ -61,6 +62,45 @@ describe('TodayPage', () => {
     expect(html).toContain('Park Picnic');
     expect(html).toContain('Morning Smile');
     expect(html).toContain('today-card-badges');
+  });
+
+  it('reflects the server-authoritative Thinking-of-you cooldown from the Dashboard on load (regression #790/#791)', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [],
+      retrospective: null,
+      thinkingOfYouAvailableAt: new Date(Date.now() + 29 * 60_000),
+    });
+
+    const expectedLabel = relationshipComponents.thinkingOfYouCooldown.replace(
+      '{{minutes}}',
+      '29',
+    );
+    expect(html).toContain('state-cooldown');
+    expect(html).toContain(expectedLabel);
+    expect(html).toContain('disabled=""');
+  });
+
+  it('does not show a cooldown when Dashboard.thinkingOfYouAvailableAt is null', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [],
+      retrospective: null,
+      thinkingOfYouAvailableAt: null,
+    });
+
+    expect(html).not.toContain('state-cooldown');
+    expect(html).toContain('today-hero-action');
   });
 
   it('renders welcoming new-space experience when there are no items yet, without hiding the couple presence hero', () => {
@@ -128,7 +168,7 @@ describe('TodayPage', () => {
     expect(html).not.toContain('today-stream-upcoming');
   });
 
-  it('renders the most recent real shared photo as the Heroic Keepsake when no retrospective exists, and filters it out of the Shared Trace below', () => {
+  it('renders the server-provided Keepsake as the Heroic focal point when no retrospective exists, and filters it out of the Shared Trace below', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -136,6 +176,13 @@ describe('TodayPage', () => {
       space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
       relationshipDuration: null,
       upcoming: [],
+      keepsake: {
+        id: 'mem-photo',
+        type: 'MEMORY',
+        titleOrText: 'Photo Memory',
+        occurredOn: new Date('2026-09-01T12:00:00Z'),
+        previewAttachmentId: 'att-123',
+      },
       recentShared: [
         {
           id: 'mem-photo',
@@ -168,7 +215,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // The photo becomes the large editorial Keepsake focal point
+    // The server-provided keepsake becomes the large editorial focal point
     expect(html).toContain('today-section-keepsake');
     expect(html).toContain('today-card-has-media');
     expect(html).toContain('Photo Memory');
@@ -185,11 +232,129 @@ describe('TodayPage', () => {
     expect(html).toContain('Text Memory');
   });
 
-  it('omits the Heroic Keepsake fallback when no loadMemoryImage is supplied', () => {
+  it('shows a real Keepsake even when many newer non-memory recentShared items would otherwise crowd it out (regression #790)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    // The recentShared feed is entirely non-memory items, newer than the
+    // photo memory. Under the old client-side scan of recentShared this would
+    // have hidden the Keepsake entirely. The server-provided `keepsake` field
+    // is independent of recentShared, so the real photo must still appear.
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      keepsake: {
+        id: 'mem-photo-old',
+        type: 'MEMORY',
+        titleOrText: 'Anniversary Trip',
+        occurredOn: new Date('2026-01-01T12:00:00Z'),
+        previewAttachmentId: 'att-old',
+      },
+      recentShared: [
+        {
+          id: 'wish-1',
+          type: 'WISH',
+          titleOrText: 'Newer Wish',
+          createdAt: new Date('2026-09-05T10:00:00Z'),
+        },
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Newer Plan',
+          createdAt: new Date('2026-09-04T10:00:00Z'),
+        },
+        {
+          id: 'place-1',
+          type: 'PLACE',
+          titleOrText: 'Newer Place',
+          createdAt: new Date('2026-09-03T10:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={{} as M4ProductApis}
+            spaceId="space-1"
+            loadMemoryImage={() =>
+              Promise.resolve('blob:http://localhost/mock')
+            }
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('today-section-keepsake');
+    expect(html).toContain('Anniversary Trip');
+    expect(html).not.toContain('new-space-experience');
+  });
+
+  it('does not become plan-first when no retrospective exists but a Keepsake is available (regression #790)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Weekend trip',
+          scheduledAt: new Date('2026-09-15T10:00:00Z'),
+        },
+      ],
+      keepsake: {
+        id: 'mem-photo',
+        type: 'MEMORY',
+        titleOrText: 'Beach Day',
+        occurredOn: new Date('2026-09-01T12:00:00Z'),
+        previewAttachmentId: 'att-123',
+      },
+      recentShared: [],
+      retrospective: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={{} as M4ProductApis}
+            spaceId="space-1"
+            loadMemoryImage={() =>
+              Promise.resolve('blob:http://localhost/mock')
+            }
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // The Keepsake precedes the planning area: the page leads with the
+    // shared photographic memory, not the upcoming plan.
+    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const planningIndex = html.indexOf('today-planning-area');
+    expect(keepsakeIndex).toBeGreaterThan(-1);
+    expect(planningIndex).toBeGreaterThan(keepsakeIndex);
+    expect(html).toContain('Beach Day');
+    expect(html).toContain('Weekend trip');
+  });
+
+  it('omits the Keepsake when no loadMemoryImage is supplied', () => {
     const html = renderTodayPage({
       space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
       relationshipDuration: null,
       upcoming: [],
+      keepsake: {
+        id: 'mem-photo',
+        type: 'MEMORY',
+        titleOrText: 'Photo Memory',
+        occurredOn: new Date('2026-09-01T12:00:00Z'),
+        previewAttachmentId: 'att-123',
+      },
       recentShared: [
         {
           id: 'mem-photo',
@@ -207,7 +372,7 @@ describe('TodayPage', () => {
     expect(html).toContain('Photo Memory');
   });
 
-  it('renders compact recent activity cards and secondary all-activity action', () => {
+  it('renders compact shared-life mini-tiles (not activity-log cards) and secondary all-activity action', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -261,13 +426,22 @@ describe('TodayPage', () => {
     // Renders section with distinct kicker and heading (no duplicate wording)
     expect(html).toContain(m5s5.dashboard.recentKicker);
     expect(html).toContain(m5s5.dashboard.recentTitle);
-    expect(html).toContain(m5s5.dashboard.recentSubline);
+    // The descriptive subline read as redundant activity-log copy and was
+    // removed per Product Owner review; the section no longer renders one.
+    expect(html).not.toContain('today-section-subline');
 
-    // Renders compact items
-    expect(html).toContain('recent-shared-card');
+    // Renders as small, soft mini-tiles, not the old activity-log/database
+    // record cards (icon-badge + heading + kind/date subtitle stacked in a
+    // vertical list).
+    expect(html).toContain('today-recent-tile');
+    expect(html).not.toContain('recent-shared-card');
     expect(html).toContain('Summer Chapter');
-    expect(html).toContain(m5s5.kind.CHAPTER);
     expect(html).toContain('Rainy Day Movies');
+
+    // Type is still available to assistive tech, just not as its own
+    // visible badge next to an already type-specific icon.
+    expect(html).toContain('sr-only');
+    expect(html).toContain(m5s5.kind.CHAPTER);
     expect(html).toContain(m5s5.kind.COLLECTION);
 
     // Slices to max 4 items
@@ -340,11 +514,14 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // Primary contextual card
-    expect(html).toContain('today-context-area');
-    expect(html).toContain('today-context-dual');
+    // Shared Planning Horizon: the upcoming item is a calm agenda row, not a
+    // dashboard-style status card, and shares the planning area two-up with
+    // the relationship signal.
+    expect(html).toContain('today-planning-area');
+    expect(html).toContain('today-planning-dual');
+    expect(html).toContain('today-agenda-row');
     expect(html).toContain('Candlelight Dinner');
-    expect(html).toContain('today-context-kicker');
+    expect(html).not.toContain('today-context-card');
 
     // Relationship signal card
     expect(html).toContain('today-signal-card');
@@ -353,11 +530,11 @@ describe('TodayPage', () => {
     expect(html).toContain('href="/story/memories/mem-1"');
     expect(html).toContain('today-signal-action');
 
-    // Zero duplication: single upcoming item is NOT duplicated in a separate upcoming section
-    expect(html).not.toContain('today-section-upcoming');
+    // Zero duplication: the upcoming item appears exactly once
+    expect(html.split('Candlelight Dinner').length - 1).toBe(1);
   });
 
-  it('omits context area entirely when neither upcoming item nor relationship activity exists', () => {
+  it('omits the planning area entirely when neither upcoming item nor relationship activity exists', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -401,8 +578,8 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // Context area is completely omitted
-    expect(html).not.toContain('today-context-area');
+    // Planning area is completely omitted
+    expect(html).not.toContain('today-planning-area');
     expect(html).not.toContain('today-signal-card');
 
     // Page flows directly into recent shared
@@ -410,7 +587,7 @@ describe('TodayPage', () => {
     expect(html).toContain('Lake Walk');
   });
 
-  it('renders single-column context area when only primary contextual item exists', () => {
+  it('renders single-column planning area when only an upcoming item exists', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -454,13 +631,14 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-context-area');
-    expect(html).toContain('today-context-single');
+    expect(html).toContain('today-planning-area');
+    expect(html).toContain('today-planning-single');
+    expect(html).toContain('today-agenda-row');
     expect(html).toContain('Cooking Night');
     expect(html).not.toContain('today-signal-card');
   });
 
-  it('renders single-column context area when only relationship signal exists', () => {
+  it('renders single-column planning area when only relationship signal exists', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -508,14 +686,14 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-context-area');
-    expect(html).toContain('today-context-single');
+    expect(html).toContain('today-planning-area');
+    expect(html).toContain('today-planning-single');
     expect(html).toContain('today-signal-card');
     expect(html).toContain('href="/story/memories/mem-99"');
-    expect(html).not.toContain('today-context-card');
+    expect(html).not.toContain('today-agenda-row');
   });
 
-  it('renders secondary upcoming section when more than 1 upcoming item exists', () => {
+  it('renders every upcoming item as a calm agenda row in one Shared Planning Horizon, not a split primary card + secondary section', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -565,13 +743,15 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // First plan is in primary context card
-    expect(html).toContain('today-context-card');
-    expect(html).toContain('First Next Plan');
+    expect(html).toContain('today-planning-area');
+    expect(html).toContain('today-agenda-list');
+    expect(html).not.toContain('today-context-card');
 
-    // Second plan is in secondary upcoming section
-    expect(html).toContain('today-section-upcoming');
-    expect(html).toContain('Second Future Plan');
+    // Both items render as agenda rows in the same list, in order
+    const firstIndex = html.indexOf('First Next Plan');
+    const secondIndex = html.indexOf('Second Future Plan');
+    expect(firstIndex).toBeGreaterThan(-1);
+    expect(secondIndex).toBeGreaterThan(firstIndex);
   });
 
   it('does not render relationship signal when comment is from the user or another actor', () => {
@@ -997,8 +1177,8 @@ describe('formatRelationshipDuration', () => {
     ).toBe('15 Tage zusammen');
   });
 
-  describe('issue #617: keep third-party dates out of primary context', () => {
-    it('selects shared plan as primary context when upcoming contains couple plan', () => {
+  describe('issue #617: keep third-party dates out of the planning area', () => {
+    it('renders the shared plan in the planning area when upcoming contains a couple plan', () => {
       const html = renderTodayPage({
         space: {
           id: 'space-1',
@@ -1017,12 +1197,11 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-context-area');
+      expect(html).toContain('today-planning-area');
       expect(html).toContain('Weekend by the lake');
-      expect(html).not.toContain('today-section-upcoming');
     });
 
-    it('omits primary context slot when upcoming is empty (no forced fallback for third-party dates)', () => {
+    it('omits the planning area when upcoming is empty (no forced fallback for third-party dates)', () => {
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
       });
@@ -1056,12 +1235,12 @@ describe('formatRelationshipDuration', () => {
         </QueryClientProvider>,
       );
 
-      // Context area must disappear cleanly; page flows directly into recent shared
-      expect(html).not.toContain('today-context-area');
+      // Planning area must disappear cleanly; page flows directly into recent shared
+      expect(html).not.toContain('today-planning-area');
       expect(html).toContain('Konzertbesuch');
     });
 
-    it('renders couple anniversary as eligible primary context', () => {
+    it('renders couple anniversary as an eligible agenda item', () => {
       const html = renderTodayPage({
         space: {
           id: 'space-1',
@@ -1080,11 +1259,12 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-context-area');
-      expect(html).toContain('today-context-card');
+      expect(html).toContain('today-planning-area');
+      expect(html).toContain('today-agenda-row');
+      expect(html).toContain('Jahrestag');
     });
 
-    it('renders couple important date as eligible primary context', () => {
+    it('renders couple important date as an eligible agenda item', () => {
       const html = renderTodayPage({
         space: {
           id: 'space-1',
@@ -1103,7 +1283,7 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-context-area');
+      expect(html).toContain('today-planning-area');
       expect(html).toContain('Zusammengezogen');
     });
   });

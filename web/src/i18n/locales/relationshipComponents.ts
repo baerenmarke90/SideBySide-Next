@@ -11,9 +11,10 @@ const relationshipComponents = {
   couplePresencePartnerFallback: 'Dein Partner',
 
   thinkingOfYouSendToPartner: 'Lieben Gruß an {{partner}} senden',
-  thinkingOfYouAction: 'Ich denk an dich',
+  thinkingOfYouAction: 'Ich denke an dich',
   thinkingOfYouSending: 'Wird gesendet …',
   thinkingOfYouSent: 'Gesendet!',
+  thinkingOfYouCooldown: 'Wieder möglich in {{minutes}} Min.',
 
   visibilityShared: 'Mit Partner geteilt',
   visibilityPrivate: 'Nur für mich',

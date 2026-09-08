@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   type ChangeEvent,
   type FormEvent,
@@ -8,20 +9,19 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PeopleApi } from '../api/generated/apis/PeopleApi';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { DateRepeat } from '../api/generated/models/DateRepeat';
-import type { ImportantDateView } from '../api/generated/models/ImportantDateView';
 import { ImportantDateType } from '../api/generated/models/ImportantDateType';
+import type { ImportantDateView } from '../api/generated/models/ImportantDateView';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import {
   EMPTY_IMPORTANT_DATE_DRAFT,
   type ImportantDateDraft,
   importantDateFieldsFromDraft,
 } from '../client/importantDateDraft';
 import { normalizeClientError } from '../client/problemDetails';
-import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
 import { AddIcon } from './DestinationIcon';
 import { ProblemState } from './ProblemState';
@@ -541,14 +541,12 @@ export function ImportantDatesPanel({
       className="important-dates-section"
       aria-labelledby="important-dates-title"
     >
-      <div className="section-head">
-        <div>
-          <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
-          <p className="important-dates-intro">{t('importantDates.intro')}</p>
-        </div>
+      <div className="important-dates-intro-block">
+        <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
+        <p className="important-dates-intro">{t('importantDates.intro')}</p>
         <button
           type="button"
-          className="primary compact-action"
+          className="secondary compact-action important-dates-create-action"
           onClick={() => {
             setEditing(null);
             setIsCreating(true);

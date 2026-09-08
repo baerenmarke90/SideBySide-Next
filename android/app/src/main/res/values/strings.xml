@@ -827,7 +827,7 @@
     <string name="relationship_presence_offline">Offline</string>
     <string name="relationship_presence_view_duration">Beziehungsdetails ansehen</string>
     <string name="relationship_thinking_of_you_send">Lieben Gruß an %1$s senden</string>
-    <string name="relationship_thinking_of_you_default">Ich denk an dich</string>
+    <string name="relationship_thinking_of_you_default">Ich denke an dich</string>
     <string name="relationship_thinking_of_you_sending">Wird gesendet …</string>
     <string name="relationship_thinking_of_you_sent">Gesendet!</string>
     <string name="relationship_visibility_shared">Mit Partner geteilt</string>

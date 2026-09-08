@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
@@ -13,15 +13,14 @@ import {
 import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
+  type AppRouteDefinition,
+  activeNavigationArea,
   DEFAULT_APP_ROUTE,
   SEARCH_ROUTE,
-  activeNavigationArea,
-  type AppRouteDefinition,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
-import { HeaderCouplePresence } from './HeaderCouplePresence';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
@@ -206,12 +205,6 @@ export function AppShell({
             spaceId={spaceId}
             unreadCount={unreadCount}
             currentAccountId={account.id}
-          />
-          <HeaderCouplePresence
-            apiBaseUrl={apiBaseUrl}
-            accessToken={accessToken}
-            account={account}
-            spaceId={spaceId}
           />
           <HeaderProfileMenu
             apiBaseUrl={apiBaseUrl}

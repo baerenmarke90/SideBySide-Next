@@ -21,6 +21,7 @@ from sidebyside.authorization import AuthorizationContext, PrivacyClass, readabl
 from sidebyside.chapters.models import Chapter
 from sidebyside.collections.models import Collection
 from sidebyside.core import clock
+from sidebyside.engagement import thinking
 from sidebyside.heart_moments.models import HeartMoment
 from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory
@@ -38,6 +39,13 @@ from sidebyside.wishes.models import Wish
 
 SECTION_LIMIT = 8
 MAX_RECOGNITION_TEXT = 160
+
+# The Keepsake slot searches a wider recency window than SECTION_LIMIT because
+# it must find a real photo even when the most recent SECTION_LIMIT shared
+# items happen to be non-memory or memories without a READY attachment. It
+# stays bounded rather than unbounded so a very active Space cannot turn this
+# into a full-table scan.
+KEEPSAKE_SCAN_LIMIT = 50
 
 
 class DashboardItemType(StrEnum):
@@ -84,8 +92,10 @@ class DashboardView:
     partner: PartnerSummary | None
     relationship_duration: RelationshipDuration | None
     retrospective: DashboardItem | None
+    keepsake: DashboardItem | None
     upcoming: list[DashboardItem]
     recent_shared: list[DashboardItem]
+    thinking_of_you_available_at: datetime | None
 
 
 def read_dashboard(
@@ -110,8 +120,10 @@ def read_dashboard(
         partner=_partner(session, authorization),
         relationship_duration=_relationship_duration(profile, today),
         retrospective=_retrospective(session, authorization, today),
+        keepsake=_keepsake(session, authorization),
         upcoming=_upcoming(session, authorization, profile, today, instant),
         recent_shared=_recent_shared(session, authorization),
+        thinking_of_you_available_at=thinking.available_at(session, authorization),
     )
 
 
@@ -231,6 +243,48 @@ def _retrospective(
 
 def _is_prior_same_day(value: date, today: date) -> bool:
     return value.year < today.year and (value.month, value.day) == (today.month, today.day)
+
+
+def _keepsake(
+    session: Session,
+    authorization: AuthorizationContext,
+) -> DashboardItem | None:
+    """Find the Today Keepsake: the most recent readable Memory with a READY photo.
+
+    This is a dedicated product role, not a byproduct of ``recent_shared``.
+    ``recent_shared`` mixes many item types and is capped at ``SECTION_LIMIT``,
+    so a handful of recent non-memory activity can crowd out the most recent
+    real shared photo entirely. The Keepsake searches memories only, across a
+    wider recency window, so the page's emotional focal point never depends on
+    what else happened to be shared recently.
+    """
+    memories = list(
+        session.execute(
+            readable(Memory, authorization)
+            .order_by(Memory.created_at.desc(), Memory.id)
+            .limit(KEEPSAKE_SCAN_LIMIT)
+        ).scalars()
+    )
+    if not memories:
+        return None
+
+    galleries = attachments_of_memories(session, [memory.id for memory in memories])
+    for memory in memories:
+        preview_id = None
+        for bound in galleries.get(memory.id, []):
+            if bound.attachment.status == AttachmentStatus.READY:
+                preview_id = bound.attachment.id
+                break
+        if preview_id is not None:
+            return DashboardItem(
+                type=DashboardItemType.MEMORY,
+                id=memory.id,
+                title_or_text=_bounded(memory.payload.title),
+                occurred_on=memory.happened_on,
+                created_at=memory.created_at,
+                preview_attachment_id=preview_id,
+            )
+    return None
 
 
 def _upcoming(

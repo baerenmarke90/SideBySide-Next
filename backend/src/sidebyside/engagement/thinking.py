@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -23,9 +23,44 @@ from sidebyside.outbox import service as outbox_service
 from sidebyside.outbox.models import OutboxEvent
 from sidebyside.relationship.models import Membership, MembershipStatus
 
-COOLDOWN_SECONDS = 60
+COOLDOWN_SECONDS = 30 * 60
+"""Product pacing decision (#790/#791), not merely a technical anti-spam
+bound: 30 minutes between logical sends from the same sender/Space. Remains
+Free/Core behavior, not a Premium quota."""
+
 PARTNER_NOT_AVAILABLE = "PARTNER_NOT_AVAILABLE"
 THINKING_OF_YOU_COOLDOWN = "THINKING_OF_YOU_COOLDOWN"
+
+
+def _last_sent_at(
+    session: Session,
+    space_id: UUID,
+    sender_account_id: UUID,
+) -> datetime | None:
+    return session.execute(
+        select(ThinkingOfYouRequest.created_at)
+        .where(
+            ThinkingOfYouRequest.space_id == space_id,
+            ThinkingOfYouRequest.sender_account_id == sender_account_id,
+        )
+        .order_by(ThinkingOfYouRequest.created_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def available_at(session: Session, context: AuthorizationContext) -> datetime | None:
+    """The server-authoritative instant this caller may next send, or ``None``
+    if a send is available right now.
+
+    This is the read side of the same cooldown ``send`` enforces, exposed so
+    a client can reflect the real state (e.g. on the Dashboard) without
+    guessing from a local timer or waiting for a blocked request.
+    """
+    last_sent = _last_sent_at(session, context.space_id, context.account_id)
+    if last_sent is None:
+        return None
+    cooldown_until = last_sent + timedelta(seconds=COOLDOWN_SECONDS)
+    return cooldown_until if cooldown_until > clock.now() else None
 
 
 def send(
@@ -71,21 +106,16 @@ def send(
         raise NotFoundError("Partner not available.", PARTNER_NOT_AVAILABLE)
 
     current_time = clock.now()
-    recent = session.execute(
-        select(ThinkingOfYouRequest.id)
-        .where(
-            ThinkingOfYouRequest.space_id == context.space_id,
-            ThinkingOfYouRequest.sender_account_id == context.account_id,
-            ThinkingOfYouRequest.created_at > current_time - timedelta(seconds=COOLDOWN_SECONDS),
-        )
-        .order_by(ThinkingOfYouRequest.created_at.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    if recent is not None:
-        raise RateLimitedError(
-            "Thinking-of-you is temporarily rate limited.",
-            THINKING_OF_YOU_COOLDOWN,
-        )
+    last_sent = _last_sent_at(session, context.space_id, context.account_id)
+    if last_sent is not None:
+        cooldown_until = last_sent + timedelta(seconds=COOLDOWN_SECONDS)
+        if cooldown_until > current_time:
+            retry_after = max(1, int((cooldown_until - current_time).total_seconds()))
+            raise RateLimitedError(
+                "Thinking-of-you is temporarily rate limited.",
+                THINKING_OF_YOU_COOLDOWN,
+                retry_after_seconds=retry_after,
+            )
 
     request_id = new_id()
     event = outbox_service.record(

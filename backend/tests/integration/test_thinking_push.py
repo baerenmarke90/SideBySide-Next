@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -100,7 +100,17 @@ def test_replay_is_idempotent_before_cooldown_and_projects_notification_only(
         headers=auth(couple["anna_token"]),
     )
     assert first.status_code == replay.status_code == 202
-    assert first.json() == replay.json() == {"clientRequestId": str(request_id)}
+    expected_available_at = (
+        (NOW + timedelta(seconds=thinking.COOLDOWN_SECONDS)).isoformat().replace("+00:00", "Z")
+    )
+    assert (
+        first.json()
+        == replay.json()
+        == {
+            "clientRequestId": str(request_id),
+            "thinkingOfYouAvailableAt": expected_available_at,
+        }
+    )
 
     requests = session.execute(select(ThinkingOfYouRequest)).scalars().all()
     assert len(requests) == 1
@@ -137,6 +147,101 @@ def test_replay_is_idempotent_before_cooldown_and_projects_notification_only(
     )
     assert blocked.status_code == 429
     assert blocked.json()["code"] == thinking.THINKING_OF_YOU_COOLDOWN
+
+
+def test_cooldown_is_thirty_minutes_with_retry_after_header_and_expires(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Product Owner decision (#790/#791): a 30-minute, server-authoritative
+    cooldown, not merely the earlier 60-second technical anti-spam bound. The
+    blocked response also carries a structured Retry-After header so a client
+    never has to parse error text to show remaining time.
+    """
+    current = {"value": NOW}
+    monkeypatch.setattr(thinking.clock, "now", lambda: current["value"])
+    assert thinking.COOLDOWN_SECONDS == 30 * 60
+
+    first = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert first.status_code == 202
+
+    # Still well within the 30-minute cooldown: blocked, with the exact
+    # remaining seconds in the Retry-After header.
+    current["value"] = NOW + timedelta(minutes=29)
+    blocked = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == thinking.THINKING_OF_YOU_COOLDOWN
+    retry_after = int(blocked.headers["retry-after"])
+    assert 0 < retry_after <= 60
+
+    # A replay of the very first clientRequestId stays idempotent and does
+    # not extend or reset the cooldown.
+    replay = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert replay.status_code == 429
+
+    # Once the full 30 minutes have elapsed, sending is available again.
+    current["value"] = NOW + timedelta(minutes=30, seconds=1)
+    allowed = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert allowed.status_code == 202
+
+    sent_count = session.execute(
+        select(func.count(ThinkingOfYouRequest.id)).where(
+            ThinkingOfYouRequest.sender_account_id == couple["anna"].id
+        )
+    ).scalar_one()
+    assert sent_count == 2
+
+
+def test_cooldown_is_isolated_per_sender_and_space(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(thinking.clock, "now", lambda: NOW)
+
+    anna_send = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert anna_send.status_code == 202
+
+    # The partner's own send in the same Space is a distinct sender and is
+    # never blocked by Anna's cooldown.
+    ben_send = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["ben_token"]),
+    )
+    assert ben_send.status_code == 202
+
+    # A completely different couple/Space is unaffected too.
+    other_anna = make_account(session, "Other Anna")
+    other_ben = make_account(session, "Other Ben")
+    other_space = make_space(session, other_anna)
+    relationship_service.add_member(session, other_space.id, other_ben)
+    session.flush()
+    other_token = sign_in(session, other_anna)
+
+    other_send = client.post(
+        f"/api/v1/spaces/{other_space.id}/thinking-of-you",
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(other_token),
+    )
+    assert other_send.status_code == 202
 
 
 def test_no_other_active_partner_creates_no_signal(client, session: Session, monkeypatch) -> None:  # type: ignore[no-untyped-def]

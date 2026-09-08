@@ -13,6 +13,7 @@ import { AuthorAvatar } from './PersonIdentity';
 import {
   formatStoryDate,
   groupStoryItems,
+  storyAuthorLabel,
   storyItemKey,
   storyItemPresentation,
 } from './storyPresentation';
@@ -145,7 +146,7 @@ export function StoryList({
                               />
                               <span>
                                 {t('story.byAuthor', {
-                                  author: author.displayName,
+                                  author: storyAuthorLabel(author.displayName),
                                 })}
                               </span>
                             </span>

@@ -164,104 +164,41 @@
   animation: heart-sparkle 0.6s ease-out;
 }
 
-/* Context Area: Primary Contextual Slot & Relationship Signal */
-.today-context-area {
+/* Shared Planning Horizon (calm agenda) + Relationship Signal */
+.today-planning-area {
   margin-bottom: var(--space-8);
 }
 
-.today-context-dual {
+.today-planning-dual {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
 }
 
 @media (min-width: 840px) {
-  .today-context-dual {
-    grid-template-columns: 1.15fr 0.85fr;
+  .today-planning-dual {
+    grid-template-columns: 1.4fr 1fr;
     align-items: stretch;
   }
 }
 
-.today-context-single {
+.today-planning-single {
   display: block;
 }
 
-.today-context-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  border-radius: var(--radius-card);
-}
-
-.today-context-link:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.today-context-card {
-  height: 100%;
+.today-planning-agenda {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: var(--space-5);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: 0 4px 16px var(--color-shadow-soft);
-  transition:
-    transform var(--motion-duration-medium) var(--motion-easing-lift),
-    border-color var(--motion-fast),
-    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
 }
 
-.today-context-link:hover .today-context-card {
-  transform: translateY(-2px);
-  border-color: var(--color-brand-glow);
-}
-
-.today-context-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.today-context-kicker {
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-brand-text);
-}
-
-.today-context-title {
-  margin: var(--space-1) 0 var(--space-3);
-  font-family: var(--font-ui);
-  font-size: 1.2rem;
-  font-weight: 750;
-  line-height: 1.35;
+.today-planning-heading {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-2);
   color: var(--color-text);
-}
-
-.today-context-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.today-context-date {
-  font-weight: 600;
-}
-
-.today-context-action {
-  font-weight: 700;
-  color: var(--color-brand);
+  font-family: var(--font-ui);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
 .today-signal-card {
@@ -399,18 +336,16 @@
   scroll-snap-align: start;
 }
 
-.today-card-shell-upcoming {
-  flex-basis: min(340px, 82vw);
-}
-
 .today-card-shell-retrospective,
 .today-card-shell-keepsake {
   flex-basis: min(340px, 80vw);
   width: 100%;
 }
 
+/* The Keepsake/retrospective is the page's photographic focal point, so it
+   uses the full available page width instead of a narrow inset column. */
 .today-retrospective-container {
-  max-width: 44rem;
+  width: 100%;
 }
 
 .today-section-keepsake .today-section-title {
@@ -423,33 +358,59 @@
   max-width: 100%;
 }
 
-/* Shared Planning Horizon: calm agenda rows instead of a card carousel */
+/* Shared Planning Horizon (#790/#791 follow-up): a full-width bordered row
+   is still a table row once the container is wider than its content - the
+   title sits far left, the date far right, and nearly all of the box is
+   empty. Each item is instead a compact tile (icon + stacked title/date,
+   like the Momente archive entries' icon + copy convention) that wraps into
+   as many columns as the available width allows, instead of stretching one
+   item across the whole row. Below the tablet breakpoint the tiles stay
+   full-width and stacked - narrow phone widths don't have room for more
+   than one anyway, so this keeps mobile's already-approved presentation. */
 .today-agenda-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (min-width: 640px) {
+  .today-agenda-list {
+    flex-flow: row wrap;
+    gap: var(--space-3);
+  }
 }
 
 .today-agenda-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
   color: inherit;
   text-decoration: none;
+  box-sizing: border-box;
 }
 
-.today-agenda-list .today-agenda-row:last-child {
-  border-bottom: none;
+@media (min-width: 640px) {
+  .today-agenda-row {
+    flex: 1 1 220px;
+    max-width: 18rem;
+  }
 }
 
 .today-agenda-row-link {
-  transition: background var(--motion-fast);
-  border-radius: var(--radius-medium);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
 }
 
 .today-agenda-row-link:hover {
-  background: var(--color-surface-panel);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--color-border);
 }
 
 .today-agenda-row-link:focus-visible {
@@ -467,9 +428,13 @@
   color: var(--color-brand-text);
 }
 
-.today-agenda-title {
-  flex: 1 1 auto;
+.today-agenda-copy {
   min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.today-agenda-title {
   font-family: var(--font-ui);
   font-size: 1rem;
   font-weight: 650;
@@ -480,81 +445,94 @@
 }
 
 .today-agenda-date {
-  flex: 0 0 auto;
   font-family: var(--font-ui);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
 
-@media (min-width: 860px) {
-  .today-stream-upcoming {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-    gap: var(--space-4);
-    overflow: visible;
-  }
-
-  .today-stream-upcoming .today-card-shell {
-    flex: none;
-    width: auto;
-  }
-}
-
+/* Shared-life trace (#790/#791 fourth/fifth follow-up): the previous
+   per-item icon-badge + heading + kind/date subtitle, stacked one per row,
+   was a textbook activity-feed/log affordance regardless of border or
+   spacing - the DOM shape itself (avatar, record name, type, timestamp) is
+   what read as a database record. A plain inline text trace (tried in the
+   third follow-up) removed the log feel but went too far the other way - no
+   surface at all reads as an unstyled fragment, not a deliberately composed
+   part of the page. Each entry is instead a small, soft mini-tile - reusing
+   the compact bordered-surface convention already approved for the
+   Shared Planning Horizon (.today-agenda-row) and the Momente archive
+   entries (.momente-archive-link) - wrapped several-per-row so the section
+   uses the available desktop width instead of sitting as a narrow column
+   with dead space beside it. The fourth follow-up capped these tiles at a
+   smaller flex-basis/max-width than .today-agenda-row directly above them
+   (170px/13rem vs. 220px/18rem), which both broke the two sections'
+   shared rhythm and truncated ordinary titles that had room to fit. The
+   fifth follow-up matches .today-agenda-row's exact width numbers instead -
+   a tile row immediately below another tile row growing to a different cap
+   is what read as "worse/tighter", not an inherent property of a smaller
+   tile. Secondary weight relative to the Shared Planning Horizon still
+   comes through padding, type scale, and a muted rather than brand-colored
+   icon - not from an artificially narrow box. Full Activity access remains
+   a link below. */
 .today-stream.today-stream-recent {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
   overflow: visible;
   scroll-snap-type: none;
   margin: 0;
   padding: 0;
 }
 
-.recent-shared-card-link {
-  text-decoration: none;
-  color: inherit;
-  display: block;
+@media (min-width: 640px) {
+  .today-stream.today-stream-recent {
+    flex-flow: row wrap;
+    gap: var(--space-3);
+  }
 }
 
-.recent-shared-card-link:focus-visible {
+.today-recent-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.today-recent-tile-static {
+  cursor: default;
+}
+
+@media (min-width: 640px) {
+  .today-recent-tile {
+    flex: 1 1 220px;
+    max-width: 18rem;
+  }
+}
+
+.today-recent-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--color-border);
+}
+
+.today-recent-tile:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
-  border-radius: var(--radius-medium);
-}
-
-.recent-shared-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: transparent;
-  box-shadow: none;
-  transition: background var(--motion-fast);
-}
-
-.today-stream-recent > *:last-child .recent-shared-card {
-  border-bottom: none;
-}
-
-.recent-shared-card-link:hover .recent-shared-card {
-  background: var(--color-surface-panel);
-}
-
-.recent-shared-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: var(--radius-medium);
-  background: var(--color-brand-surface);
-  color: var(--color-brand-text);
 }
 
 .recent-type-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.9;
@@ -562,33 +540,43 @@
   stroke-linejoin: round;
 }
 
-.recent-shared-copy {
-  min-width: 0;
-  display: grid;
-  gap: var(--space-1);
-}
-
-.recent-shared-title {
-  margin: 0;
-  font-size: 0.98rem;
-  font-weight: 650;
-  color: var(--color-text);
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recent-shared-meta {
-  display: flex;
+/* Type is still conveyed (the icon shape differs per kind), just not as its
+   own bold, brand-colored badge - that redundant field next to an
+   already-typed icon is what made this read as structured record metadata
+   instead of a quiet personal trace. A muted (not brand-accent) icon color
+   keeps these tiles visually quieter than the Shared Planning Horizon's. */
+.today-recent-tile-icon {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: 0.82rem;
+  margin-top: 0.1rem;
+  flex: 0 0 auto;
   color: var(--color-text-secondary);
 }
 
-.recent-shared-meta-sep {
-  opacity: 0.6;
+.today-recent-tile-icon .recent-type-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.today-recent-tile-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.today-recent-tile-title {
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-recent-tile-date {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 .today-recent-footer {
@@ -709,22 +697,6 @@
   max-width: 100%;
 }
 
-.today-card-upcoming {
-  min-height: 140px;
-  padding: var(--space-4) var(--space-5);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.today-card-upcoming .today-card-title {
-  max-width: 24ch;
-  font-family: var(--font-ui);
-  font-size: clamp(1.1rem, 2vw, 1.28rem);
-  font-weight: 700;
-  margin: var(--space-2) 0;
-}
-
 .today-card-link:hover .today-card {
   transform: translateY(-3px);
   border-color: var(--color-brand-glow);
@@ -804,110 +776,45 @@
   height: 1.05rem;
 }
 
-/* Semantic type badges */
+/* Semantic type badges — reuse the shared brand/shared/technical/discovery/
+   private design tokens (docs/DESIGN-PRINCIPLES.md §3.1) instead of inventing
+   a page-local rainbow palette. Each token already carries a correct dark-mode
+   value, so no per-kind dark override is needed here. */
+.today-kind-heart_moment,
+.today-kind-anniversary {
+  background: var(--color-brand-surface);
+  border-color: var(--color-brand-glow);
+  color: var(--color-brand-text);
+}
+
 .today-kind-birthday {
-  background: #fef3c722;
-  border-color: #f59e0b44;
-  color: #b45309;
-}
-:root[data-theme="dark"] .today-kind-birthday {
-  background: #78350f25;
-  border-color: #f59e0b55;
-  color: #fcd34d;
-}
-
-.today-kind-anniversary,
-.today-kind-heart_moment {
-  background: #ffe4e628;
-  border-color: #f43f5e44;
-  color: #be123c;
-}
-:root[data-theme="dark"] .today-kind-anniversary,
-:root[data-theme="dark"] .today-kind-heart_moment {
-  background: #88133728;
-  border-color: #f43f5e55;
-  color: #fda4af;
-}
-
-.today-kind-milestone {
-  background: #fef9c328;
-  border-color: #eab30844;
-  color: #a16207;
-}
-:root[data-theme="dark"] .today-kind-milestone {
-  background: #713f1228;
-  border-color: #eab30855;
-  color: #fde047;
+  background: var(--color-private-surface-soft);
+  border-color: var(--color-private-surface-soft);
+  color: var(--color-private);
 }
 
 .today-kind-plan,
 .today-kind-important_date {
-  background: #e0e7ff28;
-  border-color: #6366f144;
-  color: #4338ca;
-}
-:root[data-theme="dark"] .today-kind-plan,
-:root[data-theme="dark"] .today-kind-important_date {
-  background: #312e8128;
-  border-color: #6366f155;
-  color: #a5b4fc;
+  background: var(--color-technical-surface);
+  border-color: var(--color-technical-surface);
+  color: var(--color-technical);
 }
 
-.today-kind-chapter {
-  background: #ede9fe28;
-  border-color: #8b5cf644;
-  color: #6d28d9;
-}
-:root[data-theme="dark"] .today-kind-chapter {
-  background: #4c1d9528;
-  border-color: #8b5cf655;
-  color: #c4b5fd;
-}
-
+.today-kind-memory,
+.today-kind-chapter,
 .today-kind-collection,
-.today-kind-collection_item {
-  background: #ccfbf128;
-  border-color: #14b8a644;
-  color: #0f766e;
-}
-:root[data-theme="dark"] .today-kind-collection,
-:root[data-theme="dark"] .today-kind-collection_item {
-  background: #134e4a28;
-  border-color: #14b8a655;
-  color: #5eead4;
+.today-kind-collection_item,
+.today-kind-milestone {
+  background: var(--color-shared-surface);
+  border-color: var(--color-shared-border);
+  color: var(--color-shared-accent);
 }
 
-.today-kind-wish {
-  background: #fce7f328;
-  border-color: #ec489944;
-  color: #be185d;
-}
-:root[data-theme="dark"] .today-kind-wish {
-  background: #83184328;
-  border-color: #ec489955;
-  color: #f472b6;
-}
-
-.today-kind-memory {
-  background: #e0f2fe28;
-  border-color: #0ea5e944;
-  color: #0369a1;
-}
-:root[data-theme="dark"] .today-kind-memory {
-  background: #0c4a6e28;
-  border-color: #0ea5e955;
-  color: #7dd3fc;
-}
-
+.today-kind-wish,
 .today-kind-place {
-  background: #d1fae528;
-  border-color: #10b98144;
-  color: #047857;
-}
-:root[data-theme="dark"] .today-kind-place {
-  background: #064e3b28;
-  border-color: #10b98155;
-  color: #6ee7b7;
+  background: var(--color-discovery-surface-soft);
+  border-color: var(--color-discovery-surface-soft);
+  color: var(--color-discovery);
 }
 
 .today-card-retrospective-badge {
@@ -942,6 +849,18 @@
   .today-card-keepsake.today-card-has-media {
     grid-template-columns: 1.15fr 1fr;
     align-items: center;
+  }
+}
+
+@media (min-width: 1100px) {
+  .today-card-retrospective.today-card-has-media,
+  .today-card-keepsake.today-card-has-media {
+    grid-template-columns: 1.5fr 1fr;
+  }
+
+  .today-card-retrospective .today-card-media,
+  .today-card-keepsake .today-card-media {
+    min-height: 320px;
   }
 }
 
@@ -1105,14 +1024,12 @@
   }
 
   .today-card-shell,
-  .today-card-shell-upcoming,
   .today-card-shell-retrospective,
   .today-card-shell-keepsake {
     flex-basis: min(300px, 84vw);
   }
 
-  .today-card,
-  .today-card-upcoming {
+  .today-card {
     min-height: 190px;
     padding: var(--space-5);
   }
@@ -1134,7 +1051,7 @@
 
   .today-hero-action,
   .today-agenda-row-link,
-  .recent-shared-card-link .recent-shared-card {
+  .today-recent-tile {
     transition: none;
   }
 }

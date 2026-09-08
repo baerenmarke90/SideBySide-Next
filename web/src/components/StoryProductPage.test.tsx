@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MemoryRouter, createMemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter } from 'react-router-dom';
 import { StoryKind } from '../api/generated/models/StoryKind';
 import { StoryOrder } from '../api/generated/models/StoryOrder';
 import type { ReferenceApis } from '../client/referenceFlow';
@@ -86,8 +86,115 @@ describe('StoryProductPage', () => {
     expect(html).toContain('momente-discover-page');
     expect(html).toContain('momente-hero-highlight');
     expect(html).toContain('Summer Lake Vacation');
-    expect(html).toContain('momente-stream-track');
+    expect(html).toContain('momente-tapestry');
     expect(html).toContain('I love you more each day');
+  });
+
+  it('renders Discover as an asymmetric tapestry, not a fixed-width horizontal carousel of equal cards (regression #790)', () => {
+    const html = renderStoryPage('/story', {
+      items: [
+        {
+          kind: 'MEMORY',
+          effectiveDate: new Date('2026-08-26T00:00:00Z'),
+          memory: {
+            id: 'mem-1',
+            title: 'Summer Lake Vacation',
+            notes: 'Wonderful sunset together',
+            occurredOn: new Date('2026-08-26T00:00:00Z'),
+            createdAt: new Date('2026-08-26T00:00:00Z'),
+            attachments: [{ id: 'att-1', mediaType: 'image/jpeg' }],
+            author: { id: 'author-1', displayName: 'Alex' },
+            creator: { id: 'author-1', displayName: 'Alex' },
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+          },
+        },
+        {
+          kind: 'HEART_MOMENT',
+          effectiveDate: new Date('2026-08-25T00:00:00Z'),
+          heartMoment: {
+            id: 'heart-1',
+            text: 'I love you more each day',
+            createdAt: new Date('2026-08-25T00:00:00Z'),
+            author: { id: 'author-2', displayName: 'Taylor' },
+            creator: { id: 'author-2', displayName: 'Taylor' },
+          },
+        },
+        {
+          kind: 'MILESTONE',
+          effectiveDate: new Date('2026-08-01T00:00:00Z'),
+          milestone: {
+            id: 'milestone-1',
+            title: 'First apartment together',
+            body: null,
+            createdAt: new Date('2026-08-01T00:00:00Z'),
+            author: { id: 'author-1', displayName: 'Alex' },
+            creator: { id: 'author-1', displayName: 'Alex' },
+          },
+        },
+      ],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    // No fixed-width horizontal carousel contract remains
+    expect(html).not.toContain('momente-stream-track');
+    expect(html).not.toContain('momente-stream-card');
+
+    // The asymmetric multi-column tapestry replaces it
+    expect(html).toContain('momente-tapestry"');
+
+    // Each content type keeps a distinct presentation role, not one shared
+    // equal-sized card shell (regression #790)
+    expect(html).toContain('momente-tapestry-media');
+    expect(html).toContain('momente-tapestry-note');
+    expect(html).toContain('momente-tapestry-milestone');
+    // The Heart Moment renders as a quoted note, not a titled card
+    expect(html).toContain('momente-tapestry-quote');
+    expect(html).toContain('First apartment together');
+  });
+
+  it('shows only the first name in Discover attribution, never the full display name (#791 second follow-up)', () => {
+    const html = renderStoryPage('/story', {
+      items: [
+        {
+          kind: 'MEMORY',
+          effectiveDate: new Date('2026-08-26T00:00:00Z'),
+          memory: {
+            id: 'mem-1',
+            title: 'Summer Lake Vacation',
+            notes: 'Wonderful sunset together',
+            occurredOn: new Date('2026-08-26T00:00:00Z'),
+            createdAt: new Date('2026-08-26T00:00:00Z'),
+            attachments: [{ id: 'att-1', mediaType: 'image/jpeg' }],
+            author: { id: 'author-1', displayName: 'Alex Winter' },
+            creator: { id: 'author-1', displayName: 'Alex Winter' },
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+          },
+        },
+        {
+          kind: 'HEART_MOMENT',
+          effectiveDate: new Date('2026-08-25T00:00:00Z'),
+          heartMoment: {
+            id: 'heart-1',
+            text: 'I love you more each day',
+            createdAt: new Date('2026-08-25T00:00:00Z'),
+            author: { id: 'author-2', displayName: 'Lea Sommer' },
+            creator: { id: 'author-2', displayName: 'Lea Sommer' },
+          },
+        },
+      ],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    // The visible byAuthor attribution text is first-name-only. (The
+    // avatar's own aria-label is a separate, pre-existing accessibility
+    // label unrelated to this fix and out of #791's scope, which is why
+    // this doesn't assert on "Alex Winter"/"Lea Sommer" absence overall.)
+    expect(html).toContain('von Alex</span>');
+    expect(html).toContain('von Lea</span>');
+    expect(html).not.toContain('von Alex Winter');
+    expect(html).not.toContain('von Lea Sommer');
   });
 
   it('renders timeline view when requested via query parameter', () => {
@@ -152,6 +259,143 @@ describe('StoryProductPage', () => {
     expect(html).toContain(de.story.milestonesDesc);
     expect(html).not.toContain('Erfolge');
     expect(html).toContain('href="/story?tab=timeline&amp;type=MILESTONE"');
+  });
+
+  describe('regression #790/#791: Momente Discover newest-first month bands', () => {
+    it('renders newest month first, newest item first within a month, independent of incoming array order', () => {
+      // Items are deliberately supplied out of chronological order (e.g. as
+      // if reached via a Timeline `order=ASC` filter still applied through
+      // the `tab` URL param) to prove the band grouping sorts defensively
+      // by effectiveDate rather than trusting array order.
+      const html = renderStoryPage('/story', {
+        items: [
+          {
+            kind: 'MEMORY',
+            effectiveDate: new Date('2026-07-05T00:00:00Z'),
+            memory: {
+              id: 'mem-july',
+              title: 'Spring Picnic',
+              occurredOn: new Date('2026-07-05T00:00:00Z'),
+              createdAt: new Date('2026-07-05T00:00:00Z'),
+              attachments: [],
+              author: { id: 'author-1', displayName: 'Alex' },
+              creator: { id: 'author-1', displayName: 'Alex' },
+              capabilities: {
+                canComment: true,
+                canDelete: true,
+                canEdit: true,
+              },
+            },
+          },
+          {
+            kind: 'MEMORY',
+            effectiveDate: new Date('2026-08-10T00:00:00Z'),
+            memory: {
+              id: 'mem-early-august',
+              title: 'Early August Walk',
+              occurredOn: new Date('2026-08-10T00:00:00Z'),
+              createdAt: new Date('2026-08-10T00:00:00Z'),
+              attachments: [],
+              author: { id: 'author-1', displayName: 'Alex' },
+              creator: { id: 'author-1', displayName: 'Alex' },
+              capabilities: {
+                canComment: true,
+                canDelete: true,
+                canEdit: true,
+              },
+            },
+          },
+          {
+            kind: 'MEMORY',
+            effectiveDate: new Date('2026-08-26T00:00:00Z'),
+            memory: {
+              id: 'mem-late-august',
+              title: 'Late August Vacation',
+              occurredOn: new Date('2026-08-26T00:00:00Z'),
+              createdAt: new Date('2026-08-26T00:00:00Z'),
+              attachments: [],
+              author: { id: 'author-1', displayName: 'Alex' },
+              creator: { id: 'author-1', displayName: 'Alex' },
+              capabilities: {
+                canComment: true,
+                canDelete: true,
+                canEdit: true,
+              },
+            },
+          },
+        ],
+        hasMore: false,
+        nextCursor: null,
+      });
+
+      expect(html).toContain('momente-tapestry-bands');
+      expect(html).toContain('momente-tapestry-band');
+      expect(html).toContain('momente-band-heading');
+      expect(html).toContain('August 2026');
+      expect(html).toContain('Juli 2026');
+
+      // Scope all ordering assertions to the tapestry itself: the hero above
+      // it (`selectFeaturedStoryItem`) may pick any one of these items to
+      // highlight first, which is unrelated to the tapestry's own ordering.
+      const tapestryStart = html.indexOf('momente-tapestry-bands');
+      expect(tapestryStart).toBeGreaterThan(-1);
+
+      // Newest month band (August) precedes the older month band (July)
+      const augustBandIndex = html.indexOf('August 2026', tapestryStart);
+      const julyBandIndex = html.indexOf('Juli 2026', tapestryStart);
+      expect(augustBandIndex).toBeGreaterThan(-1);
+      expect(julyBandIndex).toBeGreaterThan(-1);
+      expect(augustBandIndex).toBeLessThan(julyBandIndex);
+
+      // Within the August band, the newest item (26th) reads before the
+      // older one (10th) in DOM order, matching visual/keyboard/reading order
+      const lateAugustIndex = html.indexOf(
+        'Late August Vacation',
+        tapestryStart,
+      );
+      const earlyAugustIndex = html.indexOf('Early August Walk', tapestryStart);
+      expect(lateAugustIndex).toBeGreaterThan(-1);
+      expect(earlyAugustIndex).toBeGreaterThan(-1);
+      expect(lateAugustIndex).toBeLessThan(earlyAugustIndex);
+
+      // Every item still falls within its own correct month band, not a
+      // single global fake grouping
+      expect(earlyAugustIndex).toBeLessThan(julyBandIndex);
+      expect(julyBandIndex).toBeLessThan(
+        html.indexOf('Spring Picnic', tapestryStart),
+      );
+    });
+
+    it('caps the tapestry at the most recent items without silently dropping a month band', () => {
+      const items = Array.from({ length: 14 }, (_, index) => ({
+        kind: 'MEMORY' as const,
+        effectiveDate: new Date(
+          Date.UTC(2026, 7, 28 - index), // 2026-08-28 downward, one per day
+        ),
+        memory: {
+          id: `mem-${index}`,
+          title: `Moment ${index}`,
+          occurredOn: new Date(Date.UTC(2026, 7, 28 - index)),
+          createdAt: new Date(Date.UTC(2026, 7, 28 - index)),
+          attachments: [],
+          author: { id: 'author-1', displayName: 'Alex' },
+          creator: { id: 'author-1', displayName: 'Alex' },
+          capabilities: { canComment: true, canDelete: true, canEdit: true },
+        },
+      }));
+
+      const html = renderStoryPage('/story', {
+        items,
+        hasMore: false,
+        nextCursor: null,
+      });
+
+      // The 12 most recent items are shown, the oldest two are not
+      expect(html).toContain('Moment 0');
+      expect(html).toContain('Moment 11');
+      expect(html).not.toContain('Moment 12');
+      expect(html).not.toContain('Moment 13');
+    });
   });
 
   describe('issue #618: data-aware and recoverable timeline filters', () => {

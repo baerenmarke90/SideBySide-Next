@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -89,6 +89,7 @@ class ThinkingOfYouCreate(ApiModel):
 
 class ThinkingOfYouAccepted(ApiModel):
     client_request_id: UUID
+    thinking_of_you_available_at: datetime
 
 
 @router.get(
@@ -256,7 +257,11 @@ def send_thinking_of_you(
         client_request_id=body.client_request_id,
     )
     response.headers["Cache-Control"] = "private, no-store"
-    return ThinkingOfYouAccepted(client_request_id=request.client_request_id)
+    return ThinkingOfYouAccepted(
+        client_request_id=request.client_request_id,
+        thinking_of_you_available_at=request.created_at
+        + timedelta(seconds=thinking.COOLDOWN_SECONDS),
+    )
 
 
 def _resolve_actors(

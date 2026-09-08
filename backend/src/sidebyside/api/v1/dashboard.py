@@ -47,8 +47,10 @@ class DashboardView(ApiModel):
     space: DashboardSpaceSummary
     relationship_duration: DashboardRelationshipDuration | None
     retrospective: DashboardItem | None
+    keepsake: DashboardItem | None
     upcoming: list[DashboardItem]
     recent_shared: list[DashboardItem]
+    thinking_of_you_available_at: datetime | None
 
 
 @router.get(
@@ -84,8 +86,10 @@ def get_dashboard(
             else None
         ),
         retrospective=_project_item(view.retrospective) if view.retrospective is not None else None,
+        keepsake=_project_item(view.keepsake) if view.keepsake is not None else None,
         upcoming=[_project_item(item) for item in view.upcoming],
         recent_shared=[_project_item(item) for item in view.recent_shared],
+        thinking_of_you_available_at=view.thinking_of_you_available_at,
     )
 
 

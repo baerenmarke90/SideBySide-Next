@@ -323,10 +323,12 @@ class TodayScreenSemanticsTest {
             )
         }
         return DashboardView(
+            keepsake = null,
             recentShared = recent,
             relationshipDuration = duration,
             retrospective = retrospective,
             space = DashboardSpaceSummary(partner = partner, spaceId = UUID.randomUUID()),
+            thinkingOfYouAvailableAt = null,
             upcoming = upcoming,
         )
     }

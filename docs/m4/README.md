@@ -135,7 +135,7 @@ M4-B owns the v1 content-free partner nudge.
 - no separate durable content object;
 - recipient derived from the other active Space Membership;
 - caller-generated `clientRequestId` provides retry idempotency;
-- one new logical send per sender/Space per rolling 60 seconds, plus normal rate limiting;
+- one new logical send per sender/Space per rolling 30 minutes (product cooldown, #790/#791), plus normal rate limiting; state is server-authoritative and exposed via `Dashboard.thinkingOfYouAvailableAt`;
 - creates recipient Notification and optional PushDelivery;
 - does not create Activity feed noise in v1.
 

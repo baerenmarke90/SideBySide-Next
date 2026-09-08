@@ -176,10 +176,12 @@ private fun dashboard(
         startedOn = LocalDate.of(2025, 7, 1),
     ),
 ) = DashboardView(
+    keepsake = null,
     recentShared = emptyList(),
     relationshipDuration = duration,
     retrospective = null,
     space = DashboardSpaceSummary(partner = null, spaceId = SPACE),
+    thinkingOfYouAvailableAt = null,
     upcoming = listOf(
         DashboardItem(
             createdAt = OffsetDateTime.now(),
@@ -226,6 +228,9 @@ private class TodayApi(
             failTimes -= 1
             throw ReferenceApiException(null, "temporary", 500)
         }
-        return ThinkingOfYouAccepted(clientRequestId = gesture.clientRequestId)
+        return ThinkingOfYouAccepted(
+            clientRequestId = gesture.clientRequestId,
+            thinkingOfYouAvailableAt = OffsetDateTime.now().plusMinutes(30),
+        )
     }
 }

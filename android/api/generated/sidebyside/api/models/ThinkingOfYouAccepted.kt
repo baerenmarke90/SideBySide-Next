@@ -32,13 +32,17 @@ import kotlinx.serialization.Contextual
  * 
  *
  * @param clientRequestId 
+ * @param thinkingOfYouAvailableAt 
  */
 @Serializable
 
 data class ThinkingOfYouAccepted (
 
     @Contextual @SerialName(value = "clientRequestId")
-    val clientRequestId: java.util.UUID
+    val clientRequestId: java.util.UUID,
+
+    @Contextual @SerialName(value = "thinkingOfYouAvailableAt")
+    val thinkingOfYouAvailableAt: java.time.OffsetDateTime
 
 ) {
 

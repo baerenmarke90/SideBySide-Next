@@ -1487,6 +1487,16 @@
       },
       "DashboardView": {
         "properties": {
+          "keepsake": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "recentShared": {
             "items": {
               "$ref": "#/components/schemas/DashboardItem"
@@ -1517,6 +1527,18 @@
           "space": {
             "$ref": "#/components/schemas/DashboardSpaceSummary"
           },
+          "thinkingOfYouAvailableAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinkingofyouavailableat"
+          },
           "upcoming": {
             "items": {
               "$ref": "#/components/schemas/DashboardItem"
@@ -1529,8 +1551,10 @@
           "space",
           "relationshipDuration",
           "retrospective",
+          "keepsake",
           "upcoming",
-          "recentShared"
+          "recentShared",
+          "thinkingOfYouAvailableAt"
         ],
         "title": "DashboardView",
         "type": "object"
@@ -7481,10 +7505,16 @@
             "format": "uuid",
             "title": "Clientrequestid",
             "type": "string"
+          },
+          "thinkingOfYouAvailableAt": {
+            "format": "date-time",
+            "title": "Thinkingofyouavailableat",
+            "type": "string"
           }
         },
         "required": [
-          "clientRequestId"
+          "clientRequestId",
+          "thinkingOfYouAvailableAt"
         ],
         "title": "ThinkingOfYouAccepted",
         "type": "object"

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from sidebyside.attachments.binding import MemoryAttachment
+from sidebyside.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
 from sidebyside.authorization import PrivacyClass
 from sidebyside.core.ids import new_id
 from sidebyside.dashboard import service as dashboard_service
@@ -26,6 +28,7 @@ from sidebyside.people.models import (
 from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
 from sidebyside.relationship import service as relationship_service
 from sidebyside.relationship.models import SpaceProfile
+from sidebyside.wishes.models import Wish, WishPayload
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -71,6 +74,26 @@ def _dashboard(client, couple):  # type: ignore[no-untyped-def]
 
 def _freeze(monkeypatch, at: datetime = FIXED_NOW) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(dashboard_service.clock, "now", lambda: at)
+
+
+def _bind_ready_photo(session: Session, memory: Memory, name: str) -> Attachment:  # type: ignore[no-untyped-def]
+    """Attach a READY photo to ``memory``, matching real ingest end state."""
+    attachment = Attachment(
+        space_id=memory.space_id,
+        owner_id=memory.owner_id,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
+        status=AttachmentStatus.READY.value,
+        media_type=MediaType.IMAGE.value,
+        declared_mime_type="image/jpeg",
+        declared_size=100,
+        ready_at=FIXED_NOW,
+        payload=AttachmentPayload(original_name=name),
+    )
+    session.add(attachment)
+    session.flush()
+    session.add(MemoryAttachment(memory_id=memory.id, attachment_id=attachment.id, position=0))
+    session.flush()
+    return attachment
 
 
 def test_dashboard_is_shared_only_and_private_no_store(
@@ -127,8 +150,10 @@ def test_dashboard_is_shared_only_and_private_no_store(
         "space",
         "relationshipDuration",
         "retrospective",
+        "keepsake",
         "upcoming",
         "recentShared",
+        "thinkingOfYouAvailableAt",
     }
 
 
@@ -189,6 +214,146 @@ def test_retrospective_uses_exact_date_and_most_recent_prior_year(
     assert retrospective["type"] == "MILESTONE"
     assert retrospective["id"] == str(expected.id)
     assert retrospective["occurredOn"] == "2025-08-30"
+
+
+def test_keepsake_survives_recent_shared_crowded_by_non_memory_items(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Issue #790: the Keepsake must not depend on recentShared's top-N.
+
+    recentShared caps every candidate type at SECTION_LIMIT and then keeps
+    only the globally most recent SECTION_LIMIT items. A burst of newer
+    non-memory activity can therefore push every visual memory out of
+    recentShared entirely. The Keepsake searches memories in its own wider
+    window, so it must still surface the real photo.
+    """
+    _freeze(monkeypatch)
+    photo_memory = Memory(
+        **_resource(couple, couple["anna"].id),
+        happened_on=date(2026, 1, 1),
+        payload=MemoryPayload(title="Anniversary trip", body="A whole photo album"),
+    )
+    photo_memory.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    session.add(photo_memory)
+    session.flush()
+    attachment = _bind_ready_photo(session, photo_memory, "trip.jpg")
+
+    for i in range(dashboard_service.SECTION_LIMIT):
+        wish = Wish(
+            **_resource(couple, couple["anna"].id),
+            payload=WishPayload(title=f"Newer wish {i}"),
+        )
+        wish.created_at = datetime(2026, 8, 1 + i, tzinfo=UTC)
+        session.add(wish)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    # The crowding actually happened: the photo memory is nowhere in
+    # recentShared, which would previously have hidden the Keepsake too.
+    recent_ids = {item["id"] for item in body["recentShared"]}
+    assert str(photo_memory.id) not in recent_ids
+    assert len(body["recentShared"]) == dashboard_service.SECTION_LIMIT
+
+    assert body["keepsake"]["id"] == str(photo_memory.id)
+    assert body["keepsake"]["type"] == "MEMORY"
+    assert body["keepsake"]["previewAttachmentId"] == str(attachment.id)
+
+
+def test_keepsake_is_space_isolated(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Memory is always SPACE_SHARED (no private variant), so the only
+    isolation the Keepsake needs to prove is tenant/Space isolation: a photo
+    memory in a foreign Space must never become this Space's Keepsake, even
+    when it is the most recent readable-looking candidate.
+    """
+    _freeze(monkeypatch)
+    shared_memory = Memory(
+        **_resource(couple, couple["anna"].id),
+        happened_on=date(2026, 1, 1),
+        payload=MemoryPayload(title="Shared photo", body="Ours"),
+    )
+    foreign_memory = Memory(
+        space_id=couple["foreign_space"].id,
+        owner_id=couple["outsider"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        happened_on=date(2026, 1, 1),
+        payload=MemoryPayload(title="Foreign photo", body="Must never appear"),
+    )
+    session.add_all([shared_memory, foreign_memory])
+    session.flush()
+
+    # The foreign memory is the newest, so recency alone would pick it;
+    # only the Space-isolated candidate must win.
+    shared_memory.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    foreign_memory.created_at = datetime(2026, 1, 2, tzinfo=UTC)
+    session.flush()
+
+    shared_attachment = _bind_ready_photo(session, shared_memory, "shared.jpg")
+    _bind_ready_photo(session, foreign_memory, "foreign.jpg")
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["keepsake"]["id"] == str(shared_memory.id)
+    assert body["keepsake"]["previewAttachmentId"] == str(shared_attachment.id)
+
+
+def test_keepsake_prefers_most_recent_memory_with_a_ready_attachment(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch)
+    newest_without_photo = Memory(
+        **_resource(couple, couple["anna"].id),
+        happened_on=date(2026, 1, 3),
+        payload=MemoryPayload(title="Newest, text only", body="No photo yet"),
+    )
+    middle_pending_photo = Memory(
+        **_resource(couple, couple["anna"].id),
+        happened_on=date(2026, 1, 2),
+        payload=MemoryPayload(title="Middle, photo still processing", body="Uploading"),
+    )
+    oldest_ready_photo = Memory(
+        **_resource(couple, couple["anna"].id),
+        happened_on=date(2026, 1, 1),
+        payload=MemoryPayload(title="Oldest, ready photo", body="Our photo"),
+    )
+    session.add_all([newest_without_photo, middle_pending_photo, oldest_ready_photo])
+    session.flush()
+    newest_without_photo.created_at = datetime(2026, 1, 3, tzinfo=UTC)
+    middle_pending_photo.created_at = datetime(2026, 1, 2, tzinfo=UTC)
+    oldest_ready_photo.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    session.flush()
+
+    pending_attachment = Attachment(
+        space_id=middle_pending_photo.space_id,
+        owner_id=middle_pending_photo.owner_id,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
+        status=AttachmentStatus.VALIDATING.value,
+        media_type=MediaType.IMAGE.value,
+        declared_mime_type="image/jpeg",
+        declared_size=100,
+        payload=AttachmentPayload(original_name="processing.jpg"),
+    )
+    session.add(pending_attachment)
+    session.flush()
+    session.add(
+        MemoryAttachment(
+            memory_id=middle_pending_photo.id,
+            attachment_id=pending_attachment.id,
+            position=0,
+        )
+    )
+    ready_attachment = _bind_ready_photo(session, oldest_ready_photo, "ready.jpg")
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["keepsake"]["id"] == str(oldest_ready_photo.id)
+    assert body["keepsake"]["previewAttachmentId"] == str(ready_attachment.id)
 
 
 def test_upcoming_combines_existing_date_sources_in_deterministic_order(
@@ -394,3 +559,37 @@ def test_recognition_fields_are_bounded(client, session: Session, couple, monkey
     item = next(entry for entry in response.json()["recentShared"] if entry["id"] == str(memory.id))
     assert item["titleOrText"] == "x" * dashboard_service.MAX_RECOGNITION_TEXT
     assert "Body stays out" not in response.text
+
+
+def test_thinking_of_you_available_at_reflects_server_authoritative_cooldown(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Issue #790/#791: the client must be able to reconcile the Thinking-of-
+    you control's cooldown state from the Dashboard read model alone (e.g. on
+    page load), rather than a local timer or a failed send.
+    """
+    current = {"value": FIXED_NOW}
+    monkeypatch.setattr(dashboard_service.clock, "now", lambda: current["value"])
+
+    before_send = _dashboard(client, couple)
+    assert before_send.status_code == 200
+    assert before_send.json()["thinkingOfYouAvailableAt"] is None
+
+    sent = client.post(
+        f"/api/v1/spaces/{couple['space'].id}/thinking-of-you",
+        json={"clientRequestId": str(new_id())},
+        headers=auth(couple["token_a"]),
+    )
+    assert sent.status_code == 202
+
+    during_cooldown = _dashboard(client, couple)
+    assert during_cooldown.status_code == 200
+    raw_available_at = during_cooldown.json()["thinkingOfYouAvailableAt"]
+    assert raw_available_at is not None
+    parsed_available_at = datetime.fromisoformat(raw_available_at.replace("Z", "+00:00"))
+    assert parsed_available_at == current["value"] + timedelta(minutes=30)
+
+    current["value"] = current["value"] + timedelta(minutes=30, seconds=1)
+    after_cooldown = _dashboard(client, couple)
+    assert after_cooldown.status_code == 200
+    assert after_cooldown.json()["thinkingOfYouAvailableAt"] is None

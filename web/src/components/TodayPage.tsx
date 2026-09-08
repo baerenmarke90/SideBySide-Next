@@ -1,21 +1,25 @@
-import { useRef } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { DashboardItemType } from '../api/generated/models/DashboardItemType';
 import type { DashboardRelationshipDuration } from '../api/generated/models/DashboardRelationshipDuration';
+import type { DashboardView } from '../api/generated/models/DashboardView';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
-import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
-import {
-  type M4ProductApis,
-  dashboardItemPath,
-  engagementTargetPath,
-} from '../client/m4Product';
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
-import { normalizeClientError } from '../client/problemDetails';
+import {
+  dashboardItemPath,
+  engagementTargetPath,
+  type M4ProductApis,
+} from '../client/m4Product';
+import {
+  ClientProblemError,
+  normalizeClientError,
+} from '../client/problemDetails';
 import { ACTIVITY_ROUTE } from '../client/routes';
 import { postSnackbar } from '../client/snackbar';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
@@ -122,11 +126,7 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-export type TodayCardVariant =
-  | 'upcoming'
-  | 'recent'
-  | 'retrospective'
-  | 'keepsake';
+export type TodayCardVariant = 'recent' | 'retrospective' | 'keepsake';
 
 /**
  * Presentation roles for modules composed on the Today orchestration surface.
@@ -180,58 +180,6 @@ export function TodayModuleSection({
       <div className="today-section-body">{children}</div>
     </section>
   );
-}
-
-function TodayContextualCard({ item }: { item: DashboardItem }) {
-  const { t } = useTranslation();
-  const path = dashboardItemPath(item.type, item.id);
-  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
-  const date = rawDate ? formatUpcomingRelative(rawDate, t) : null;
-
-  const kicker =
-    item.type === 'PLAN'
-      ? t('m5s5.today.contextSlot.upcomingPlanKicker')
-      : item.type === 'IMPORTANT_DATE' ||
-          item.type === 'BIRTHDAY' ||
-          item.type === 'ANNIVERSARY'
-        ? t('m5s5.today.contextSlot.importantDateKicker')
-        : t('m5s5.today.contextSlot.kicker');
-
-  const content = (
-    <div className="today-context-card sbs-motion-lift">
-      <div className="today-context-header">
-        <span className="today-context-kicker">{kicker}</span>
-        <span
-          className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
-        >
-          <span className="today-type-icon" aria-hidden="true">
-            <RecentItemTypeIcon type={item.type} />
-          </span>
-          <span>{t(`m5s5.kind.${item.type}`)}</span>
-        </span>
-      </div>
-      <h3 className="today-context-title">
-        {item.titleOrText || t('m5s5.dashboard.itemFallback')}
-      </h3>
-      <div className="today-context-footer">
-        {date ? <span className="today-context-date">{date}</span> : null}
-        {path ? (
-          <span className="today-context-action">
-            {t('m5s5.today.contextSlot.viewDetails')} →
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-
-  if (path) {
-    return (
-      <Link to={path} className="today-context-link">
-        {content}
-      </Link>
-    );
-  }
-  return content;
 }
 
 function TodayRelationshipSignalCard({
@@ -410,41 +358,46 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
   const typeLabel = t(`m5s5.kind.${item.type}`);
   const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
 
-  const cardInner = (
-    <div className="recent-shared-card sbs-motion-lift">
-      <div className="recent-shared-icon" aria-hidden="true">
+  const tileInner = (
+    <>
+      <span
+        className={`today-recent-tile-icon today-kind-${item.type.toLowerCase()}`}
+        aria-hidden="true"
+      >
         <RecentItemTypeIcon type={item.type} />
-      </div>
-      <div className="recent-shared-copy">
-        <h3 className="recent-shared-title">{title}</h3>
-        <div className="recent-shared-meta">
-          <span className="recent-shared-kind">{typeLabel}</span>
-          {recency ? (
-            <>
-              <span className="recent-shared-meta-sep" aria-hidden="true">
-                ·
-              </span>
-              <time
-                className="recent-shared-date"
-                dateTime={rawDate?.toISOString()}
-              >
-                {recency}
-              </time>
-            </>
-          ) : null}
-        </div>
-      </div>
-    </div>
+      </span>
+      <span className="today-recent-tile-copy">
+        {/* Type stays available to assistive tech (it's still meaningful
+            context) but isn't a separate visible field - a redundant text
+            label next to an already type-specific icon is what made each
+            entry read as a database record (icon, name, type, date) rather
+            than a warm shared-life trace (#790/#791 fourth follow-up). */}
+        <span className="sr-only">{typeLabel}: </span>
+        <span className="today-recent-tile-title">{title}</span>
+        {recency ? (
+          <time
+            className="today-recent-tile-date"
+            dateTime={rawDate?.toISOString()}
+          >
+            {recency}
+          </time>
+        ) : null}
+      </span>
+    </>
   );
 
   if (path) {
     return (
-      <Link to={path} className="recent-shared-card-link">
-        {cardInner}
+      <Link to={path} className="today-recent-tile">
+        {tileInner}
       </Link>
     );
   }
-  return <div className="recent-shared-card-wrapper">{cardInner}</div>;
+  return (
+    <span className="today-recent-tile today-recent-tile-static">
+      {tileInner}
+    </span>
+  );
 }
 
 function TodayAgendaRow({ item }: { item: DashboardItem }) {
@@ -459,8 +412,10 @@ function TodayAgendaRow({ item }: { item: DashboardItem }) {
       <span className="today-agenda-icon" aria-hidden="true">
         <RecentItemTypeIcon type={item.type} />
       </span>
-      <span className="today-agenda-title">{title}</span>
-      {date ? <span className="today-agenda-date">{date}</span> : null}
+      <span className="today-agenda-copy">
+        <span className="today-agenda-title">{title}</span>
+        {date ? <span className="today-agenda-date">{date}</span> : null}
+      </span>
     </>
   );
 
@@ -486,11 +441,7 @@ function VisualMemoryCard({
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
   const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
-  const date = rawDate
-    ? variant === 'upcoming'
-      ? formatUpcomingRelative(rawDate, t)
-      : formatDate(rawDate)
-    : null;
+  const date = rawDate ? formatDate(rawDate) : null;
 
   const previewAttachmentId = item.previewAttachmentId;
   const hasMedia = Boolean(previewAttachmentId && loadMemoryImage);
@@ -552,16 +503,27 @@ function VisualMemoryCard({
   }
   return <div className={shellClass}>{inner}</div>;
 }
+const THINKING_OF_YOU_COOLDOWN_CODE = 'THINKING_OF_YOU_COOLDOWN';
+
 function ThinkingOfYouHero({
   apis,
   spaceId,
   partnerName,
+  thinkingOfYouAvailableAt,
 }: {
   apis: M4ProductApis;
   spaceId: string;
   partnerName?: string;
+  thinkingOfYouAvailableAt: Date | null;
 }) {
   const clientRequestIdRef = useRef<string>('');
+  const queryClient = useQueryClient();
+  // A locally-known cooldown, only ever set from a server response (the
+  // 429's Retry-After header) so the button reflects reality immediately
+  // even before the next Dashboard refetch lands.
+  const [localCooldownUntil, setLocalCooldownUntil] = useState<Date | null>(
+    null,
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -571,10 +533,34 @@ function ThinkingOfYouHero({
           thinkingOfYouCreate: { clientRequestId: clientRequestIdRef.current },
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (accepted) => {
       postSnackbar('m5s5.dashboard.thinkingOfYouSent');
+      setLocalCooldownUntil(null);
+      queryClient.setQueryData<DashboardView>(
+        dashboardQueryKey(spaceId),
+        (old) =>
+          old
+            ? {
+                ...old,
+                thinkingOfYouAvailableAt: accepted.thinkingOfYouAvailableAt,
+              }
+            : old,
+      );
     },
-    onError: () => {
+    onError: (error) => {
+      if (
+        error instanceof ClientProblemError &&
+        error.code === THINKING_OF_YOU_COOLDOWN_CODE
+      ) {
+        const minutes = error.retryAfterSeconds
+          ? Math.max(1, Math.ceil(error.retryAfterSeconds / 60))
+          : 30;
+        setLocalCooldownUntil(new Date(Date.now() + minutes * 60_000));
+        postSnackbar('m5s5.dashboard.thinkingOfYouCooldownBlocked', {
+          minutes,
+        });
+        return;
+      }
       postSnackbar('m5s5.common.error');
     },
   });
@@ -590,6 +576,7 @@ function ThinkingOfYouHero({
       partnerName={partnerName}
       disabled={mutation.isPending}
       onSend={handleSend}
+      cooldownUntil={thinkingOfYouAvailableAt ?? localCooldownUntil}
     />
   );
 }
@@ -666,11 +653,11 @@ export function TodayPage({
     partnerProfileQuery.data?.profileAttachmentId,
   );
 
-  // 1. Primary Contextual Slot (0 or 1 item):
-  // Deterministically selects the earliest upcoming item. If empty, the slot disappears.
+  // 1. Shared Planning Horizon: every upcoming item, in the same calm agenda
+  // language (compact date-block rows). The Design Principles orchestration
+  // invariant requires this to stay one coherent module rather than promoting
+  // the first item into its own dashboard-style status card.
   const upcoming = dashboardQuery.data?.upcoming ?? [];
-  const primaryContextItem = upcoming.length > 0 ? upcoming[0] : null;
-  const secondaryUpcoming = upcoming.length > 1 ? upcoming.slice(1) : [];
 
   // 2. Relationship Signal Slot (0 or 1 item):
   // Curated partner interaction (e.g. partner commented on a shared memory).
@@ -686,25 +673,27 @@ export function TodayPage({
         )
       : undefined;
 
-  const hasContextModules = Boolean(
-    primaryContextItem || relationshipSignalItem,
+  const hasPlanningModules = Boolean(
+    upcoming.length > 0 || relationshipSignalItem,
   );
-  const hasBothContextModules = Boolean(
-    primaryContextItem && relationshipSignalItem,
+  const hasBothPlanningModules = Boolean(
+    upcoming.length > 0 && relationshipSignalItem,
   );
   const recentShared = dashboardQuery.data?.recentShared ?? [];
   const retrospective = dashboardQuery.data?.retrospective;
 
-  // Heroic Keepsake: prefer the curated retrospective; otherwise fall back to
-  // the most recent real shared photo so the page never leads with an empty slot.
-  const visualRecentSharedItem =
+  // Heroic Keepsake: a first-class server role (Dashboard.keepsake), not a
+  // client-side scan of the recency-limited recentShared list. That keeps the
+  // page's emotional focal point stable even when recent non-memory activity
+  // would otherwise crowd every visual memory out of recentShared. The curated
+  // retrospective still takes priority when one exists for today.
+  const serverKeepsake = dashboardQuery.data?.keepsake;
+  const keepsakeItem =
     !retrospective && loadMemoryImage
-      ? recentShared.find(
-          (item) => item.type === 'MEMORY' && Boolean(item.previewAttachmentId),
-        )
+      ? (serverKeepsake ?? undefined)
       : undefined;
-  const recentSharedForTrace = visualRecentSharedItem
-    ? recentShared.filter((item) => item.id !== visualRecentSharedItem.id)
+  const recentSharedForTrace = keepsakeItem
+    ? recentShared.filter((item) => item.id !== keepsakeItem.id)
     : recentShared;
 
   const isSparse = Boolean(
@@ -712,7 +701,8 @@ export function TodayPage({
       upcoming.length === 0 &&
       recentShared.length === 0 &&
       !retrospective &&
-      !relationshipSignalItem,
+      !relationshipSignalItem &&
+      !serverKeepsake,
   );
 
   return (
@@ -776,6 +766,9 @@ export function TodayPage({
                   apis={apis}
                   spaceId={spaceId}
                   partnerName={partner?.displayName}
+                  thinkingOfYouAvailableAt={
+                    dashboardQuery.data.thinkingOfYouAvailableAt
+                  }
                 />
               </div>
             }
@@ -832,7 +825,7 @@ export function TodayPage({
                     />
                   </div>
                 </TodayModuleSection>
-              ) : visualRecentSharedItem ? (
+              ) : keepsakeItem ? (
                 <TodayModuleSection
                   className="today-section-retrospective today-section-keepsake"
                   title={t('m5s5.today.keepsake.title')}
@@ -841,7 +834,7 @@ export function TodayPage({
                 >
                   <div className="today-retrospective-container">
                     <VisualMemoryCard
-                      item={visualRecentSharedItem}
+                      item={keepsakeItem}
                       variant="keepsake"
                       loadMemoryImage={loadMemoryImage}
                     />
@@ -849,17 +842,29 @@ export function TodayPage({
                 </TodayModuleSection>
               ) : null}
 
-              {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
-              {hasContextModules ? (
+              {/* ROLE: Shared Planning Horizon (calm agenda rows, every upcoming
+                  item in the same visual language) + Relationship Signal. Both
+                  are optional and share one two-zone area on wide screens so the
+                  first upcoming item never becomes its own dashboard-style card. */}
+              {hasPlanningModules ? (
                 <div
-                  className={`today-context-area ${
-                    hasBothContextModules
-                      ? 'today-context-dual'
-                      : 'today-context-single'
+                  className={`today-planning-area ${
+                    hasBothPlanningModules
+                      ? 'today-planning-dual'
+                      : 'today-planning-single'
                   } sbs-motion-reveal`}
                 >
-                  {primaryContextItem ? (
-                    <TodayContextualCard item={primaryContextItem} />
+                  {upcoming.length > 0 ? (
+                    <div className="today-planning-agenda">
+                      <h2 className="today-planning-heading">
+                        {t('m5s5.dashboard.upcomingTitle')}
+                      </h2>
+                      <div className="today-agenda-list">
+                        {upcoming.map((item: DashboardItem) => (
+                          <TodayAgendaRow key={item.id} item={item} />
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                   {relationshipSignalItem ? (
                     <TodayRelationshipSignalCard
@@ -871,23 +876,6 @@ export function TodayPage({
                 </div>
               ) : null}
 
-              {/* ROLE: Shared Planning Horizon — calm agenda rows, not a card carousel
-                  (rendered only when > 1 upcoming items exist to avoid duplicating the
-                  primary contextual item). */}
-              {secondaryUpcoming.length > 0 ? (
-                <TodayModuleSection
-                  className="today-section-upcoming"
-                  title={t('m5s5.dashboard.upcomingMoreTitle')}
-                  animationDelay="150ms"
-                >
-                  <div className="today-agenda-list">
-                    {secondaryUpcoming.map((item: DashboardItem) => (
-                      <TodayAgendaRow key={item.id} item={item} />
-                    ))}
-                  </div>
-                </TodayModuleSection>
-              ) : null}
-
               {/* ROLE: Shared Trace — a quiet list of recent shared moments
                   (excludes any item already shown above as the Keepsake). */}
               {recentSharedForTrace.length > 0 ? (
@@ -895,7 +883,6 @@ export function TodayPage({
                   className="today-section-recent"
                   title={t('m5s5.dashboard.recentTitle')}
                   kicker={t('m5s5.dashboard.recentKicker')}
-                  subline={t('m5s5.dashboard.recentSubline')}
                   animationDelay="200ms"
                 >
                   <div className="today-stream today-stream-recent">

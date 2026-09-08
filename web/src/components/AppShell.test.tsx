@@ -246,35 +246,19 @@ describe('AppShell', () => {
     expect(html).toContain('Unsere Aktivitäten');
   });
 
-  it('shows only the partner in the header couple presence, never the account a second time', () => {
+  it('shows only the current user profile identity in the global header, never the partner (regression #790/#791)', () => {
     const html = renderShell('/story');
     const header = html.slice(
       html.indexOf('<header'),
       html.indexOf('</header>') + '</header>'.length,
     );
 
-    const coupleIndex = header.indexOf('header-couple-presence');
-    const profileMenuIndex = header.indexOf('header-profile-menu');
-    expect(coupleIndex).toBeGreaterThan(-1);
-    expect(profileMenuIndex).toBeGreaterThan(coupleIndex);
-
-    const coupleBlock = header.slice(coupleIndex, profileMenuIndex);
-    expect(coupleBlock).toContain('title="Sam Example"');
-    expect(coupleBlock).toContain(personInitials('Sam Example'));
-    expect(coupleBlock).not.toContain('Alex Example');
-    expect(coupleBlock).not.toContain(personInitials('Alex Example'));
-  });
-
-  it('hides the couple presence entirely when no partner can be resolved, rather than a waiting placeholder', () => {
-    const html = renderShell('/story', false, 0, [
-      { id: 'account-1', displayName: 'Alex Example' },
-    ]);
-    const header = html.slice(
-      html.indexOf('<header'),
-      html.indexOf('</header>') + '</header>'.length,
-    );
-
+    // The global header carries no partner-presence signal at all: no
+    // dedicated markup, and the partner's name/initials never appear.
     expect(header).not.toContain('header-couple-presence');
+    expect(header).toContain('header-profile-menu');
+    expect(header).not.toContain('Sam Example');
+    expect(header).not.toContain(personInitials('Sam Example'));
   });
 
   it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {

@@ -34,15 +34,20 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
+ * @param keepsake 
  * @param recentShared 
  * @param relationshipDuration 
  * @param retrospective 
  * @param space 
+ * @param thinkingOfYouAvailableAt 
  * @param upcoming 
  */
 @Serializable
 
 data class DashboardView (
+
+    @SerialName(value = "keepsake")
+    val keepsake: DashboardItem?,
 
     @SerialName(value = "recentShared")
     val recentShared: kotlin.collections.List<DashboardItem>,
@@ -55,6 +60,9 @@ data class DashboardView (
 
     @SerialName(value = "space")
     val space: DashboardSpaceSummary,
+
+    @Contextual @SerialName(value = "thinkingOfYouAvailableAt")
+    val thinkingOfYouAvailableAt: java.time.OffsetDateTime?,
 
     @SerialName(value = "upcoming")
     val upcoming: kotlin.collections.List<DashboardItem>
