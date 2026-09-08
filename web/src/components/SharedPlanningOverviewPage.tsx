@@ -208,7 +208,14 @@ export function SharedPlanningOverviewPage({
         <div className="future-map-path" aria-hidden="true" />
 
         <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
-          <div className="future-map-marker">
+          <div
+            className="future-map-marker"
+            style={{
+              background: 'var(--color-brand)',
+              boxShadow:
+                '0 0 0 2px var(--color-surface), 0 5px 12px var(--color-brand-glow)',
+            }}
+          >
             <span className="marker-dot" />
           </div>
           <div className="future-map-content">
@@ -300,7 +307,9 @@ export function SharedPlanningOverviewPage({
                         onChange={(event) =>
                           setNewPlanPlaceName(event.target.value)
                         }
-                        required
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') event.preventDefault();
+                        }}
                         maxLength={200}
                       />
                     </div>
@@ -314,6 +323,9 @@ export function SharedPlanningOverviewPage({
                         onChange={(event) =>
                           setNewPlanPlaceAddress(event.target.value)
                         }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') event.preventDefault();
+                        }}
                       />
                     </div>
                     <div className="inline-place-create-actions">

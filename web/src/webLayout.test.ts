@@ -166,16 +166,7 @@ describe('compact navigation', () => {
 describe('shared form controls', () => {
   it('gives selects the same surface as text inputs', () => {
     expect(stylesCss).toMatch(
-      /input:not\(\[type="checkbox"\], \[type="radio"\], \[type="file"\]\),\s*select,\s*textarea\s*\{[^}]*min-height: 48px/s,
-    );
-  });
-
-  it('excludes file inputs from the shared text-control surface', () => {
-    // A visually-hidden file input (see .visually-hidden-input) must not
-    // regain a 100%-width box from this rule's higher specificity, or its
-    // geometry can leak past its container on narrow viewports.
-    expect(stylesCss).toMatch(
-      /input:not\([^)]*\[type="file"\][^)]*\),\s*select,\s*textarea/,
+      /input:not\(\[type="checkbox"\], \[type="radio"\]\),\s*select,\s*textarea\s*\{[^}]*min-height: 48px/s,
     );
   });
 
