@@ -141,12 +141,11 @@ export function tapestryRoleWeight(role: TapestryRole): number {
  * currently lightest column keeps the columns close to equal height without
  * requiring real DOM measurement.
  */
-export function distributeIntoTapestryColumns<T>(
+function greedyDistribute<T>(
   entries: readonly T[],
-  columnCount: number,
+  count: number,
   weightOf: (entry: T) => number,
 ): T[][] {
-  const count = Math.max(1, Math.floor(columnCount));
   const columns: T[][] = Array.from({ length: count }, () => []);
   const columnWeights = new Array(count).fill(0);
   for (const entry of entries) {
@@ -156,6 +155,44 @@ export function distributeIntoTapestryColumns<T>(
     }
     columns[lightest].push(entry);
     columnWeights[lightest] += weightOf(entry);
+  }
+  return columns;
+}
+
+/**
+ * A column left far lighter than the heaviest one doesn't read as the
+ * tapestry's intentional asymmetry - it reads as a large empty area next to
+ * a tall photo tile (#790/#791 follow-up). A sparse month can have as few as
+ * one heavy "media" item and a couple of one-line "milestone" markers;
+ * spreading those across as many columns as the viewport's default strands
+ * each marker alone opposite the photo. Below this fraction of the heaviest
+ * column's weight, fold back to one fewer column (which packs the light
+ * entries together instead) rather than accept the gap.
+ */
+const TAPESTRY_MIN_COLUMN_BALANCE_RATIO = 0.3;
+
+export function distributeIntoTapestryColumns<T>(
+  entries: readonly T[],
+  columnCount: number,
+  weightOf: (entry: T) => number,
+): T[][] {
+  let count = Math.max(1, Math.floor(columnCount));
+  let columns = greedyDistribute(entries, count, weightOf);
+  while (count > 1) {
+    const weights = columns.map((column) =>
+      column.reduce((sum, entry) => sum + weightOf(entry), 0),
+    );
+    const nonEmptyWeights = weights.filter((weight) => weight > 0);
+    const maxWeight = Math.max(0, ...nonEmptyWeights);
+    const minWeight = nonEmptyWeights.length ? Math.min(...nonEmptyWeights) : 0;
+    if (
+      maxWeight === 0 ||
+      minWeight / maxWeight >= TAPESTRY_MIN_COLUMN_BALANCE_RATIO
+    ) {
+      break;
+    }
+    count -= 1;
+    columns = greedyDistribute(entries, count, weightOf);
   }
   return columns;
 }

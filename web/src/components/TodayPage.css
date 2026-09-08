@@ -358,33 +358,40 @@
   max-width: 100%;
 }
 
-/* Shared Planning Horizon: calm agenda rows instead of a card carousel */
+/* Shared Planning Horizon: each upcoming item is its own compact, bounded
+   surface (#790/#791 follow-up) rather than a shared-border row list, which
+   read as a table/spreadsheet next to eimir.'s other relationship-first
+   surfaces. Reuses the same bordered/radius/surface conventions already
+   approved for the Momente archive entries (.momente-archive-link). */
 .today-agenda-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
 }
 
 .today-agenda-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
   color: inherit;
   text-decoration: none;
 }
 
-.today-agenda-list .today-agenda-row:last-child {
-  border-bottom: none;
-}
-
 .today-agenda-row-link {
-  transition: background var(--motion-fast);
-  border-radius: var(--radius-medium);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
 }
 
 .today-agenda-row-link:hover {
-  background: var(--color-surface-panel);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--color-border);
 }
 
 .today-agenda-row-link:focus-visible {
