@@ -44,6 +44,12 @@ input.visually-hidden-input {
   padding: 0;
 }
 
+/* Allow the visible picker copy to shrink inside the flex row so its existing
+ * nowrap/ellipsis treatment owns long format text instead of widening the page. */
+.file-picker > span:not(.file-picker-icon) {
+  min-width: 0;
+}
+
 .visually-hidden-input:focus-visible + .file-picker {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
