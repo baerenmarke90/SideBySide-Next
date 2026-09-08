@@ -7,25 +7,26 @@ const NOW = new Date('2026-09-08T12:00:00Z');
 function plan(
   overrides: Pick<PlanDetail, 'id' | 'status'> & Partial<PlanDetail>,
 ): PlanDetail {
-  const createdAt = overrides.createdAt ?? new Date('2026-08-01T10:00:00Z');
+  const { id, status, ...rest } = overrides;
+  const createdAt = rest.createdAt ?? new Date('2026-08-01T10:00:00Z');
   return {
     capabilities: { canComment: true, canDelete: true, canEdit: true },
     createdAt,
     createdBy: 'account-lea',
-    creator: { accountId: 'account-lea', displayName: 'Lea' },
+    creator: { id: 'account-lea', displayName: 'Lea' },
     description: null,
     experiencedOn: null,
-    id: overrides.id,
+    id,
     placeId: null,
     plannedEnd: null,
     plannedStart: null,
     sourceWishId: null,
     spaceId: 'space-lea-alex',
-    status: overrides.status,
-    title: overrides.id,
+    status,
+    title: id,
     updatedAt: createdAt,
     version: 1,
-    ...overrides,
+    ...rest,
   };
 }
 
