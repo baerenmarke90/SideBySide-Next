@@ -127,9 +127,7 @@ export function ChapterCreatePage({
                   <input id="chapter-start" name="startOn" type="date" />
                 </div>
                 <div className="field-group">
-                  <label htmlFor="chapter-end">
-                    {t('m5s3.chapter.endOn')}
-                  </label>
+                  <label htmlFor="chapter-end">{t('m5s3.chapter.endOn')}</label>
                   <input id="chapter-end" name="endOn" type="date" />
                 </div>
               </div>
@@ -153,7 +151,10 @@ export function ChapterCreatePage({
           </details>
 
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={STORY_CHAPTERS_ROUTE}>
+            <Link
+              className="button-link secondary-link"
+              to={STORY_CHAPTERS_ROUTE}
+            >
               {t('common.cancel')}
             </Link>
             <button type="submit" disabled={createChapter.isPending}>

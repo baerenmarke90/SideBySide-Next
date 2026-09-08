@@ -295,6 +295,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Danke, dass du heute einfach zugehört hast.",
     "Dies ist das Profil, das dein Partner sieht.",
     "Ein Jahr in unserer Wohnung",
+    "Ein ruhiger Sonntagmorgen",
     "Ein Wochenende am Wasser",
     "Erinnerung mit Bild speichern",
     "Eure Story beginnt hier.",
@@ -309,6 +310,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     "von Alex",
     "von Lea",
     "von Sam",
+    "Wir haben lange geschlafen und dann gemeinsam Pfannkuchen gemacht.",
     "Wochenendtrip an die Ostsee",
     "Zuletzt bei euch",
 )

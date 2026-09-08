@@ -122,7 +122,11 @@ function PlacePicker({
   }
 
   function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
-    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+    if (
+      event.key === 'ArrowDown' ||
+      event.key === 'Enter' ||
+      event.key === ' '
+    ) {
       event.preventDefault();
       setOpen(true);
       window.requestAnimationFrame(() => focusItem(0));
@@ -131,7 +135,8 @@ function PlacePicker({
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     const items = Array.from(
-      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [],
+      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ??
+        [],
     );
     if (!items.length) return;
     const currentIndex = items.indexOf(document.activeElement as HTMLElement);

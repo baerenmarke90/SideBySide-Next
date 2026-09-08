@@ -43,7 +43,11 @@ async function installPlanningApiMocks(
 ): Promise<{
   createPlaceCalls: number;
   createPlanCalls: number;
-  lastPlanBody: { title: string; description?: string; placeId?: string } | null;
+  lastPlanBody: {
+    title: string;
+    description?: string;
+    placeId?: string;
+  } | null;
 }> {
   const places: MockPlace[] = [...(options.seedPlaces ?? [])];
   const calls = {

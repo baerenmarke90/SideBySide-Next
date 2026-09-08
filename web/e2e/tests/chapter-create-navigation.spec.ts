@@ -145,7 +145,10 @@ async function installChapterApiMocks(
       return;
     }
 
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/chapters`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/chapters`
+    ) {
       await fulfillJson({ hasMore: false, items: [], nextCursor: null });
       return;
     }
@@ -277,9 +280,7 @@ test('creating a Chapter from its dedicated Create page saves and returns to the
   await signIn(page);
 
   await page.goto('/plan/chapters/new');
-  await page
-    .getByLabel(m5s3.common.title, { exact: true })
-    .fill(CHAPTER_TITLE);
+  await page.getByLabel(m5s3.common.title, { exact: true }).fill(CHAPTER_TITLE);
   await page.getByRole('button', { name: m5s3.common.save }).click();
 
   await expect(page).toHaveURL(/\/plan\/chapters\/chapter-1$/);

@@ -176,8 +176,7 @@ async function installApiMocks(page: Page): Promise<void> {
 
     if (
       method === 'GET' &&
-      pathname ===
-        `/api/v1/spaces/${SPACE_ID}/memories/${MEMORY_ID}/comments`
+      pathname === `/api/v1/spaces/${SPACE_ID}/memories/${MEMORY_ID}/comments`
     ) {
       await fulfillJson({ hasMore: false, items: [], nextCursor: null });
       return;
@@ -232,7 +231,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await signIn(page);
 
     await page.goto('/story/memories/new');
-    await expect(page.getByRole('heading', { name: de.memory.heading })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: de.memory.heading }),
+    ).toBeVisible();
 
     await expectSharingHeartCentered(page);
 
