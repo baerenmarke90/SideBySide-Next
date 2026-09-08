@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import profileIdentity from '../../src/i18n/locales/profileIdentity';
 import storyProducts from '../../src/i18n/locales/storyProducts';
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
@@ -235,7 +236,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await page.goto('/more/profile');
     const changeAvatar = page.getByRole('button', {
-      name: de.profileIdentity.changeAvatar,
+      name: profileIdentity.changeAvatar,
     });
     await expect(changeAvatar).toBeVisible();
     await changeAvatar.focus();
@@ -244,7 +245,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const profileInput = page.locator('#profile-avatar-file');
     await expectHiddenGeometry(profileInput);
     await expect(profileInput).toHaveAccessibleName(
-      de.profileIdentity.changeAvatar,
+      profileIdentity.changeAvatar,
     );
     await expect(profileInput).toHaveAttribute('tabindex', '-1');
 
