@@ -1,0 +1,39 @@
+name: Issue 809 E2E diff cleanup
+
+on:
+  pull_request:
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    if: github.event.pull_request.head.ref == 'feat/809-shared-story-summary'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.7'
+
+      - name: Restore canonical E2E style and reapply #809 evidence
+        run: python3 tools/issue809_clean_e2e.py
+
+      - name: Verify patch whitespace
+        run: git diff --check
+
+      - name: Commit focused E2E diff and remove helper
+        run: |
+          rm tools/issue809_clean_e2e.py .github/workflows/issue809-clean-e2e.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "test(web): keep #809 browser evidence diff focused"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
