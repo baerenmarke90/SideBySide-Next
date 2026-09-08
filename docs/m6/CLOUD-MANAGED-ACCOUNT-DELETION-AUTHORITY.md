@@ -5,10 +5,11 @@
 **Related:** #520, #521, #524, #646, #647, #652, #666
 
 Cloud/Managed reuses the same forward-only Account-deletion authority as
-Self-Hosted. The journal is independent of PostgreSQL point-in-time backups so a
-restore that predates an accepted deletion cannot make that Account usable again.
-This supplement fixes the bootstrap/startup boundary required by that recovery
-contract; it introduces no Cloud-only deletion semantics and no second authority.
+Self-Hosted. The journal contains minimal pseudonymous recovery metadata and is
+independent of PostgreSQL point-in-time backups so a restore that predates an
+accepted deletion cannot make that Account usable again. This supplement fixes
+the bootstrap/startup boundary required by that recovery contract; it introduces
+no Cloud-only deletion semantics and no second authority.
 
 ## 1. Provisioning is an explicit one-shot control-plane action
 
@@ -86,11 +87,22 @@ A pre-deletion database restore plus a **missing** journal must fail at step 3 a
 must never reach step 7. The same restore plus the **valid newer** journal must
 reapply its tombstones before writers resume.
 
-## 5. Durability and privacy remain unchanged
+## 5. Durability and privacy classification remain unchanged
 
 The §3.5 topology requirement still applies: all API replicas that can accept a
 self-service deletion must see the same durable file with correct cross-client
-`fcntl` locking. The journal remains minimal recovery metadata only: stable
-instance UUID, Account UUID, acceptance timestamp, and hash-chain integrity
-metadata. No email address, display name, Space content, attachment metadata, or
-other private payload is added by bootstrap or reconciliation.
+`fcntl` locking.
+
+The journal is **minimal pseudonymous recovery metadata**: it contains only the
+stable instance UUID, stable Account UUID, irreversible acceptance timestamp, and
+hash-chain integrity/version metadata required by the recovery purpose. It is
+content-free and data-minimized, but not identity-free: the stable Account UUID and
+timestamp can still be linked to an Account in the system/recovery context. Treat
+the artifact as protected, recovery-sensitive authority state rather than as
+ordinary non-personal operational metadata.
+
+No email address, display name, Space ID/content, partner ID, token, credential,
+attachment metadata, `ProtectedPayload`, `OWNER_ONLY` payload, or other
+relationship/private content is added by bootstrap or reconciliation. This absence
+of private content must not be restated as an assertion that the journal contains
+zero account-linkable or pseudonymous metadata.
