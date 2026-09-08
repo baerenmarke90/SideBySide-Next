@@ -12,12 +12,8 @@ from sqlalchemy import select
 from sidebyside.identity import preferences as account_preferences
 from sidebyside.identity.models import Account
 from sidebyside.jobs.models import Job
-from sidebyside.plans.models import (
-    Plan,
-    PlanPayload,
-    PlanStatus,
-    shared_privacy as plan_shared_privacy,
-)
+from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
+from sidebyside.plans.models import shared_privacy as plan_shared_privacy
 from sidebyside.reminders import runtime
 from sidebyside.reminders.models import (
     Reminder,
@@ -170,9 +166,7 @@ def test_periodic_and_request_reconcile_create_one_logical_occurrence(
         occurrence = occurrences[0]
         assert occurrence.state == OccurrenceState.PENDING.value
         assert occurrence.generation == 1
-        assert [job.payload["generation"] for job in _occurrence_jobs(query, occurrence.id)] == [
-            1
-        ]
+        assert [job.payload["generation"] for job in _occurrence_jobs(query, occurrence.id)] == [1]
 
 
 def test_timezone_replan_cannot_be_overwritten_by_stale_periodic_plan(
@@ -181,7 +175,7 @@ def test_timezone_replan_cannot_be_overwritten_by_stale_periodic_plan(
 ) -> None:  # type: ignore[no-untyped-def]
     _client, maker = production_client
     monkeypatch.setattr(runtime.clock, "now", lambda: NOW)
-    account_id, space_id, reminder_id, occurrence_state = _seed_manual_reminder(
+    account_id, space_id, _reminder_id, occurrence_state = _seed_manual_reminder(
         maker, reconcile=True
     )
     assert occurrence_state is not None
