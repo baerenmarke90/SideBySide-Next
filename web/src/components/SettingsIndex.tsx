@@ -16,6 +16,11 @@ export function SettingsIndex() {
           </a>
         </li>
         <li>
+          <a href="#settings-dashboard">
+            {t('profileIdentity.settingsDashboard')}
+          </a>
+        </li>
+        <li>
           <a href="#settings-notifications">
             {t('profileIdentity.settingsNotifications')}
           </a>
