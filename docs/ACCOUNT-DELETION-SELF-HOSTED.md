@@ -4,10 +4,11 @@
 
 **Related:** #520, #644, #190, #666
 
-SideBySide Account deletion uses a forward-only deletion journal outside the
-point-in-time PostgreSQL backup. That separation is intentional: restoring a
-database backup created before an accepted deletion must never resurrect the
-Account, its credentials, sessions, or `OWNER_ONLY` data.
+SideBySide Account deletion uses a forward-only deletion journal containing
+minimal pseudonymous recovery metadata outside the point-in-time PostgreSQL
+backup. That separation is intentional: restoring a database backup created
+before an accepted deletion must never resurrect the Account, its credentials,
+sessions, or `OWNER_ONLY` data.
 
 ## 1. Bootstrap the authority exactly once
 
@@ -76,6 +77,16 @@ The journal file is:
 ```text
 /var/lib/sidebyside/deletion-journal/account-deletions.journal
 ```
+
+Privacy classification is explicit: the journal is **minimal pseudonymous
+recovery metadata**. It is content-free, but it is not identity-free or ordinary
+non-personal operational metadata. Each tombstone contains a stable Account UUID
+and irreversible acceptance timestamp that can still be related to an Account in
+the system/recovery context. The journal is therefore recovery-sensitive and must
+remain protected even though it contains no relationship content, email address,
+display name, Space ID, partner ID, token, credential, `ProtectedPayload`, or
+`OWNER_ONLY` payload. Its schema remains data-minimized to the fields required for
+restore-safe deletion and integrity validation.
 
 This unit is deliberately separate from:
 
@@ -185,8 +196,8 @@ Only after successful reconciliation, readiness/revision checks, and the remaini
 
 ## 6. Destructive operator actions
 
-Treat the deletion journal volume as deletion-safety state, not disposable cache.
-In particular:
+Treat the deletion journal volume as recovery-sensitive deletion-safety state, not
+disposable cache. In particular:
 
 - `docker compose down -v` destroys the named journal volume along with other
   volumes and is unsafe while any pre-deletion backup remains restorable;
