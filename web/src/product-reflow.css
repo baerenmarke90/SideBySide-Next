@@ -4,10 +4,14 @@
  * Root CSS zoom changes the usable inline size without changing viewport media
  * queries. Product layouts therefore need to collapse from the space they
  * actually receive, not only from window width. The shell remains viewport-
- * responsive; the product surface is the containment boundary for content
- * layout decisions.
+ * responsive; each route page is the containment boundary for content layout
+ * decisions so containment cannot alter the shell content wrapper's sizing.
  */
 .product-main {
+  min-width: 0;
+}
+
+.product-main > .page {
   container-name: product-content;
   container-type: inline-size;
   min-width: 0;
