@@ -51,23 +51,25 @@
  * relative to the body baseline. Where the engine implements the CSS
  * `initial-letter` property (Chromium, Safari) it takes over and computes
  * the correct multi-line baseline alignment natively instead of the
- * hand-tuned font-size/line-height fallback below.
+ * hand-tuned font-size/line-height fallback below. Sized to read as a
+ * compact editorial initial — about two lines tall and close to the
+ * following text — rather than a separate decorative element.
  */
 .memory-detail-body.drop-cap::first-letter {
   float: left;
   line-height: 1;
   font-family: var(--font-display);
-  font-size: 3.6rem;
+  font-size: 2.6rem;
   font-weight: 700;
-  margin-right: 0.5rem;
+  margin-right: 0.3rem;
   color: var(--color-brand);
   text-transform: uppercase;
 }
 
-@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+@supports (initial-letter: 1.7) or (-webkit-initial-letter: 1.7) {
   .memory-detail-body.drop-cap::first-letter {
-    -webkit-initial-letter: 2;
-    initial-letter: 2;
+    -webkit-initial-letter: 1.7 2;
+    initial-letter: 1.7 2;
   }
 }
 
