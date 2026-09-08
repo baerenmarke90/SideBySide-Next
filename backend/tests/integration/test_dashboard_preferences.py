@@ -57,9 +57,7 @@ def test_dashboard_preference_defaults_enabled_and_is_private_per_partner(
     initial_b = _preferences(client, couple["space"].id, couple["token_b"])
     assert initial_a.status_code == 200, initial_a.text
     assert initial_b.status_code == 200, initial_b.text
-    expected_default = {
-        "items": [{"moduleKey": "SHARED_STORY_SUMMARY", "visible": True}]
-    }
+    expected_default = {"items": [{"moduleKey": "SHARED_STORY_SUMMARY", "visible": True}]}
     assert initial_a.json() == expected_default
     assert initial_b.json() == expected_default
 
@@ -84,9 +82,10 @@ def test_dashboard_preference_defaults_enabled_and_is_private_per_partner(
         visible=True,
     )
     assert shown.status_code == 200
-    assert _preferences(client, couple["space"].id, couple["token_a"]).json()["items"][0][
-        "visible"
-    ] is True
+    assert (
+        _preferences(client, couple["space"].id, couple["token_a"]).json()["items"][0]["visible"]
+        is True
+    )
 
 
 def test_dashboard_preference_is_tenant_guarded_and_unknown_keys_fail_closed(
