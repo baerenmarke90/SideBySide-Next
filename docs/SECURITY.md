@@ -209,10 +209,15 @@ transaction ends. Two link flows for the same unlinked identity therefore end as
 one link and one `OIDC_IDENTITY_ALREADY_LINKED`, not as a database uniqueness
 error.
 
-A cross-account link rejection rolls its request transaction back but keeps the
-state redeemed. The authorization code has already been exchanged at that point,
-so a retry cannot be a legitimate continuation of the flow; the state is spent
-in a separate transaction so the rejected attempt cannot be repeated.
+OIDC state single-use follows the authorization-code lifecycle rather than the
+external error code. Once the token exchange succeeds, the state remains
+redeemed even if a later JWKS request, ID-token validation, Account resolution,
+invitation validation, or link-binding decision rejects the callback. The outer
+request may roll back, but a separate transaction preserves the consumed state
+because the exchanged authorization code cannot legitimately continue the same
+browser flow. Failures before a successful exchange may deliberately return the
+state to the pool when the provider has not accepted the authorization code and
+a retry of the same browser flow remains legitimate.
 
 An invalid, expired, revoked, or already-used invitation token does not open an
 alternative path. Concurrent callbacks for the same invitation serialize on
