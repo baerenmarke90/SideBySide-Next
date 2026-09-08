@@ -6,6 +6,7 @@ const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 const TEST_NOW = '2026-09-01T10:00:00Z';
+const PLAN_DRAFT_TITLE = 'Autumn weekend in Alsace';
 
 type MockPlace = {
   id: string;
@@ -34,7 +35,7 @@ function placeDetail(place: MockPlace) {
 /**
  * A focused mock harness for the Plan Create / inline Place Create flow.
  * Unlike product-accessibility.spec.ts's mocks, this tracks created Places
- * server-side so the Ort <select> can show a newly created Place immediately.
+ * server-side so the Place <select> can show a newly created Place immediately.
  */
 async function installPlanningApiMocks(
   page: Page,
@@ -259,8 +260,7 @@ async function signIn(page: Page): Promise<void> {
 }
 
 function planCreateForm(page: Page) {
-  // Scoped to the Plan create <details> (not Wish's, which shares field
-  // labels like "Titel" further down the same /plan overview page).
+  // Scope to the Plan create <details>; the Wish form below shares labels.
   return page.locator('details:has(#plan-title)');
 }
 
@@ -270,7 +270,7 @@ async function openPlanCreateForm(page: Page) {
   await form.getByText(m5s3.plan.create).click();
   await form
     .getByLabel(m5s3.common.title, { exact: true })
-    .fill('Herbstwochenende im Elsass');
+    .fill(PLAN_DRAFT_TITLE);
   return form;
 }
 
@@ -292,9 +292,8 @@ test('creating a new Place inline keeps the Plan draft and selects the new Place
     placeSelect.locator('option', { hasText: 'Colmar' }),
   ).toHaveCount(1);
 
-  // The Plan draft (title typed before the inline Place create) must survive.
   await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
-    'Herbstwochenende im Elsass',
+    PLAN_DRAFT_TITLE,
   );
 
   await form.getByRole('button', { name: m5s3.common.save }).click();
@@ -332,10 +331,50 @@ test('a failed inline Place creation keeps the Plan draft and lets the user retr
 
   await expect(form.getByRole('alert')).toBeVisible();
   await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
-    'Herbstwochenende im Elsass',
+    PLAN_DRAFT_TITLE,
   );
   expect(calls.createPlaceCalls).toBe(1);
 
   const placeSelect = form.getByLabel(m5s3.common.place, { exact: true });
   await expect(placeSelect).toHaveValue('');
+});
+
+test('an open empty inline Place panel does not block saving the Plan', async ({
+  page,
+}) => {
+  const calls = await installPlanningApiMocks(page);
+  await page.goto('/today');
+  await signIn(page);
+  const form = await openPlanCreateForm(page);
+
+  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  await form.getByRole('button', { name: m5s3.common.save }).click();
+
+  await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
+    '',
+  );
+  expect(calls.createPlaceCalls).toBe(0);
+  expect(calls.createPlanCalls).toBe(1);
+});
+
+test('pressing Enter in inline Place fields does not submit the outer Plan', async ({
+  page,
+}) => {
+  const calls = await installPlanningApiMocks(page);
+  await page.goto('/today');
+  await signIn(page);
+  const form = await openPlanCreateForm(page);
+
+  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  const nameInput = form.getByLabel(m5s3.place.name, { exact: true });
+  await nameInput.fill('Colmar');
+  await nameInput.press('Enter');
+  expect(calls.createPlaceCalls).toBe(0);
+  expect(calls.createPlanCalls).toBe(0);
+
+  const addressInput = form.getByLabel(m5s3.place.address, { exact: true });
+  await addressInput.fill('12 Example Street');
+  await addressInput.press('Enter');
+  expect(calls.createPlaceCalls).toBe(0);
+  expect(calls.createPlanCalls).toBe(0);
 });
