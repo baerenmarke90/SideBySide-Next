@@ -64,7 +64,7 @@ NONE -> PENDING -> COMPLETED
 
 ### 3.1 Irreversible acceptance boundary
 
-Deletion is considered accepted only after a minimal deletion tombstone has been durably recorded in the forward-only deletion reconciliation journal described in section 7. The journal write is idempotent by `(instance, account_id)` and contains no email, display name, token, proof, private payload or partner identifier.
+Deletion is considered accepted only after a minimal pseudonymous recovery tombstone has been durably recorded in the forward-only deletion reconciliation journal described in section 7. The journal write is idempotent by `(instance, account_id)` and contains no email, display name, token, proof, private payload or partner identifier.
 
 After the journal accepts the tombstone, the request is irreversible: failures in subsequent database/media cleanup are retried until the same deletion result is reached.
 
@@ -134,7 +134,7 @@ No ownership is transferred to the surviving partner merely to make foreign keys
 | Web session state | Hard clear locally | On accepted/completed deletion response | Nobody | N/A | Reuse `clearStoredSession()` |
 | Web IndexedDB product read cache | Hard clear locally | On accepted/completed deletion response | Nobody in deleted browser context | N/A | Reuse `clearProductReadCache()` |
 | Android in-memory/session epoch + Room/protected caches | Hard clear/invalidate locally | On accepted/completed deletion response | Nobody in deleted app context | N/A | Reuse logout/session-epoch path and `ProductReadCache.clearAll()`; clear drafts/protected cache too |
-| Deletion reconciliation tombstone | Retain minimal technical record outside the restorable application DB | Until every backup that predates deletion has expired, plus the operator's documented safety margin | Recovery subsystem only | Authoritative input to post-restore reconciliation | Append/idempotent; never contains PII/private payloads |
+| Deletion reconciliation tombstone | Retain minimal pseudonymous recovery metadata outside the restorable application DB | Until every backup that predates deletion has expired, plus the operator's documented safety margin | Recovery subsystem only | Authoritative input to post-restore reconciliation | Append/idempotent; data-minimized and content-free, but Account UUID/timestamp remain pseudonymous and account-linkable |
 
 ## 6. Jobs, Outbox and stale side effects
 
@@ -167,7 +167,13 @@ Each record contains only:
 - irreversible acceptance timestamp;
 - integrity/version metadata required by the selected implementation.
 
-It contains no email, display name, Space id, partner id, token, password/passkey material, recovery proof, ProtectedPayload or `OWNER_ONLY` content.
+The privacy classification is **minimal pseudonymous recovery metadata**. The
+journal is content-free and data-minimized, but not identity-free: a stable Account
+UUID plus an acceptance timestamp can still be related to an Account in the
+system/recovery context. It is therefore protected, recovery-sensitive authority
+state rather than ordinary non-personal operational metadata.
+
+It contains no email, display name, Space id, partner id, token, password/passkey material, recovery proof, ProtectedPayload or `OWNER_ONLY` content. The absence of relationship/private content does not imply an absence of account-linkable or pseudonymous metadata.
 
 The deployment/recovery boundary must protect and recover this journal independently of an older application database recovery point. For Self-Hosted this becomes an explicit protected recovery unit consumed by the canonical recovery procedure; Cloud/Managed must provide the equivalent provider-neutral durability/reconciliation contract through #521 rather than inventing different Domain semantics.
 
@@ -188,7 +194,7 @@ restore database + durable media
 
 The recovery command/runbook must fail closed if a launch/production restore cannot access the required journal. A developer-only synthetic recovery test may use a synthetic journal fixture.
 
-The journal is retained at least until the oldest backup that could contain the pre-deletion Account has expired. This couples tombstone retention to the **bounded backup-retention horizon**, not to an invented universal number of days.
+The journal is retained at least until the oldest backup that could contain the pre-deletion Account has expired, plus the operator's documented safety margin. This couples tombstone retention to the **bounded backup-retention horizon**, not to an invented universal number of days.
 
 ## 8. Relationship-offboarding boundary (#518)
 
