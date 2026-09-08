@@ -694,3 +694,52 @@ for (const colorScheme of ['light', 'dark'] as const) {
     expect(unexpectedRequests).toEqual([]);
   });
 }
+
+// CSS layout zoom keeps the 390px CSS viewport but halves the usable layout
+// width. A 320px root minimum used to survive that halving as 640 rendered
+// pixels, which is exactly how #798 reproduced.
+test('sign-in reflows below a 320px layout width at 200 percent zoom', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
+
+  const dimensions = await page.evaluate(() => ({
+    bodyScrollWidth: document.body.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(dimensions.clientWidth).toBe(390);
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  expect(dimensions.bodyScrollWidth).toBeLessThan(320);
+});
+
+test('authenticated shell reflows below a 320px layout width at 200 percent zoom', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/today$/);
+  await expectNoHorizontalOverflow(page);
+
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
+
+  const dimensions = await page.evaluate(() => ({
+    bodyScrollWidth: document.body.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+
+  expect(dimensions.clientWidth).toBe(390);
+  expect(dimensions.bodyScrollWidth).toBeLessThan(320);
+  expect(unexpectedRequests).toEqual([]);
+});
