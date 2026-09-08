@@ -12,7 +12,7 @@ function daysAgo(n: number): string {
 }
 
 /**
- * Reproduces the real-demo composition complaint (#790/#791 third
+ * Reproduces the real-demo composition complaint (#790/#791 fourth
  * follow-up): four recent shared items of different kinds, mirroring the
  * canonical Lea/Alex-shaped content this section normally shows. This is
  * enough to reproduce the reported activity-log/left-column/dead-space
@@ -163,7 +163,7 @@ async function signIn(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/today$/);
 }
 
-test('Today "Zuletzt bei euch" renders as a flowing inline trace, not activity-log cards, and uses desktop width instead of a narrow left column', async ({
+test('Today "Zuletzt bei euch" renders as small bordered mini-tiles, not activity-log cards or a bare text trace, and uses desktop width instead of a narrow left column', async ({
   page,
 }) => {
   await installMocks(page);
@@ -179,25 +179,38 @@ test('Today "Zuletzt bei euch" renders as a flowing inline trace, not activity-l
     page.locator('.today-section-recent .today-section-subline'),
   ).toHaveCount(0);
 
-  const entries = page.locator('.today-trace-entry');
-  await expect(entries).toHaveCount(RECENT_SHARED_ITEMS.length);
+  const tiles = page.locator('.today-recent-tile');
+  await expect(tiles).toHaveCount(RECENT_SHARED_ITEMS.length);
 
-  // Entries are compact inline text, not full-width rows: none should come
-  // close to the 1920px viewport, and more than one must share the same
-  // line so the section actually uses the available width instead of
-  // sitting as a narrow column with dead space beside it.
-  const rects = await entries.evaluateAll((nodes) =>
+  // Each entry is a real, deliberately bordered mini-surface - not a bare,
+  // unstyled line of text (the over-corrected third follow-up) and not a
+  // huge full-width SaaS card. A visible border/background plus a bounded,
+  // compact width is what makes this read as a designed unit.
+  for (const tile of await tiles.all()) {
+    const style = await tile.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { borderWidth: cs.borderTopWidth, borderStyle: cs.borderTopStyle };
+    });
+    expect(style.borderStyle).toBe('solid');
+    expect(Number.parseFloat(style.borderWidth)).toBeGreaterThan(0);
+  }
+
+  // Compact and bounded, not full-width rows: none should come close to the
+  // 1920px viewport, and several must share the same line (2-4 per row is
+  // the requested rhythm) so the section actually uses the available width
+  // instead of sitting as a narrow column with dead space beside it.
+  const rects = await tiles.evaluateAll((nodes) =>
     nodes.map((node) => node.getBoundingClientRect()),
   );
   for (const rect of rects) {
-    expect(rect.width).toBeLessThan(500);
+    expect(rect.width).toBeLessThan(260);
   }
   const tops = rects.map((rect) => rect.top);
   expect(new Set(tops).size).toBeLessThan(tops.length);
 
   // Type is still available to assistive tech, but not as a separate
   // visible badge next to an already type-specific icon.
-  await expect(page.locator('.today-trace-entry .sr-only').first()).toHaveText(
+  await expect(page.locator('.today-recent-tile .sr-only').first()).toHaveText(
     /./,
   );
 
@@ -216,28 +229,55 @@ test('Today "Zuletzt bei euch" renders as a flowing inline trace, not activity-l
   expect(result.violations).toEqual([]);
 });
 
-test('Today "Zuletzt bei euch" trace entries are keyboard-focusable in order with a visible focus ring', async ({
+test('Today "Zuletzt bei euch" mini-tiles wrap 2-4 per row on both required desktop widths', async ({
+  page,
+}) => {
+  await installMocks(page);
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await page.goto('/today');
+  await signIn(page);
+  await page.waitForSelector('.today-recent-tile');
+
+  for (const width of [1920, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+
+    const tops = await page
+      .locator('.today-recent-tile')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+      );
+    const rowCount = new Set(tops).size;
+    // 4 tiles wrapping onto a single row would mean too few per line for
+    // "2-4 per row"; all 4 stacking one-per-row would be the old narrow
+    // left column this fix removes. Some wrapping, not all of it, is the
+    // target for this fixture's 4 tiles on a desktop-width viewport.
+    expect(rowCount).toBeGreaterThan(0);
+    expect(rowCount).toBeLessThan(RECENT_SHARED_ITEMS.length);
+  }
+});
+
+test('Today "Zuletzt bei euch" mini-tiles are keyboard-focusable in order with a visible focus ring', async ({
   page,
 }) => {
   await installMocks(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/today');
   await signIn(page);
-  await page.waitForSelector('.today-trace-entry');
+  await page.waitForSelector('.today-recent-tile');
 
-  const firstEntry = page.locator('.today-trace-entry').first();
+  const firstTile = page.locator('.today-recent-tile').first();
   // Real Tab-key traversal (not element.focus()) so :focus-visible actually
-  // engages, matching how a keyboard user reaches this entry.
+  // engages, matching how a keyboard user reaches this tile.
   for (let attempt = 0; attempt < 40; attempt++) {
-    const isFocused = await firstEntry.evaluate(
+    const isFocused = await firstTile.evaluate(
       (el) => document.activeElement === el,
     );
     if (isFocused) break;
     await page.keyboard.press('Tab');
   }
-  await expect(firstEntry).toBeFocused();
+  await expect(firstTile).toBeFocused();
 
-  const outline = await firstEntry.evaluate((el) => {
+  const outline = await firstTile.evaluate((el) => {
     const style = getComputedStyle(el);
     return { width: style.outlineWidth, style: style.outlineStyle };
   });
@@ -252,7 +292,16 @@ test('Today "Zuletzt bei euch" stays regression-free on mobile and in dark mode'
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/today');
   await signIn(page);
-  await page.waitForSelector('.today-trace-entry');
+  await page.waitForSelector('.today-recent-tile');
+
+  // Mobile keeps the already-accepted single, full-width stacked column -
+  // no unnecessary redesign of an already-approved viewport.
+  const lefts = await page
+    .locator('.today-recent-tile')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().left),
+    );
+  expect(new Set(lefts).size).toBe(1);
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -270,7 +319,7 @@ test('Today "Zuletzt bei euch" is axe-clean in dark mode', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/today');
   await signIn(page);
-  await page.waitForSelector('.today-trace-entry');
+  await page.waitForSelector('.today-recent-tile');
 
   const result = await new AxeBuilder({ page }).analyze();
   expect(result.violations).toEqual([]);

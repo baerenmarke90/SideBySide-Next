@@ -372,7 +372,7 @@ describe('TodayPage', () => {
     expect(html).toContain('Photo Memory');
   });
 
-  it('renders a compact shared-life trace (not activity-log cards) and secondary all-activity action', () => {
+  it('renders compact shared-life mini-tiles (not activity-log cards) and secondary all-activity action', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -430,10 +430,10 @@ describe('TodayPage', () => {
     // removed per Product Owner review; the section no longer renders one.
     expect(html).not.toContain('today-section-subline');
 
-    // Renders as flowing inline trace entries, not activity-log/database
+    // Renders as small, soft mini-tiles, not the old activity-log/database
     // record cards (icon-badge + heading + kind/date subtitle stacked in a
     // vertical list).
-    expect(html).toContain('today-trace-entry');
+    expect(html).toContain('today-recent-tile');
     expect(html).not.toContain('recent-shared-card');
     expect(html).toContain('Summer Chapter');
     expect(html).toContain('Rainy Day Movies');

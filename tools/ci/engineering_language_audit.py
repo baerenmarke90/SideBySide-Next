@@ -310,6 +310,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     "von Lea",
     "von Sam",
     "Wochenendtrip an die Ostsee",
+    "Zuletzt bei euch",
 )
 
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}

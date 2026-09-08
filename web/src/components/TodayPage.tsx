@@ -358,44 +358,44 @@ function RecentSharedItemCard({ item }: { item: DashboardItem }) {
   const typeLabel = t(`m5s5.kind.${item.type}`);
   const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
 
-  const entryInner = (
+  const tileInner = (
     <>
       <span
-        className={`today-trace-icon today-kind-${item.type.toLowerCase()}`}
+        className={`today-recent-tile-icon today-kind-${item.type.toLowerCase()}`}
         aria-hidden="true"
       >
         <RecentItemTypeIcon type={item.type} />
       </span>
-      {/* Type stays available to assistive tech (it's still meaningful
-          context) but isn't a separate visible field - a redundant text
-          label next to an already type-specific icon is what made each
-          entry read as a database record (icon, name, type, date) rather
-          than a shared-life trace (#790/#791 third follow-up). */}
-      <span className="sr-only">{typeLabel}: </span>
-      <span className="today-trace-text">{title}</span>
-      {recency ? (
-        <>
-          <span className="today-trace-sep" aria-hidden="true">
-            ·
-          </span>
-          <time className="today-trace-time" dateTime={rawDate?.toISOString()}>
+      <span className="today-recent-tile-copy">
+        {/* Type stays available to assistive tech (it's still meaningful
+            context) but isn't a separate visible field - a redundant text
+            label next to an already type-specific icon is what made each
+            entry read as a database record (icon, name, type, date) rather
+            than a warm shared-life trace (#790/#791 fourth follow-up). */}
+        <span className="sr-only">{typeLabel}: </span>
+        <span className="today-recent-tile-title">{title}</span>
+        {recency ? (
+          <time
+            className="today-recent-tile-date"
+            dateTime={rawDate?.toISOString()}
+          >
             {recency}
           </time>
-        </>
-      ) : null}
+        ) : null}
+      </span>
     </>
   );
 
   if (path) {
     return (
-      <Link to={path} className="today-trace-entry">
-        {entryInner}
+      <Link to={path} className="today-recent-tile">
+        {tileInner}
       </Link>
     );
   }
   return (
-    <span className="today-trace-entry today-trace-entry-static">
-      {entryInner}
+    <span className="today-recent-tile today-recent-tile-static">
+      {tileInner}
     </span>
   );
 }

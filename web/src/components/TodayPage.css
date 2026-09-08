@@ -451,42 +451,74 @@
   color: var(--color-text-secondary);
 }
 
-/* Shared-life trace (#790/#791 third follow-up): the previous per-item
+/* Shared-life trace (#790/#791 fourth follow-up): the previous per-item
    icon-badge + heading + kind/date subtitle, stacked one per row, was a
    textbook activity-feed/log affordance regardless of border or spacing -
    the DOM shape itself (avatar, record name, type, timestamp) is what read
-   as a database record. Entries are now plain inline text (no per-item
-   card/border/background) that wrap left-to-right like a flowing editorial
-   caption, so the section uses the available desktop width instead of
-   sitting as a narrow left-aligned column with dead space beside it, and
-   doesn't read as a database record repeated four times. Full Activity
-   access remains a secondary link below. */
+   as a database record. A plain inline text trace (tried in the third
+   follow-up) removed the log feel but went too far the other way - no
+   surface at all reads as an unstyled fragment, not a deliberately composed
+   part of the page. Each entry is instead a small, soft mini-tile - reusing
+   the compact bordered-surface convention already approved for the
+   Shared Planning Horizon (.today-agenda-row) and the Momente archive
+   entries (.momente-archive-link) - wrapped several-per-row so the section
+   uses the available desktop width instead of sitting as a narrow column
+   with dead space beside it. Sized and colored more quietly than the
+   Shared Planning Horizon tiles (smaller padding/type scale, a muted
+   rather than brand-colored icon) so the section stays clearly secondary
+   to Today's primary content. Full Activity access remains a link below. */
 .today-stream.today-stream-recent {
   display: flex;
-  flex-flow: row wrap;
-  align-items: center;
-  gap: var(--space-3) var(--space-6);
+  flex-direction: column;
+  gap: var(--space-2);
   overflow: visible;
   scroll-snap-type: none;
   margin: 0;
   padding: 0;
 }
 
-.today-trace-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  max-width: 100%;
-  color: inherit;
-  text-decoration: none;
-  border-radius: var(--radius-medium);
+@media (min-width: 640px) {
+  .today-stream.today-stream-recent {
+    flex-flow: row wrap;
+    gap: var(--space-3);
+  }
 }
 
-.today-trace-entry-static {
+.today-recent-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.today-recent-tile-static {
   cursor: default;
 }
 
-.today-trace-entry:focus-visible {
+@media (min-width: 640px) {
+  .today-recent-tile {
+    flex: 1 1 170px;
+    max-width: 13rem;
+  }
+}
+
+.today-recent-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--color-border);
+}
+
+.today-recent-tile:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -504,40 +536,40 @@
 /* Type is still conveyed (the icon shape differs per kind), just not as its
    own bold, brand-colored badge - that redundant field next to an
    already-typed icon is what made this read as structured record metadata
-   instead of a quiet personal trace. */
-.today-trace-icon {
+   instead of a quiet personal trace. A muted (not brand-accent) icon color
+   keeps these tiles visually quieter than the Shared Planning Horizon's. */
+.today-recent-tile-icon {
   display: inline-flex;
   align-items: center;
+  margin-top: 0.1rem;
   flex: 0 0 auto;
   color: var(--color-text-secondary);
 }
 
-.today-trace-icon .recent-type-icon {
-  width: 0.95rem;
-  height: 0.95rem;
+.today-recent-tile-icon .recent-type-icon {
+  width: 0.85rem;
+  height: 0.85rem;
 }
 
-.today-trace-text {
+.today-recent-tile-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.today-recent-tile-title {
   font-family: var(--font-ui);
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--color-text);
-  overflow-wrap: anywhere;
-}
-
-.today-trace-entry:hover .today-trace-text {
-  text-decoration: underline;
-}
-
-.today-trace-sep {
-  color: var(--color-text-muted);
-  opacity: 0.7;
-}
-
-.today-trace-time {
-  font-size: 0.82rem;
-  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.today-recent-tile-date {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 .today-recent-footer {
@@ -1011,7 +1043,8 @@
   }
 
   .today-hero-action,
-  .today-agenda-row-link {
+  .today-agenda-row-link,
+  .today-recent-tile {
     transition: none;
   }
 }
