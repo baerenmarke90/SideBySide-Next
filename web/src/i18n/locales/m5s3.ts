@@ -89,6 +89,11 @@ const m5s3 = {
     createMemoryFromPlan: 'Erinnerung daraus festhalten',
     deleteConsequence:
       'Der Plan wird gelöscht. Ein verknüpfter Ort oder andere eigenständige Inhalte bleiben erhalten.',
+    addNewPlace: '+ Neuen Ort anlegen',
+    newPlaceHeading: 'Neuer Ort',
+    newPlaceSave: 'Ort erstellen',
+    newPlaceSaving: 'Ort wird erstellt …',
+    newPlaceCancel: 'Ortsauswahl behalten',
     status: {
       IDEA: 'Idee',
       PLANNED: 'Das haben wir vor',
@@ -125,6 +130,12 @@ const m5s3 = {
     heading: 'Kapitel',
     intro: 'Kapitel bündeln eure gemeinsamen Erinnerungen und Meilensteine.',
     create: 'Kapitel hinzufügen',
+    createEyebrow: 'Kapitel anlegen',
+    createHeading: 'Neues Kapitel',
+    createIntro:
+      'Gebt eurem Kapitel einen Titel und ordnet Erinnerungen, Herzmomente und Meilensteine später darin ein.',
+    formAria: 'Kapitel anlegen',
+    addMoreDetails: 'Beschreibung, Zeitraum und Ort hinzufügen (optional)',
     loading: 'Kapitel wird geladen …',
     detailEyebrow: 'Gemeinsames Kapitel',
     startOn: 'Beginn',

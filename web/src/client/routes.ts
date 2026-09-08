@@ -136,6 +136,7 @@ export const MILESTONE_CREATE_ROUTE = '/story/milestones/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/story/milestones/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN =
   '/story/milestones/:milestoneId/edit';
+export const CHAPTER_CREATE_ROUTE = '/plan/chapters/new';
 export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
 
 /* Planning content -------------------------------------------------------- */

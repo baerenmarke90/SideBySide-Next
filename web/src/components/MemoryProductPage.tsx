@@ -17,6 +17,7 @@ import {
   type MemoryEditValues,
 } from '../client/memoryProduct';
 import { MAX_MEMORY_ATTACHMENTS } from '../client/attachmentLimits';
+import { splitFirstGrapheme } from '../client/graphemeSplit';
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
 import {
@@ -552,6 +553,9 @@ export function MemoryProductPage({
     ? `${t('memoryProduct.detailEyebrow').toUpperCase()} · ${formatDateOnly(memory.happenedOn)}`
     : t('memoryProduct.detailEyebrow').toUpperCase();
 
+  const bodyText = memory.body || t('memoryProduct.noBody');
+  const { first: bodyDropCap, rest: bodyRest } = splitFirstGrapheme(bodyText);
+
   return (
     <div className="page memory-product-page">
       {offline ? (
@@ -582,8 +586,11 @@ export function MemoryProductPage({
 
       <div className="memory-detail-container">
         <article className="story-surface memory-detail-card coffee-table-layout">
-          <p className="memory-detail-body drop-cap">
-            {memory.body || t('memoryProduct.noBody')}
+          <p className="memory-detail-body">
+            {bodyDropCap ? (
+              <span className="drop-cap-letter">{bodyDropCap}</span>
+            ) : null}
+            {bodyRest}
           </p>
 
           <section aria-labelledby="memory-photos-heading">

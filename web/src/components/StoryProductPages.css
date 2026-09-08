@@ -90,19 +90,6 @@
   box-shadow: var(--shadow-card);
 }
 
-.drop-cap::first-letter {
-  float: left;
-  font-family: var(--font-display);
-  font-size: 3.35rem;
-  line-height: 0.82;
-  font-weight: 700;
-  margin-top: 0.12rem;
-  margin-right: 0.55rem;
-  margin-bottom: -0.1rem;
-  color: var(--color-brand);
-  text-transform: uppercase;
-}
-
 .memory-detail-body {
   max-width: 60ch;
   margin: 0 auto var(--space-8);

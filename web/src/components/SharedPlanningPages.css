@@ -151,6 +151,118 @@
   margin-top: var(--space-4);
 }
 
+.place-picker {
+  position: relative;
+  width: 100%;
+}
+
+.place-picker-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: 0.8rem 0.9rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.place-picker-trigger:hover {
+  border-color: var(--color-text-muted);
+  filter: none;
+  transform: none;
+}
+
+.place-picker-caret {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  opacity: 0.6;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+/*
+ * Rendered in a document-body portal (see PlacePicker in
+ * SharedPlanningOverviewPage.tsx) so it is never confined to the create
+ * form's own stacking context — the section it lives in gets one from its
+ * `sbs-motion-reveal` transform animation, which would otherwise force the
+ * menu to paint underneath a later sibling section regardless of z-index.
+ * `position`, `top`, `left`, and `width` are set inline from the trigger's
+ * viewport rect; this rule only styles the panel itself.
+ */
+.place-picker-menu {
+  z-index: 200;
+  display: grid;
+  gap: 2px;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: var(--space-2);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.place-picker-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  padding: 0.55rem 0.7rem;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 500;
+  text-align: left;
+}
+
+.place-picker-option:hover,
+.place-picker-option:focus-visible {
+  background: var(--color-surface-subtle);
+  transform: none;
+}
+
+.place-picker-option[aria-checked="true"] {
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  font-weight: 700;
+}
+
+.place-picker-separator {
+  margin: var(--space-1) 0.2rem;
+  border: 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.place-picker-add {
+  color: var(--color-brand-strong);
+  font-weight: 700;
+}
+
+.inline-place-create {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+}
+
+.inline-place-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
 .planning-coordinate-grid,
 .planning-detail-grid {
   display: grid;
