@@ -56,7 +56,7 @@ def test_shared_story_summary_is_identical_for_partners_and_excludes_private_and
             owner_id=couple["anna"].id,
             privacy_class=PrivacyClass.SPACE_SHARED.value,
             happened_on=date(2026, 1, day),
-            payload=MemoryPayload(title=f"Memory {day}", body=None),
+            payload=MemoryPayload(title=f"Memory {day}", body=""),
         )
         for day in (1, 2)
     ]
@@ -86,7 +86,7 @@ def test_shared_story_summary_is_identical_for_partners_and_excludes_private_and
         owner_id=couple["outsider"].id,
         privacy_class=PrivacyClass.SPACE_SHARED.value,
         happened_on=date(2026, 4, 1),
-        payload=MemoryPayload(title="Foreign", body=None),
+        payload=MemoryPayload(title="Foreign", body=""),
     )
     session.add_all([*memories, shared_heart, private_heart, milestone, foreign_memory])
     session.flush()
@@ -135,7 +135,7 @@ def test_shared_story_summary_is_not_bounded_by_dashboard_section_limit(
                 owner_id=couple["anna"].id,
                 privacy_class=PrivacyClass.SPACE_SHARED.value,
                 happened_on=date(2026, 5, 1),
-                payload=MemoryPayload(title=f"Memory {index}", body=None),
+                payload=MemoryPayload(title=f"Memory {index}", body=""),
             )
         )
     session.flush()
