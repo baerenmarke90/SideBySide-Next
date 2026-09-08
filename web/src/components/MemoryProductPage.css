@@ -42,6 +42,35 @@
   line-height: 1.8;
 }
 
+/*
+ * ::first-letter (not a DOM-split span) so the browser's own Unicode-aware
+ * "first letter" boundary applies instead of a naive string-index split,
+ * which would risk breaking a surrogate pair, combining mark, or emoji at
+ * the start of a memory. `line-height: 1` removes the half-leading offset
+ * that is the usual cause of a float drop cap looking sunken/raised/shifted
+ * relative to the body baseline. Where the engine implements the CSS
+ * `initial-letter` property (Chromium, Safari) it takes over and computes
+ * the correct multi-line baseline alignment natively instead of the
+ * hand-tuned font-size/line-height fallback below.
+ */
+.memory-detail-body.drop-cap::first-letter {
+  float: left;
+  line-height: 1;
+  font-family: var(--font-display);
+  font-size: 3.6rem;
+  font-weight: 700;
+  margin-right: 0.5rem;
+  color: var(--color-brand);
+  text-transform: uppercase;
+}
+
+@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+  .memory-detail-body.drop-cap::first-letter {
+    -webkit-initial-letter: 2;
+    initial-letter: 2;
+  }
+}
+
 .memory-section-head {
   margin-bottom: var(--space-4);
 }

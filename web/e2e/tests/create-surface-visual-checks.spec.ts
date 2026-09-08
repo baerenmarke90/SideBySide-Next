@@ -30,8 +30,8 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 /**
  * A focused mock harness for the create-surface visual regression checks:
  * the shared-visibility heart glyph centering on Memory Create, the local
- * "today" date default on HeartMoment/Milestone Create, and the drop-cap-free
- * Memory Detail paragraph.
+ * "today" date default on HeartMoment/Milestone Create, and the Memory
+ * Detail drop cap.
  */
 async function installApiMocks(page: Page): Promise<void> {
   await page.route('**/api/v1/**', async (route) => {
@@ -279,24 +279,51 @@ test('Milestone Create defaults the date to local today and stays typeable', asy
   await expect(dateInput).toHaveValue('2025-12-24');
 });
 
-test('Memory Detail renders the body as a plain paragraph without a drop cap, and reflows cleanly at 200 percent zoom', async ({
-  page,
-}) => {
-  await installApiMocks(page);
-  await page.goto('/today');
-  await signIn(page);
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`Memory Detail keeps a floated, enlarged drop cap on the body paragraph (${colorScheme})`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme });
+    await installApiMocks(page);
+    await page.goto('/today');
+    await signIn(page);
 
-  await page.goto(`/story/memories/${MEMORY_ID}`);
-  await expect(page.getByRole('heading', { name: MEMORY_TITLE })).toBeVisible();
+    await page.goto(`/story/memories/${MEMORY_ID}`);
+    await expect(
+      page.getByRole('heading', { name: MEMORY_TITLE }),
+    ).toBeVisible();
 
-  const body = page.locator('.memory-detail-body');
-  await expect(body).toBeVisible();
-  await expect(body).not.toHaveClass(/drop-cap/);
-  await expect(page.locator('.drop-cap')).toHaveCount(0);
-  await expect(body).toHaveText(MEMORY_BODY);
+    const body = page.locator('.memory-detail-body');
+    await expect(body).toBeVisible();
+    await expect(body).toHaveClass(/drop-cap/);
+    await expect(body).toHaveText(MEMORY_BODY);
 
-  await page.locator('html').evaluate((element) => {
-    element.style.zoom = '2';
+    const [bodyFontSize, firstLetterStyle] = await Promise.all([
+      body.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize)),
+      body.evaluate((el) => {
+        const style = getComputedStyle(el, '::first-letter');
+        return {
+          float: style.float,
+          fontSize: Number.parseFloat(style.fontSize),
+        };
+      }),
+    ]);
+    // The drop cap must actually render as a floated, enlarged glyph — not
+    // just carry the class name with no visible effect.
+    expect(firstLetterStyle.float).toBe('left');
+    expect(firstLetterStyle.fontSize).toBeGreaterThan(bodyFontSize * 1.5);
+
+    await page.screenshot({
+      path: testInfo.outputPath(`memory-detail-drop-cap-${colorScheme}.png`),
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.locator('html').evaluate((element) => {
+      element.style.zoom = '2';
+    });
+    await expectNoHorizontalOverflow(page);
   });
-  await expectNoHorizontalOverflow(page);
-});
+}

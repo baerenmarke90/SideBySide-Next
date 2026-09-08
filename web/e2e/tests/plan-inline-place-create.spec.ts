@@ -297,7 +297,9 @@ function placePickerTrigger(form: Locator) {
 
 async function openPlacePicker(form: Locator) {
   await placePickerTrigger(form).click();
-  return form.getByRole('menu', { name: m5s3.common.place });
+  // The menu is rendered in a document-body portal (see PlacePicker in
+  // SharedPlanningOverviewPage.tsx), so it is not a descendant of `form`.
+  return form.page().getByRole('menu', { name: m5s3.common.place });
 }
 
 async function clickAddNewPlaceInPicker(form: Locator) {

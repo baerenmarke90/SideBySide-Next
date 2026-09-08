@@ -3,9 +3,11 @@ import {
   type KeyboardEvent,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useInfiniteQuery,
   useMutation,
@@ -16,13 +18,14 @@ import { Link } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
 import { planDetailPath, wishDetailPath } from '../client/routes';
 import {
   loadAllPlaces,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { invalidateDashboard } from '../client/dashboardQueries';
+import { useDismissiblePopover } from '../client/useDismissiblePopover';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -74,6 +77,63 @@ function PlanningCard({
   );
 }
 
+interface PlacePickerCoords {
+  left: number;
+  width: number;
+  maxHeight: number;
+  placement: 'below' | 'above';
+  top?: number;
+  bottom?: number;
+}
+
+const PLACE_PICKER_VIEWPORT_MARGIN = 8;
+const PLACE_PICKER_PREFERRED_MAX_HEIGHT = 256; // matches --menu max-height: 16rem
+
+function computePlacePickerCoords(rect: DOMRect): PlacePickerCoords {
+  const spaceBelow =
+    window.innerHeight - rect.bottom - PLACE_PICKER_VIEWPORT_MARGIN * 2;
+  const spaceAbove = rect.top - PLACE_PICKER_VIEWPORT_MARGIN * 2;
+  // Prefer opening below the trigger; flip above it only when there isn't
+  // enough room below but there is more room above, so the menu — rendered
+  // in a document-body portal with `position: fixed` — never ends up partly
+  // or fully beneath the viewport bottom, where page scrolling can never
+  // bring it back into view because a fixed element does not move on scroll.
+  const placement: PlacePickerCoords['placement'] =
+    spaceBelow < 120 && spaceAbove > spaceBelow ? 'above' : 'below';
+
+  return {
+    left: rect.left,
+    width: rect.width,
+    maxHeight: Math.max(
+      120,
+      Math.min(
+        PLACE_PICKER_PREFERRED_MAX_HEIGHT,
+        placement === 'below' ? spaceBelow : spaceAbove,
+      ),
+    ),
+    placement,
+    top:
+      placement === 'below'
+        ? rect.bottom + PLACE_PICKER_VIEWPORT_MARGIN
+        : undefined,
+    bottom:
+      placement === 'above'
+        ? window.innerHeight - rect.top + PLACE_PICKER_VIEWPORT_MARGIN
+        : undefined,
+  };
+}
+
+/**
+ * The Plan Create section lives inside a `.sbs-motion-reveal` reveal
+ * animation, which (like its `Wünsche & Ideen` sibling below it) creates its
+ * own stacking context for as long as the animation targets `transform`.
+ * A `position: absolute` menu confined to that stacking context can never
+ * paint above a *later* sibling section's stacking context, regardless of
+ * its own z-index — the sibling simply paints on top by document order. The
+ * menu is therefore rendered in a portal at the document body, positioned
+ * from the trigger's viewport rect, so it is not confined to any ancestor's
+ * stacking context, overflow, or animation.
+ */
 function PlacePicker({
   id,
   label,
@@ -93,30 +153,32 @@ function PlacePicker({
   noPlaceLabel: string;
   addNewPlaceLabel: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { isOpen, close, toggle, triggerRef, panelRef } =
+    useDismissiblePopover();
+  const [coords, setCoords] = useState<PlacePickerCoords | null>(null);
   const menuId = useId();
 
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(event: MouseEvent): void {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [open]);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
 
-  function closeMenu(): void {
-    setOpen(false);
-    triggerRef.current?.focus();
-  }
+    function updateCoords(): void {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setCoords(computePlacePickerCoords(rect));
+    }
+
+    updateCoords();
+    window.addEventListener('scroll', updateCoords, true);
+    window.addEventListener('resize', updateCoords);
+    return () => {
+      window.removeEventListener('scroll', updateCoords, true);
+      window.removeEventListener('resize', updateCoords);
+    };
+  }, [isOpen, triggerRef]);
 
   function focusItem(index: number): void {
     const items =
-      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]');
+      panelRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]');
     if (!items?.length) return;
     items[(index + items.length) % items.length]?.focus();
   }
@@ -128,14 +190,14 @@ function PlacePicker({
       event.key === ' '
     ) {
       event.preventDefault();
-      setOpen(true);
+      if (!isOpen) toggle();
       window.requestAnimationFrame(() => focusItem(0));
     }
   }
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     const items = Array.from(
-      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ??
+      panelRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ??
         [],
     );
     if (!items.length) return;
@@ -152,11 +214,8 @@ function PlacePicker({
     } else if (event.key === 'End') {
       event.preventDefault();
       focusItem(items.length - 1);
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      closeMenu();
     } else if (event.key === 'Tab') {
-      setOpen(false);
+      close();
     }
   }
 
@@ -164,71 +223,83 @@ function PlacePicker({
     places.find((place) => place.id === selectedPlaceId)?.name ?? noPlaceLabel;
 
   return (
-    <div className="place-picker" ref={rootRef}>
+    <div className="place-picker">
       <button
-        ref={triggerRef}
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         id={id}
         aria-label={label}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-controls={menuId}
         className="place-picker-trigger"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => toggle()}
         onKeyDown={handleTriggerKeyDown}
       >
         <span>{selectedLabel}</span>
         <span className="place-picker-caret" aria-hidden="true" />
       </button>
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={label}
-          className="place-picker-menu"
-          onKeyDown={handleMenuKeyDown}
-        >
-          <button
-            type="button"
-            role="menuitemradio"
-            aria-checked={selectedPlaceId === ''}
-            className="place-picker-option"
-            onClick={() => {
-              onSelect('');
-              closeMenu();
-            }}
-          >
-            {noPlaceLabel}
-          </button>
-          {places.map((place) => (
-            <button
-              key={place.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={selectedPlaceId === place.id}
-              className="place-picker-option"
-              onClick={() => {
-                onSelect(place.id);
-                closeMenu();
+      {isOpen && coords && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={panelRef as React.RefObject<HTMLDivElement>}
+              id={menuId}
+              role="menu"
+              aria-label={label}
+              className="place-picker-menu"
+              style={{
+                position: 'fixed',
+                top: coords.top,
+                bottom: coords.bottom,
+                left: coords.left,
+                width: coords.width,
+                maxHeight: coords.maxHeight,
               }}
+              onKeyDown={handleMenuKeyDown}
             >
-              {place.name}
-            </button>
-          ))}
-          <hr className="place-picker-separator" />
-          <button
-            type="button"
-            role="menuitem"
-            className="place-picker-option place-picker-add"
-            onClick={() => {
-              setOpen(false);
-              onAddNewPlace();
-            }}
-          >
-            {addNewPlaceLabel}
-          </button>
-        </div>
-      ) : null}
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={selectedPlaceId === ''}
+                className="place-picker-option"
+                onClick={() => {
+                  onSelect('');
+                  close(true);
+                }}
+              >
+                {noPlaceLabel}
+              </button>
+              {places.map((place) => (
+                <button
+                  key={place.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selectedPlaceId === place.id}
+                  className="place-picker-option"
+                  onClick={() => {
+                    onSelect(place.id);
+                    close(true);
+                  }}
+                >
+                  {place.name}
+                </button>
+              ))}
+              <hr className="place-picker-separator" />
+              <button
+                type="button"
+                role="menuitem"
+                className="place-picker-option place-picker-add"
+                onClick={() => {
+                  close();
+                  onAddNewPlace();
+                }}
+              >
+                {addNewPlaceLabel}
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
