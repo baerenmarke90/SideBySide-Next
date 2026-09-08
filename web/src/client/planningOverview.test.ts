@@ -77,7 +77,9 @@ describe('planning overview selectors', () => {
       'plan-b',
       'plan-later',
     ]);
-    expect(selectIdeaPlans(plans).map((item) => item.id)).toEqual(['plan-idea']);
+    expect(selectIdeaPlans(plans).map((item) => item.id)).toEqual([
+      'plan-idea',
+    ]);
     expect(convertedWishPlan.sourceWishId).toBe('wish-autumn-hike');
     expect(plans.map((item) => item.id)).toEqual(inputOrder);
   });
