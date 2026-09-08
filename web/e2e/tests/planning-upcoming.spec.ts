@@ -46,7 +46,7 @@ function planDetail({
     capabilities: { canComment: true, canDelete: true, canEdit: true },
     createdAt: TEST_NOW,
     createdBy: ACCOUNT_ID,
-    creator: { accountId: ACCOUNT_ID, displayName: 'Anna' },
+    creator: { id: ACCOUNT_ID, displayName: 'Anna' },
     description: null,
     experiencedOn,
     id,
@@ -199,7 +199,10 @@ async function installPlanningMocks(
       return;
     }
 
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/activity`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/activity`
+    ) {
       await fulfillJson({ items: [], nextCursor: null });
       return;
     }
@@ -254,7 +257,7 @@ async function installPlanningMocks(
                 },
                 createdAt: TEST_NOW,
                 createdBy: ACCOUNT_ID,
-                creator: { accountId: ACCOUNT_ID, displayName: 'Anna' },
+                creator: { id: ACCOUNT_ID, displayName: 'Anna' },
                 id: WISH_ID,
                 spaceId: SPACE_ID,
                 status: 'PLANNED',
@@ -341,9 +344,11 @@ test('Bald & Geplant contains only dated upcoming Plans in Today order and shows
   await expect(someday.getByText(m5s3.wish.status.PLANNED)).toBeVisible();
 
   expect(
-    await soon.locator('.future-map-marker').evaluate((element) =>
-      (element as HTMLElement).style.getPropertyValue('background'),
-    ),
+    await soon
+      .locator('.future-map-marker')
+      .evaluate((element) =>
+        (element as HTMLElement).style.getPropertyValue('background'),
+      ),
   ).toBe('var(--color-brand)');
 
   await page.goto('/today');
