@@ -249,8 +249,8 @@ function memoryItem(
  * single base authority is exercised against all of them (#795).
  */
 const FOOTER_VARIANTS = [
-  memoryItem('mem-none', 'Ein Abend ohne Bilder', '2026-08-28', 0),
-  memoryItem('mem-one', 'Ein Foto vom Steg', '2026-08-27', 1),
+  memoryItem('mem-none', 'Ein ruhiger Sonntagmorgen', '2026-08-28', 0),
+  memoryItem('mem-one', 'Ein Jahr in unserer Wohnung', '2026-08-27', 1),
   memoryItem('mem-many', 'Ein Wochenende am Wasser', '2026-08-24', 3),
   {
     kind: 'HEART_MOMENT',
