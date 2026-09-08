@@ -10,6 +10,7 @@ const TEST_NOW = '2026-09-01T10:00:00Z';
 const ACCOUNT = { id: ACCOUNT_ID, displayName: 'Lea Sommer' };
 const PARTNER = { id: PARTNER_ID, displayName: 'Alex Winter' };
 const CAPABILITIES = { canEdit: true, canDelete: true, canComment: true };
+const EMPTY_PAGE = { hasMore: false, items: [], nextCursor: null };
 
 const STORY_ITEMS = [
   {
@@ -52,19 +53,6 @@ const STORY_ITEMS = [
     },
   },
 ];
-
-const RELATED_PERSON = {
-  id: 'person-1',
-  displayName: 'Lisa Beispielname',
-  relationship: 'FRIEND',
-  birthday: '1995-05-12',
-  birthdayYearKnown: true,
-  visibility: 'SHARED',
-  avatarAttachmentId: null,
-  version: 1,
-  createdAt: TEST_NOW,
-  updatedAt: TEST_NOW,
-};
 
 const AFFECTED_SURFACES = [
   '/today',
@@ -114,9 +102,9 @@ async function installApiMocks(page: Page): Promise<string[]> {
       await fulfillJson({
         account: ACCOUNT,
         tokens: {
-          accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
           accessToken: 'product-reflow-access-token',
-          refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
+          refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
           refreshToken: 'product-reflow-refresh-token',
         },
       });
@@ -130,9 +118,9 @@ async function installApiMocks(page: Page): Promise<string[]> {
 
     if (method === 'POST' && pathname === '/api/v1/auth/refresh') {
       await fulfillJson({
-        accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
         accessToken: 'product-reflow-refreshed-token',
-        refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
+        refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
         refreshToken: 'product-reflow-refresh-token-2',
       });
       return;
@@ -182,12 +170,12 @@ async function installApiMocks(page: Page): Promise<string[]> {
       (pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${ACCOUNT_ID}` ||
         pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${PARTNER_ID}`)
     ) {
-      const partner = pathname.endsWith(PARTNER_ID);
+      const isPartner = pathname.endsWith(PARTNER_ID);
       await fulfillJson({
-        accountId: partner ? PARTNER_ID : ACCOUNT_ID,
+        accountId: isPartner ? PARTNER_ID : ACCOUNT_ID,
         createdAt: TEST_NOW,
-        displayName: partner ? PARTNER.displayName : ACCOUNT.displayName,
-        id: partner ? '55555555-5555-4555-8555-555555555555' : PROFILE_ID,
+        displayName: isPartner ? PARTNER.displayName : ACCOUNT.displayName,
+        id: isPartner ? '55555555-5555-4555-8555-555555555555' : PROFILE_ID,
         preferences: [],
         profileAttachmentId: null,
         updatedAt: TEST_NOW,
@@ -202,16 +190,12 @@ async function installApiMocks(page: Page): Promise<string[]> {
     ) {
       await fulfillJson({
         space: { spaceId: SPACE_ID, partner: PARTNER },
-        relationshipDuration: { daysTogether: 1174, startedOn: '2023-06-17' },
+        relationshipDuration: {
+          daysTogether: 1174,
+          startedOn: '2023-06-17',
+        },
         retrospective: null,
-        recentShared: [
-          {
-            id: 'recent-1',
-            type: 'MEMORY',
-            titleOrText: 'Unser letzter gemeinsamer Ausflug',
-            happenedAt: TEST_NOW,
-          },
-        ],
+        recentShared: [],
         upcoming: [
           {
             id: 'plan-1',
@@ -234,7 +218,11 @@ async function installApiMocks(page: Page): Promise<string[]> {
       method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/timeline`
     ) {
-      await fulfillJson({ items: STORY_ITEMS, hasMore: false, nextCursor: null });
+      await fulfillJson({
+        items: STORY_ITEMS,
+        hasMore: false,
+        nextCursor: null,
+      });
       return;
     }
 
@@ -242,7 +230,7 @@ async function installApiMocks(page: Page): Promise<string[]> {
       method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/activity`
     ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      await fulfillJson(EMPTY_PAGE);
       return;
     }
 
@@ -258,7 +246,7 @@ async function installApiMocks(page: Page): Promise<string[]> {
       method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/notifications`
     ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      await fulfillJson(EMPTY_PAGE);
       return;
     }
 
@@ -266,7 +254,20 @@ async function installApiMocks(page: Page): Promise<string[]> {
       method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/related-persons`
     ) {
-      await fulfillJson([RELATED_PERSON]);
+      await fulfillJson([
+        {
+          id: 'person-1',
+          displayName: 'Lisa Beispielname',
+          relationship: 'FRIEND',
+          birthday: '1995-05-12',
+          birthdayYearKnown: true,
+          visibility: 'SHARED',
+          avatarAttachmentId: null,
+          version: 1,
+          createdAt: TEST_NOW,
+          updatedAt: TEST_NOW,
+        },
+      ]);
       return;
     }
 
@@ -282,7 +283,7 @@ async function installApiMocks(page: Page): Promise<string[]> {
       method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/private/notes`
     ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      await fulfillJson(EMPTY_PAGE);
       return;
     }
 
@@ -317,7 +318,7 @@ async function installApiMocks(page: Page): Promise<string[]> {
         `/api/v1/spaces/${SPACE_ID}/wishes`,
       ].includes(pathname)
     ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      await fulfillJson(EMPTY_PAGE);
       return;
     }
 
@@ -387,7 +388,10 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
   expect(result.clippedControls).toEqual([]);
 }
 
-async function openSurfaceAt400Percent(page: Page, path: string): Promise<void> {
+async function openSurfaceAt400Percent(
+  page: Page,
+  path: string,
+): Promise<void> {
   await page.goto(path);
   await expect(page.locator('#main-content')).toBeVisible();
   await page.locator('html').evaluate((element) => {
@@ -461,7 +465,11 @@ test('400 percent reflow keeps keyboard-reachable controls inside the viewport',
   await page.goto('/today');
   await signIn(page);
 
-  for (const path of ['/story?tab=timeline', '/story/memories/new', '/more/settings']) {
+  for (const path of [
+    '/story?tab=timeline',
+    '/story/memories/new',
+    '/more/settings',
+  ]) {
     await openSurfaceAt400Percent(page, path);
     const firstControl = page
       .locator(
