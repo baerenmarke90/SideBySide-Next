@@ -1,0 +1,450 @@
+name: Temporary apply issue 674 patch
+
+on:
+  push:
+    branches:
+      - fix/674-android-search-stale-pagination
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/674-android-search-stale-pagination
+          fetch-depth: 0
+
+      - name: Apply scoped search-generation fix and regression tests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          vm_path = Path('android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt')
+          vm = vm_path.read_text()
+
+          old_members = '''    /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
+              private var lastSearchQuery: String? = null
+              private var lastSearchKind: SearchKind? = null
+          '''.replace('              ', '')
+          new_members = '''    /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
+              private var lastSearchQuery: String? = null
+              private var lastSearchKind: SearchKind? = null
+              /**
+               * Changes whenever a first-page search supersedes the previous search identity.
+               * Session generation alone is insufficient because query/filter changes stay in the same session.
+               */
+              private var searchGeneration: Long = 0
+          '''.replace('              ', '')
+          if vm.count(old_members) != 1:
+              raise SystemExit('Expected exactly one search member block')
+          vm = vm.replace(old_members, new_members, 1)
+
+          old_search = '''    fun search(query: String, kind: SearchKind? = null) {
+              if (query.isBlank()) {
+                  clearSearch()
+                  return
+              }
+              val api = contract ?: return
+              val currentSession = session ?: return
+              val spaceId = activeSpaceId ?: return
+              val operationEpoch = sessionEpoch
+              val trimmed = query.trim()
+
+              mutate { it.copy(searchBusy = true, searchProblem = null) }
+              viewModelScope.launch {
+                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
+                      .onSuccess { page ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                          lastSearchQuery = trimmed
+                          lastSearchKind = kind
+                          searchCursor = page.nextCursor
+                          mutate {
+                              it.copy(
+                                  searchResults = page.items,
+                                  searchBusy = false,
+                                  searchHasMore = page.nextCursor != null,
+                              )
+                          }
+                      }
+                      .onFailure { throwable ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                          mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
+                      }
+              }
+          }
+
+              fun loadMoreSearch() {
+              val api = contract ?: return
+              val currentSession = session ?: return
+              val spaceId = activeSpaceId ?: return
+              val cursor = searchCursor ?: return
+              val query = lastSearchQuery ?: return
+              if (_uiState.value.searchLoadingMore) return
+              val operationEpoch = sessionEpoch
+
+              mutate { it.copy(searchLoadingMore = true) }
+              viewModelScope.launch {
+                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, lastSearchKind, cursor) }
+                      .onSuccess { page ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                          searchCursor = page.nextCursor
+                          mutate {
+                              it.copy(
+                                  searchResults = it.searchResults + page.items,
+                                  searchHasMore = page.nextCursor != null,
+                                  searchLoadingMore = false,
+                              )
+                          }
+                      }
+                      .onFailure {
+                          if (isCurrentSession(operationEpoch, currentSession)) {
+                              mutate { it.copy(searchLoadingMore = false) }
+                          }
+                      }
+              }
+          }
+
+              fun clearSearch() {
+              searchCursor = null
+              lastSearchQuery = null
+              lastSearchKind = null
+              mutate {
+                  it.copy(
+                      searchResults = emptyList(),
+                      searchBusy = false,
+                      searchProblem = null,
+                      searchHasMore = false,
+                      searchLoadingMore = false,
+                  )
+              }
+          }
+          '''.replace('              ', '')
+          new_search = '''    fun search(query: String, kind: SearchKind? = null) {
+              if (query.isBlank()) {
+                  clearSearch()
+                  return
+              }
+              val api = contract ?: return
+              val currentSession = session ?: return
+              val spaceId = activeSpaceId ?: return
+              val operationEpoch = sessionEpoch
+              val trimmed = query.trim()
+              val requestGeneration = ++searchGeneration
+
+              // The new first page owns the search identity immediately. Clearing the
+              // old cursor prevents load-more from pairing Search B with Search A's cursor
+              // while Search B is still in flight.
+              searchCursor = null
+              lastSearchQuery = trimmed
+              lastSearchKind = kind
+              mutate {
+                  it.copy(
+                      searchBusy = true,
+                      searchProblem = null,
+                      searchHasMore = false,
+                      searchLoadingMore = false,
+                  )
+              }
+              viewModelScope.launch {
+                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
+                      .onSuccess { page ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                          if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onSuccess
+                          searchCursor = page.nextCursor
+                          mutate {
+                              it.copy(
+                                  searchResults = page.items,
+                                  searchBusy = false,
+                                  searchHasMore = page.nextCursor != null,
+                              )
+                          }
+                      }
+                      .onFailure { throwable ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                          if (!isCurrentSearch(requestGeneration, trimmed, kind)) return@onFailure
+                          mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
+                      }
+              }
+          }
+
+              fun loadMoreSearch() {
+              val api = contract ?: return
+              val currentSession = session ?: return
+              val spaceId = activeSpaceId ?: return
+              val cursor = searchCursor ?: return
+              val query = lastSearchQuery ?: return
+              val kind = lastSearchKind
+              if (_uiState.value.searchLoadingMore) return
+              val operationEpoch = sessionEpoch
+              val requestGeneration = searchGeneration
+
+              mutate { it.copy(searchLoadingMore = true) }
+              viewModelScope.launch {
+                  if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                  runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, kind, cursor) }
+                      .onSuccess { page ->
+                          if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                          if (!isCurrentSearch(requestGeneration, query, kind)) return@onSuccess
+                          searchCursor = page.nextCursor
+                          mutate {
+                              it.copy(
+                                  searchResults = it.searchResults + page.items,
+                                  searchHasMore = page.nextCursor != null,
+                                  searchLoadingMore = false,
+                              )
+                          }
+                      }
+                      .onFailure {
+                          if (
+                              isCurrentSession(operationEpoch, currentSession) &&
+                              isCurrentSearch(requestGeneration, query, kind)
+                          ) {
+                              mutate { it.copy(searchLoadingMore = false) }
+                          }
+                      }
+              }
+          }
+
+              fun clearSearch() {
+              searchGeneration += 1
+              searchCursor = null
+              lastSearchQuery = null
+              lastSearchKind = null
+              mutate {
+                  it.copy(
+                      searchResults = emptyList(),
+                      searchBusy = false,
+                      searchProblem = null,
+                      searchHasMore = false,
+                      searchLoadingMore = false,
+                  )
+              }
+          }
+          '''.replace('              ', '')
+          if vm.count(old_search) != 1:
+              raise SystemExit('Expected exactly one search method block')
+          vm = vm.replace(old_search, new_search, 1)
+
+          old_helper = '''    private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
+              sessionEpoch == epoch && session === currentSession
+          '''.replace('              ', '')
+          new_helper = '''    private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
+              sessionEpoch == epoch && session === currentSession
+
+              private fun isCurrentSearch(generation: Long, query: String, kind: SearchKind?): Boolean =
+              searchGeneration == generation && lastSearchQuery == query && lastSearchKind == kind
+          '''.replace('              ', '')
+          if vm.count(old_helper) != 1:
+              raise SystemExit('Expected exactly one session helper block')
+          vm = vm.replace(old_helper, new_helper, 1)
+          vm_path.write_text(vm)
+
+          test_path = Path('android/app/src/test/java/de/sidebyside/next/search/SearchTest.kt')
+          test = test_path.read_text()
+          if 'import kotlinx.coroutines.CompletableDeferred\n' not in test:
+              test = test.replace(
+                  'import kotlinx.coroutines.Dispatchers\n',
+                  'import kotlinx.coroutines.CompletableDeferred\nimport kotlinx.coroutines.Dispatchers\n',
+                  1,
+              )
+          if 'import kotlinx.coroutines.test.runCurrent\n' not in test:
+              test = test.replace(
+                  'import kotlinx.coroutines.test.resetMain\n',
+                  'import kotlinx.coroutines.test.resetMain\nimport kotlinx.coroutines.test.runCurrent\n',
+                  1,
+              )
+
+          marker = '''    @Test
+              fun aResultPageWithoutANextCursorReportsNoMore() = runTest(dispatcher) {
+          '''.replace('              ', '')
+          tests = '''    @Test
+              fun staleFirstPageFromOlderKindCannotReplaceNewerSearch() = runTest(dispatcher) {
+              val api = ControllableSearchApi()
+              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+              val currentResult = searchResult("A gift by the sea")
+
+              signIn(model)
+              model.search("sea", SearchKind.MEMORY)
+              runCurrent()
+              val staleFirstPage = api.calls.single()
+
+              model.search("sea", SearchKind.GIFT_IDEA)
+              runCurrent()
+              val currentFirstPage = api.calls.last()
+              currentFirstPage.response.complete(SearchPage(items = listOf(currentResult), nextCursor = "gift-page-2"))
+              runCurrent()
+
+              assertEquals(listOf(currentResult), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchHasMore)
+
+              staleFirstPage.response.complete(
+                  SearchPage(items = listOf(searchResult("Old memory result")), nextCursor = null),
+              )
+              advanceUntilIdle()
+
+              assertEquals(listOf(currentResult), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchHasMore)
+
+              model.loadMoreSearch()
+              runCurrent()
+              val currentPagination = api.calls.last()
+              assertEquals("sea", currentPagination.query)
+              assertEquals(SearchKind.GIFT_IDEA, currentPagination.kind)
+              assertEquals("gift-page-2", currentPagination.cursor)
+              currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
+              advanceUntilIdle()
+          }
+
+              @Test
+              fun staleLoadMoreIsIgnoredWhenItFinishesBeforeNewFirstPage() = runTest(dispatcher) {
+              val api = ControllableSearchApi()
+              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+              val oldFirst = searchResult("Old first page")
+              val newFirst = searchResult("New first page")
+
+              signIn(model)
+              model.search("old")
+              runCurrent()
+              api.calls[0].response.complete(SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"))
+              advanceUntilIdle()
+
+              model.loadMoreSearch()
+              runCurrent()
+              val staleLoadMore = api.calls[1]
+              model.search("new")
+              runCurrent()
+              val currentFirstPage = api.calls[2]
+
+              staleLoadMore.response.complete(
+                  SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
+              )
+              runCurrent()
+
+              assertEquals(listOf(oldFirst), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchBusy)
+              assertTrue(!model.uiState.value.searchHasMore)
+              assertTrue(!model.uiState.value.searchLoadingMore)
+
+              currentFirstPage.response.complete(SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"))
+              advanceUntilIdle()
+
+              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchHasMore)
+          }
+
+              @Test
+              fun staleLoadMoreIsIgnoredWhenNewFirstPageFinishesFirst() = runTest(dispatcher) {
+              val api = ControllableSearchApi()
+              val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+              val oldFirst = searchResult("Old first page")
+              val newFirst = searchResult("New first page")
+
+              signIn(model)
+              model.search("old")
+              runCurrent()
+              api.calls[0].response.complete(SearchPage(items = listOf(oldFirst), nextCursor = "old-page-2"))
+              advanceUntilIdle()
+
+              model.loadMoreSearch()
+              runCurrent()
+              val staleLoadMore = api.calls[1]
+              model.search("new")
+              runCurrent()
+              val currentFirstPage = api.calls[2]
+              currentFirstPage.response.complete(SearchPage(items = listOf(newFirst), nextCursor = "new-page-2"))
+              runCurrent()
+
+              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchHasMore)
+
+              staleLoadMore.response.complete(
+                  SearchPage(items = listOf(searchResult("Old second page")), nextCursor = null),
+              )
+              advanceUntilIdle()
+
+              assertEquals(listOf(newFirst), model.uiState.value.searchResults)
+              assertTrue(model.uiState.value.searchHasMore)
+
+              model.loadMoreSearch()
+              runCurrent()
+              val currentPagination = api.calls.last()
+              assertEquals("new-page-2", currentPagination.cursor)
+              currentPagination.response.complete(SearchPage(items = emptyList(), nextCursor = null))
+              advanceUntilIdle()
+          }
+
+          '''.replace('              ', '')
+          if test.count(marker) != 1:
+              raise SystemExit('Expected exactly one test insertion marker')
+          test = test.replace(marker, tests + marker, 1)
+
+          api_marker = 'private class SearchApi(\n'
+          controllable = '''private data class PendingSearchCall(
+              val query: String,
+              val kind: SearchKind?,
+              val cursor: String?,
+              val response: CompletableDeferred<SearchPage>,
+          )
+
+              private class ControllableSearchApi : FakeReferenceContract() {
+              val calls = mutableListOf<PendingSearchCall>()
+
+              override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+                  account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
+                  tokens = TokenView(
+                      accessExpiresAt = OffsetDateTime.now(),
+                      accessToken = "access",
+                      refreshExpiresAt = OffsetDateTime.now(),
+                      refreshToken = "refresh",
+                  ),
+              )
+
+              override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+                  listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+              override suspend fun search(
+                  spaceId: UUID,
+                  accessToken: String,
+                  query: String,
+                  kind: SearchKind?,
+                  cursor: String?,
+              ): SearchPage {
+                  val response = CompletableDeferred<SearchPage>()
+                  calls += PendingSearchCall(query = query, kind = kind, cursor = cursor, response = response)
+                  return response.await()
+              }
+          }
+
+          '''.replace('              ', '')
+          if test.count(api_marker) != 1:
+              raise SystemExit('Expected exactly one SearchApi marker')
+          test = test.replace(api_marker, controllable + api_marker, 1)
+          test_path.write_text(test)
+          PY
+
+      - name: Verify diff formatting
+        run: git diff --check
+
+      - name: Run focused Android search tests
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:testDebugUnitTest --tests de.sidebyside.next.search.SearchTest
+
+      - name: Commit scoped fix and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-fix-674.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/java/de/sidebyside/next/reference/ReferenceViewModel.kt \
+                  android/app/src/test/java/de/sidebyside/next/search/SearchTest.kt \
+                  .github/workflows/tmp-fix-674.yml
+          git commit -m "fix(android): ignore stale search pagination responses (#674)"
+          git push origin HEAD:fix/674-android-search-stale-pagination
