@@ -1,6 +1,7 @@
 import {
   ACTIVITY_ROUTE,
   APP_ROUTES,
+  CHAPTER_CREATE_ROUTE,
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
@@ -135,6 +136,7 @@ describe('content deep links', () => {
     expect(WISH_DETAIL_ROUTE_PATTERN).toBe('/plan/wishes/:wishId');
     expect(PLAN_DETAIL_ROUTE_PATTERN).toBe('/plan/plans/:planId');
     expect(PLACE_DETAIL_ROUTE_PATTERN).toBe('/plan/places/:placeId');
+    expect(CHAPTER_CREATE_ROUTE).toBe('/plan/chapters/new');
     expect(CHAPTER_DETAIL_ROUTE_PATTERN).toBe('/plan/chapters/:chapterId');
     expect(COLLECTION_DETAIL_ROUTE_PATTERN).toBe(
       '/plan/collections/:collectionId',

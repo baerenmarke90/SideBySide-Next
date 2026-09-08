@@ -1,4 +1,11 @@
-import { type FormEvent, useState } from 'react';
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -6,6 +13,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import { normalizeClientError } from '../client/problemDetails';
@@ -63,6 +71,160 @@ function PlanningCard({
         </div>
       </Link>
     </li>
+  );
+}
+
+function PlacePicker({
+  id,
+  label,
+  places,
+  selectedPlaceId,
+  onSelect,
+  onAddNewPlace,
+  noPlaceLabel,
+  addNewPlaceLabel,
+}: {
+  id: string;
+  label: string;
+  places: PlaceDetail[];
+  selectedPlaceId: string;
+  onSelect: (placeId: string) => void;
+  onAddNewPlace: () => void;
+  noPlaceLabel: string;
+  addNewPlaceLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent): void {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [open]);
+
+  function closeMenu(): void {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function focusItem(index: number): void {
+    const items =
+      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]');
+    if (!items?.length) return;
+    items[(index + items.length) % items.length]?.focus();
+  }
+
+  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
+    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setOpen(true);
+      window.requestAnimationFrame(() => focusItem(0));
+    }
+  }
+
+  function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    const items = Array.from(
+      rootRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [],
+    );
+    if (!items.length) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusItem(currentIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusItem(currentIndex <= 0 ? items.length - 1 : currentIndex - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusItem(items.length - 1);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMenu();
+    } else if (event.key === 'Tab') {
+      setOpen(false);
+    }
+  }
+
+  const selectedLabel =
+    places.find((place) => place.id === selectedPlaceId)?.name ?? noPlaceLabel;
+
+  return (
+    <div className="place-picker" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        className="place-picker-trigger"
+        onClick={() => setOpen((value) => !value)}
+        onKeyDown={handleTriggerKeyDown}
+      >
+        <span>{selectedLabel}</span>
+        <span className="place-picker-caret" aria-hidden="true" />
+      </button>
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label={label}
+          className="place-picker-menu"
+          onKeyDown={handleMenuKeyDown}
+        >
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={selectedPlaceId === ''}
+            className="place-picker-option"
+            onClick={() => {
+              onSelect('');
+              closeMenu();
+            }}
+          >
+            {noPlaceLabel}
+          </button>
+          {places.map((place) => (
+            <button
+              key={place.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={selectedPlaceId === place.id}
+              className="place-picker-option"
+              onClick={() => {
+                onSelect(place.id);
+                closeMenu();
+              }}
+            >
+              {place.name}
+            </button>
+          ))}
+          <hr className="place-picker-separator" />
+          <button
+            type="button"
+            role="menuitem"
+            className="place-picker-option place-picker-add"
+            onClick={() => {
+              setOpen(false);
+              onAddNewPlace();
+            }}
+          >
+            {addNewPlaceLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -134,6 +296,11 @@ export function SharedPlanningOverviewPage({
   const [isCreatingPlanPlace, setIsCreatingPlanPlace] = useState(false);
   const [newPlanPlaceName, setNewPlanPlaceName] = useState('');
   const [newPlanPlaceAddress, setNewPlanPlaceAddress] = useState('');
+  const newPlanPlaceNameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isCreatingPlanPlace) newPlanPlaceNameRef.current?.focus();
+  }, [isCreatingPlanPlace]);
 
   const createPlanPlace = useMutation({
     mutationFn: (values: { name: string; address?: string }) =>
@@ -173,12 +340,11 @@ export function SharedPlanningOverviewPage({
     const form = event.currentTarget;
     const data = new FormData(form);
     const description = String(data.get('description')).trim();
-    const placeId = String(data.get('placeId')).trim();
     createPlan.mutate(
       {
         title: String(data.get('title')).trim(),
         description: description || undefined,
-        placeId: placeId || undefined,
+        placeId: selectedPlanPlaceId || undefined,
       },
       {
         onSuccess: () => {
@@ -189,12 +355,6 @@ export function SharedPlanningOverviewPage({
       },
     );
   }
-
-  const placeChoices = (placesQuery.data ?? []).map((place) => (
-    <option key={place.id} value={place.id}>
-      {place.name}
-    </option>
-  ));
 
   return (
     <div className="page planning-page planning-sanctuary">
@@ -284,17 +444,16 @@ export function SharedPlanningOverviewPage({
                 <label htmlFor="create-plan-place">
                   {t('m5s3.common.place')}
                 </label>
-                <select
+                <PlacePicker
                   id="create-plan-place"
-                  name="placeId"
-                  value={selectedPlanPlaceId}
-                  onChange={(event) =>
-                    setSelectedPlanPlaceId(event.target.value)
-                  }
-                >
-                  <option value="">{t('m5s3.common.noPlace')}</option>
-                  {placeChoices}
-                </select>
+                  label={t('m5s3.common.place')}
+                  places={placesQuery.data ?? []}
+                  selectedPlaceId={selectedPlanPlaceId}
+                  onSelect={setSelectedPlanPlaceId}
+                  onAddNewPlace={() => setIsCreatingPlanPlace(true)}
+                  noPlaceLabel={t('m5s3.common.noPlace')}
+                  addNewPlaceLabel={t('m5s3.plan.addNewPlace')}
+                />
                 {isCreatingPlanPlace ? (
                   <div className="inline-place-create">
                     <div className="field-group">
@@ -303,6 +462,7 @@ export function SharedPlanningOverviewPage({
                       </label>
                       <input
                         id="new-plan-place-name"
+                        ref={newPlanPlaceNameRef}
                         value={newPlanPlaceName}
                         onChange={(event) =>
                           setNewPlanPlaceName(event.target.value)
@@ -356,15 +516,7 @@ export function SharedPlanningOverviewPage({
                       <ProblemState error={createPlanPlace.error} />
                     ) : null}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="tertiary compact-action"
-                    onClick={() => setIsCreatingPlanPlace(true)}
-                  >
-                    {t('m5s3.plan.addNewPlace')}
-                  </button>
-                )}
+                ) : null}
                 <button type="submit" disabled={createPlan.isPending}>
                   {createPlan.isPending
                     ? t('m5s3.common.saving')

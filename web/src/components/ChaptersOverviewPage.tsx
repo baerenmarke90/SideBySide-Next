@@ -1,19 +1,13 @@
-import type { FormEvent } from 'react';
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
 import { normalizeClientError } from '../client/problemDetails';
-import { appRoutePath, chapterDetailPath } from '../client/routes';
 import {
-  dateFromInput,
-  loadAllPlaces,
-  type SharedPlanningApis,
-} from '../client/sharedPlanning';
+  appRoutePath,
+  chapterDetailPath,
+  CHAPTER_CREATE_ROUTE,
+} from '../client/routes';
+import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -52,7 +46,6 @@ export function ChaptersOverviewPage({
   spaceId: string;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   const chapters = useInfiniteQuery({
     queryKey: ['m5-s3', 'chapters', spaceId],
@@ -69,52 +62,7 @@ export function ChaptersOverviewPage({
     retry: false,
   });
 
-  const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'chapter-places', spaceId],
-    queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
-    staleTime: 30_000,
-    retry: false,
-  });
-
-  const createChapter = useMutation({
-    mutationFn: (values: {
-      title: string;
-      description?: string;
-      startOn?: Date;
-      endOn?: Date;
-      placeId?: string;
-    }) =>
-      apiCall(() =>
-        apis.chapters.createChapter({ spaceId, chapterCreate: values }),
-      ),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['m5-s3', 'chapters', spaceId],
-      });
-    },
-  });
-
   const chapterItems = chapters.data?.pages.flatMap((page) => page.items) ?? [];
-
-  function submitChapter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const description = String(data.get('description')).trim();
-    const startOn = dateFromInput(String(data.get('startOn')).trim());
-    const endOn = dateFromInput(String(data.get('endOn')).trim());
-    const placeId = String(data.get('placeId')).trim();
-    createChapter.mutate(
-      {
-        title: String(data.get('title')).trim(),
-        description: description || undefined,
-        startOn: startOn ?? undefined,
-        endOn: endOn ?? undefined,
-        placeId: placeId || undefined,
-      },
-      { onSuccess: () => form.reset() },
-    );
-  }
 
   return (
     <div className="page planning-page">
@@ -127,6 +75,11 @@ export function ChaptersOverviewPage({
         eyebrow={t('navigation.story')}
         title={t('m5s3.chapter.heading')}
         description={t('m5s3.chapter.intro')}
+        action={
+          <Link className="button-link" to={CHAPTER_CREATE_ROUTE}>
+            {t('m5s3.chapter.create')}
+          </Link>
+        }
       />
 
       <section className="planning-subsection">
@@ -176,82 +129,6 @@ export function ChaptersOverviewPage({
               : t('m5s3.common.loadMore')}
           </button>
         ) : null}
-
-        <details className="planning-create" id="chapter-create-details">
-          <summary id="chapter-title">{t('m5s3.chapter.create')}</summary>
-          <div className="immersive-create-card">
-            <form onSubmit={submitChapter} className="immersive-create-form">
-              <div className="immersive-create-hero">
-                <label htmlFor="chapter-name" className="sr-only">
-                  {t('m5s3.common.title')}
-                </label>
-                <input
-                  id="chapter-name"
-                  name="title"
-                  required
-                  maxLength={200}
-                  placeholder={t('m5s3.common.title')}
-                  className="immersive-create-title"
-                />
-              </div>
-
-              <details className="immersive-create-details">
-                <summary>{t('m5s3.chapter.addMoreDetails')}</summary>
-                <div className="immersive-create-details-content">
-                  <div className="field-group">
-                    <label htmlFor="chapter-desc">
-                      {t('m5s3.common.description')}
-                    </label>
-                    <textarea id="chapter-desc" name="description" rows={3} />
-                  </div>
-                  <div className="planning-coordinate-grid">
-                    <div className="field-group">
-                      <label htmlFor="chapter-start">
-                        {t('m5s3.chapter.startOn')}
-                      </label>
-                      <input id="chapter-start" name="startOn" type="date" />
-                    </div>
-                    <div className="field-group">
-                      <label htmlFor="chapter-end">
-                        {t('m5s3.chapter.endOn')}
-                      </label>
-                      <input id="chapter-end" name="endOn" type="date" />
-                    </div>
-                  </div>
-                  <div className="field-group">
-                    <label htmlFor="chapter-place">
-                      {t('m5s3.common.place')}
-                    </label>
-                    <select
-                      id="chapter-place"
-                      name="placeId"
-                      defaultValue=""
-                      disabled={placesQuery.isLoading}
-                    >
-                      <option value="">{t('m5s3.common.noPlace')}</option>
-                      {(placesQuery.data ?? []).map((place) => (
-                        <option key={place.id} value={place.id}>
-                          {place.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </details>
-
-              <div className="form-actions">
-                <button type="submit" disabled={createChapter.isPending}>
-                  {createChapter.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-              </div>
-              {createChapter.error ? (
-                <ProblemState error={createChapter.error} />
-              ) : null}
-            </form>
-          </div>
-        </details>
       </section>
     </div>
   );

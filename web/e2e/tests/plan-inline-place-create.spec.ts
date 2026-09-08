@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import m5s3 from '../../src/i18n/locales/m5s3';
 
@@ -35,14 +35,26 @@ function placeDetail(place: MockPlace) {
 /**
  * A focused mock harness for the Plan Create / inline Place Create flow.
  * Unlike product-accessibility.spec.ts's mocks, this tracks created Places
- * server-side so the Place <select> can show a newly created Place immediately.
+ * server-side so the Place picker can show a newly created Place immediately.
  */
 async function installPlanningApiMocks(
   page: Page,
-  options: { placeCreateFails?: boolean } = {},
-): Promise<{ createPlaceCalls: number; createPlanCalls: number }> {
-  const places: MockPlace[] = [];
-  const calls = { createPlaceCalls: 0, createPlanCalls: 0 };
+  options: { placeCreateFails?: boolean; seedPlaces?: MockPlace[] } = {},
+): Promise<{
+  createPlaceCalls: number;
+  createPlanCalls: number;
+  lastPlanBody: { title: string; description?: string; placeId?: string } | null;
+}> {
+  const places: MockPlace[] = [...(options.seedPlaces ?? [])];
+  const calls = {
+    createPlaceCalls: 0,
+    createPlanCalls: 0,
+    lastPlanBody: null as {
+      title: string;
+      description?: string;
+      placeId?: string;
+    } | null,
+  };
 
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -180,6 +192,7 @@ async function installPlanningApiMocks(
         description?: string;
         placeId?: string;
       };
+      calls.lastPlanBody = body;
       await fulfillJson(
         {
           id: 'plan-1',
@@ -274,23 +287,61 @@ async function openPlanCreateForm(page: Page) {
   return form;
 }
 
-test('creating a new Place inline keeps the Plan draft and selects the new Place', async ({
+function placePickerTrigger(form: Locator) {
+  return form.getByRole('button', { name: m5s3.common.place, exact: true });
+}
+
+async function openPlacePicker(form: Locator) {
+  await placePickerTrigger(form).click();
+  return form.getByRole('menu', { name: m5s3.common.place });
+}
+
+async function clickAddNewPlaceInPicker(form: Locator) {
+  const menu = await openPlacePicker(form);
+  await menu.getByRole('menuitem', { name: m5s3.plan.addNewPlace }).click();
+}
+
+test('the place picker opens the no-place option and existing Places, with the add-new-place action visually separated', async ({
   page,
 }) => {
-  await installPlanningApiMocks(page);
+  await installPlanningApiMocks(page, {
+    seedPlaces: [{ id: 'place-1', name: 'Berlin', address: null }],
+  });
   await page.goto('/today');
   await signIn(page);
   const form = await openPlanCreateForm(page);
 
-  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  await expect(placePickerTrigger(form)).toHaveText(m5s3.common.noPlace);
+
+  const menu = await openPlacePicker(form);
+  await expect(
+    menu.getByRole('menuitemradio', { name: m5s3.common.noPlace }),
+  ).toBeVisible();
+  await expect(
+    menu.getByRole('menuitemradio', { name: 'Berlin' }),
+  ).toBeVisible();
+  await expect(
+    menu.getByRole('menuitem', { name: m5s3.plan.addNewPlace }),
+  ).toBeVisible();
+
+  await menu.getByRole('menuitemradio', { name: 'Berlin' }).click();
+  await expect(placePickerTrigger(form)).toHaveText('Berlin');
+  await expect(menu).toBeHidden();
+});
+
+test('creating a new Place from the picker keeps the Plan draft and selects the new Place, without leaking a sentinel placeId', async ({
+  page,
+}) => {
+  const calls = await installPlanningApiMocks(page);
+  await page.goto('/today');
+  await signIn(page);
+  const form = await openPlanCreateForm(page);
+
+  await clickAddNewPlaceInPicker(form);
   await form.getByLabel(m5s3.place.name, { exact: true }).fill('Colmar');
   await form.getByRole('button', { name: m5s3.plan.newPlaceSave }).click();
 
-  const placeSelect = form.getByLabel(m5s3.common.place, { exact: true });
-  await expect(placeSelect).toHaveValue('place-1');
-  await expect(
-    placeSelect.locator('option', { hasText: 'Colmar' }),
-  ).toHaveCount(1);
+  await expect(placePickerTrigger(form)).toHaveText('Colmar');
 
   await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
     PLAN_DRAFT_TITLE,
@@ -300,21 +351,28 @@ test('creating a new Place inline keeps the Plan draft and selects the new Place
   await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
     '',
   );
+  expect(calls.lastPlanBody?.placeId).toBe('place-1');
 });
 
-test('an existing Place can still be selected and the no-place default option remains available', async ({
+test('an existing Place can be selected and the no-place option remains the default', async ({
   page,
 }) => {
-  await installPlanningApiMocks(page);
+  await installPlanningApiMocks(page, {
+    seedPlaces: [{ id: 'place-1', name: 'Berlin', address: null }],
+  });
   await page.goto('/today');
   await signIn(page);
   const form = await openPlanCreateForm(page);
 
-  const placeSelect = form.getByLabel(m5s3.common.place, { exact: true });
-  await expect(placeSelect).toHaveValue('');
-  await expect(
-    placeSelect.locator('option', { hasText: m5s3.common.noPlace }),
-  ).toHaveCount(1);
+  await expect(placePickerTrigger(form)).toHaveText(m5s3.common.noPlace);
+
+  const menu = await openPlacePicker(form);
+  await menu.getByRole('menuitemradio', { name: 'Berlin' }).click();
+
+  await form.getByRole('button', { name: m5s3.common.save }).click();
+  await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
+    '',
+  );
 });
 
 test('a failed inline Place creation keeps the Plan draft and lets the user retry', async ({
@@ -325,7 +383,7 @@ test('a failed inline Place creation keeps the Plan draft and lets the user retr
   await signIn(page);
   const form = await openPlanCreateForm(page);
 
-  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  await clickAddNewPlaceInPicker(form);
   await form.getByLabel(m5s3.place.name, { exact: true }).fill('Colmar');
   await form.getByRole('button', { name: m5s3.plan.newPlaceSave }).click();
 
@@ -335,11 +393,10 @@ test('a failed inline Place creation keeps the Plan draft and lets the user retr
   );
   expect(calls.createPlaceCalls).toBe(1);
 
-  const placeSelect = form.getByLabel(m5s3.common.place, { exact: true });
-  await expect(placeSelect).toHaveValue('');
+  await expect(placePickerTrigger(form)).toHaveText(m5s3.common.noPlace);
 });
 
-test('an open empty inline Place panel does not block saving the Plan', async ({
+test('an open empty inline Place panel does not block saving the Plan and does not send a sentinel placeId', async ({
   page,
 }) => {
   const calls = await installPlanningApiMocks(page);
@@ -347,7 +404,7 @@ test('an open empty inline Place panel does not block saving the Plan', async ({
   await signIn(page);
   const form = await openPlanCreateForm(page);
 
-  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  await clickAddNewPlaceInPicker(form);
   await form.getByRole('button', { name: m5s3.common.save }).click();
 
   await expect(form.getByLabel(m5s3.common.title, { exact: true })).toHaveValue(
@@ -355,6 +412,7 @@ test('an open empty inline Place panel does not block saving the Plan', async ({
   );
   expect(calls.createPlaceCalls).toBe(0);
   expect(calls.createPlanCalls).toBe(1);
+  expect(calls.lastPlanBody?.placeId).toBeUndefined();
 });
 
 test('pressing Enter in inline Place fields does not submit the outer Plan', async ({
@@ -365,7 +423,7 @@ test('pressing Enter in inline Place fields does not submit the outer Plan', asy
   await signIn(page);
   const form = await openPlanCreateForm(page);
 
-  await form.getByRole('button', { name: m5s3.plan.addNewPlace }).click();
+  await clickAddNewPlaceInPicker(form);
   const nameInput = form.getByLabel(m5s3.place.name, { exact: true });
   await nameInput.fill('Colmar');
   await nameInput.press('Enter');

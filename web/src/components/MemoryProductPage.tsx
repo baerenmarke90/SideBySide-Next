@@ -582,7 +582,7 @@ export function MemoryProductPage({
 
       <div className="memory-detail-container">
         <article className="story-surface memory-detail-card coffee-table-layout">
-          <p className="memory-detail-body drop-cap">
+          <p className="memory-detail-body">
             {memory.body || t('memoryProduct.noBody')}
           </p>
 

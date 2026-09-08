@@ -11,6 +11,7 @@ import {
 import type { HeartMomentUpdate } from '../api/generated/models/HeartMomentUpdate';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { localDateInputValue, openNativeDatePicker } from '../client/dateInput';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   deleteProductReadCacheEntry,
@@ -391,6 +392,8 @@ export function HeartMomentProductPage({
                 name="happenedOn"
                 type="date"
                 required
+                defaultValue={localDateInputValue()}
+                onClick={openNativeDatePicker}
               />
             </div>
 

@@ -42,18 +42,6 @@
   line-height: 1.8;
 }
 
-.memory-detail-body.drop-cap::first-letter {
-  float: left;
-  font-family: var(--font-display);
-  font-size: 3.35rem;
-  line-height: 1;
-  font-weight: 700;
-  padding-top: 0.35rem;
-  margin-right: 0.5rem;
-  color: var(--color-brand);
-  text-transform: uppercase;
-}
-
 .memory-section-head {
   margin-bottom: var(--space-4);
 }

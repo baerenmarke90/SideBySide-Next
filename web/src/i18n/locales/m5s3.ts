@@ -130,6 +130,11 @@ const m5s3 = {
     heading: 'Kapitel',
     intro: 'Kapitel bündeln eure gemeinsamen Erinnerungen und Meilensteine.',
     create: 'Kapitel hinzufügen',
+    createEyebrow: 'Kapitel anlegen',
+    createHeading: 'Neues Kapitel',
+    createIntro:
+      'Gebt eurem Kapitel einen Titel und ordnet Erinnerungen, Herzmomente und Meilensteine später darin ein.',
+    formAria: 'Kapitel anlegen',
     addMoreDetails: 'Beschreibung, Zeitraum und Ort hinzufügen (optional)',
     loading: 'Kapitel wird geladen …',
     detailEyebrow: 'Gemeinsames Kapitel',
