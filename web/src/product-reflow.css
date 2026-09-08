@@ -7,6 +7,11 @@
  * responsive; each route page is the containment boundary for content layout
  * decisions so containment cannot alter the shell content wrapper's sizing.
  */
+.product-shell {
+  container-name: product-shell;
+  container-type: inline-size;
+}
+
 .product-main {
   min-width: 0;
 }
@@ -27,6 +32,21 @@
 .story-timeline,
 .story-surface {
   min-width: 0;
+}
+
+/* The private-context badge already leaves the visual compact topbar at the
+   established <=839px viewport breakpoint. Mirror that existing shell contract
+   when root zoom makes the shell itself effectively narrow. The label stays in
+   the accessibility tree; only its visual space is removed. */
+@container product-shell (max-width: 52.4375rem) {
+  .product-topbar .private-context {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
 }
 
 /* Existing <= 760px compact contracts, keyed to available product width. */
