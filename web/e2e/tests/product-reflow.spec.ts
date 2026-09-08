@@ -419,10 +419,9 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
     result.scrollWidth,
     `Horizontal overflow on ${result.route}: ${JSON.stringify(result.overflowingBoxes, null, 2)}`,
   ).toBeLessThanOrEqual(result.clientWidth);
-  expect(
-    result.clippedControls,
-    `Clipped controls on ${result.route}`,
-  ).toEqual([]);
+  expect(result.clippedControls, `Clipped controls on ${result.route}`).toEqual(
+    [],
+  );
 }
 
 async function openSurfaceAt400Percent(
