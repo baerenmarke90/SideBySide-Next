@@ -544,6 +544,100 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert str(foreign_date.id) not in ids
 
 
+def test_upcoming_important_date_annual_feb29_resolves_to_feb28_in_non_leap_year(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Issue #699: Feb-29 annual recurrence must resolve to Feb-28 rather than
+    skipping non-leap years until the next leap year."""
+    _freeze(monkeypatch, datetime(2027, 1, 15, 12, 0, tzinfo=UTC))
+    important = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.ANNIVERSARY.value,
+        date=date(2020, 2, 29),
+        repeats=DateRepeat.ANNUALLY.value,
+        payload=ImportantDatePayload(label="Leap day anniversary"),
+    )
+    session.add(important)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    item = next(entry for entry in response.json()["upcoming"] if entry["id"] == str(important.id))
+    assert item["occurredOn"] == "2027-02-28"
+
+
+def test_upcoming_important_date_annual_feb29_stays_feb29_in_leap_year(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch, datetime(2028, 1, 15, 12, 0, tzinfo=UTC))
+    important = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.ANNIVERSARY.value,
+        date=date(2020, 2, 29),
+        repeats=DateRepeat.ANNUALLY.value,
+        payload=ImportantDatePayload(label="Leap day anniversary"),
+    )
+    session.add(important)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    item = next(entry for entry in response.json()["upcoming"] if entry["id"] == str(important.id))
+    assert item["occurredOn"] == "2028-02-29"
+
+
+def test_upcoming_relationship_anniversary_feb29_resolves_to_feb28_in_non_leap_year(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch, datetime(2027, 1, 15, 12, 0, tzinfo=UTC))
+    profile = session.execute(
+        select(SpaceProfile).where(SpaceProfile.space_id == couple["space"].id)
+    ).scalar_one()
+    profile.relationship_started_on = date(2020, 2, 29)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    anniversary = next(
+        entry for entry in response.json()["upcoming"] if entry["type"] == "ANNIVERSARY"
+    )
+    assert anniversary["occurredOn"] == "2027-02-28"
+
+
+def test_upcoming_annual_occurrence_boundary_before_and_after(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """The caller's timezone-derived `today` decides which side of the
+    boundary an annual occurrence falls on."""
+    important = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.ANNIVERSARY.value,
+        date=date(2020, 6, 15),
+        repeats=DateRepeat.ANNUALLY.value,
+        payload=ImportantDatePayload(label="Mid-year anniversary"),
+    )
+    session.add(important)
+    session.flush()
+
+    _freeze(monkeypatch, datetime(2026, 6, 14, 12, 0, tzinfo=UTC))
+    before = _dashboard(client, couple)
+    assert before.status_code == 200
+    item = next(e for e in before.json()["upcoming"] if e["id"] == str(important.id))
+    assert item["occurredOn"] == "2026-06-15"
+
+    _freeze(monkeypatch, datetime(2026, 6, 16, 12, 0, tzinfo=UTC))
+    after = _dashboard(client, couple)
+    assert after.status_code == 200
+    item = next(e for e in after.json()["upcoming"] if e["id"] == str(important.id))
+    assert item["occurredOn"] == "2027-06-15"
+
+
 def test_recognition_fields_are_bounded(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     _freeze(monkeypatch)
     memory = Memory(
