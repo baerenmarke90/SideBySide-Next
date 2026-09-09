@@ -273,6 +273,39 @@ for (const colorScheme of ['light', 'dark'] as const) {
   });
 }
 
+for (const width of [390, 320] as const) {
+  test(`Memory Create keeps the shared-visibility note compact and secondary to the title at ${width}px (#849)`, async ({
+    page,
+  }) => {
+    await installApiMocks(page);
+    await page.goto('/today');
+    await signIn(page);
+
+    await page.goto('/story/memories/new');
+    await page.setViewportSize({ width, height: 844 });
+    await expect(
+      page.getByRole('heading', { name: de.memory.heading }),
+    ).toBeVisible();
+
+    const note = page.locator('.immersive-sharing-note');
+    await expect(note).toBeVisible();
+    await expect(note).toHaveAttribute('role', 'note');
+
+    const title = page.getByLabel(de.memory.titleLabel);
+    const noteBox = await note.boundingBox();
+    const titleBox = await title.boundingBox();
+    if (!noteBox || !titleBox) throw new Error('Note or title did not render.');
+
+    // Before the reflow fix the note wrapped into an oversized teal/green
+    // block (150px+) that dwarfed the title field it precedes. A compact,
+    // secondary treatment stays well under that regressed height.
+    expect(noteBox.height).toBeLessThan(110);
+    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(titleBox.y);
+
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
 test('HeartMoment Create defaults the date to local today and stays typeable', async ({
   page,
 }) => {
