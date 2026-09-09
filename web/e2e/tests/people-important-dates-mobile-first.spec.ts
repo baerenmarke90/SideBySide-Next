@@ -10,9 +10,9 @@ const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 const TEST_NOW = '2026-09-09T10:00:00Z';
 const LONG_PERSON_NAME =
-  'Alexandra Maximiliane von Beispielhausen mit einem außergewöhnlich langen Namen';
+  'Alexandra Maximiliane Example-Surname With An Exceptionally Long Display Name';
 const LONG_DATE_LABEL =
-  'Unser erster gemeinsamer Urlaub am Meer und der Beginn einer sehr langen gemeinsamen Reise';
+  'Our first shared seaside holiday and the beginning of an exceptionally long journey together';
 
 async function expectNoWcagViolations(page: Page): Promise<void> {
   const result = await new AxeBuilder({ page })
@@ -109,7 +109,7 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
 
     if (method === 'POST' && pathname === '/api/v1/auth/sign-in') {
       await fulfillJson({
-        account: { id: ACCOUNT_ID, displayName: 'Lea Sommer' },
+        account: { id: ACCOUNT_ID, displayName: 'Lea Summer' },
         tokens: {
           accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
           accessToken: 'people-e2e-access-token',
@@ -131,7 +131,7 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
     }
 
     if (method === 'GET' && pathname === '/api/v1/auth/me') {
-      await fulfillJson({ id: ACCOUNT_ID, displayName: 'Lea Sommer' });
+      await fulfillJson({ id: ACCOUNT_ID, displayName: 'Lea Summer' });
       return;
     }
 
@@ -152,7 +152,7 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
         id: SPACE_ID,
         createdAt: '2023-06-17T00:00:00Z',
         partners: [
-          { id: ACCOUNT_ID, displayName: 'Lea Sommer' },
+          { id: ACCOUNT_ID, displayName: 'Lea Summer' },
           { id: PARTNER_ID, displayName: 'Alex Winter' },
         ],
       });
@@ -184,7 +184,7 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
       await fulfillJson({
         accountId: ACCOUNT_ID,
         createdAt: TEST_NOW,
-        displayName: 'Lea Sommer',
+        displayName: 'Lea Summer',
         id: PROFILE_ID,
         preferences: [],
         profileAttachmentId: null,
@@ -276,7 +276,7 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
         },
         {
           id: 'date-2',
-          label: 'Maras Geburtstag',
+          label: 'Mara birthday',
           date: '2026-11-03',
           relatedPersonId: 'person-2',
           repeats: 'ANNUALLY',
@@ -427,9 +427,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
   await expect(page.getByLabel(people.nameLabel)).toBeFocused();
-  await expect(
-    dialog.locator('.focused-editor-disclosure'),
-  ).not.toHaveAttribute('open');
+  await expect(dialog.locator('.focused-editor-disclosure')).not.toHaveAttribute(
+    'open',
+  );
   await expect(page.getByLabel(people.visibilityLabel)).toBeVisible();
   await expectHorizontalReflow(page);
   await expectNoWcagViolations(page);
@@ -499,7 +499,9 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 
-  const personCreate = page.getByRole('button', { name: people.addPersonAction });
+  const personCreate = page.getByRole('button', {
+    name: people.addPersonAction,
+  });
   await personCreate.click();
   dialog = page.getByRole('dialog');
   await expectHorizontalReflow(page);
@@ -540,9 +542,11 @@ test('focused editors keep completion reachable at small height and adapt withou
   await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole('button', {
-    name: new RegExp(LONG_DATE_LABEL.slice(0, 32), 'i'),
-  }).click();
+  await page
+    .getByRole('button', {
+      name: new RegExp(LONG_DATE_LABEL.slice(0, 32), 'i'),
+    })
+    .click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/focused-editor-sheet/);
   await expect(dialog.locator('.focused-editor-actions')).toBeVisible();
