@@ -156,16 +156,21 @@ jobs:
       - name: Tests without integration
         run: uv run --frozen pytest -m "not integration" -q
 
-  backend-integration:
-    name: Backend Integration
+  backend_integration_shards:
+    name: Backend Integration Shard ${{ matrix.shard }}/4
     needs: changes
     if: needs.changes.outputs.backend_integration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
-    # Run database tests and schema/migration checks separately from the static
-    # and unit gate. This executes expensive integration tests exactly once per
-    # commit and allows both backend gates to run in parallel.
+    # Each shard gets its own runner and PostgreSQL service. The deterministic
+    # selector partitions the collected integration node IDs exactly once, so
+    # the gate keeps full coverage without forcing all database tests through a
+    # single ~23-minute runner.
     services:
       postgres:
         image: postgres:17-alpine
@@ -221,28 +226,75 @@ jobs:
           rm alembic/versions/drift_check_*.py
 
       - name: Integration tests actually ran
-        # A skipped security test must not look like a passing test. The
-        # machine-readable JUnit report proves that at least one integration
-        # test ran and that none were skipped.
+        # Collect once per isolated shard, split node IDs deterministically, and
+        # retain the existing no-skips guarantee. --durations keeps the slowest
+        # tests visible so future fixture regressions can be optimized directly.
         run: |
+          collection=$(mktemp)
+          selected_file=$(mktemp)
           report=$(mktemp)
-          uv run --frozen pytest -m integration -q --junitxml="$report"
-          uv run --frozen python - "$report" <<'PY'
+          uv run --frozen pytest -m integration --collect-only -q > "$collection"
+          python ../tools/ci/pytest_shard.py \
+            --shard "${{ matrix.shard }}" \
+            --shard-count 4 \
+            < "$collection" > "$selected_file"
+          mapfile -t selected < "$selected_file"
+          expected="${#selected[@]}"
+          if [ "$expected" -eq 0 ]; then
+            echo "Integration shard ${{ matrix.shard }}/4 selected no tests."
+            exit 1
+          fi
+          echo "Integration shard ${{ matrix.shard }}/4 selected $expected tests."
+          uv run --frozen pytest -m integration -q --durations=20 \
+            --junitxml="$report" "${selected[@]}"
+          uv run --frozen python - "$report" "$expected" <<'PY'
           import sys
           import xml.etree.ElementTree as ET
 
           root = ET.parse(sys.argv[1]).getroot()
+          expected = int(sys.argv[2])
           testcases = root.findall(".//testcase")
           skipped = sum(case.find("skipped") is not None for case in testcases)
 
-          if not testcases:
-              raise SystemExit("No integration tests ran.")
+          if len(testcases) != expected:
+              raise SystemExit(
+                  f"Expected {expected} integration tests, but JUnit contains {len(testcases)}."
+              )
           if skipped:
               raise SystemExit(
                   f"{skipped} integration test(s) were skipped - "
                   "is the database unavailable?"
               )
           PY
+
+  backend-integration:
+    name: Backend Integration
+    needs: [changes, backend_integration_shards]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The repository ruleset requires the exact "Backend Integration" context.
+    # Keep that stable while the expensive work fans out into matrix shards.
+    steps:
+      - name: Verify integration shards
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+          INTEGRATION_REQUIRED: ${{ needs.changes.outputs.backend_integration }}
+          SHARDS_RESULT: ${{ needs.backend_integration_shards.result }}
+        run: |
+          if [ "$CHANGE_RESULT" != "success" ]; then
+            echo "Change Detection did not succeed: $CHANGE_RESULT"
+            exit 1
+          fi
+          if [ "$INTEGRATION_REQUIRED" != "true" ]; then
+            echo "Backend integration is not required for this change set."
+            exit 0
+          fi
+          if [ "$SHARDS_RESULT" != "success" ]; then
+            echo "One or more Backend Integration shards did not succeed: $SHARDS_RESULT"
+            exit 1
+          fi
+          echo "All Backend Integration shards succeeded."
 
   self-hosted:
     name: Self-Hosted Start
