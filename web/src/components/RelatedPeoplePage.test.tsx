@@ -1,19 +1,15 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  cleanup,
+  fireEvent,
   render,
   screen,
-  fireEvent,
   waitFor,
-  cleanup,
   within,
 } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-afterEach(() => {
-  cleanup();
-});
 import type { PeopleApi } from '../api/generated/apis/PeopleApi';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { PersonRelationship } from '../api/generated/models/PersonRelationship';
@@ -25,6 +21,10 @@ import {
   DeleteRelatedPersonDialogContent,
   RelatedPeoplePage,
 } from './RelatedPeoplePage';
+
+afterEach(() => {
+  cleanup();
+});
 
 const person: RelatedPersonView = {
   id: 'person-1',
@@ -101,7 +101,7 @@ describe('RelatedPerson delete dialog', () => {
   });
 });
 
-describe('RelatedPeoplePage redesigned surface', () => {
+describe('RelatedPeoplePage mobile-first surface', () => {
   function createMockPeopleApi(
     initialPeople: RelatedPersonView[] = [person],
   ): PeopleApi {
@@ -151,14 +151,13 @@ describe('RelatedPeoplePage redesigned surface', () => {
     );
   }
 
-  it('renders person list as primary surface without side rail form', async () => {
+  it('protects W08 by keeping the avatar-led people overview without a side rail', async () => {
     const { container } = renderRelatedPeoplePage();
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
     });
 
-    // No permanent side rail
     expect(container.querySelector('.layout-rail')).toBeNull();
     expect(container.querySelector('.layout-split')).toBeNull();
 
@@ -169,31 +168,50 @@ describe('RelatedPeoplePage redesigned surface', () => {
     expect(card?.textContent).toContain('LI');
   });
 
-  it('opens create modal dialog on add person button click', async () => {
-    renderRelatedPeoplePage();
+  it('opens W54 as a focused sheet with identity first and optional birthday disclosure', async () => {
+    const { container } = renderRelatedPeoplePage();
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
     });
 
-    const addBtn = screen.getByRole('button', {
+    const addButton = screen.getByRole('button', {
       name: new RegExp(people.addPersonAction, 'i'),
     });
-    fireEvent.click(addBtn);
+    addButton.focus();
+    fireEvent.click(addButton);
 
     const dialog = screen.getByRole('dialog');
-    expect(dialog).not.toBeNull();
+    expect(dialog.classList.contains('focused-editor-sheet')).toBe(true);
     expect(
       screen.getByRole('heading', { name: people.createTitle }),
     ).not.toBeNull();
-    expect(screen.getByLabelText(people.nameLabel)).not.toBeNull();
+    expect(
+      screen.getByRole('heading', { name: people.identitySectionTitle }),
+    ).not.toBeNull();
 
-    // Close via Escape key
+    const nameInput = screen.getByLabelText(people.nameLabel) as HTMLInputElement;
+    expect(nameInput).toBe(document.activeElement);
+    expect(nameInput.required).toBe(true);
+    expect(nameInput.maxLength).toBe(120);
+
+    const birthdayDisclosure = container.querySelector(
+      '.focused-editor-disclosure',
+    ) as HTMLDetailsElement | null;
+    expect(birthdayDisclosure).not.toBeNull();
+    expect(birthdayDisclosure?.open).toBe(false);
+
+    expect(screen.getByLabelText(people.visibilityLabel)).not.toBeNull();
+    expect(
+      within(dialog).getByRole('button', { name: people.create }),
+    ).not.toBeNull();
+
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(addButton).toBe(document.activeElement);
   });
 
-  it('opens edit modal dialog on card click and allows deleting', async () => {
+  it('opens W55 from the full person card and keeps destructive lifecycle separate', async () => {
     renderRelatedPeoplePage();
 
     await waitFor(() => {
@@ -203,23 +221,23 @@ describe('RelatedPeoplePage redesigned surface', () => {
     const card = screen
       .getByRole('heading', { name: 'Lisa' })
       .closest('.people-card');
-    expect(card).not.toBeNull();
     if (!card) throw new Error('card not found');
     fireEvent.click(card);
 
     const editDialog = screen.getByRole('dialog');
-    expect(editDialog).not.toBeNull();
+    expect(editDialog.classList.contains('related-person-editor')).toBe(true);
     expect(
       screen.getByRole('heading', { name: people.editTitle }),
     ).not.toBeNull();
     expect(screen.getByDisplayValue('Lisa')).not.toBeNull();
 
-    // Has delete action
-    const deleteBtn = screen.getByRole('button', { name: people.delete });
-    expect(deleteBtn).not.toBeNull();
+    const deleteButton = screen.getByRole('button', { name: people.delete });
+    expect(deleteButton.closest('.focused-editor-danger-zone')).not.toBeNull();
+    expect(
+      within(editDialog).getByRole('button', { name: people.saveChanges }),
+    ).not.toBeNull();
 
-    // Clicking delete opens delete confirmation dialog
-    fireEvent.click(deleteBtn);
+    fireEvent.click(deleteButton);
     expect(
       screen.getByRole('heading', { name: people.deleteTitle }),
     ).not.toBeNull();
@@ -227,13 +245,12 @@ describe('RelatedPeoplePage redesigned surface', () => {
       screen.getByText(new RegExp(people.deletePreserveTitle, 'i')),
     ).not.toBeNull();
 
-    // Cancel returns to page
-    const cancelBtn = screen.getByRole('button', { name: de.common.cancel });
-    fireEvent.click(cancelBtn);
+    const cancelButton = screen.getByRole('button', { name: de.common.cancel });
+    fireEvent.click(cancelButton);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('hides the Dashboard-visibility toggle until a birthday exists, then defaults it off', async () => {
+  it('keeps the Dashboard-visibility toggle conditional on a birthday', async () => {
     const { container } = renderRelatedPeoplePage();
 
     await waitFor(() => {
@@ -247,7 +264,11 @@ describe('RelatedPeoplePage redesigned surface', () => {
 
     expect(screen.queryByLabelText(people.birthdayShowOnDashboard)).toBeNull();
 
-    // Create mode starts with a known-year birthday field already active.
+    const disclosure = container.querySelector(
+      '.focused-editor-disclosure',
+    ) as HTMLDetailsElement;
+    fireEvent.click(within(disclosure).getByText(people.birthdayLabel));
+
     const birthdayInput = container.querySelector<HTMLInputElement>(
       '#related-person-birthday',
     );
@@ -340,6 +361,24 @@ describe('RelatedPeoplePage redesigned surface', () => {
     expect(call.relatedPersonFields.showBirthdayOnDashboard).toBe(false);
   });
 
+  it('preserves long names in the editor without changing the stored value', async () => {
+    const longName =
+      'Alexandra Maximiliane von Beispielhausen mit einem außergewöhnlich langen Namen';
+    const longPerson = { ...person, displayName: longName };
+    renderRelatedPeoplePage(createMockPeopleApi([longPerson]));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: longName })).not.toBeNull();
+    });
+    const card = screen
+      .getByRole('heading', { name: longName })
+      .closest('.people-card');
+    if (!card) throw new Error('card not found');
+    fireEvent.click(card);
+
+    expect(screen.getByDisplayValue(longName)).not.toBeNull();
+  });
+
   it('manages body scroll lock and revokes avatar object URLs on replacement and unmount', async () => {
     document.body.style.overflow = 'visible';
     const originalCreate = URL.createObjectURL;
@@ -355,34 +394,27 @@ describe('RelatedPeoplePage redesigned surface', () => {
       expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
     });
 
-    const addBtn = screen.getByRole('button', {
+    const addButton = screen.getByRole('button', {
       name: new RegExp(people.addPersonAction, 'i'),
     });
-    fireEvent.click(addBtn);
+    fireEvent.click(addButton);
 
     expect(document.body.style.overflow).toBe('hidden');
 
     const fileInput = screen.getByLabelText(people.avatarLabel);
     const file1 = new File(['image1'], 'avatar1.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file1] } });
-
     expect(createObjectURLSpy).toHaveBeenCalledWith(file1);
 
-    // Replace with second file
     createObjectURLSpy.mockReturnValue('blob:test-avatar-2');
     const file2 = new File(['image2'], 'avatar2.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file2] } });
-
-    // First URL revoked
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-1');
 
-    // Close modal via close button
-    const closeBtn = screen.getByRole('button', {
-      name: people.closeDialogAria,
-    });
-    fireEvent.click(closeBtn);
+    fireEvent.click(
+      screen.getByRole('button', { name: people.closeDialogAria }),
+    );
 
-    // Second URL revoked on unmount
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-2');
     expect(document.body.style.overflow).toBe('visible');
 
