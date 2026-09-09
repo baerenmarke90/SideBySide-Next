@@ -6,9 +6,11 @@ import type { AccountView } from '../api/generated/models/AccountView';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { DashboardItemType } from '../api/generated/models/DashboardItemType';
+import { DashboardModuleKey } from '../api/generated/models/DashboardModuleKey';
 import type { DashboardRelationshipDuration } from '../api/generated/models/DashboardRelationshipDuration';
 import type { DashboardView } from '../api/generated/models/DashboardView';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
+import { dashboardPreferencesQueryKey } from '../client/dashboardPreferences';
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
 import {
@@ -28,6 +30,10 @@ import { CouplePresence } from './CouplePresence';
 import { MemoryPreview } from './MemoryPreview';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
+import {
+  SharedStorySummary,
+  sharedStorySummaryIsEligible,
+} from './SharedStorySummary';
 import { ThinkingOfYouButton } from './ThinkingOfYouButton';
 import { UiState } from './UiState';
 import './TodayPage.css';
@@ -601,6 +607,17 @@ export function TodayPage({
     retry: false,
   });
 
+  const sharedStorySummaryEligible = dashboardQuery.data?.sharedStorySummary
+    ? sharedStorySummaryIsEligible(dashboardQuery.data.sharedStorySummary)
+    : false;
+  const dashboardPreferencesQuery = useQuery({
+    queryKey: dashboardPreferencesQueryKey(spaceId),
+    queryFn: () =>
+      apiCall(() => apis.dashboard.listDashboardModulePreferences({ spaceId })),
+    enabled: sharedStorySummaryEligible,
+    retry: false,
+  });
+
   const activityQuery = useQuery({
     queryKey: ['m4', 'activity', spaceId],
     queryFn: () =>
@@ -704,6 +721,14 @@ export function TodayPage({
       !relationshipSignalItem &&
       !serverKeepsake,
   );
+  const sharedStorySummaryVisible =
+    sharedStorySummaryEligible &&
+    (dashboardPreferencesQuery.data?.items.some(
+      (item) =>
+        item.moduleKey === DashboardModuleKey.SHARED_STORY_SUMMARY &&
+        item.visible,
+    ) ??
+      false);
 
   const keepsakeSection = keepsakeItem ? (
     <TodayModuleSection
@@ -914,6 +939,12 @@ export function TodayPage({
                     </Link>
                   </div>
                 </TodayModuleSection>
+              ) : null}
+
+              {sharedStorySummaryVisible ? (
+                <SharedStorySummary
+                  summary={dashboardQuery.data.sharedStorySummary}
+                />
               ) : null}
             </>
           )}

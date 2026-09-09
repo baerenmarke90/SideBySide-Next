@@ -138,6 +138,11 @@ def test_dashboard_is_shared_only_and_private_no_store(
         "displayName": "Ben",
     }
     assert body["retrospective"]["id"] == str(shared_heart.id)
+    assert body["sharedStorySummary"] == {
+        "memories": 0,
+        "heartMoments": 1,
+        "milestones": 0,
+    }
 
     visible_ids = {
         item["id"] for section in (body["upcoming"], body["recentShared"]) for item in section
@@ -153,6 +158,7 @@ def test_dashboard_is_shared_only_and_private_no_store(
         "keepsake",
         "upcoming",
         "recentShared",
+        "sharedStorySummary",
         "thinkingOfYouAvailableAt",
     }
 

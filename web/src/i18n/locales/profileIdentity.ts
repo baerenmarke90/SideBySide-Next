@@ -33,9 +33,16 @@ const profileIdentity = {
   settingsIntro:
     'Hier verwaltest du deine persönlichen App-Einstellungen, Verbindungen und Daten.',
   settingsPageIntro:
-    'Eure Verbindung zuerst, danach Benachrichtigungen, Darstellung, Daten und sensible Aktionen.',
+    'Eure Verbindung zuerst, danach Dashboard, Benachrichtigungen, Darstellung, Daten und sensible Aktionen.',
   settingsIdentity: 'Profilbild und Anzeigename',
   settingsRelationship: 'Partner und Verbindung',
+  settingsDashboard: 'Dashboard',
+  settingsDashboardIntro:
+    'Blende die Bereiche ein, die du in deiner Übersicht sehen möchtest.',
+  dashboardModuleSharedStorySummary: 'Geschichte in Zahlen',
+  dashboardModuleVisibleHelp: 'In deiner Übersicht anzeigen',
+  dashboardSettingsLoading: 'Dashboard-Einstellungen werden geladen …',
+  dashboardSettingsSaving: 'Wird gespeichert …',
   settingsNotifications: 'Benachrichtigungen',
   settingsNotificationsIntro:
     'Lege fest, wie eimir. dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',

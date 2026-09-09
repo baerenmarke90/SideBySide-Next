@@ -1,5 +1,7 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import m5s5 from '../../src/i18n/locales/m5s5';
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const PARTNER_ID = '44444444-4444-4444-8444-444444444444';
@@ -192,10 +194,18 @@ async function installApiMocks(page: Page): Promise<string[]> {
         space: { spaceId: SPACE_ID, partner: PARTNER },
         relationshipDuration: {
           daysTogether: 1174,
+          displayMode: 'DAYS',
           startedOn: '2023-06-17',
         },
         retrospective: null,
+        keepsake: null,
         recentShared: [],
+        sharedStorySummary: {
+          memories: 4,
+          heartMoments: 1,
+          milestones: 0,
+        },
+        thinkingOfYouAvailableAt: null,
         upcoming: [
           {
             id: 'plan-1',
@@ -210,6 +220,16 @@ async function installApiMocks(page: Page): Promise<string[]> {
             scheduledAt: '2026-09-12T18:00:00Z',
           },
         ],
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+    ) {
+      await fulfillJson({
+        items: [{ moduleKey: 'SHARED_STORY_SUMMARY', visible: true }],
       });
       return;
     }
@@ -344,6 +364,28 @@ async function signIn(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/today$/);
 }
 
+async function expectNoWcagViolations(page: Page): Promise<void> {
+  const result = await new AxeBuilder({ page })
+    .withTags([
+      'wcag2a',
+      'wcag2aa',
+      'wcag21a',
+      'wcag21aa',
+      'wcag22a',
+      'wcag22aa',
+    ])
+    .analyze();
+
+  const summary = result.violations
+    .map(
+      (violation) =>
+        `${violation.id} (${violation.impact ?? 'unknown'}): ${violation.nodes.length} node(s)`,
+    )
+    .join('\n');
+
+  expect(result.violations, summary || 'No axe violations').toEqual([]);
+}
+
 async function expectHorizontalReflow(page: Page): Promise<void> {
   const result = await page.evaluate(() => {
     const root = document.documentElement;
@@ -467,7 +509,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 test('representative layout families keep their accepted normal viewport reflow', async ({
   page,
-}) => {
+}, testInfo) => {
   test.setTimeout(120_000);
   const unexpectedRequests = await installApiMocks(page);
   await page.setViewportSize({ width: 390, height: 900 });
@@ -489,6 +531,21 @@ test('representative layout families keep their accepted normal viewport reflow'
       await page.goto(path);
       await expect(page.locator('#main-content')).toBeVisible();
       await expectHorizontalReflow(page);
+      if (path === '/today') {
+        await expect(
+          page.getByRole('heading', {
+            name: m5s5.dashboard.storySummaryTitle,
+            level: 2,
+          }),
+        ).toBeVisible();
+        if (width === 320 || width === 1440) {
+          await expectNoWcagViolations(page);
+          await page.screenshot({
+            path: testInfo.outputPath(`shell-today-story-summary-${width}.png`),
+            fullPage: true,
+          });
+        }
+      }
     }
   }
 

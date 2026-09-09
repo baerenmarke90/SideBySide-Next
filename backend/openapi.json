@@ -1418,6 +1418,61 @@
         "title": "DashboardItemType",
         "type": "string"
       },
+      "DashboardModuleKey": {
+        "description": "Stable product keys for modules registered with Dashboard settings.",
+        "enum": [
+          "SHARED_STORY_SUMMARY"
+        ],
+        "title": "DashboardModuleKey",
+        "type": "string"
+      },
+      "DashboardModulePreferenceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardModulePreferenceView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DashboardModulePreferenceList",
+        "type": "object"
+      },
+      "DashboardModulePreferenceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "visible"
+        ],
+        "title": "DashboardModulePreferenceUpdate",
+        "type": "object"
+      },
+      "DashboardModulePreferenceView": {
+        "properties": {
+          "moduleKey": {
+            "$ref": "#/components/schemas/DashboardModuleKey"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "moduleKey",
+          "visible"
+        ],
+        "title": "DashboardModulePreferenceView",
+        "type": "object"
+      },
       "DashboardPartner": {
         "properties": {
           "displayName": {
@@ -1458,6 +1513,29 @@
           "displayMode"
         ],
         "title": "DashboardRelationshipDuration",
+        "type": "object"
+      },
+      "DashboardSharedStorySummary": {
+        "properties": {
+          "heartMoments": {
+            "title": "Heartmoments",
+            "type": "integer"
+          },
+          "memories": {
+            "title": "Memories",
+            "type": "integer"
+          },
+          "milestones": {
+            "title": "Milestones",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "memories",
+          "heartMoments",
+          "milestones"
+        ],
+        "title": "DashboardSharedStorySummary",
         "type": "object"
       },
       "DashboardSpaceSummary": {
@@ -1524,6 +1602,9 @@
               }
             ]
           },
+          "sharedStorySummary": {
+            "$ref": "#/components/schemas/DashboardSharedStorySummary"
+          },
           "space": {
             "$ref": "#/components/schemas/DashboardSpaceSummary"
           },
@@ -1554,6 +1635,7 @@
           "keepsake",
           "upcoming",
           "recentShared",
+          "sharedStorySummary",
           "thinkingOfYouAvailableAt"
         ],
         "title": "DashboardView",
@@ -14190,6 +14272,140 @@
           }
         },
         "summary": "Get Dashboard",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/dashboard/preferences": {
+      "get": {
+        "description": "Return the current account's effective Dashboard visibility settings.",
+        "operationId": "listDashboardModulePreferences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardModulePreferenceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Dashboard Module Preferences",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/dashboard/preferences/{moduleKey}": {
+      "put": {
+        "description": "Set one private per-account Dashboard module visibility override.",
+        "operationId": "setDashboardModulePreference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "moduleKey",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DashboardModuleKey"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardModulePreferenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardModulePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Set Dashboard Module Preference",
         "tags": [
           "dashboard"
         ]

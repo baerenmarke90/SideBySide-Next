@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Path, Response
+from pydantic import ConfigDict
 
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.dashboard import service
+from sidebyside.dashboard import preferences, service
 from sidebyside.dashboard.service import DashboardItemType
 from sidebyside.relationship.models import DurationDisplayMode
+from sidebyside.story import summary as story_summary
 
 router = APIRouter(tags=["dashboard"])
 
@@ -43,6 +46,12 @@ class DashboardItem(ApiModel):
     preview_attachment_id: UUID | None = None
 
 
+class DashboardSharedStorySummary(ApiModel):
+    memories: int
+    heart_moments: int
+    milestones: int
+
+
 class DashboardView(ApiModel):
     space: DashboardSpaceSummary
     relationship_duration: DashboardRelationshipDuration | None
@@ -50,7 +59,23 @@ class DashboardView(ApiModel):
     keepsake: DashboardItem | None
     upcoming: list[DashboardItem]
     recent_shared: list[DashboardItem]
+    shared_story_summary: DashboardSharedStorySummary
     thinking_of_you_available_at: datetime | None
+
+
+class DashboardModulePreferenceUpdate(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    visible: bool
+
+
+class DashboardModulePreferenceView(ApiModel):
+    module_key: preferences.DashboardModuleKey
+    visible: bool
+
+
+class DashboardModulePreferenceList(ApiModel):
+    items: list[DashboardModulePreferenceView]
 
 
 @router.get(
@@ -66,6 +91,7 @@ def get_dashboard(
 ) -> DashboardView:
     """Return the shared-only relationship overview for one Space."""
     view = service.read_dashboard(session, authorization)
+    counts = story_summary.read_shared_story_counts(session, authorization)
     response.headers["Cache-Control"] = "private, no-store"
     return DashboardView(
         space=DashboardSpaceSummary(
@@ -89,8 +115,64 @@ def get_dashboard(
         keepsake=_project_item(view.keepsake) if view.keepsake is not None else None,
         upcoming=[_project_item(item) for item in view.upcoming],
         recent_shared=[_project_item(item) for item in view.recent_shared],
+        shared_story_summary=DashboardSharedStorySummary(
+            memories=counts.memories,
+            heart_moments=counts.heart_moments,
+            milestones=counts.milestones,
+        ),
         thinking_of_you_available_at=view.thinking_of_you_available_at,
     )
+
+
+@router.get(
+    "/spaces/{spaceId}/dashboard/preferences",
+    response_model=DashboardModulePreferenceList,
+    operation_id="listDashboardModulePreferences",
+    responses=problem_responses(401, 404),
+)
+def list_dashboard_module_preferences(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+) -> DashboardModulePreferenceList:
+    """Return the current account's effective Dashboard visibility settings."""
+    states = preferences.read_module_preferences(
+        session,
+        account_id=authorization.account_id,
+        space_id=authorization.space_id,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return DashboardModulePreferenceList(
+        items=[
+            DashboardModulePreferenceView(module_key=state.key, visible=state.visible)
+            for state in states
+        ]
+    )
+
+
+@router.put(
+    "/spaces/{spaceId}/dashboard/preferences/{moduleKey}",
+    response_model=DashboardModulePreferenceView,
+    operation_id="setDashboardModulePreference",
+    responses=problem_responses(401, 404, 422),
+)
+def set_dashboard_module_preference(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+    body: DashboardModulePreferenceUpdate,
+    module_key: Annotated[preferences.DashboardModuleKey, Path(alias="moduleKey")],
+) -> DashboardModulePreferenceView:
+    """Set one private per-account Dashboard module visibility override."""
+    state = preferences.set_module_visibility(
+        session,
+        account_id=authorization.account_id,
+        space_id=authorization.space_id,
+        module_key=module_key,
+        visible=body.visible,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return DashboardModulePreferenceView(module_key=state.key, visible=state.visible)
 
 
 def _project_item(item: service.DashboardItem) -> DashboardItem:

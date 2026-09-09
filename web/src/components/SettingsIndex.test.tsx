@@ -10,6 +10,9 @@ describe('SettingsIndex', () => {
     expect(html).toContain('href="#settings-connection"');
     expect(html).toContain(`>${profileIdentity.settingsRelationship}<`);
 
+    expect(html).toContain('href="#settings-dashboard"');
+    expect(html).toContain(`>${profileIdentity.settingsDashboard}<`);
+
     expect(html).toContain('href="#settings-notifications"');
     expect(html).toContain(`>${profileIdentity.settingsNotifications}<`);
 
@@ -23,6 +26,9 @@ describe('SettingsIndex', () => {
     expect(html).toContain(`>${profileIdentity.settingsSensitiveTitle}<`);
 
     expect(html.indexOf('href="#settings-connection"')).toBeLessThan(
+      html.indexOf('href="#settings-dashboard"'),
+    );
+    expect(html.indexOf('href="#settings-dashboard"')).toBeLessThan(
       html.indexOf('href="#settings-notifications"'),
     );
     expect(html.indexOf('href="#settings-notifications"')).toBeLessThan(

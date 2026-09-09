@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { DashboardApi } from '../api/generated/apis/DashboardApi';
 import { RulesApi } from '../api/generated/apis/RulesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
@@ -9,6 +10,7 @@ import { MORE_NOTIFICATIONS_ROUTE } from '../client/routes';
 import { useTranslation } from '../i18n';
 import { AccountSettingsPanel } from './AccountSettingsPanel';
 import { AnniversaryReminderSettings } from './AnniversaryReminderSettings';
+import { DashboardSettingsPanel } from './DashboardSettingsPanel';
 import { PageHeader } from './PageHeader';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { ProfileAppearancePanel } from './ProfileAppearancePanel';
@@ -41,6 +43,10 @@ export function SettingsPage(props: SettingsPageProps) {
     [configuration],
   );
   const rulesApi = useMemo(() => new RulesApi(configuration), [configuration]);
+  const dashboardApi = useMemo(
+    () => new DashboardApi(configuration),
+    [configuration],
+  );
   const demoMode = isDemoModeConfigured();
 
   return (
@@ -65,6 +71,25 @@ export function SettingsPage(props: SettingsPageProps) {
           />
           <PartnerConnectionPanel {...props} />
         </div>
+
+        <section
+          id="settings-dashboard"
+          className="form-card settings-section settings-functional-panel"
+          aria-labelledby="settings-dashboard-heading"
+        >
+          <div className="settings-section-head">
+            <h2 id="settings-dashboard-heading">
+              {t('profileIdentity.settingsDashboard')}
+            </h2>
+            <p className="settings-section-intro">
+              {t('profileIdentity.settingsDashboardIntro')}
+            </p>
+          </div>
+          <DashboardSettingsPanel
+            dashboardApi={dashboardApi}
+            spaceId={props.spaceId}
+          />
+        </section>
 
         <section
           id="settings-notifications"
