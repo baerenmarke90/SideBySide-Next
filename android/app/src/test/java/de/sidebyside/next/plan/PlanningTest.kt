@@ -145,6 +145,39 @@ class PlanningTest {
     }
 
     @Test
+    fun turningAWishIntoAPlanCanScheduleTheResultingPlanInTheSameCall() = runTest(dispatcher) {
+        // #836: converting should not force a second visit through the plan's
+        // own schedule sheet when the couple already knows when.
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN, version = 4)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.planWish(OPEN_WISH, "", "", null, "2026-09-20", "18:30")
+        advanceUntilIdle()
+
+        // Scheduled against the *plan* the conversion just returned, not the
+        // wish's own version.
+        assertEquals(listOf(1), api.scheduleVersions)
+        val scheduledStart = api.schedules.single().plannedStart
+        assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
+        assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
+    }
+
+    @Test
+    fun turningAWishIntoAPlanWithoutADateSchedulesNothing() = runTest(dispatcher) {
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.planWish(OPEN_WISH, "", "", null)
+        advanceUntilIdle()
+
+        assertTrue(api.schedules.isEmpty())
+    }
+
+    @Test
     fun editingAWishTitleUsesTheExistingUpdateCallAndVersion() = runTest(dispatcher) {
         val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN, version = 5)))
         val model = signedIn(api)
@@ -195,6 +228,36 @@ class PlanningTest {
         advanceUntilIdle()
 
         assertTrue(api.directlyCreated.isEmpty())
+    }
+
+    @Test
+    fun creatingAPlanDirectlyCanScheduleItInTheSameCall() = runTest(dispatcher) {
+        // #836: the couple can give the plan a moment right when they make it.
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.createPlan("A weekend away", "", null, "2026-09-20", "18:30")
+        advanceUntilIdle()
+
+        assertEquals(listOf(1), api.scheduleVersions)
+        val scheduledStart = api.schedules.single().plannedStart
+        assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
+        assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
+    }
+
+    @Test
+    fun creatingAPlanDirectlyWithOnlyADayDoesNotScheduleAnything() = runTest(dispatcher) {
+        // A day without a time is never sent — `PlanSchedule.plannedStart` is a
+        // moment, not a date — so this must not schedule anything on its own,
+        // even though the plan is still created.
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.createPlan("A weekend away", "", null, "2026-09-20", null)
+        advanceUntilIdle()
+
+        assertEquals(1, api.directlyCreated.size)
+        assertTrue(api.schedules.isEmpty())
     }
 
     @Test

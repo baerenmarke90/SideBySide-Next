@@ -1187,6 +1187,7 @@ private fun DemoShell(
                     onComplete = viewModel::completePlan,
                     onReturnToWish = viewModel::returnPlanToWish,
                     onDeletePlan = viewModel::deletePlan,
+                    onCreatePlace = { name -> viewModel.addPlace(name, "", "", "", "") },
                     onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
                     onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
                     onOpenChapters = { navController.navigate(CHAPTERS_ROUTE) },
