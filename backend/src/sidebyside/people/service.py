@@ -7,6 +7,13 @@ serialization.
 Rules beyond pure visibility live in exactly two places: as a schema
 constraint and - so the client receives an understandable response instead
 of a database error - as a corresponding check here before persistence.
+
+Lock order is part of the People contract: lock the ``RelatedPerson`` first,
+then write or lock any linked ``ImportantDate`` rows, and only afterwards run
+reminder reconciliation. Privacy updates and deletes take the parent lock
+exclusively; date create/relink takes it in shared mode. No operation may lock
+an ImportantDate and then acquire its RelatedPerson lock, because that would
+create a deadlock cycle with privacy transitions and deletes.
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ from sidebyside.authorization import (
     privacy_for,
     readable,
     require_readable,
+    require_readable_shared,
     require_writable,
     require_writable_locked,
 )
@@ -240,7 +248,7 @@ def update_person(
     show_birthday_on_dashboard: bool = False,
     avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
-    person = require_writable(session, RelatedPerson, context, person_id)
+    person = require_writable_locked(session, RelatedPerson, context, person_id)
     _ensure_expected_version(person.version, expected_version, "related person")
 
     privacy = privacy_for(visibility)
@@ -339,13 +347,18 @@ def _person_link(
 ) -> tuple[UUID | None, str | None]:
     """Resolve an important date's person and carry along its privacy class.
 
-    Resolution goes through the guard: callers who may not read a person also
-    cannot attach a date to that person, and the response does not reveal
-    whether the person exists.
+    Resolution takes a shared parent lock before an ImportantDate is inserted
+    or updated. A concurrent privacy transition takes the exclusive version of
+    the same lock, so whichever operation locks the person first defines the
+    domain outcome. Readability is checked again while the lock is held because
+    the person's privacy may have changed while the first guarded lookup waited
+    for the lock. Callers who may no longer read the person therefore still get
+    the privacy-safe absence response.
     """
     if related_person_id is None:
         return None, None
 
+    person = require_readable_shared(session, RelatedPerson, context, related_person_id)
     person = require_readable(session, RelatedPerson, context, related_person_id)
     if (
         person.privacy_class == PrivacyClass.OWNER_ONLY.value
