@@ -150,7 +150,9 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     expect(disclosure).not.toBeNull();
     expect(disclosure?.open).toBe(false);
     expect(
-      screen.getByLabelText(importantDates.visibilityLabel),
+      within(dialog).getByRole('combobox', {
+        name: importantDates.visibilityLabel,
+      }),
     ).not.toBeNull();
     expect(
       within(dialog).getByRole('button', { name: importantDates.create }),
