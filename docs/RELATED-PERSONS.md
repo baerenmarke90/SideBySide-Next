@@ -70,6 +70,16 @@ Clients display only day and month when `birthdayYearKnown = false`. A known yea
 
 Both objects carry a version. Writes require `If-Match` with the last read version; stale state returns 409 (`VERSION_CONFLICT`). Responses include the version as `ETag`.
 
+The canonical lock order for linked mutations is:
+
+1. lock the `RelatedPerson` parent;
+2. write or lock affected `ImportantDate` rows;
+3. run reminder reconciliation.
+
+A person privacy update or delete takes the parent lock with `FOR UPDATE`. An ImportantDate create or relink takes the same parent with `FOR SHARE`, then revalidates guarded readability and the person's current Privacy class while holding that lock. If the date link commits first, a waiting `SHARED -> PRIVATE` transition sees the shared date and returns `409 RELATED_PERSON_HAS_SHARED_DATES`. If the privacy transition commits first, a waiting shared date link sees the private person and returns the existing privacy-safe absence or `422 IMPORTANT_DATE_MORE_OPEN_THAN_PERSON`, depending on whether the caller may still read the person.
+
+An operation must not lock an ImportantDate and then acquire its RelatedPerson lock. Keeping every linked write parent-first prevents a deadlock cycle with privacy transitions and the explicit person delete policies. The composite foreign key, `ON UPDATE CASCADE`, and `never_more_open_than_its_person` check remain the final database backstop.
+
 ## Events
 
 This Domain emits no Outbox Events. M1 has no recipient for them, and an Event about a third party would create a second copy of their data with its own retention. When reminder logic arrives, the Event is created there with metadata only and without plaintext.
