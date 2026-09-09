@@ -15,6 +15,7 @@ const relationshipComponents = {
   thinkingOfYouSending: 'Wird gesendet …',
   thinkingOfYouSent: 'Gesendet!',
   thinkingOfYouCooldown: 'Wieder möglich in {{minutes}} Min.',
+  thinkingOfYouError: 'Senden fehlgeschlagen',
 
   visibilityShared: 'Mit Partner geteilt',
   visibilityPrivate: 'Nur für mich',

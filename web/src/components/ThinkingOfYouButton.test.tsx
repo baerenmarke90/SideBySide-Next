@@ -1,3 +1,4 @@
+import '../i18n';
 // @vitest-environment jsdom
 import {
   act,
@@ -78,8 +79,8 @@ describe('ThinkingOfYouButton', () => {
 
     await waitFor(() => {
       expect(btn.getAttribute('aria-busy')).toBeNull();
-      expect(btn.getAttribute('aria-label')).toBe(expectedPartnerLabel);
-      expect(btn.className).toContain('state-idle');
+      expect(btn.getAttribute('aria-label')).toBe(relationshipComponents.thinkingOfYouError);
+      expect(btn.className).toContain('state-error');
     });
   });
 

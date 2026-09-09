@@ -6,7 +6,7 @@ import {
   type PartnerPresenceStatus,
 } from './PartnerAvatarPair';
 import { firstNameFromDisplayName } from '../client/personalName';
-import relationshipComponents from '../i18n/locales/relationshipComponents';
+import { useTranslation } from 'react-i18next';
 import './CouplePresence.css';
 
 export interface CouplePresenceProps {
@@ -40,24 +40,25 @@ export function CouplePresence({
   headingLevel = 'h2',
   className = '',
 }: CouplePresenceProps) {
+  const { t } = useTranslation();
   const generatedId = useId();
   const titleId = `couple-presence-title-${generatedId}`;
 
   const defaultStatusText =
     status === 'connected'
-      ? relationshipComponents.couplePresenceConnected
+      ? t('couplePresenceConnected')
       : status === 'waiting'
-        ? relationshipComponents.couplePresenceWaiting
-        : relationshipComponents.couplePresenceOffline;
+        ? t('couplePresenceWaiting')
+        : t('couplePresenceOffline');
 
   const primaryFirstName = firstNameFromDisplayName(
     primaryPerson.displayName,
-    relationshipComponents.couplePresenceYouFallback,
+    t('couplePresenceYouFallback'),
   );
   const secondaryFirstName = secondaryPerson
     ? firstNameFromDisplayName(
         secondaryPerson.displayName,
-        relationshipComponents.couplePresencePartnerFallback,
+        t('couplePresencePartnerFallback'),
       )
     : null;
   const presenceTitle = secondaryFirstName
@@ -72,7 +73,7 @@ export function CouplePresence({
         ...secondaryPerson,
         displayName:
           secondaryFirstName ||
-          relationshipComponents.couplePresencePartnerFallback,
+          t('couplePresencePartnerFallback'),
       }
     : null;
 
@@ -116,7 +117,7 @@ export function CouplePresence({
                     className="couple-presence-duration-btn today-hero-duration-link"
                     title={
                       durationTitle ||
-                      relationshipComponents.couplePresenceDurationAction
+                      t('couplePresenceDurationAction')
                     }
                   >
                     <span className="today-hero-pill-icon" aria-hidden="true">
@@ -139,7 +140,7 @@ export function CouplePresence({
                     onClick={onDurationClick}
                     title={
                       durationTitle ||
-                      relationshipComponents.couplePresenceDurationAction
+                      t('couplePresenceDurationAction')
                     }
                   >
                     {relationshipDuration}

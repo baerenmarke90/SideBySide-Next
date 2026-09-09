@@ -1,4 +1,4 @@
-import relationshipComponents from '../i18n/locales/relationshipComponents';
+import { useTranslation } from 'react-i18next';
 import './VisibilityBadge.css';
 
 export type VisibilityType =
@@ -31,14 +31,15 @@ export function VisibilityBadge({
   customLabel,
   className = '',
 }: VisibilityBadgeProps) {
+  const { t } = useTranslation();
   const normalized = normalizeVisibility(visibility);
 
   const defaultLabel =
     normalized === 'shared'
-      ? relationshipComponents.visibilityShared
+      ? t('visibilityShared')
       : normalized === 'private'
-        ? relationshipComponents.visibilityPrivate
-        : relationshipComponents.visibilityTemporary;
+        ? t('visibilityPrivate')
+        : t('visibilityTemporary');
 
   const label = customLabel || defaultLabel;
 
