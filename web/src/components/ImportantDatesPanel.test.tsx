@@ -278,7 +278,7 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     renderPanel(createMockPeopleApi([{ ...date, label: longLabel }]));
 
     const card = await screen.findByRole('button', {
-      name: new RegExp('A very long important date label', 'i'),
+      name: /A very long important date label/i,
     });
     expect(card.textContent).toContain(longLabel);
     fireEvent.click(card);
