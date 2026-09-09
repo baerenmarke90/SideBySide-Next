@@ -259,11 +259,10 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     expect(order).toBe('planning-first');
 
     await expectHorizontalReflow(page);
-    // Axe is intentionally not asserted here: the generic Keepsake card
-    // carries a pre-existing, unrelated color-contrast defect on the shared
-    // `--color-shared-accent`/`--color-shared-surface` design token pair
-    // (not introduced or touched by #840's reordering). Tracked separately;
-    // out of scope for this focused precedence fix.
+    // #841 corrected the shared-kind badge text token (was
+    // `--color-shared-accent`, now `--color-shared`), so the generic
+    // Keepsake card's color-contrast is asserted here again.
+    await expectNoWcagViolations(page);
     await capture(page, testInfo, 'signal-before-keepsake-390-light');
 
     await page.setViewportSize({ width: 320, height: 844 });
@@ -307,8 +306,9 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     expect(keepsakeIsFirstContentSection).toBe(true);
 
     await expectHorizontalReflow(page);
-    // Axe intentionally not asserted here for the same pre-existing,
-    // out-of-scope shared-token contrast reason noted above.
+    // See #841 note above: the shared-kind badge token fix means this
+    // Keepsake-only view is now asserted axe-clean too.
+    await expectNoWcagViolations(page);
     await capture(page, testInfo, 'keepsake-only-390-light');
   });
 
