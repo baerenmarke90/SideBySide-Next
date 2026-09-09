@@ -199,6 +199,9 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Mit Lea geteilt",
         "Nur für mich",
     ),
+    Path("docs/design/eimir/MOBILE-FIRST-SURFACE-AUDIT.md"): (
+        "Nur für mich",
+    ),
     Path("docs/m2/DEMO-SCENARIO.md"): (
         "Sonnenaufgang am See",
         "Unser erster Pastateig",
