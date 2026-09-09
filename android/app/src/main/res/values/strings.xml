@@ -286,6 +286,9 @@
     <string name="plan_title_hint">Was habt ihr vor?</string>
     <string name="plan_description_hint">Ein paar Worte dazu</string>
     <string name="plan_optional_details">Mehr dazu</string>
+    <string name="plan_place_new">Neuen Ort anlegen</string>
+    <string name="plan_place_new_hint">Wie heißt der Ort?</string>
+    <string name="plan_place_new_confirm">Ort übernehmen</string>
     <string name="plan_at_place">Bei %1$s</string>
     <string name="plan_edit">Bearbeiten</string>
     <string name="plan_edit_title">Plan bearbeiten</string>

@@ -1,6 +1,7 @@
 package de.sidebyside.next.plan
 
 import android.content.Context
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -211,8 +212,8 @@ class PlanScreenTest {
         var planned: List<Any?>? = null
         render(
             wishes = listOf(wish),
-            onPlanWish = { id, title, description, placeId ->
-                planned = listOf(id, title, description, placeId)
+            onPlanWish = { id, title, description, placeId, startOn, startAt ->
+                planned = listOf(id, title, description, placeId, startOn, startAt)
             },
         )
 
@@ -227,7 +228,8 @@ class PlanScreenTest {
             .performScrollTo()
             .performClick()
 
-        assertEquals(listOf(wish.id, "A weekend by the sea", "", null), planned)
+        // No date was picked, so none is sent along either.
+        assertEquals(listOf(wish.id, "A weekend by the sea", "", null, null, null), planned)
     }
 
     @Test
@@ -236,7 +238,7 @@ class PlanScreenTest {
         var planned: List<Any?>? = null
         render(
             wishes = listOf(wish),
-            onPlanWish = { _, _, description, placeId -> planned = listOf(description, placeId) },
+            onPlanWish = { _, _, description, placeId, _, _ -> planned = listOf(description, placeId) },
         )
 
         composeRule.onNodeWithText("A weekend by the sea").performScrollTo().performClick()
@@ -261,12 +263,110 @@ class PlanScreenTest {
         assertEquals(listOf("Somewhere quiet", place.id), planned)
     }
 
+    @Test
+    fun wishToPlanCanCarryADateAndATimeInTheSameFlow() {
+        val wish = aWish("A weekend by the sea")
+        var planned: Pair<String?, String?>? = null
+        render(
+            wishes = listOf(wish),
+            onPlanWish = { _, _, _, _, startOn, startAt -> planned = startOn to startAt },
+        )
+
+        composeRule.onNodeWithText("A weekend by the sea").performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan)).performClick()
+
+        // The moment is offered right here, not through a second visit to the
+        // plan once it already exists.
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_day))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_time))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan_confirm))
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(LocalDate.now().toString() to "19:00", planned)
+    }
+
+    @Test
+    fun wishToPlanCannotSubmitADayWithoutATimeToGoWithIt() {
+        render(wishes = listOf(aWish("A weekend by the sea")))
+
+        composeRule.onNodeWithText("A weekend by the sea").performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_day))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
+
+        // A day was picked but no time yet; submitting now would silently
+        // drop the day the couple already chose.
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan_confirm))
+            .performScrollTo()
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun newPlaceCanBeCreatedInlineDuringWishToPlanConversion() {
+        val wish = aWish("A weekend by the sea")
+        val livePlaces = mutableStateListOf(place)
+        var requestedName: String? = null
+        var planned: UUID? = null
+        render(
+            wishes = listOf(wish),
+            places = livePlaces,
+            onCreatePlace = { name ->
+                requestedName = name
+                // Mirrors what the ViewModel does after creating a place: the
+                // reload brings it back into the same list this sheet reads.
+                livePlaces.add(place.copy(id = UUID.randomUUID(), name = name, version = 1))
+            },
+            onPlanWish = { _, _, _, placeId, _, _ -> planned = placeId },
+        )
+
+        composeRule.onNodeWithText("A weekend by the sea").performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_optional_details))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_place_new))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_place_new_hint))
+            .performScrollTo()
+            .performTextInput("Lake house")
+        composeRule.onNodeWithText(context.getString(R.string.plan_place_new_confirm))
+            .performScrollTo()
+            .performClick()
+
+        assertEquals("Lake house", requestedName)
+        // Selected without another tap — the draft is not lost finding the
+        // place the couple just described.
+        composeRule.onNodeWithText("Lake house").assertExists()
+
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan_confirm))
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(livePlaces.last().id, planned)
+    }
+
     // --- Plans -----------------------------------------------------------
 
     @Test
     fun creatingAPlanDirectlyIsReachedFromInsideTheWishComposer() {
         var submitted: Triple<String, String, UUID?>? = null
-        render(onCreatePlan = { title, description, placeId ->
+        render(onCreatePlan = { title, description, placeId, _, _ ->
             submitted = Triple(title, description, placeId)
         })
 
@@ -291,6 +391,37 @@ class PlanScreenTest {
             .performClick()
 
         assertEquals(Triple("A weekend away", "Somewhere quiet", null), submitted)
+    }
+
+    @Test
+    fun creatingAPlanDirectlyCanCarryADateAndATimeToo() {
+        var submitted: Pair<String?, String?>? = null
+        render(onCreatePlan = { _, _, _, startOn, startAt -> submitted = startOn to startAt })
+
+        composeRule.onNodeWithText(context.getString(R.string.plan_capture))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNode(hasSetTextAction()).performTextInput("A weekend away")
+        composeRule.onNodeWithText(context.getString(R.string.plan_wish_direct_plan))
+            .performScrollTo()
+            .performClick()
+
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_day))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_time))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_add))
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(LocalDate.now().toString() to "19:00", submitted)
     }
 
     @Test
@@ -344,6 +475,18 @@ class PlanScreenTest {
             .performClick()
 
         assertEquals(listOf(plan.id, "A weekend away", "Somewhere quiet", null), edited)
+    }
+
+    @Test
+    fun editingAPlanOffersNoSecondScheduleEntryPoint() {
+        render(plans = listOf(aPlan(PlanStatus.IDEA, title = "A weekend away")))
+
+        composeRule.onNodeWithText("A weekend away").performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_edit)).performClick()
+
+        // Scheduling stays reachable only through the plan's own dedicated
+        // sheet; the editor does not grow a second, competing path to it.
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule)).assertDoesNotExist()
     }
 
     @Test
@@ -541,9 +684,10 @@ class PlanScreenTest {
         plans: List<PlanDetail> = emptyList(),
         onAddWish: (String) -> Unit = {},
         onEditWish: (UUID, String) -> Unit = { _, _ -> },
-        onPlanWish: (UUID, String, String, UUID?) -> Unit = { _, _, _, _ -> },
+        onPlanWish: (UUID, String, String, UUID?, String?, String?) -> Unit =
+            { _, _, _, _, _, _ -> },
         onRemoveWish: (UUID) -> Unit = {},
-        onCreatePlan: (String, String, UUID?) -> Unit = { _, _, _ -> },
+        onCreatePlan: (String, String, UUID?, String?, String?) -> Unit = { _, _, _, _, _ -> },
         onEditPlan: (UUID, String, String, UUID?) -> Unit = { _, _, _, _ -> },
         onSchedule: (UUID, String, String) -> Unit = { _, _, _ -> },
         onUnschedule: (UUID) -> Unit = {},
@@ -551,13 +695,15 @@ class PlanScreenTest {
         onReturnToWish: (UUID) -> Unit = {},
         onDeletePlan: (UUID) -> Unit = {},
         onOpenPlaces: () -> Unit = {},
+        onCreatePlace: (String) -> Unit = {},
+        places: List<PlaceDetail> = listOf(place),
     ) {
         composeRule.setContent {
             SideBySideTheme {
                 PlanScreen(
                     wishes = wishes,
                     plans = plans,
-                    places = listOf(place),
+                    places = places,
                     busy = false,
                     problem = null,
                     onAddWish = onAddWish,
@@ -571,6 +717,7 @@ class PlanScreenTest {
                     onComplete = onComplete,
                     onReturnToWish = onReturnToWish,
                     onDeletePlan = onDeletePlan,
+                    onCreatePlace = onCreatePlace,
                     onOpenPlaces = onOpenPlaces,
                     onOpenCollections = {},
                     onOpenChapters = {},

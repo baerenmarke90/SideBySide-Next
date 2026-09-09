@@ -85,15 +85,30 @@ fun PlanScreen(
     problem: UiProblem?,
     onAddWish: (String) -> Unit,
     onEditWish: (id: UUID, title: String) -> Unit,
-    onPlanWish: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
+    onPlanWish: (
+        id: UUID,
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
     onRemoveWish: (UUID) -> Unit,
-    onCreatePlan: (title: String, description: String, placeId: UUID?) -> Unit,
+    onCreatePlan: (
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
     onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
     onSchedule: (id: UUID, startOn: String, startAt: String) -> Unit,
     onUnschedule: (UUID) -> Unit,
     onComplete: (id: UUID, experiencedOn: String) -> Unit,
     onReturnToWish: (UUID) -> Unit,
     onDeletePlan: (UUID) -> Unit,
+    /** Creates a new shared Place with just a name, from inside Planning. */
+    onCreatePlace: (String) -> Unit,
     /**
      * Opens the couple's shared places.
      *
@@ -269,6 +284,7 @@ fun PlanScreen(
         onSchedule = onSchedule,
         onUnschedule = onUnschedule,
         onComplete = onComplete,
+        onCreatePlace = onCreatePlace,
     )
 
     PlanningConfirmation(
@@ -295,12 +311,26 @@ private fun FocusedPlanningSurface(
     setConfirm: (String?) -> Unit,
     onAddWish: (String) -> Unit,
     onEditWish: (id: UUID, title: String) -> Unit,
-    onPlanWish: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
-    onCreatePlan: (title: String, description: String, placeId: UUID?) -> Unit,
+    onPlanWish: (
+        id: UUID,
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
+    onCreatePlan: (
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
     onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
     onSchedule: (id: UUID, startOn: String, startAt: String) -> Unit,
     onUnschedule: (UUID) -> Unit,
     onComplete: (id: UUID, experiencedOn: String) -> Unit,
+    onCreatePlace: (String) -> Unit,
 ) {
     val target = focus ?: return
     val kind = target.substringBefore(':')
@@ -366,9 +396,10 @@ private fun FocusedPlanningSurface(
                 places = places,
                 busy = busy,
                 onDismiss = dismiss,
-                onSubmit = { title, description, placeId ->
+                onCreatePlace = onCreatePlace,
+                onSubmit = { title, description, placeId, startOn, startAt ->
                     setFocus(null)
-                    onPlanWish(wish.id, title, description, placeId)
+                    onPlanWish(wish.id, title, description, placeId, startOn, startAt)
                 },
             )
         }
@@ -379,10 +410,12 @@ private fun FocusedPlanningSurface(
             headingRes = R.string.plan_new_title,
             submitLabelRes = R.string.plan_add,
             initialTitle = argument,
+            allowSchedule = true,
             onDismiss = dismiss,
-            onSubmit = { title, description, placeId ->
+            onCreatePlace = onCreatePlace,
+            onSubmit = { title, description, placeId, startOn, startAt ->
                 setFocus(null)
-                onCreatePlan(title, description, placeId)
+                onCreatePlan(title, description, placeId, startOn, startAt)
             },
         )
 
@@ -397,7 +430,8 @@ private fun FocusedPlanningSurface(
                 initialDescription = plan.description.orEmpty(),
                 initialPlaceId = plan.placeId,
                 onDismiss = dismiss,
-                onSubmit = { title, description, placeId ->
+                onCreatePlace = onCreatePlace,
+                onSubmit = { title, description, placeId, _, _ ->
                     setFocus(null)
                     onEditPlan(plan.id, title, description, placeId)
                 },

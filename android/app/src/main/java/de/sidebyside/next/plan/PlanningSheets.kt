@@ -264,7 +264,14 @@ internal fun WishToPlanSheet(
     places: List<PlaceDetail>,
     busy: Boolean,
     onDismiss: () -> Unit,
-    onSubmit: (title: String, description: String, placeId: UUID?) -> Unit,
+    onCreatePlace: (String) -> Unit,
+    onSubmit: (
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
 ) {
     PlanningSheet(onDismiss = onDismiss) {
         SheetHeading(stringResource(R.string.plan_wish_make_plan_title))
@@ -296,12 +303,20 @@ internal fun WishToPlanSheet(
             busy = busy,
             submitLabelRes = R.string.plan_wish_make_plan_confirm,
             initialTitle = wish.title,
+            allowSchedule = true,
+            onCreatePlace = onCreatePlace,
             onSubmit = onSubmit,
         )
     }
 }
 
-/** Creating or editing a plan directly, with the same fields either way. */
+/**
+ * Creating or editing a plan directly, with the same fields either way.
+ *
+ * [allowSchedule] is only true for direct creation: an edit already has its
+ * own dedicated schedule sheet reachable from the plan itself, so offering a
+ * second path to the same moment here would let the two drift apart.
+ */
 @Composable
 internal fun PlanComposerSheet(
     places: List<PlaceDetail>,
@@ -311,8 +326,16 @@ internal fun PlanComposerSheet(
     initialTitle: String = "",
     initialDescription: String = "",
     initialPlaceId: UUID? = null,
+    allowSchedule: Boolean = false,
     onDismiss: () -> Unit,
-    onSubmit: (title: String, description: String, placeId: UUID?) -> Unit,
+    onCreatePlace: (String) -> Unit,
+    onSubmit: (
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
 ) {
     PlanningSheet(onDismiss = onDismiss) {
         SheetEyebrow(R.string.plan_eyebrow)
@@ -325,19 +348,29 @@ internal fun PlanComposerSheet(
             initialTitle = initialTitle,
             initialDescription = initialDescription,
             initialPlaceId = initialPlaceId,
+            allowSchedule = allowSchedule,
+            onCreatePlace = onCreatePlace,
             onSubmit = onSubmit,
         )
     }
 }
 
 /**
- * Title first; description and place only when asked for.
+ * Title first; description, place and — for direct creation — a moment only
+ * when asked for.
  *
  * Shared by direct plan creation, plan editing and wish conversion, so those
  * three cannot drift into three different sets of fields for one resource. An
  * edit that already has a description or a place opens with them unfolded,
  * because hiding what someone wrote is not progressive disclosure.
+ *
+ * [allowSchedule] adds a day/time section next to `Mehr dazu`, so a couple
+ * who already knows when never has to leave this sheet, reopen the new plan
+ * and find the schedule action a second time. A day alone does not schedule
+ * anything — [SheetPrimaryAction] below only turns on time picking once a day
+ * is chosen, and submitting still works with neither set.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.PlanFields(
     key: String,
@@ -347,7 +380,15 @@ private fun ColumnScope.PlanFields(
     initialTitle: String,
     initialDescription: String = "",
     initialPlaceId: UUID? = null,
-    onSubmit: (title: String, description: String, placeId: UUID?) -> Unit,
+    allowSchedule: Boolean = false,
+    onCreatePlace: (String) -> Unit,
+    onSubmit: (
+        title: String,
+        description: String,
+        placeId: UUID?,
+        startOn: String?,
+        startAt: String?,
+    ) -> Unit,
 ) {
     var title by rememberSaveable(key) { mutableStateOf(initialTitle) }
     var description by rememberSaveable(key) { mutableStateOf(initialDescription) }
@@ -355,8 +396,28 @@ private fun ColumnScope.PlanFields(
     var detailsOpen by rememberSaveable(key) {
         mutableStateOf(initialDescription.isNotBlank() || initialPlaceId != null)
     }
+    var newPlaceOpen by rememberSaveable(key) { mutableStateOf(false) }
+    var newPlaceName by rememberSaveable(key) { mutableStateOf("") }
+    var pendingNewPlaceName by rememberSaveable(key) { mutableStateOf<String?>(null) }
+    var scheduleOpen by rememberSaveable(key) { mutableStateOf(false) }
+    var day by rememberSaveable(key) { mutableStateOf<String?>(null) }
+    var time by rememberSaveable(key) { mutableStateOf<String?>(null) }
+    var dayPickerOpen by rememberSaveable(key) { mutableStateOf(false) }
+    var timePickerOpen by rememberSaveable(key) { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     RequestInitialFocus(focusRequester)
+
+    // A place just created here is not selected yet — it only exists once the
+    // reload that every planning write triggers brings it back. Matching it
+    // by name the moment it appears is what lets creating a place read as
+    // one step instead of create-then-go-find-it-again.
+    LaunchedEffect(places, pendingNewPlaceName) {
+        val pendingName = pendingNewPlaceName ?: return@LaunchedEffect
+        places.firstOrNull { it.name == pendingName }?.let {
+            placeId = it.id
+            pendingNewPlaceName = null
+        }
+    }
 
     OutlinedTextField(
         value = title,
@@ -382,13 +443,105 @@ private fun ColumnScope.PlanFields(
             busy = busy,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (newPlaceOpen) {
+            OutlinedTextField(
+                value = newPlaceName,
+                onValueChange = { newPlaceName = it.take(200) },
+                label = { Text(stringResource(R.string.plan_place_new_hint)) },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SheetSecondaryAction(
+                R.string.plan_place_new_confirm,
+                enabled = !busy && newPlaceName.isNotBlank(),
+            ) {
+                val name = newPlaceName.trim()
+                pendingNewPlaceName = name
+                onCreatePlace(name)
+                newPlaceOpen = false
+                newPlaceName = ""
+            }
+        } else {
+            SheetSecondaryAction(R.string.plan_place_new, enabled = !busy) {
+                newPlaceOpen = true
+            }
+        }
     } else {
         SheetSecondaryAction(R.string.plan_optional_details, enabled = !busy) {
             detailsOpen = true
         }
     }
-    SheetPrimaryAction(submitLabelRes, enabled = !busy && title.isNotBlank()) {
-        onSubmit(title, description, placeId)
+    if (allowSchedule) {
+        if (scheduleOpen) {
+            PickerRow(
+                labelRes = R.string.plan_schedule_day,
+                value = day?.let { formattedDate(LocalDate.parse(it)) },
+                placeholderRes = R.string.plan_schedule_pick_day,
+                enabled = !busy,
+                onClick = { dayPickerOpen = true },
+            )
+            if (day != null) {
+                PickerRow(
+                    labelRes = R.string.plan_schedule_time,
+                    value = time,
+                    placeholderRes = R.string.plan_schedule_pick_time,
+                    enabled = !busy,
+                    onClick = { timePickerOpen = true },
+                )
+            }
+        } else {
+            SheetSecondaryAction(R.string.plan_schedule, enabled = !busy) {
+                scheduleOpen = true
+            }
+        }
+    }
+    // A day the couple picked is never sent on its own — `PlanSchedule` needs
+    // a time to go with it — so submit stays off between choosing the day and
+    // confirming a time rather than quietly dropping the day they already
+    // chose.
+    val scheduleReady = day == null || time != null
+    SheetPrimaryAction(submitLabelRes, enabled = !busy && title.isNotBlank() && scheduleReady) {
+        onSubmit(title, description, placeId, day, time)
+    }
+
+    if (dayPickerOpen) {
+        DayPicker(
+            initial = day?.let { LocalDate.parse(it) } ?: LocalDate.now(),
+            onDismiss = { dayPickerOpen = false },
+            onPick = {
+                dayPickerOpen = false
+                day = it.toString()
+            },
+        )
+    }
+    if (timePickerOpen) {
+        val initial = time?.let { LocalTime.parse(it) } ?: LocalTime.of(19, 0)
+        val state = rememberTimePickerState(
+            initialHour = initial.hour,
+            initialMinute = initial.minute,
+            is24Hour = true,
+        )
+        TimePickerDialog(
+            onDismissRequest = { timePickerOpen = false },
+            title = { Text(stringResource(R.string.plan_schedule_pick_time)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        timePickerOpen = false
+                        time = LocalTime.of(state.hour, state.minute).toString()
+                    },
+                ) {
+                    Text(stringResource(R.string.plan_picker_take))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { timePickerOpen = false }) {
+                    Text(stringResource(R.string.plan_cancel))
+                }
+            },
+        ) {
+            TimePicker(state = state)
+        }
     }
 }
 
