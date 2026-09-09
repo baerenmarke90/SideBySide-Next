@@ -410,7 +410,7 @@ test.describe('Quick Create -> dedicated /new routes: land at the correct start 
     await openQuickCreateAndChoose(page, navigation.quickCreatePrivateNote);
 
     await expect(page).toHaveURL(/\/more\/private\/notes\/new$/);
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     const titleInput = page.locator('#private-note-title');
     await expect(titleInput).toBeInViewport();
     await expect(titleInput).not.toBeFocused();
@@ -433,7 +433,7 @@ test.describe('Quick Create -> dedicated /new routes: land at the correct start 
     await openQuickCreateAndChoose(page, navigation.quickCreateGiftIdea);
 
     await expect(page).toHaveURL(/\/more\/private\/gift-ideas\/new$/);
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     const titleInput = page.locator('#gift-title');
     await expect(titleInput).toBeInViewport();
     await expect(titleInput).not.toBeFocused();
@@ -473,7 +473,7 @@ test.describe('Quick Create -> dedicated /new routes: land at the correct start 
     // for a direct visit too; what matters here is that Quick Create lands
     // at the same top-of-page start position as direct entry, rather than
     // leaving the previous page's scroll offset in place.
-    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await expect(
       page.getByRole('heading', { name: privateArea.gifts.createTitle }),
     ).toBeInViewport();
