@@ -63,7 +63,7 @@ The `eimir.` mark evolves the signature two-ring motif:
 |---|---|---|---|
 | **Shared Mint** | `#207266` | `#72D8C4` | Togetherness, shared tasks, synchronized state, memories |
 | **Shared Surface** | `#EDF7F5` | `#143630` | Shared badge container, collaborative list highlight |
-| **Private Rose** | `#D13B65` | `#FF658E` | Private personal notes, gifts, solo wishlists |
+| **Private Rose** | `#C8305B` | `#FF658E` | Private personal notes, gifts, solo wishlists |
 | **Peach / Sunset** | `#F5A882` | `#FFD68A` | Warmth, discovery, milestones, optimism |
 | **Soft Lavender** | `#8A7DB8` | `#D6CBE0` | Dusk, contemplation, quiet moments |
 
