@@ -372,9 +372,7 @@ function ImportantDateEditorSheet({
               <details
                 className="focused-editor-disclosure"
                 open={detailsOpen}
-                onToggle={(event) =>
-                  setDetailsOpen(event.currentTarget.open)
-                }
+                onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
               >
                 <summary>
                   <span>
