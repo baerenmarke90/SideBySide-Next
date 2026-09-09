@@ -23,7 +23,7 @@ afterEach(() => cleanup());
 
 const person: RelatedPersonView = {
   id: 'person-1',
-  displayName: 'Lisa Beispielname',
+  displayName: 'Lisa Example',
   relationship: PersonRelationship.FRIEND,
   birthday: null,
   birthdayYearKnown: false,
@@ -37,7 +37,7 @@ const person: RelatedPersonView = {
 
 const date: ImportantDateView = {
   id: 'date-1',
-  label: 'Unser erster gemeinsamer Urlaub am Meer',
+  label: 'Our first shared seaside holiday',
   date: new Date('2026-09-21T00:00:00Z'),
   relatedPersonId: person.id,
   repeats: DateRepeat.ANNUALLY,
@@ -168,7 +168,7 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     );
     const dialog = screen.getByRole('dialog');
     fireEvent.change(screen.getByLabelText(importantDates.labelLabel), {
-      target: { value: 'Ein neuer besonderer Tag' },
+      target: { value: 'A new important date' },
     });
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
@@ -249,7 +249,7 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     fireEvent.click(card);
 
     fireEvent.change(screen.getByLabelText(importantDates.labelLabel), {
-      target: { value: 'Unser Jahrestag am Meer' },
+      target: { value: 'Our seaside anniversary' },
     });
     fireEvent.click(
       screen.getByRole('button', { name: importantDates.saveChanges }),
@@ -267,18 +267,18 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     ).mock.calls[0][0];
     expect(call.dateId).toBe(date.id);
     expect(call.ifMatch).toBe(String(date.version));
-    expect(call.importantDateFields.label).toBe('Unser Jahrestag am Meer');
+    expect(call.importantDateFields.label).toBe('Our seaside anniversary');
     expect(call.importantDateFields.relatedPersonId).toBe(person.id);
     expect(call.importantDateFields.visibility).toBe(date.visibility);
   });
 
   it('keeps long labels intact instead of truncating relationship content in the DOM', async () => {
     const longLabel =
-      'Der sehr lange besondere Tag, an dem wir gemeinsam eine außergewöhnlich lange Reise begonnen haben';
+      'A very long important date label describing the beginning of an exceptionally long shared journey together';
     renderPanel(createMockPeopleApi([{ ...date, label: longLabel }]));
 
     const card = await screen.findByRole('button', {
-      name: new RegExp('Der sehr lange besondere Tag', 'i'),
+      name: new RegExp('A very long important date label', 'i'),
     });
     expect(card.textContent).toContain(longLabel);
     fireEvent.click(card);
