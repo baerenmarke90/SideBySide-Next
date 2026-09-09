@@ -39,6 +39,7 @@ import kotlinx.serialization.Contextual
  * @param avatarAttachmentId 
  * @param birthday 
  * @param birthdayYearKnown 
+ * @param showBirthdayOnDashboard 
  */
 @Serializable
 
@@ -60,7 +61,10 @@ data class RelatedPersonFields (
     val birthday: java.time.LocalDate? = null,
 
     @SerialName(value = "birthdayYearKnown")
-    val birthdayYearKnown: kotlin.Boolean? = false
+    val birthdayYearKnown: kotlin.Boolean? = false,
+
+    @SerialName(value = "showBirthdayOnDashboard")
+    val showBirthdayOnDashboard: kotlin.Boolean? = false
 
 ) {
 

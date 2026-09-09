@@ -417,8 +417,9 @@ def test_upcoming_combines_existing_date_sources_in_deterministic_order(
     assert response.status_code == 200
     upcoming = response.json()["upcoming"]
     # Only couple-level items appear: PLAN, IMPORTANT_DATE (related_person_id=None), ANNIVERSARY.
-    # Third-party birthdays and ImportantDates assigned to a RelatedPerson are
-    # excluded from Wir/Today (#617).
+    # ImportantDates assigned to a RelatedPerson are excluded from Wir/Today
+    # (#617). The birthday itself defaults to not shown (#617/#699 refined
+    # rule); see test_upcoming_birthday_* below for the explicit opt-in path.
     assert [item["type"] for item in upcoming] == [
         "PLAN",
         "IMPORTANT_DATE",
@@ -434,8 +435,9 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
 ) -> None:  # type: ignore[no-untyped-def]
     _freeze(monkeypatch)
 
-    # 1. Shared plan + upcoming RelatedPerson birthday:
-    # Plan can be primary context; third-party birthday does not appear in upcoming.
+    # 1. Shared plan + upcoming RelatedPerson birthday (dashboard visibility
+    # left at its default of off): Plan can be primary context; the
+    # birthday does not appear in upcoming unless explicitly opted in.
     plan = Plan(
         **_resource(couple, couple["anna"].id),
         status=PlanStatus.PLANNED.value,
@@ -513,7 +515,9 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert types == ["IMPORTANT_DATE", "ANNIVERSARY"]
     assert res_couple_date.json()["upcoming"][0]["id"] == str(couple_date.id)
 
-    # 5. Private / foreign person or date data: no leaks
+    # 5. Private / foreign person or date data: no leaks. The foreign person
+    # has Dashboard visibility explicitly enabled, so exclusion here can only
+    # come from tenant isolation, not from the opt-in defaulting to off.
     foreign_person = RelatedPerson(
         space_id=couple["foreign_space"].id,
         owner_id=couple["outsider"].id,
@@ -521,6 +525,7 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
         relationship=PersonRelationship.FRIEND.value,
         birthday=date(1904, 9, 5),
         birthday_year_known=False,
+        show_birthday_on_dashboard=True,
         payload=RelatedPersonPayload(display_name="Foreign Friend"),
     )
     foreign_date = ImportantDate(
@@ -542,6 +547,264 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     ids = {item["id"] for item in res_no_leaks.json()["upcoming"]}
     assert str(foreign_person.id) not in ids
     assert str(foreign_date.id) not in ids
+
+
+def _birthday_person(couple, *, owner_id, **overrides):  # type: ignore[no-untyped-def]
+    fields = {
+        **_resource(couple, owner_id),
+        "relationship": PersonRelationship.FRIEND.value,
+        "birthday": date(1904, 9, 1),
+        "birthday_year_known": False,
+        "payload": RelatedPersonPayload(display_name="Lisa"),
+    }
+    fields.update(overrides)
+    return RelatedPerson(**fields)
+
+
+def test_upcoming_birthday_default_off_is_excluded(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """#699 Finding 1: a newly created shared birthday does not appear
+    until its owner explicitly opts it into the Dashboard."""
+    _freeze(monkeypatch)
+    person = _birthday_person(couple, owner_id=couple["anna"].id)
+    session.add(person)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    assert response.json()["upcoming"] == []
+
+
+def test_upcoming_birthday_enabled_and_shared_appears(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch)
+    person = _birthday_person(couple, owner_id=couple["anna"].id, show_birthday_on_dashboard=True)
+    session.add(person)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    assert len(upcoming) == 1
+    assert upcoming[0]["type"] == "BIRTHDAY"
+    assert upcoming[0]["id"] == str(person.id)
+    assert upcoming[0]["titleOrText"] == "Lisa"
+
+
+def test_upcoming_birthday_enabled_but_owner_only_never_appears(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """Enabling Dashboard visibility never overrides OWNER_ONLY privacy."""
+    _freeze(monkeypatch)
+    person = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
+        show_birthday_on_dashboard=True,
+    )
+    session.add(person)
+    session.flush()
+
+    anna_view = _dashboard(client, couple)
+    assert anna_view.status_code == 200
+    assert anna_view.json()["upcoming"] == []
+
+    ben_view = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/dashboard",
+        headers=auth(sign_in(session, couple["ben"])),
+    )
+    assert ben_view.status_code == 200
+    assert ben_view.json()["upcoming"] == []
+
+
+def test_upcoming_birthday_owner_only_partner_view_has_no_side_channel(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """The partner's Dashboard must not reveal a private birthday exists,
+    even through count/order/section-presence side channels."""
+    _freeze(monkeypatch)
+    private_person = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
+        show_birthday_on_dashboard=True,
+    )
+    shared_plan = Plan(
+        **_resource(couple, couple["anna"].id),
+        status=PlanStatus.PLANNED.value,
+        planned_start=datetime(2026, 9, 5, 19, 0, tzinfo=UTC),
+        payload=PlanPayload(title="Shared plan"),
+    )
+    session.add_all([private_person, shared_plan])
+    session.flush()
+
+    response = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/dashboard",
+        headers=auth(sign_in(session, couple["ben"])),
+    )
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    # Only the shared plan is visible; the private birthday influences
+    # neither count nor presence.
+    assert len(upcoming) == 1
+    assert upcoming[0]["id"] == str(shared_plan.id)
+
+
+def test_upcoming_birthday_disabled_shared_does_not_influence_order_or_count(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch)
+    disabled_person = _birthday_person(
+        couple, owner_id=couple["anna"].id, show_birthday_on_dashboard=False
+    )
+    plan = Plan(
+        **_resource(couple, couple["anna"].id),
+        status=PlanStatus.PLANNED.value,
+        planned_start=datetime(2026, 8, 30, 18, 0, tzinfo=UTC),
+        payload=PlanPayload(title="Tonight"),
+    )
+    session.add_all([disabled_person, plan])
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    assert len(upcoming) == 1
+    assert upcoming[0]["type"] == "PLAN"
+
+
+def test_upcoming_birthday_visible_to_both_partners(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch)
+    person = _birthday_person(couple, owner_id=couple["anna"].id, show_birthday_on_dashboard=True)
+    session.add(person)
+    session.flush()
+
+    for token in (couple["token_a"], sign_in(session, couple["ben"])):
+        response = client.get(
+            f"/api/v1/spaces/{couple['space'].id}/dashboard",
+            headers=auth(token),
+        )
+        assert response.status_code == 200
+        upcoming = response.json()["upcoming"]
+        assert len(upcoming) == 1
+        assert upcoming[0]["type"] == "BIRTHDAY"
+        assert upcoming[0]["id"] == str(person.id)
+
+
+def test_upcoming_birthday_deterministic_ordering_with_other_sources(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """next occurrence ASC, then type, then stable ID - unchanged by adding
+    a birthday source into the same candidate pool."""
+    _freeze(monkeypatch)
+    plan = Plan(
+        **_resource(couple, couple["anna"].id),
+        status=PlanStatus.PLANNED.value,
+        planned_start=datetime(2026, 8, 31, 10, 0, tzinfo=UTC),
+        payload=PlanPayload(title="Early plan"),
+    )
+    important = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.CUSTOM.value,
+        date=date(2026, 9, 2),
+        repeats=DateRepeat.NONE.value,
+        payload=ImportantDatePayload(label="Mid date"),
+    )
+    person = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        birthday=date(1904, 9, 2),
+        show_birthday_on_dashboard=True,
+    )
+    session.add_all([plan, important, person])
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    # Plan (Aug 31) first; then Sep 2 tie between IMPORTANT_DATE and BIRTHDAY,
+    # broken by type name ASC ("BIRTHDAY" < "IMPORTANT_DATE").
+    assert [item["type"] for item in upcoming] == ["PLAN", "BIRTHDAY", "IMPORTANT_DATE"]
+
+
+def test_upcoming_birthday_feb29_resolves_to_feb28_in_non_leap_year(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch, datetime(2027, 1, 15, 12, 0, tzinfo=UTC))
+    person = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        birthday=date(1904, 2, 29),
+        show_birthday_on_dashboard=True,
+    )
+    session.add(person)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    assert len(upcoming) == 1
+    assert upcoming[0]["occurredOn"] == "2027-02-28"
+
+
+def test_upcoming_birthday_feb29_stays_feb29_in_leap_year(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch, datetime(2028, 1, 15, 12, 0, tzinfo=UTC))
+    person = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        birthday=date(1904, 2, 29),
+        show_birthday_on_dashboard=True,
+    )
+    session.add(person)
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = response.json()["upcoming"]
+    assert len(upcoming) == 1
+    assert upcoming[0]["occurredOn"] == "2028-02-29"
+
+
+def test_upcoming_birthday_known_year_is_never_exposed_beyond_next_occurrence(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """birthdayYearKnown semantics: `occurredOn` carries only the next
+    occurrence year, never the real birth year, whether known or not."""
+    _freeze(monkeypatch, datetime(2026, 9, 1, 12, 0, tzinfo=UTC))
+    known = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        birthday=date(1990, 9, 10),
+        birthday_year_known=True,
+        show_birthday_on_dashboard=True,
+        payload=RelatedPersonPayload(display_name="Known year"),
+    )
+    unknown = _birthday_person(
+        couple,
+        owner_id=couple["anna"].id,
+        birthday=date(1904, 9, 20),
+        birthday_year_known=False,
+        show_birthday_on_dashboard=True,
+        payload=RelatedPersonPayload(display_name="Unknown year"),
+    )
+    session.add_all([known, unknown])
+    session.flush()
+
+    response = _dashboard(client, couple)
+    assert response.status_code == 200
+    upcoming = {item["id"]: item for item in response.json()["upcoming"]}
+    # Neither the real birth year (1990) nor the placeholder (1904) leaks:
+    # both occurrences land in the current caller-local year, 2026.
+    assert upcoming[str(known.id)]["occurredOn"] == "2026-09-10"
+    assert upcoming[str(unknown.id)]["occurredOn"] == "2026-09-20"
 
 
 def test_upcoming_important_date_annual_feb29_resolves_to_feb28_in_non_leap_year(

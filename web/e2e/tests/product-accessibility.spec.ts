@@ -311,7 +311,7 @@ test('compact authenticated shell keeps global quick create reachable and access
   await page.keyboard.press('ArrowDown');
 
   const sheetDialog = page.getByRole('dialog', {
-    name: navigation.newContent,
+    name: navigation.quickCreateTitle,
   });
   await expect(sheetDialog).toBeVisible();
 
@@ -327,7 +327,7 @@ test('compact authenticated shell keeps global quick create reachable and access
   await page.keyboard.press('Tab');
   await expect(memoryTarget).toBeFocused();
   await expect(
-    page.getByRole('link', { name: navigation.quickCreateCollection }),
+    page.getByRole('link', { name: navigation.quickCreateWish }),
   ).toBeVisible();
   await expect(
     page.getByRole('link', { name: navigation.quickCreatePrivateNote }),
@@ -615,7 +615,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const create = page.getByRole('button', { name: navigation.newContent });
     await create.focus();
     await page.keyboard.press('ArrowDown');
-    const menu = page.getByRole('menu', { name: navigation.newContent });
+    const menu = page.getByRole('menu', { name: navigation.quickCreateTitle });
     await expect(menu).toBeVisible();
     const memory = menu.getByRole('menuitem', {
       name: navigation.quickCreateMemory,
@@ -624,7 +624,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(memory).toHaveAttribute('href', '/story/memories/new');
     await page.keyboard.press('End');
     await expect(
-      menu.getByRole('menuitem', { name: navigation.quickCreatePrivateNote }),
+      menu.getByRole('menuitem', { name: navigation.quickCreateGiftIdea }),
     ).toBeFocused();
     await expectNoWcagViolations(page);
     await page.screenshot({

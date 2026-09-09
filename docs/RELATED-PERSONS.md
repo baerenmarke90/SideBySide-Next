@@ -66,6 +66,14 @@ The UI must never display or indirectly reveal whether such private partner date
 
 Clients display only day and month when `birthdayYearKnown = false`. A known year without a date is inconsistent and is rejected with 422 (`RELATED_PERSON_BIRTHDAY_REQUIRED`) instead of silently corrected.
 
+## Dashboard birthday visibility
+
+`showBirthdayOnDashboard` (default `false`) is an explicit, per-person opt-in for this birthday to appear in the shared Dashboard `upcoming` list (#699). A `RelatedPerson` is never a Dashboard source just because it has a birthday - #617 established that third-party dates are not projected into the couple's `/today` context by default, and this flag is the deliberate exception a user chooses per person.
+
+Projection requires all three at once: `birthday` is set, `visibility` is `SHARED` (`SPACE_SHARED`), and `showBirthdayOnDashboard` is `true`. A `dashboard_visibility_needs_a_birthday` CHECK enforces the first condition at the schema level; the service validates it before persistence with the same 422 pattern as `RELATED_PERSON_BIRTHDAY_REQUIRED`.
+
+This setting is independent of Reminder delivery. Enabling or disabling Dashboard visibility never changes whether a Reminder fires for this birthday, and vice versa - they are separate preferences that happen to read the same `birthday` column.
+
 ## Concurrency
 
 Both objects carry a version. Writes require `If-Match` with the last read version; stale state returns 409 (`VERSION_CONFLICT`). Responses include the version as `ETag`.

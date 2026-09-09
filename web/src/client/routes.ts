@@ -26,7 +26,10 @@ export type AppRouteIcon =
   | 'private'
   | 'profile'
   | 'settings'
-  | 'add';
+  | 'add'
+  | 'milestone'
+  | 'wish'
+  | 'gift';
 
 export interface AppRouteDefinition {
   id: AppRouteId;
