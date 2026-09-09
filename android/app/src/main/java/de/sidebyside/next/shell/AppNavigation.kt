@@ -38,7 +38,7 @@ fun AppNavigation(
      */
     detailRoutes: NavGraphBuilder.(NavHostController) -> Unit = {},
     /**
-     * Which routes are owner-only and need [SecureWindowEffect]. Left to the
+     * Which routes are owner-only and need [SecureWindowNavigationEffect]. Left to the
      * caller because the shell itself does not know the app's domain routes;
      * defaults to never-secure so existing callers are unaffected.
      */
@@ -61,7 +61,7 @@ fun AppNavigation(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val currentDestination = destinationForRoute(currentRoute, destinations)
-    SecureWindowEffect(secure = secureWhen(currentRoute))
+    SecureWindowNavigationEffect(navController = navController, secureWhen = secureWhen)
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         AppShell(

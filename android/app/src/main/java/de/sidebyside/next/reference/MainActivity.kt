@@ -87,6 +87,7 @@ import de.sidebyside.next.activity.ActivityScreen
 import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
+import de.sidebyside.next.shell.secureWindowUntilNavigationIsKnown
 import de.sidebyside.next.story.HeartMomentsScreen
 import de.sidebyside.next.story.MemoryComments
 import de.sidebyside.next.story.MemoryScreen
@@ -107,6 +108,10 @@ class MainActivity : ComponentActivity() {
         // that consumes the insets.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // The destination restored by Navigation is not known until Compose
+        // builds the graph. Protect the new Activity window before setContent
+        // so recreation cannot expose an owner-only Recents or display frame.
+        secureWindowUntilNavigationIsKnown(window)
         oidcCallback.value = intent?.data?.takeIf(::isRecentAuthenticationOidcCallback)
         setContent {
             SideBySideTheme {
@@ -1262,77 +1267,6 @@ private fun DemoShell(
 }
 
 /**
- * Matches the Web path from
- * `docs/decisions/0003-primary-navigation-and-route-model.md`, so the Deep Link
- * registry can be built on it without a second mapping.
- */
-private const val MEMORY_ID_ARGUMENT = "memoryId"
-private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
-
-/** The account's own HeartMoments, private ones included. */
-private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
-private const val INVITATIONS_ROUTE = "more/invitations"
-
-private const val ITEM_ID_ARGUMENT = "itemId"
-private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
-
-/**
- * Matches the Web path from `web/src/client/routes.ts`
- * (`MILESTONE_CREATE_ROUTE`). Registered ahead of [MILESTONE_ROUTE] in the
- * Nav graph, since Navigation Compose scores a literal path segment above a
- * `{itemId}` wildcard when both could otherwise match "new".
- */
-private const val MILESTONE_CREATE_ROUTE = "story/milestones/new"
-private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
-
-private const val RELATED_PERSONS_ROUTE = "people/related-persons"
-private const val PERSON_ID_ARGUMENT = "personId"
-private const val IMPORTANT_DATES_ROUTE =
-    "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
-
-private const val PREFERENCES_ROUTE = "profile/preferences"
-
-private const val PLACES_ROUTE = "planning/places"
-private const val PLACE_ID_ARGUMENT = "placeId"
-private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
-
-private const val COLLECTIONS_ROUTE = "planning/collections"
-
-private const val CHAPTERS_ROUTE = "planning/chapters"
-private const val CHAPTER_ID_ARGUMENT = "chapterId"
-private const val CHAPTER_CONTENT_ROUTE = "planning/chapters/{$CHAPTER_ID_ARGUMENT}/content"
-
-private const val PRIVATE_AREA_ROUTE = "more/private"
-
-/** No Web equivalent exists yet to match — this UI is Android-first. */
-private const val DATA_EXPORT_ROUTE = "more/data-export"
-
-/** No Web equivalent exists yet to match — this UI is Android-first. */
-private const val DATA_IMPORT_ROUTE = "more/data-import"
-private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
-private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
-private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
-private const val COLLECTION_ID_ARGUMENT = "collectionId"
-private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
-private const val COLLECTION_DETAIL_ROUTE = "planning/collections/{$COLLECTION_ID_ARGUMENT}"
-
-/** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
-private const val NOTIFICATIONS_ROUTE = "more/notifications"
-
-/** Matches the Web path from `web/src/client/routes.ts` (`ACTIVITY_ROUTE`). */
-private const val ACTIVITY_ROUTE = "today/activity"
-
-/**
- * Matches the Web path from `web/src/client/routes.ts` (`SEARCH_ROUTE`).
- * Secured the same way as the Private Area subtree (see `secureWhen`
- * above): a result's `SearchKind` can be `PRIVATE_NOTE`, `GIFT_IDEA`, or a
- * PrivateCollection kind just as easily as a shared one, so the screen as a
- * whole gets the same screenshot/Recents protection rather than only the
- * routes with "private" in their path.
- */
-private const val SEARCH_ROUTE = "search"
-
-/**
  * The M2-D18 cross-client Deep Link contract's "small logical target
  * tuple... maps to the current client's canonical route," applied to
  * Notifications and Activity: each entry names a resource kind and id
@@ -1357,21 +1291,6 @@ internal fun engagementTargetRoute(targetType: EngagementTarget?, targetId: java
         EngagementTarget.WISH, EngagementTarget.PLAN, null -> null
     }
 }
-
-/**
- * Whether [route] is inside the owner-only Private Area subtree — the hub
- * and every screen under it, matched by prefix so a new private-area screen
- * is secure by default rather than needing to opt in.
- */
-internal fun isPrivateAreaRoute(route: String?): Boolean =
-    route != null && (route == PRIVATE_AREA_ROUTE || route.startsWith("$PRIVATE_AREA_ROUTE/"))
-
-/**
- * Every route that gets [de.sidebyside.next.shell.SecureWindowEffect]: the
- * Private Area subtree, and Search — a result's `SearchKind` can be a
- * private one just as easily as a shared one.
- */
-internal fun isSecureRoute(route: String?): Boolean = isPrivateAreaRoute(route) || route == SEARCH_ROUTE
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
