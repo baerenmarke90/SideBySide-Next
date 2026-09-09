@@ -505,15 +505,6 @@ export function RelatedPeoplePage({
                           : ''
                       }`.trim()}
                     >
-                      <span className="people-card-badge-icon" aria-hidden="true">
-                        <DestinationIcon
-                          icon={
-                            person.visibility === ContentVisibility.PRIVATE
-                              ? 'private'
-                              : 'people'
-                          }
-                        />
-                      </span>
                       {t(`people.visibility.${person.visibility}`)}
                     </span>
                   </div>
