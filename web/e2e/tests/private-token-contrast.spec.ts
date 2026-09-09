@@ -123,7 +123,7 @@ async function installMocks(page: Page): Promise<string[]> {
         happenedOn: '2026-09-08',
         id: HEART_MOMENT_ID,
         spaceId: SPACE_ID,
-        text: 'Ein stiller Moment nur für mich',
+        text: 'A quiet moment just for me',
         updatedAt: TEST_NOW,
         version: 1,
         visibility: 'OWNER_ONLY',
