@@ -127,10 +127,7 @@ export function RelatedPersonEditorSheet({
   );
   const displayedAvatarUrl =
     avatarPreviewUrl || (currentAvatarId ? existingAvatarUrl : null);
-  const initials = useMemo(
-    () => (person ? personInitials(person.displayName) : '?'),
-    [person],
-  );
+  const initials = useMemo(() => (person ? personInitials(person.displayName) : '?'), [person]);
 
   const monthOptions = useMemo(
     () =>
