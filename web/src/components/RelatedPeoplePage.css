@@ -51,11 +51,7 @@
 }
 
 .choice-card-danger {
-  border-color: color-mix(
-    in srgb,
-    var(--color-error) 35%,
-    var(--color-border-subtle)
-  );
+  border-color: color-mix(in srgb, var(--color-error) 35%, var(--color-border-subtle));
 }
 
 .important-dates-section {
@@ -106,11 +102,7 @@
   bottom: var(--space-3);
   left: 2.05rem;
   width: 1px;
-  background: color-mix(
-    in srgb,
-    var(--color-brand) 22%,
-    var(--color-border-subtle)
-  );
+  background: color-mix(in srgb, var(--color-brand) 22%, var(--color-border-subtle));
   pointer-events: none;
 }
 
