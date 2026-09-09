@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { QuickCreateMenu } from './QuickCreateMenu';
+import { beforeAll, describe, expect, it } from 'vitest';
+import type { SharedPlanningApis } from '../client/sharedPlanning';
 import navigation from '../i18n/locales/navigation';
+import { QuickCreateMenu } from './QuickCreateMenu';
+import { SharedPlanningOverviewPage } from './SharedPlanningOverviewPage';
 
 function LocationTracker({
   onLocation,
@@ -246,5 +249,89 @@ describe('QuickCreateMenu - Desktop Popover', () => {
     // Home key moves to first item (memory)
     fireEvent.keyDown(menu, { key: 'Home' });
     expect(document.activeElement).toBe(items[0]);
+  });
+});
+
+describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () => {
+  beforeAll(() => {
+    // jsdom does not implement scrollIntoView; the real API is exercised by
+    // browser QA, this stub only keeps the DOM focus assertions runnable.
+    Element.prototype.scrollIntoView = () => {};
+  });
+
+  function renderQuickCreateWithPlanningComposer(initialPath: string) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <QuickCreateMenu variant="mobile" />
+          <SharedPlanningOverviewPage
+            apis={{} as SharedPlanningApis}
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('Quick Create -> Wunsch opens the existing wish composer and focuses its title input', () => {
+    renderQuickCreateWithPlanningComposer('/today');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: navigation.newContent }),
+    );
+    fireEvent.click(screen.getByText(navigation.quickCreateWish));
+
+    // Sheet is gone; navigation landed on /plan#wish-title
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    const details = document.getElementById('wish-title')?.closest('details');
+    expect(details?.open).toBe(true);
+
+    const titleInput = document.getElementById('create-wish-title');
+    expect(titleInput).not.toBeNull();
+    expect(document.activeElement).toBe(titleInput);
+  });
+
+  it('Quick Create -> Plan opens the existing plan composer and focuses its title input', () => {
+    renderQuickCreateWithPlanningComposer('/today');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: navigation.newContent }),
+    );
+    fireEvent.click(screen.getByText(navigation.quickCreatePlan));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    const details = document.getElementById('plan-title')?.closest('details');
+    expect(details?.open).toBe(true);
+
+    const titleInput = document.getElementById('create-plan-title');
+    expect(titleInput).not.toBeNull();
+    expect(document.activeElement).toBe(titleInput);
+  });
+
+  it('a normal /plan visit without a hash does not force focus into either composer', () => {
+    renderQuickCreateWithPlanningComposer('/plan');
+
+    expect(document.activeElement).not.toBe(
+      document.getElementById('create-wish-title'),
+    );
+    expect(document.activeElement).not.toBe(
+      document.getElementById('create-plan-title'),
+    );
+  });
+
+  it('an irrelevant/unknown hash does not force focus into either composer', () => {
+    renderQuickCreateWithPlanningComposer('/plan#does-not-exist');
+
+    expect(document.activeElement).not.toBe(
+      document.getElementById('create-wish-title'),
+    );
+    expect(document.activeElement).not.toBe(
+      document.getElementById('create-plan-title'),
+    );
   });
 });
