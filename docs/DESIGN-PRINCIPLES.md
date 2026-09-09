@@ -162,7 +162,7 @@ individual view. `design/tokens.json` is the sole source of truth.
 | Shared Surface | `#EDF7F5` | shared badge and container surfaces |
 | Technical Blue | `#1769AA` | system information and technical context |
 | Discovery Amber | `#7A5100` | inspiration, options, and discovery |
-| Private Rose | `#D13B65` | private, restricted, or personal-only space |
+| Private Rose | `#C8305B` | private, restricted, or personal-only space |
 | Focus Blue | `#285F91` | high-contrast keyboard focus indicator |
 | Dark Background | `#18131D` | night / dark mode deep aubergine background |
 | Dark Surface | `#231C29` | cards in dark mode |

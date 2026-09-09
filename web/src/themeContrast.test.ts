@@ -158,6 +158,12 @@ describe('theme token contrast', () => {
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
+        cssVariable(light, 'color-private'),
+        cssVariable(entryLight, 'color-private-surface-soft'),
+      ),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(
         cssVariable(dark, 'color-shared'),
         cssVariable(dark, 'color-shared-surface'),
       ),
@@ -166,6 +172,12 @@ describe('theme token contrast', () => {
       contrast(
         cssVariable(dark, 'color-error'),
         cssVariable(dark, 'color-error-surface'),
+      ),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(
+        cssVariable(dark, 'color-private'),
+        cssVariable(dark, 'color-private-surface-soft'),
       ),
     ).toBeGreaterThanOrEqual(4.5);
   });
