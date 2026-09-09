@@ -190,7 +190,9 @@ describe('RelatedPeoplePage mobile-first surface', () => {
       screen.getByRole('heading', { name: people.identitySectionTitle }),
     ).not.toBeNull();
 
-    const nameInput = screen.getByLabelText(people.nameLabel) as HTMLInputElement;
+    const nameInput = screen.getByLabelText(
+      people.nameLabel,
+    ) as HTMLInputElement;
     expect(nameInput).toBe(document.activeElement);
     expect(nameInput.required).toBe(true);
     expect(nameInput.maxLength).toBe(120);
