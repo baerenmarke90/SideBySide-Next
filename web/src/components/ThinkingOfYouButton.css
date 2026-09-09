@@ -139,3 +139,34 @@
     transition: none;
   }
 }
+
+/* State: Error */
+.thinking-of-you-btn.state-error {
+  background: var(--color-danger-surface, #fff0f0);
+  border-color: var(--color-danger, #d32f2f);
+  color: var(--color-danger, #d32f2f);
+  transform: scale(1.02);
+}
+
+.thinking-of-you-btn.state-error .error-icon {
+  animation: error-shake 0.4s ease-out;
+}
+
+@keyframes error-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-of-you-btn.state-error .error-icon {
+    animation: none;
+  }
+}

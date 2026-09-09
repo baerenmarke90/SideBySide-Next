@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { firstNameFromDisplayName } from '../client/personalName';
-import relationshipComponents from '../i18n/locales/relationshipComponents';
+import { useTranslation } from 'react-i18next';
 import './ThinkingOfYouButton.css';
 
 const COOLDOWN_TICK_MS = 30_000;
@@ -35,7 +35,10 @@ export function ThinkingOfYouButton({
   className = '',
   cooldownUntil = null,
 }: ThinkingOfYouButtonProps) {
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const { t } = useTranslation();
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>(
+    'idle',
+  );
   const [now, setNow] = useState(() => Date.now());
 
   const isCoolingDown = cooldownUntil != null && cooldownUntil.getTime() > now;
@@ -61,7 +64,10 @@ export function ThinkingOfYouButton({
         setState('idle');
       }, CONFIRMATION_MS);
     } catch {
-      setState('idle');
+      setState('error');
+      setTimeout(() => {
+        setState('idle');
+      }, 4000);
     }
   }, [state, disabled, isCoolingDown, onSend]);
 
@@ -69,15 +75,15 @@ export function ThinkingOfYouButton({
     ? firstNameFromDisplayName(partnerName, '')
     : '';
   const targetLabel = personalPartnerName
-    ? relationshipComponents.thinkingOfYouSendToPartner.replace(
+    ? t('thinkingOfYouSendToPartner').replace(
         '{{partner}}',
         personalPartnerName,
       )
-    : relationshipComponents.thinkingOfYouAction;
+    : t('thinkingOfYouAction');
 
   const cooldownLabel =
     cooldownUntil && isCoolingDown
-      ? relationshipComponents.thinkingOfYouCooldown.replace(
+      ? t('thinkingOfYouCooldown').replace(
           '{{minutes}}',
           String(remainingMinutes(cooldownUntil, now)),
         )
@@ -88,18 +94,22 @@ export function ThinkingOfYouButton({
       ? 'sending'
       : state === 'sent'
         ? 'sent'
-        : isCoolingDown
-          ? 'cooldown'
-          : 'idle';
+        : state === 'error'
+          ? 'error'
+          : isCoolingDown
+            ? 'cooldown'
+            : 'idle';
 
   const currentAccessibleName =
     visualState === 'sent'
-      ? relationshipComponents.thinkingOfYouSent
+      ? t('thinkingOfYouSent')
       : visualState === 'sending'
-        ? relationshipComponents.thinkingOfYouSending
-        : visualState === 'cooldown'
-          ? cooldownLabel
-          : targetLabel;
+        ? t('thinkingOfYouSending')
+        : visualState === 'error'
+          ? t('thinkingOfYouError')
+          : visualState === 'cooldown'
+            ? cooldownLabel
+            : targetLabel;
 
   const isDisabled = disabled || state === 'sending' || isCoolingDown;
 
@@ -130,6 +140,23 @@ export function ThinkingOfYouButton({
           >
             <polyline points="20 6 9 17 4 12" />
           </svg>
+        ) : visualState === 'error' ? (
+          <svg
+            aria-hidden="true"
+            className="thinking-of-you-icon error-icon"
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
         ) : (
           <svg
             aria-hidden="true"
@@ -147,12 +174,14 @@ export function ThinkingOfYouButton({
       {variant === 'full' && (
         <span className="thinking-of-you-label" aria-hidden="true">
           {visualState === 'sent'
-            ? relationshipComponents.thinkingOfYouSent
+            ? t('thinkingOfYouSent')
             : visualState === 'sending'
-              ? relationshipComponents.thinkingOfYouSending
-              : visualState === 'cooldown'
-                ? cooldownLabel
-                : relationshipComponents.thinkingOfYouAction}
+              ? t('thinkingOfYouSending')
+              : visualState === 'error'
+                ? t('thinkingOfYouError')
+                : visualState === 'cooldown'
+                  ? cooldownLabel
+                  : t('thinkingOfYouAction')}
         </span>
       )}
     </button>
