@@ -2705,11 +2705,24 @@ class ReferenceViewModel(
         planningCall { api, spaceId, token -> api.deleteWish(spaceId, token, wishId, wish.version) }
     }
 
-    /** Turns a wish into a plan; both survive, the wish as `PLANNED`. */
-    fun planWish(wishId: java.util.UUID, title: String, description: String, placeId: java.util.UUID?) {
+    /**
+     * Turns a wish into a plan; both survive, the wish as `PLANNED`.
+     *
+     * [startOn]/[startAt] let the couple give the new plan a moment in the
+     * same flow that created it, so a day already known does not force a
+     * second visit through the dedicated schedule sheet.
+     */
+    fun planWish(
+        wishId: java.util.UUID,
+        title: String,
+        description: String,
+        placeId: java.util.UUID?,
+        startOn: String? = null,
+        startAt: String? = null,
+    ) {
         val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
         planningCall { api, spaceId, token ->
-            api.planWish(
+            val response = api.planWish(
                 spaceId,
                 token,
                 wishId,
@@ -2720,14 +2733,25 @@ class ReferenceViewModel(
                     title = title.ifBlank { wish.title },
                 ),
             )
+            scheduleNewPlan(api, spaceId, token, response.plan, startOn, startAt)
         }
     }
 
-    /** Direct plan creation (M3-D30): a plan that never started as a wish. */
-    fun createPlan(title: String, description: String, placeId: java.util.UUID?) {
+    /**
+     * Direct plan creation (M3-D30): a plan that never started as a wish.
+     *
+     * [startOn]/[startAt] carry the same same-flow scheduling as [planWish].
+     */
+    fun createPlan(
+        title: String,
+        description: String,
+        placeId: java.util.UUID?,
+        startOn: String? = null,
+        startAt: String? = null,
+    ) {
         if (title.isBlank()) return
         planningCall { api, spaceId, token ->
-            api.createPlan(
+            val plan = api.createPlan(
                 spaceId,
                 token,
                 PlanCreate(
@@ -2736,7 +2760,31 @@ class ReferenceViewModel(
                     placeId = placeId,
                 ),
             )
+            scheduleNewPlan(api, spaceId, token, plan, startOn, startAt)
         }
+    }
+
+    /**
+     * Schedules a plan the same call just created, when the couple picked
+     * both a day and a time for it before submitting.
+     *
+     * `PlanSchedule.plannedStart` is a moment, not a date, so a day without a
+     * time is not sent — [WishToPlanSheet] and the direct plan composer only
+     * offer the time picker once a day is chosen, and never treat a lone day
+     * as enough to schedule from.
+     */
+    private suspend fun scheduleNewPlan(
+        api: ReferenceContract,
+        spaceId: java.util.UUID,
+        token: String,
+        plan: PlanDetail,
+        startOn: String?,
+        startAt: String?,
+    ) {
+        val day = startOn?.let { parseHappenedOn(it) } ?: return
+        val time = startAt?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: return
+        val start = planScheduleStart(day, time, java.time.ZoneId.systemDefault())
+        api.schedulePlan(spaceId, token, plan.id, plan.version, PlanSchedule(plannedStart = start))
     }
 
     fun updatePlan(planId: java.util.UUID, title: String, description: String, placeId: java.util.UUID?) {
