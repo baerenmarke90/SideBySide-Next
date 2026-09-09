@@ -88,6 +88,7 @@ function ImportantDateEditorSheet({
   const [visibility, setVisibility] = useState<
     ImportantDateDraft['visibility']
   >(initialDraft.visibility);
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(date));
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -370,7 +371,10 @@ function ImportantDateEditorSheet({
 
               <details
                 className="focused-editor-disclosure"
-                defaultOpen={Boolean(date)}
+                open={detailsOpen}
+                onToggle={(event) =>
+                  setDetailsOpen(event.currentTarget.open)
+                }
               >
                 <summary>
                   <span>
