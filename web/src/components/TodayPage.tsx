@@ -705,6 +705,23 @@ export function TodayPage({
       !serverKeepsake,
   );
 
+  const keepsakeSection = keepsakeItem ? (
+    <TodayModuleSection
+      className="today-section-retrospective today-section-keepsake"
+      title={t('m5s5.today.keepsake.title')}
+      kicker={t('m5s5.today.keepsake.kicker')}
+      animationDelay="100ms"
+    >
+      <div className="today-retrospective-container">
+        <VisualMemoryCard
+          item={keepsakeItem}
+          variant="keepsake"
+          loadMemoryImage={loadMemoryImage}
+        />
+      </div>
+    </TodayModuleSection>
+  ) : null;
+
   return (
     <div className="page today-page">
       {dashboardQuery.isLoading && (
@@ -809,7 +826,14 @@ export function TodayPage({
           ) : (
             <>
               {/* ROLE: Heroic Keepsake — the curated retrospective, or (when
-                  none exists) the most recent real shared photo. */}
+                  none exists) the most recent real shared photo.
+                  Ordering (#840): a genuine date-specific retrospective keeps
+                  its established prominence ahead of the planning area. A
+                  merely generic Keepsake (no retrospective) is not
+                  date-relevant, so it must not outrank a genuinely
+                  current/upcoming relationship signal when one exists — it
+                  renders after the planning area in that case, and keeps its
+                  prior prominent placement when no such signal exists. */}
               {retrospective ? (
                 <TodayModuleSection
                   className="today-section-retrospective"
@@ -825,22 +849,9 @@ export function TodayPage({
                     />
                   </div>
                 </TodayModuleSection>
-              ) : keepsakeItem ? (
-                <TodayModuleSection
-                  className="today-section-retrospective today-section-keepsake"
-                  title={t('m5s5.today.keepsake.title')}
-                  kicker={t('m5s5.today.keepsake.kicker')}
-                  animationDelay="100ms"
-                >
-                  <div className="today-retrospective-container">
-                    <VisualMemoryCard
-                      item={keepsakeItem}
-                      variant="keepsake"
-                      loadMemoryImage={loadMemoryImage}
-                    />
-                  </div>
-                </TodayModuleSection>
               ) : null}
+
+              {!hasPlanningModules ? keepsakeSection : null}
 
               {/* ROLE: Shared Planning Horizon (calm agenda rows, every upcoming
                   item in the same visual language) + Relationship Signal. Both
@@ -875,6 +886,8 @@ export function TodayPage({
                   ) : null}
                 </div>
               ) : null}
+
+              {hasPlanningModules ? keepsakeSection : null}
 
               {/* ROLE: Shared Trace — a quiet list of recent shared moments
                   (excludes any item already shown above as the Keepsake). */}
