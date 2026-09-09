@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { PRIVATE_GIFT_IDEAS_PATH } from '../client/privateArea';
 import {
   type AppRouteIcon,
@@ -102,7 +102,6 @@ export interface QuickCreateMenuProps {
 
 export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
   const { t } = useTranslation();
-  const location = useLocation();
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -191,39 +190,6 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
     };
   }, [open, variant, closeMenu]);
 
-  // Anchor hash scrolling. When the anchor is a disclosure `<summary>` (as
-  // used by the Wish/Plan inline composers), also focus the primary field
-  // inside the now-open `<details>` so choosing an action from Quick Create
-  // lands the user directly in a ready-to-type composer instead of merely
-  // revealing it.
-  useEffect(() => {
-    const targetId = location.hash.replace(/^#/, '');
-    if (!targetId) return;
-
-    const target = document.getElementById(targetId);
-    if (!target) return;
-
-    let detailsAncestor: HTMLDetailsElement | null = null;
-    let parent = target.parentElement;
-    while (parent) {
-      if (parent instanceof HTMLDetailsElement) {
-        parent.open = true;
-        detailsAncestor ??= parent;
-      }
-      parent = parent.parentElement;
-    }
-
-    const focusTarget =
-      target.tagName === 'SUMMARY'
-        ? detailsAncestor?.querySelector<
-            HTMLInputElement | HTMLTextAreaElement
-          >('input:not([type="hidden"]), textarea')
-        : null;
-
-    (focusTarget ?? target).scrollIntoView({ block: 'center' });
-    focusTarget?.focus({ preventScroll: true });
-  }, [location.hash]);
-
   function focusMenuItem(index: number): void {
     const items =
       rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
@@ -307,8 +273,9 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
         to={target.to}
         // Choosing an action is a deliberate navigation, not an abort: close
         // the sheet without the trigger focus-return `closeMenu` performs
-        // for Escape/backdrop/close-button, so a target destination (e.g.
-        // the Wish/Plan composer's own focus handoff) keeps the focus it set.
+        // for Escape/backdrop/close-button, so the destination's own
+        // route-entry handoff (see routeEntryHandoff.ts) is not competed
+        // with by focus jumping back to this trigger.
         onClick={() => setOpen(false)}
         aria-label={t(target.labelKey)}
         aria-describedby={sublineId}

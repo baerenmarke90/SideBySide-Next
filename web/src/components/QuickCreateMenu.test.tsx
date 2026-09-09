@@ -2,10 +2,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import navigation from '../i18n/locales/navigation';
 import { QuickCreateMenu } from './QuickCreateMenu';
+import { RouteEntryHandoff } from './RouteEntryHandoff';
 import { SharedPlanningOverviewPage } from './SharedPlanningOverviewPage';
 
 function LocationTracker({
@@ -252,11 +253,15 @@ describe('QuickCreateMenu - Desktop Popover', () => {
   });
 });
 
-describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () => {
+describe('QuickCreateMenu -> shared route-entry handoff (#810/#839)', () => {
   beforeAll(() => {
     // jsdom does not implement scrollIntoView; the real API is exercised by
-    // browser QA, this stub only keeps the DOM focus assertions runnable.
-    Element.prototype.scrollIntoView = () => {};
+    // browser QA, this stub only keeps the DOM assertions below runnable.
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  beforeEach(() => {
+    window.scrollTo = vi.fn();
   });
 
   function renderQuickCreateWithPlanningComposer(initialPath: string) {
@@ -266,6 +271,7 @@ describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () =
     return render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[initialPath]}>
+          <RouteEntryHandoff />
           <QuickCreateMenu variant="mobile" />
           <SharedPlanningOverviewPage
             apis={{} as SharedPlanningApis}
@@ -276,7 +282,7 @@ describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () =
     );
   }
 
-  it('Quick Create -> Wunsch opens the existing wish composer and focuses its title input', () => {
+  it('Quick Create -> Wunsch opens the existing wish composer without forcing focus into it', () => {
     renderQuickCreateWithPlanningComposer('/today');
 
     fireEvent.click(
@@ -290,12 +296,15 @@ describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () =
     const details = document.getElementById('wish-title')?.closest('details');
     expect(details?.open).toBe(true);
 
+    // Per the #810/#839 product contract, the composer is opened and
+    // visible, but the title input must NOT be programmatically focused
+    // (no forced keyboard).
     const titleInput = document.getElementById('create-wish-title');
     expect(titleInput).not.toBeNull();
-    expect(document.activeElement).toBe(titleInput);
+    expect(document.activeElement).not.toBe(titleInput);
   });
 
-  it('Quick Create -> Plan opens the existing plan composer and focuses its title input', () => {
+  it('Quick Create -> Plan opens the existing plan composer without forcing focus into it', () => {
     renderQuickCreateWithPlanningComposer('/today');
 
     fireEvent.click(
@@ -310,7 +319,21 @@ describe('QuickCreateMenu -> Wish/Plan focused composer handoff (#810 P2)', () =
 
     const titleInput = document.getElementById('create-plan-title');
     expect(titleInput).not.toBeNull();
-    expect(document.activeElement).toBe(titleInput);
+    expect(document.activeElement).not.toBe(titleInput);
+  });
+
+  it('Quick Create -> Notiz/Geschenkidee navigation lands at the top of the new page', () => {
+    renderQuickCreateWithPlanningComposer('/today');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: navigation.newContent }),
+    );
+    fireEvent.click(screen.getByText(navigation.quickCreateGiftIdea));
+
+    // No hash target on this destination: the shared handoff lands the
+    // user at the top of the freshly mounted create page rather than
+    // wherever /today happened to be scrolled to.
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   it('a normal /plan visit without a hash does not force focus into either composer', () => {
