@@ -450,7 +450,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await expect(
     dialog.locator('.focused-editor-disclosure'),
   ).not.toHaveAttribute('open');
-  await expect(page.getByLabel(people.visibilityLabel)).toBeVisible();
+  await expect(
+    dialog.getByRole('combobox', { name: people.visibilityLabel }),
+  ).toBeVisible();
   await expectHorizontalReflow(page);
   await expectNoWcagViolations(page);
   await capture(page, testInfo, 'w54-person-create-390-light');
@@ -519,7 +521,7 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   });
   await dateCard.click();
   dialog = page.getByRole('dialog');
-  await expectHorizontalReflow(pae);
+  await expectHorizontalReflow(page);
   await capture(page, testInfo, 'w52-400-percent-dark');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -529,7 +531,7 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   });
   await personCreate.click();
   dialog = page.getByRole('dialog');
-  await expectHorizontalReflow(pae);
+  await expectHorizontalReflow(page);
   await capture(page, testInfo, 'w54-400-percent-dark');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -613,7 +615,7 @@ test('focused editors keep completion reachable at small height and adapt withou
   await expect(page.locator('.layout-split')).toHaveCount(0);
   await expect(page.locator('.layout-rail')).toHaveCount(0);
   await expectHorizontalReflow(page);
-  await expectNoWcagViolations(pae);
+  await expectNoWcagViolations(page);
   await capture(page, testInfo, 'w52-expanded-1440-dark');
 
   expect(unexpectedRequests).toEqual([]);
