@@ -1,12 +1,52 @@
 # SideBySide Partner-App Experience Standard
 
 **Status:** Mandatory product UI standard  
-**Version:** 1.1  
-**Effective from:** September 2, 2026
+**Version:** 2.0  
+**Effective from:** September 9, 2026
 
-This document is binding for every user-facing Web and Android change. It complements `DESIGN-PRINCIPLES.md`, `UX-PATTERNS.md`, `SCREEN-TEMPLATES.md`, `COMPONENT-CONTRACTS.md`, and `DESIGN-SYSTEM-DELIVERY.md`.
+This document is binding for every user-facing Web and Android change. It complements `DESIGN-PRINCIPLES.md`, `UX-PATTERNS.md`, `SCREEN-TEMPLATES.md`, `COMPONENT-CONTRACTS.md`, and `DESIGN-SYSTEM-DELIVERY.md`. Where any of those documents can be read as permitting a desktop-first, table-first, or "design desktop then shrink" interpretation, section 0 of this document governs and the conflicting wording must be corrected or explicitly documented as a conflict rather than followed literally.
 
 SideBySide is not a generic productivity tool, admin console, CRM, spreadsheet, or CRUD frontend. It is a private digital place for two people. Functional correctness is necessary but not sufficient: a client feature is incomplete when it feels like database administration with nicer colors.
+
+## 0. Smartphone is the normative product reference
+
+> **Product Owner decision:** eimir. is primarily a smartphone partner app. The smartphone/Compact experience is the normative product reference for normal couple-facing functionality. Web is a fully supported adaptation of the same product experience, not the source from which mobile interaction is derived.
+
+This supersedes any prior interpretation, in this document or elsewhere, that treats desktop/Expanded composition as the starting point and mobile as a later reduction. A feature is **not** mobile-first merely because a desktop layout eventually reflows to a 390 px viewport.
+
+### What this means in practice
+
+1. The **Compact/smartphone interaction model is designed first** — see the Mandatory Mobile Interaction Contract in section 10.
+2. The human task, content hierarchy, and one-handed interaction determine the pattern before any layout decision is made.
+3. Medium/Expanded/Web **may**:
+   - use more space;
+   - add context;
+   - show media larger;
+   - add meaningful secondary content;
+   - use additional preview surfaces;
+   - show parallel information where it brings genuine benefit.
+4. Medium/Expanded/Web **must not**, merely because room exists:
+   - add more tables, columns, boxes, widgets, or metadata;
+   - add more permanent actions;
+   - introduce administrative master/detail structures.
+5. Responsive design means **recomposition according to the same product model**, not density expansion. A wider viewport is an opportunity to add context, not an invitation to add controls.
+6. Spreadsheet/admin/CRM/desktop-management patterns are exceptions, not defaults (section 2, section 14).
+7. `Functionality first, design later` remains prohibited for user-facing product work.
+
+### Precedence for conflicting product-UI requirements
+
+When requirements conflict, product UI decisions resolve in this order:
+
+1. privacy / security
+2. accessibility
+3. comprehensibility / usability
+4. **smartphone-first partner-app invariant** (this section)
+5. domain-specific product decision
+6. shared design-system consistency
+7. generic Screen Template default
+8. visual novelty
+
+A generic Screen Template default (`SCREEN-TEMPLATES.md`) never outranks this invariant. When a template's literal wording conflicts with it, the invariant wins; the template must be corrected, or the conflict must be documented in the owning issue/PR until it is corrected. See `docs/DESIGN-PRINCIPLES.md` section 2 for how this precedence integrates with the broader design priority order.
 
 ## 1. Product character
 
@@ -199,22 +239,39 @@ Appropriate examples include a subtle heart pulse, tiny particles, soft glow, sh
 
 Haptics may supplement visible feedback on supported mobile devices but never replace it.
 
-## 10. Feature composition requirements
+## 10. Mandatory Mobile Interaction Contract
 
-Before implementing a new user-facing feature, the issue or PR MUST identify:
+Before implementation starts, every new or materially changed user-facing Web/Android feature MUST document a Mobile Interaction Contract in the owning issue (or, for an existing issue that lacks one, in a Product Design Preflight performed before UI code is written; see section 15).
 
-1. the owning Screen Template or explain why no existing template fits;
-2. the existing design-system components/patterns that will be reused;
-3. the primary emotional or content focal point;
-4. the primary action and visual hierarchy;
-5. how the feature stays warm, modern, lively, and appropriate to a partner app;
-6. whether relationship microcopy, playful detail, or a delight moment is appropriate;
-7. Compact and Expanded behavior;
-8. Loading, Empty, Error, Offline, and Success behavior where applicable;
-9. motion/feedback behavior, including reduced motion;
-10. privacy/relationship-state presentation where applicable.
+The Contract MUST cover at least:
 
-`Functionality first, design later` is not an acceptable delivery strategy for product UI. The first mergeable implementation must already use the shared product language.
+1. user goal / human outcome;
+2. relationship / emotional value, where relevant;
+3. primary Compact screen/state;
+4. single dominant action;
+5. content hierarchy (section 4);
+6. what is visible immediately vs. progressively disclosed;
+7. interaction pattern — page, Bottom Sheet, menu, inline, dialog, gesture, etc.;
+8. Loading state;
+9. Empty state;
+10. Error state;
+11. Offline state, where relevant;
+12. Success state;
+13. privacy / relationship state;
+14. large-text and narrow-viewport behavior;
+15. motion / interaction feedback and reduced-motion behavior;
+16. Expanded/Web adaptation (how it enriches without changing product meaning, per section 0/11);
+17. why a conventional table/list/master-detail is appropriate, if one is used (section 2, section 16);
+18. visual acceptance plan (section 12).
+
+The Contract also implicitly identifies, and the issue/PR MUST still record:
+
+- the owning Screen Template, or why no existing template fits;
+- the existing design-system components/patterns that will be reused, or a documented gap (section 16);
+- how the feature stays warm, modern, lively, and appropriate to a partner app;
+- whether relationship microcopy, playful detail, or a delight moment is appropriate.
+
+`Functionality first, design later` is not an acceptable delivery strategy for product UI. The first mergeable implementation must already use the shared product language and satisfy the Contract, or document deviations.
 
 ## 11. Responsive composition
 
@@ -270,7 +327,54 @@ A couple-facing surface is not merge-ready if any answer below is `no`:
 
 Administration, diagnostics, migration, and operational tools may legitimately use denser information design. An exception MUST be explicit in the PR and MUST not leak that visual language into couple-facing product surfaces.
 
+A couple-facing surface exception (a genuine comparison-heavy structured-data task that needs table/admin-like density) MUST additionally be:
+
+- explicitly justified in the owning issue;
+- re-checked, not merely re-copied, in the PR's Product Design / UX section (`.github/pull_request_template.md`).
+
 Accessibility, privacy, security, comprehensibility, and platform conventions always take precedence over decorative treatment.
+
+## 15. Existing issues without a Mobile Interaction Contract
+
+An issue opened before this standard, or otherwise missing a Mobile Interaction Contract (section 10), MUST NOT proceed straight to UI implementation. Perform and document a **Product Design Preflight** first:
+
+1. write the missing Mobile Interaction Contract against the current issue scope;
+2. identify whether the originally planned composition still satisfies section 0 and section 2;
+3. record the Preflight result in the issue before UI code is written.
+
+Implementation may then proceed against the completed Contract.
+
+## 16. Lists are not automatically list UI
+
+Multiple domain objects do not automatically mean "render a list of rows." For domains such as Memories, Heart Moments, Milestones, Wishes, Plans, People, Places, Collections, and Chapters, first determine the human task — remembering, discovering, planning, dreaming, deciding together, browsing, storytelling, or understanding relationship context. Only then choose the presentation pattern.
+
+A conventional list remains a legitimate choice when it is genuinely the best mobile interaction for that task (section 10, item 17). It must never be the default that follows automatically from the shape of the data model.
+
+## 17. Reuse before build: the correct pattern, not merely an existing one
+
+`Reuse before build` (`docs/REUSE-BEFORE-BUILD.md`) remains mandatory. It does not authorize reusing a wrong pattern merely because it already exists.
+
+When an existing generic row, card, table, settings list, or form component would produce the wrong UX for a couple-facing task:
+
+1. recognize and document the design-system gap;
+2. create, or reuse, the smallest correct pattern for the task;
+3. reuse that pattern going forward.
+
+"I reused the existing table/list component" is not, by itself, a valid design justification. Reuse is not a shield for the wrong product pattern.
+
+## 18. Anti-CRM sanity question
+
+Every couple-facing surface review MUST be able to answer this question:
+
+> Could this normal couple-facing surface be reused almost unchanged for CRM, invoicing, inventory, project management, or server administration?
+
+If the answer is **yes**, the design requires either a revision or an explicit, documented Product Owner exception (section 14). This question targets normal couple-facing product surfaces; it must not be misapplied to genuine ServerAdmin/diagnostics scope, which is an explicit exception by design.
+
+## 19. Relationship to the retrospective surface audit
+
+This standard governs new and materially changed features going forward, and the issue/PR requirements that enforce it (`AGENTS.md`, `.github/ISSUE_TEMPLATE/feature.yml`, `.github/pull_request_template.md`, `.github/workflows/product-design-review.yml`).
+
+Applying this standard retrospectively to the entire currently implemented Web and Android product — inventorying every existing surface, classifying it, and remediating or explicitly excepting every noncompliant one — is owned by the dedicated retrospective audit issue (`#825`) and its remediation PRs, not by this document or by any PR that only changes governance. This document does not attempt to enumerate or redesign existing screens; it defines the standard that audit measures against. If a future revision of this standard changes what "compliant" means, `#825` re-checks its final acceptance against the revised standard.
 
 ## Related documents
 
