@@ -738,12 +738,11 @@ export function ImportantDatesPanel({
                       deleteMutation.reset();
                       setSavedMessage(null);
                     }}
-                    aria-label={`${date.label} – ${t('importantDates.edit')}`}
+                    aria-label={`${dateFormatter.format(date.date)} – ${date.label} – ${t('importantDates.edit')}`}
                   >
                     <time
                       className="important-date-marker"
                       dateTime={dateInputValue(date.date)}
-                      aria-label={dateFormatter.format(date.date)}
                     >
                       <span className="important-date-marker-day">
                         {markerDay}
