@@ -23,7 +23,7 @@ import {
 } from '../client/importantDateDraft';
 import { normalizeClientError } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
-import { AddIcon } from './DestinationIcon';
+import { AddIcon, DestinationIcon } from './DestinationIcon';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
@@ -36,7 +36,7 @@ function dateInputValue(value: Date | null | undefined): string {
   return value.toISOString().slice(0, 10);
 }
 
-function ImportantDateModalDialog({
+function ImportantDateEditorSheet({
   date,
   people,
   pending,
@@ -88,37 +88,29 @@ function ImportantDateModalDialog({
   const [visibility, setVisibility] = useState<
     ImportantDateDraft['visibility']
   >(initialDraft.visibility);
-
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(date));
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const isDirty = useMemo(() => {
-    return (
+  const isDirty = useMemo(
+    () =>
       label !== initialDraft.label ||
       dateVal !== initialDraft.date ||
       type !== initialDraft.type ||
       repeats !== initialDraft.repeats ||
       relatedPersonId !== initialDraft.relatedPersonId ||
-      visibility !== initialDraft.visibility
-    );
-  }, [
-    label,
-    dateVal,
-    type,
-    repeats,
-    relatedPersonId,
-    visibility,
-    initialDraft,
-  ]);
+      visibility !== initialDraft.visibility,
+    [dateVal, initialDraft, label, relatedPersonId, repeats, type, visibility],
+  );
 
   const handleCloseAttempt = useCallback(() => {
     if (pending || deletePending) return;
     if (isDirty) {
       setShowDiscardConfirm(true);
-    } else {
-      onClose();
+      return;
     }
-  }, [pending, deletePending, isDirty, onClose]);
+    onClose();
+  }, [deletePending, isDirty, onClose, pending]);
 
   useEffect(() => {
     const previousFocus =
@@ -136,16 +128,16 @@ function ImportantDateModalDialog({
   }, []);
 
   useEffect(() => {
-    const backdropEl = backdropRef.current;
-    if (!backdropEl) return;
-    function handleBackdropClick(e: MouseEvent) {
-      if (e.target === backdropEl && !pending && !deletePending) {
-        handleCloseAttempt();
-      }
+    const backdrop = backdropRef.current;
+    if (!backdrop) return;
+
+    function handleBackdropClick(event: MouseEvent) {
+      if (event.target === backdrop) handleCloseAttempt();
     }
-    backdropEl.addEventListener('click', handleBackdropClick);
-    return () => backdropEl.removeEventListener('click', handleBackdropClick);
-  }, [pending, deletePending, handleCloseAttempt]);
+
+    backdrop.addEventListener('click', handleBackdropClick);
+    return () => backdrop.removeEventListener('click', handleBackdropClick);
+  }, [handleCloseAttempt]);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape' && !pending && !deletePending) {
@@ -163,9 +155,9 @@ function ImportantDateModalDialog({
 
     const focusable = Array.from(
       dialogRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])',
       ),
-    );
+    ).filter((element) => element.offsetParent !== null);
     if (focusable.length === 0) return;
 
     const first = focusable[0];
@@ -191,235 +183,325 @@ function ImportantDateModalDialog({
     });
   }
 
+  const privacyIcon =
+    visibility === ContentVisibility.PRIVATE ? 'private' : 'people';
+
   return (
-    <div ref={backdropRef} className="modal-backdrop" role="presentation">
+    <div
+      ref={backdropRef}
+      className="focused-editor-backdrop"
+      role="presentation"
+    >
       <section
         ref={dialogRef}
-        className="modal-card"
+        className="focused-editor-sheet important-date-editor"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="important-date-modal-title"
+        aria-labelledby="important-date-editor-title"
         onKeyDown={handleDialogKeyDown}
       >
-        <div className="people-modal-header">
-          <h2 id="important-date-modal-title">
-            {date
-              ? t('importantDates.editTitle')
-              : t('importantDates.createTitle')}
-          </h2>
+        <header className="focused-editor-header">
+          <div className="focused-editor-heading">
+            <span className="focused-editor-kicker">
+              {t('importantDates.heading')}
+            </span>
+            <h2 id="important-date-editor-title">
+              {date
+                ? t('importantDates.editTitle')
+                : t('importantDates.createTitle')}
+            </h2>
+          </div>
           <button
             type="button"
-            className="people-modal-close"
+            className="focused-editor-close"
             onClick={handleCloseAttempt}
             aria-label={t('importantDates.closeDialogAria')}
             disabled={pending || deletePending}
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
-        </div>
+        </header>
 
-        {showDeleteConfirm && date ? (
-          <div className="inline-message inline-message-danger" role="alert">
-            <strong>{t('importantDates.deleteQuestion')}</strong>
-            <span>{t('importantDates.deleteBody')}</span>
-            {deleteError ? <ProblemState error={deleteError} /> : null}
-            <div className="form-actions choice-row">
-              <button
-                type="button"
-                className="secondary compact-action"
-                disabled={deletePending}
-                onClick={() => setShowDeleteConfirm(false)}
+        <form className="focused-editor-form" onSubmit={handleSubmit}>
+          <div className="focused-editor-scroll">
+            <div className="focused-editor-stack">
+              {showDeleteConfirm && date ? (
+                <div
+                  className="inline-message inline-message-danger focused-editor-confirmation"
+                  role="alert"
+                >
+                  <strong>{t('importantDates.deleteQuestion')}</strong>
+                  <span>{t('importantDates.deleteBody')}</span>
+                  {deleteError ? <ProblemState error={deleteError} /> : null}
+                  <div className="form-actions choice-row">
+                    <button
+                      type="button"
+                      className="secondary compact-action"
+                      disabled={deletePending}
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger compact-action"
+                      disabled={deletePending}
+                      onClick={() => onDelete(date)}
+                    >
+                      {deletePending
+                        ? t('importantDates.deleting')
+                        : t('importantDates.deleteConfirm')}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {showDiscardConfirm ? (
+                <div
+                  className="inline-message inline-message-danger focused-editor-confirmation"
+                  role="alert"
+                >
+                  <strong>{t('importantDates.discardTitle')}</strong>
+                  <span>{t('importantDates.discardBody')}</span>
+                  <div className="form-actions choice-row">
+                    <button
+                      type="button"
+                      className="secondary compact-action"
+                      onClick={() => setShowDiscardConfirm(false)}
+                    >
+                      {t('importantDates.keepEditing')}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger compact-action"
+                      onClick={onClose}
+                    >
+                      {t('importantDates.discardConfirm')}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <section
+                className="focused-editor-primary"
+                aria-labelledby="important-date-meaning-title"
               >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="danger compact-action"
-                disabled={deletePending}
-                onClick={() => onDelete(date)}
+                <div className="focused-editor-section-heading">
+                  <h3 id="important-date-meaning-title">
+                    {t('importantDates.meaningSectionTitle')}
+                  </h3>
+                  <p>{t('importantDates.meaningSectionHelp')}</p>
+                </div>
+
+                <div className="important-date-primary-grid">
+                  <div className="field-group important-date-date-field">
+                    <label htmlFor="important-date-date">
+                      {t('importantDates.dateLabel')}
+                    </label>
+                    <input
+                      ref={initialInputRef}
+                      id="important-date-date"
+                      name="date"
+                      type="date"
+                      required
+                      value={dateVal}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        setDateVal(event.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="important-date-label">
+                      {t('importantDates.labelLabel')}
+                    </label>
+                    <input
+                      id="important-date-label"
+                      name="label"
+                      required
+                      maxLength={160}
+                      value={label}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        setLabel(event.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section
+                className="focused-editor-section"
+                aria-labelledby="important-date-person-title"
               >
-                {deletePending
-                  ? t('importantDates.deleting')
-                  : t('importantDates.deleteConfirm')}
-              </button>
+                <div className="focused-editor-section-heading compact">
+                  <h3 id="important-date-person-title">
+                    {t('importantDates.relationshipSectionTitle')}
+                  </h3>
+                  <p>{t('importantDates.relationshipSectionHelp')}</p>
+                </div>
+                <div className="field-group">
+                  <label htmlFor="important-date-person">
+                    {t('importantDates.personLabel')}
+                  </label>
+                  <select
+                    id="important-date-person"
+                    name="relatedPersonId"
+                    value={relatedPersonId}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                      setRelatedPersonId(event.target.value)
+                    }
+                  >
+                    <option value="">{t('importantDates.personNone')}</option>
+                    {people.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {person.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+
+              <details
+                className="focused-editor-disclosure"
+                open={detailsOpen}
+                onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
+              >
+                <summary>
+                  <span>
+                    <strong>{t('importantDates.detailsTitle')}</strong>
+                    <small>
+                      {t(`importantDates.type.${type}`)} ·{' '}
+                      {t(`importantDates.repeats.${repeats}`)}
+                    </small>
+                  </span>
+                </summary>
+                <div className="focused-editor-disclosure-content important-date-details-grid">
+                  <div className="field-group">
+                    <label htmlFor="important-date-type">
+                      {t('importantDates.typeLabel')}
+                    </label>
+                    <select
+                      id="important-date-type"
+                      name="type"
+                      value={type}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        setType(
+                          event.target.value as ImportantDateDraft['type'],
+                        )
+                      }
+                    >
+                      {DATE_TYPES.map((typeValue) => (
+                        <option key={typeValue} value={typeValue}>
+                          {t(`importantDates.type.${typeValue}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field-group">
+                    <label htmlFor="important-date-repeat">
+                      {t('importantDates.repeatLabel')}
+                    </label>
+                    <select
+                      id="important-date-repeat"
+                      name="repeats"
+                      value={repeats}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        setRepeats(
+                          event.target.value as ImportantDateDraft['repeats'],
+                        )
+                      }
+                    >
+                      {DATE_REPEATS.map((repeat) => (
+                        <option key={repeat} value={repeat}>
+                          {t(`importantDates.repeats.${repeat}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </details>
+
+              <section
+                className="focused-editor-privacy"
+                aria-labelledby="important-date-privacy-title"
+              >
+                <span
+                  className="focused-editor-privacy-icon"
+                  aria-hidden="true"
+                >
+                  <DestinationIcon icon={privacyIcon} />
+                </span>
+                <div className="focused-editor-privacy-content">
+                  <div className="focused-editor-section-heading compact">
+                    <h3 id="important-date-privacy-title">
+                      {t('importantDates.visibilityLabel')}
+                    </h3>
+                    <p>{t('importantDates.visibilityHelp')}</p>
+                  </div>
+                  <select
+                    id="important-date-visibility"
+                    name="visibility"
+                    value={visibility}
+                    aria-label={t('importantDates.visibilityLabel')}
+                    onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                      setVisibility(
+                        event.target.value as ImportantDateDraft['visibility'],
+                      )
+                    }
+                  >
+                    {VISIBILITIES.map((visibilityValue) => (
+                      <option key={visibilityValue} value={visibilityValue}>
+                        {t(`importantDates.visibility.${visibilityValue}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+
+              {error ? <ProblemState error={error} /> : null}
+
+              {date ? (
+                <section
+                  className="focused-editor-danger-zone"
+                  aria-labelledby="important-date-lifecycle-title"
+                >
+                  <div className="focused-editor-section-heading compact">
+                    <h3 id="important-date-lifecycle-title">
+                      {t('importantDates.lifecycleTitle')}
+                    </h3>
+                    <p>{t('importantDates.lifecycleHelp')}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary danger compact-action"
+                    disabled={pending || deletePending}
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    {t('importantDates.delete')}
+                  </button>
+                </section>
+              ) : null}
             </div>
           </div>
-        ) : null}
 
-        {showDiscardConfirm ? (
-          <div className="inline-message inline-message-danger" role="alert">
-            <strong>{t('importantDates.discardTitle')}</strong>
-            <span>{t('importantDates.discardBody')}</span>
-            <div className="form-actions choice-row">
-              <button
-                type="button"
-                className="secondary compact-action"
-                onClick={() => setShowDiscardConfirm(false)}
-              >
-                {t('importantDates.keepEditing')}
-              </button>
-              <button
-                type="button"
-                className="danger compact-action"
-                onClick={onClose}
-              >
-                {t('importantDates.discardConfirm')}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <div className="field-group">
-            <label htmlFor="important-date-label">
-              {t('importantDates.labelLabel')}
-            </label>
-            <input
-              ref={initialInputRef}
-              id="important-date-label"
-              name="label"
-              required
-              maxLength={160}
-              value={label}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setLabel(e.target.value)
-              }
-            />
-          </div>
-
-          <div className="field-group">
-            <label htmlFor="important-date-date">
-              {t('importantDates.dateLabel')}
-            </label>
-            <input
-              id="important-date-date"
-              name="date"
-              type="date"
-              required
-              value={dateVal}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setDateVal(e.target.value)
-              }
-            />
-          </div>
-
-          <div className="field-group">
-            <label htmlFor="important-date-type">
-              {t('importantDates.typeLabel')}
-            </label>
-            <select
-              id="important-date-type"
-              name="type"
-              value={type}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setType(e.target.value as ImportantDateDraft['type'])
-              }
+          <footer className="focused-editor-actions">
+            <button type="submit" disabled={pending || deletePending}>
+              {pending
+                ? t('importantDates.saving')
+                : date
+                  ? t('importantDates.saveChanges')
+                  : t('importantDates.create')}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={pending || deletePending}
+              onClick={handleCloseAttempt}
             >
-              {DATE_TYPES.map((tVal) => (
-                <option key={tVal} value={tVal}>
-                  {t(`importantDates.type.${tVal}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field-group">
-            <label htmlFor="important-date-repeat">
-              {t('importantDates.repeatLabel')}
-            </label>
-            <select
-              id="important-date-repeat"
-              name="repeats"
-              value={repeats}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setRepeats(e.target.value as ImportantDateDraft['repeats'])
-              }
-            >
-              {DATE_REPEATS.map((repeat) => (
-                <option key={repeat} value={repeat}>
-                  {t(`importantDates.repeats.${repeat}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field-group">
-            <label htmlFor="important-date-person">
-              {t('importantDates.personLabel')}
-            </label>
-            <select
-              id="important-date-person"
-              name="relatedPersonId"
-              value={relatedPersonId}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setRelatedPersonId(e.target.value)
-              }
-            >
-              <option value="">{t('importantDates.personNone')}</option>
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.displayName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field-group">
-            <label htmlFor="important-date-visibility">
-              {t('importantDates.visibilityLabel')}
-            </label>
-            <select
-              id="important-date-visibility"
-              name="visibility"
-              value={visibility}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setVisibility(
-                  e.target.value as ImportantDateDraft['visibility'],
-                )
-              }
-            >
-              {VISIBILITIES.map((vVal) => (
-                <option key={vVal} value={vVal}>
-                  {t(`importantDates.visibility.${vVal}`)}
-                </option>
-              ))}
-            </select>
-            <p className="field-help">{t('importantDates.visibilityHelp')}</p>
-          </div>
-
-          {error ? <ProblemState error={error} /> : null}
-
-          <div className="important-dates-modal-actions">
-            {date ? (
-              <button
-                type="button"
-                className="danger"
-                disabled={pending || deletePending}
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                {t('importantDates.delete')}
-              </button>
-            ) : (
-              <div />
-            )}
-            <div className="form-actions-end">
-              <button
-                type="button"
-                className="secondary"
-                disabled={pending || deletePending}
-                onClick={handleCloseAttempt}
-              >
-                {t('common.cancel')}
-              </button>
-              <button type="submit" disabled={pending || deletePending}>
-                {pending
-                  ? t('importantDates.saving')
-                  : date
-                    ? t('importantDates.saveChanges')
-                    : t('importantDates.create')}
-              </button>
-            </div>
-          </div>
+              {t('common.cancel')}
+            </button>
+          </footer>
         </form>
       </section>
     </div>
@@ -445,6 +527,15 @@ export function ImportantDatesPanel({
     () =>
       new Intl.DateTimeFormat(i18n.language, {
         dateStyle: 'long',
+        timeZone: 'UTC',
+      }),
+    [i18n.language],
+  );
+  const dateMarkerFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        day: '2-digit',
+        month: 'short',
         timeZone: 'UTC',
       }),
     [i18n.language],
@@ -534,7 +625,7 @@ export function ImportantDatesPanel({
     },
   });
 
-  const isModalOpen = isCreating || Boolean(editing);
+  const editorOpen = isCreating || Boolean(editing);
 
   return (
     <section
@@ -542,8 +633,10 @@ export function ImportantDatesPanel({
       aria-labelledby="important-dates-title"
     >
       <div className="important-dates-intro-block">
-        <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
-        <p className="important-dates-intro">{t('importantDates.intro')}</p>
+        <div>
+          <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
+          <p className="important-dates-intro">{t('importantDates.intro')}</p>
+        </div>
         <button
           type="button"
           className="secondary compact-action important-dates-create-action"
@@ -566,8 +659,8 @@ export function ImportantDatesPanel({
         </div>
       ) : null}
 
-      {isModalOpen ? (
-        <ImportantDateModalDialog
+      {editorOpen ? (
+        <ImportantDateEditorSheet
           date={editing}
           people={people}
           pending={saveMutation.isPending}
@@ -620,6 +713,12 @@ export function ImportantDatesPanel({
               const linkedPersonName = date.relatedPersonId
                 ? personNames.get(date.relatedPersonId)
                 : undefined;
+              const markerParts = dateMarkerFormatter.formatToParts(date.date);
+              const markerDay =
+                markerParts.find((part) => part.type === 'day')?.value ?? '';
+              const markerMonth =
+                markerParts.find((part) => part.type === 'month')?.value ?? '';
+
               return (
                 <li key={date.id} className="important-date-item">
                   <button
@@ -632,40 +731,61 @@ export function ImportantDatesPanel({
                       deleteMutation.reset();
                       setSavedMessage(null);
                     }}
-                    aria-label={`${date.label} – ${t('importantDates.edit')}`}
+                    aria-label={`${dateFormatter.format(date.date)} – ${date.label} – ${t('importantDates.edit')}`}
                   >
-                    <div className="important-date-card-header">
-                      <div className="important-date-title-group">
-                        <h4 className="important-date-title">{date.label}</h4>
-                        {linkedPersonName ? (
-                          <span className="important-date-person">
-                            {t('importantDates.linkedPerson', {
-                              name: linkedPersonName,
-                            })}
+                    <time
+                      className="important-date-marker"
+                      dateTime={dateInputValue(date.date)}
+                    >
+                      <span className="important-date-marker-day">
+                        {markerDay}
+                      </span>
+                      <span className="important-date-marker-month">
+                        {markerMonth}
+                      </span>
+                    </time>
+                    <span className="important-date-timeline-body">
+                      <span className="important-date-title">{date.label}</span>
+                      {linkedPersonName ? (
+                        <span className="important-date-person">
+                          {t('importantDates.linkedPerson', {
+                            name: linkedPersonName,
+                          })}
+                        </span>
+                      ) : null}
+                      <span className="important-date-meta">
+                        <span>{t(`importantDates.type.${date.type}`)}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>
+                          {t(`importantDates.repeats.${date.repeats}`)}
+                        </span>
+                        <span aria-hidden="true">·</span>
+                        <span
+                          className={`important-date-visibility ${
+                            date.visibility === ContentVisibility.PRIVATE
+                              ? 'important-date-visibility-private'
+                              : 'important-date-visibility-shared'
+                          }`}
+                        >
+                          <span
+                            className="important-date-visibility-icon"
+                            aria-hidden="true"
+                          >
+                            <DestinationIcon
+                              icon={
+                                date.visibility === ContentVisibility.PRIVATE
+                                  ? 'private'
+                                  : 'people'
+                              }
+                            />
                           </span>
-                        ) : null}
-                      </div>
-                      <span className="important-date-date">
-                        {dateFormatter.format(date.date)}
+                          {t(`importantDates.visibility.${date.visibility}`)}
+                        </span>
                       </span>
-                    </div>
-                    <div className="important-date-chips">
-                      <span className="important-date-chip">
-                        {t(`importantDates.type.${date.type}`)}
-                      </span>
-                      <span className="important-date-chip">
-                        {t(`importantDates.repeats.${date.repeats}`)}
-                      </span>
-                      <span
-                        className={`important-date-chip ${
-                          date.visibility === ContentVisibility.PRIVATE
-                            ? 'important-date-chip-private'
-                            : 'important-date-chip-shared'
-                        }`}
-                      >
-                        {t(`importantDates.visibility.${date.visibility}`)}
-                      </span>
-                    </div>
+                    </span>
+                    <span className="important-date-chevron" aria-hidden="true">
+                      ›
+                    </span>
                   </button>
                 </li>
               );
