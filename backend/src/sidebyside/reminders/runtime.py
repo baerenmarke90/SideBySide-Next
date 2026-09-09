@@ -665,12 +665,7 @@ def _timezone(name: str) -> ZoneInfo:
 
 
 def _annual_date(year: int, month: int, day: int) -> date:
-    try:
-        return date(year, month, day)
-    except ValueError:
-        if month == 2 and day == 29:
-            return date(year, 2, 28)
-        raise
+    return clock.annual_occurrence(year, month, day)
 
 
 def _resolve_local(day: date, wall_time: time, zone: ZoneInfo) -> datetime:

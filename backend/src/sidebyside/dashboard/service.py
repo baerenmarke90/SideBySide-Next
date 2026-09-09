@@ -357,17 +357,17 @@ def _next_important_date(value: ImportantDate, today: date) -> date | None:
 
 
 def _next_annual(source: date, today: date) -> date:
-    """Return the next real calendar occurrence, including Feb-29 semantics."""
-    year = today.year
-    while True:
-        try:
-            candidate = date(year, source.month, source.day)
-        except ValueError:
-            year += 1
-            continue
-        if candidate >= today:
-            return candidate
-        year += 1
+    """Return the next occurrence of an annually-recurring month/day.
+
+    Uses the same canonical annual-recurrence rule as Reminder/Rule
+    scheduling (``clock.annual_occurrence``): February 29 resolves to
+    February 28 in a non-leap year rather than being skipped until the next
+    leap year.
+    """
+    this_year = clock.annual_occurrence(today.year, source.month, source.day)
+    if this_year >= today:
+        return this_year
+    return clock.annual_occurrence(today.year + 1, source.month, source.day)
 
 
 def _upcoming_sort_key(item: DashboardItem) -> tuple[datetime, str, str]:

@@ -72,3 +72,21 @@ def today_in(zone: str, *, at: datetime | None = None) -> date:
     """
     instant = at if at is not None else now()
     return ensure_utc(instant).astimezone(resolve_zone(zone)).date()
+
+
+def annual_occurrence(year: int, month: int, day: int) -> date:
+    """Resolve one year's occurrence of an annually-recurring month/day.
+
+    February 29 resolves to February 28 in a non-leap year rather than
+    raising or being skipped. This is the one canonical annual-recurrence
+    rule for every domain day that repeats yearly - Reminder/Rule scheduling
+    and the Dashboard upcoming projection both call this, so a leap-year
+    source date (a birthday, anniversary, or important date) never disagrees
+    with itself across surfaces.
+    """
+    try:
+        return date(year, month, day)
+    except ValueError:
+        if month == 2 and day == 29:
+            return date(year, 2, 28)
+        raise
