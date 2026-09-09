@@ -203,7 +203,9 @@ describe('RelatedPeoplePage mobile-first surface', () => {
     expect(birthdayDisclosure).not.toBeNull();
     expect(birthdayDisclosure?.open).toBe(false);
 
-    expect(screen.getByLabelText(people.visibilityLabel)).not.toBeNull();
+    expect(
+      within(dialog).getByRole('combobox', { name: people.visibilityLabel }),
+    ).not.toBeNull();
     expect(
       within(dialog).getByRole('button', { name: people.create }),
     ).not.toBeNull();
