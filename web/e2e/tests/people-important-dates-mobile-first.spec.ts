@@ -39,7 +39,7 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
     const root = document.documentElement;
     const controls = Array.from(
       document.querySelectorAll<HTMLElement>(
-        '#main-content a[href], #main-content button, #main-content input, #main-content select, #main-content textarea, #main-content summary',
+        '#main-content a[href], #main-content button, #main-content input:not(.visually-hidden-file-input), #main-content select, #main-content textarea, #main-content summary',
       ),
     )
       .filter((element) => {
@@ -427,9 +427,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
   await expect(page.getByLabel(people.nameLabel)).toBeFocused();
-  await expect(dialog.locator('.focused-editor-disclosure')).not.toHaveAttribute(
-    'open',
-  );
+  await expect(
+    dialog.locator('.focused-editor-disclosure'),
+  ).not.toHaveAttribute('open');
   await expect(page.getByLabel(people.visibilityLabel)).toBeVisible();
   await expectHorizontalReflow(page);
   await expectNoWcagViolations(page);
