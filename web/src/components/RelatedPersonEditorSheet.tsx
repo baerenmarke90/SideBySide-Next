@@ -14,15 +14,15 @@ import { PersonRelationship } from '../api/generated/models/PersonRelationship';
 import type { RelatedPersonFields } from '../api/generated/models/RelatedPersonFields';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import {
+  type DraftUploadPhase,
+  uploadMemoryDraftAttachment,
+} from '../client/memoryAttachmentDraft';
+import { createReferenceApis } from '../client/referenceFlow';
+import {
   birthdayFromInput,
   birthdayInputParts,
   daysInMonth,
 } from '../client/relatedPersonBirthday';
-import { createReferenceApis } from '../client/referenceFlow';
-import {
-  type DraftUploadPhase,
-  uploadMemoryDraftAttachment,
-} from '../client/memoryAttachmentDraft';
 import { useRelatedPersonAvatarUrl } from '../client/useRelatedPersonAvatarUrl';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
