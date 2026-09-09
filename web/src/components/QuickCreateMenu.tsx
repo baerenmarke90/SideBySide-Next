@@ -8,15 +8,15 @@ import {
   useState,
 } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { PRIVATE_GIFT_IDEAS_PATH } from '../client/privateArea';
 import {
+  type AppRouteIcon,
+  appRoutePath,
   HEART_MOMENT_CREATE_ROUTE,
   MEMORY_CREATE_ROUTE,
   MILESTONE_CREATE_ROUTE,
   MORE_PRIVATE_ROUTE,
-  appRoutePath,
-  type AppRouteIcon,
 } from '../client/routes';
-import { PRIVATE_GIFT_IDEAS_PATH } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
 import './QuickCreateMenu.css';
@@ -191,7 +191,11 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
     };
   }, [open, variant, closeMenu]);
 
-  // Anchor hash scrolling
+  // Anchor hash scrolling. When the anchor is a disclosure `<summary>` (as
+  // used by the Wish/Plan inline composers), also focus the primary field
+  // inside the now-open `<details>` so choosing an action from Quick Create
+  // lands the user directly in a ready-to-type composer instead of merely
+  // revealing it.
   useEffect(() => {
     const targetId = location.hash.replace(/^#/, '');
     if (!targetId) return;
@@ -199,12 +203,25 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
     const target = document.getElementById(targetId);
     if (!target) return;
 
+    let detailsAncestor: HTMLDetailsElement | null = null;
     let parent = target.parentElement;
     while (parent) {
-      if (parent instanceof HTMLDetailsElement) parent.open = true;
+      if (parent instanceof HTMLDetailsElement) {
+        parent.open = true;
+        detailsAncestor ??= parent;
+      }
       parent = parent.parentElement;
     }
-    target.scrollIntoView({ block: 'center' });
+
+    const focusTarget =
+      target.tagName === 'SUMMARY'
+        ? detailsAncestor?.querySelector<
+            HTMLInputElement | HTMLTextAreaElement
+          >('input:not([type="hidden"]), textarea')
+        : null;
+
+    (focusTarget ?? target).scrollIntoView({ block: 'center' });
+    focusTarget?.focus({ preventScroll: true });
   }, [location.hash]);
 
   function focusMenuItem(index: number): void {
@@ -288,7 +305,11 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
         key={target.labelKey}
         className={`quick-create-mobile-item quick-create-mobile-item-${target.tone}`}
         to={target.to}
-        onClick={closeMenu}
+        // Choosing an action is a deliberate navigation, not an abort: close
+        // the sheet without the trigger focus-return `closeMenu` performs
+        // for Escape/backdrop/close-button, so a target destination (e.g.
+        // the Wish/Plan composer's own focus handoff) keeps the focus it set.
+        onClick={() => setOpen(false)}
         aria-label={t(target.labelKey)}
         aria-describedby={sublineId}
       >
