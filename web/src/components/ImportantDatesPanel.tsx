@@ -100,15 +100,7 @@ function ImportantDateEditorSheet({
       repeats !== initialDraft.repeats ||
       relatedPersonId !== initialDraft.relatedPersonId ||
       visibility !== initialDraft.visibility,
-    [
-      dateVal,
-      initialDraft,
-      label,
-      relatedPersonId,
-      repeats,
-      type,
-      visibility,
-    ],
+    [dateVal, initialDraft, label, relatedPersonId, repeats, type, visibility],
   );
 
   const handleCloseAttempt = useCallback(() => {
@@ -393,7 +385,9 @@ function ImportantDateEditorSheet({
                       name="type"
                       value={type}
                       onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                        setType(event.target.value as ImportantDateDraft['type'])
+                        setType(
+                          event.target.value as ImportantDateDraft['type'],
+                        )
                       }
                     >
                       {DATE_TYPES.map((typeValue) => (
@@ -432,7 +426,10 @@ function ImportantDateEditorSheet({
                 className="focused-editor-privacy"
                 aria-labelledby="important-date-privacy-title"
               >
-                <span className="focused-editor-privacy-icon" aria-hidden="true">
+                <span
+                  className="focused-editor-privacy-icon"
+                  aria-hidden="true"
+                >
                   <DestinationIcon icon={privacyIcon} />
                 </span>
                 <div className="focused-editor-privacy-content">
@@ -638,9 +635,7 @@ export function ImportantDatesPanel({
       <div className="important-dates-intro-block">
         <div>
           <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
-          <p className="important-dates-intro">
-            {t('importantDates.intro')}
-          </p>
+          <p className="important-dates-intro">{t('importantDates.intro')}</p>
         </div>
         <button
           type="button"
@@ -761,7 +756,9 @@ export function ImportantDatesPanel({
                       <span className="important-date-meta">
                         <span>{t(`importantDates.type.${date.type}`)}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{t(`importantDates.repeats.${date.repeats}`)}</span>
+                        <span>
+                          {t(`importantDates.repeats.${date.repeats}`)}
+                        </span>
                         <span aria-hidden="true">·</span>
                         <span
                           className={`important-date-visibility ${
