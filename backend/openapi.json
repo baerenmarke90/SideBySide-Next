@@ -4861,6 +4861,11 @@
           "relationship": {
             "$ref": "#/components/schemas/PersonRelationship"
           },
+          "showBirthdayOnDashboard": {
+            "default": false,
+            "title": "Showbirthdayondashboard",
+            "type": "boolean"
+          },
           "visibility": {
             "$ref": "#/components/schemas/ContentVisibility"
           }
@@ -4920,6 +4925,10 @@
           "relationship": {
             "$ref": "#/components/schemas/PersonRelationship"
           },
+          "showBirthdayOnDashboard": {
+            "title": "Showbirthdayondashboard",
+            "type": "boolean"
+          },
           "updatedAt": {
             "format": "date-time",
             "title": "Updatedat",
@@ -4940,6 +4949,7 @@
           "birthday",
           "birthdayYearKnown",
           "visibility",
+          "showBirthdayOnDashboard",
           "version",
           "createdAt",
           "updatedAt"

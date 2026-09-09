@@ -39,6 +39,7 @@ import kotlinx.serialization.Contextual
  * @param displayName 
  * @param id 
  * @param relationship 
+ * @param showBirthdayOnDashboard 
  * @param updatedAt 
  * @param version 
  * @param visibility 
@@ -65,6 +66,9 @@ data class RelatedPersonView (
 
     @Contextual @SerialName(value = "relationship")
     val relationship: PersonRelationship,
+
+    @SerialName(value = "showBirthdayOnDashboard")
+    val showBirthdayOnDashboard: kotlin.Boolean,
 
     @Contextual @SerialName(value = "updatedAt")
     val updatedAt: java.time.OffsetDateTime,

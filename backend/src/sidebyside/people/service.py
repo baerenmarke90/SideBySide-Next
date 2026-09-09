@@ -58,6 +58,7 @@ from sidebyside.reminders import runtime as reminder_runtime
 class PeopleErrorCode:
     DISPLAY_NAME_REQUIRED = "RELATED_PERSON_DISPLAY_NAME_REQUIRED"
     BIRTHDAY_REQUIRED = "RELATED_PERSON_BIRTHDAY_REQUIRED"
+    DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY = "RELATED_PERSON_DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY"
     HAS_SHARED_DATES = "RELATED_PERSON_HAS_SHARED_DATES"
     AVATAR_IMAGE_REQUIRED = "RELATED_PERSON_AVATAR_IMAGE_REQUIRED"
     LABEL_REQUIRED = "IMPORTANT_DATE_LABEL_REQUIRED"
@@ -96,6 +97,21 @@ def normalize_birthday(birthday: date | None, *, year_known: bool) -> date | Non
     if year_known:
         return birthday
     return birthday.replace(year=UNKNOWN_BIRTH_YEAR)
+
+
+def _validate_dashboard_visibility(
+    birthday: date | None, *, show_birthday_on_dashboard: bool
+) -> None:
+    """A birthday must exist before it can be opted into the Dashboard.
+
+    Mirrors the schema's `dashboard_visibility_needs_a_birthday` check so the
+    client receives a 422 instead of a database error.
+    """
+    if show_birthday_on_dashboard and birthday is None:
+        raise ValidationError(
+            "A birthday is required to show it on the Dashboard.",
+            PeopleErrorCode.DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY,
+        )
 
 
 def list_persons(session: Session, context: AuthorizationContext) -> Sequence[RelatedPerson]:
@@ -171,15 +187,21 @@ def create_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    show_birthday_on_dashboard: bool = False,
     avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
+    normalized_birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    _validate_dashboard_visibility(
+        normalized_birthday, show_birthday_on_dashboard=show_birthday_on_dashboard
+    )
     person = RelatedPerson(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=privacy_for(visibility).value,
         relationship=relationship.value,
-        birthday=normalize_birthday(birthday, year_known=birthday_year_known),
+        birthday=normalized_birthday,
         birthday_year_known=birthday_year_known,
+        show_birthday_on_dashboard=show_birthday_on_dashboard,
         payload=RelatedPersonPayload(
             display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
         ),
@@ -223,6 +245,7 @@ def update_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    show_birthday_on_dashboard: bool = False,
     avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
     person = require_writable_locked(session, RelatedPerson, context, person_id)
@@ -242,11 +265,17 @@ def update_person(
             PeopleErrorCode.HAS_SHARED_DATES,
         )
 
+    normalized_birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    _validate_dashboard_visibility(
+        normalized_birthday, show_birthday_on_dashboard=show_birthday_on_dashboard
+    )
+
     _rebind_avatar(session, context, person, avatar_attachment_id)
     person.privacy_class = privacy.value
     person.relationship = relationship.value
-    person.birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    person.birthday = normalized_birthday
     person.birthday_year_known = birthday_year_known
+    person.show_birthday_on_dashboard = show_birthday_on_dashboard
     person.payload = RelatedPersonPayload(
         display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
     )

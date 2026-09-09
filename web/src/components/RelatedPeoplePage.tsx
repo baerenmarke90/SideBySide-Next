@@ -76,6 +76,11 @@ function personFields(
     ) as RelatedPersonFields['visibility'],
     birthday,
     birthdayYearKnown: Boolean(birthday && birthdayYearKnown),
+    // The control only renders while a birthday is present, so this can only
+    // be 'on' together with a real birthday value.
+    showBirthdayOnDashboard: Boolean(
+      birthday && form.get('showBirthdayOnDashboard') === 'on',
+    ),
     avatarAttachmentId: avatarAttachmentId || undefined,
   };
 }
@@ -155,6 +160,9 @@ function RelatedPersonModalDialog({
     initialBirthdayParts.monthValue,
   );
   const [birthdayDay, setBirthdayDay] = useState(initialBirthdayParts.dayValue);
+  const [showBirthdayOnDashboard, setShowBirthdayOnDashboard] = useState(
+    person?.birthday ? person.showBirthdayOnDashboard : false,
+  );
 
   const [currentAvatarId, setCurrentAvatarId] = useState<string | null>(
     person?.avatarAttachmentId ?? null,
@@ -188,6 +196,13 @@ function RelatedPersonModalDialog({
     [i18n.language],
   );
   const birthdayPartRequired = Boolean(birthdayMonth || birthdayDay);
+  const hasBirthday = birthdayYearKnown
+    ? Boolean(knownBirthday)
+    : Boolean(birthdayMonth && birthdayDay);
+
+  useEffect(() => {
+    if (!hasBirthday) setShowBirthdayOnDashboard(false);
+  }, [hasBirthday]);
 
   const createdObjectUrlRef = useRef<string | null>(null);
 
@@ -511,6 +526,29 @@ function RelatedPersonModalDialog({
                 </p>
               </>
             )}
+
+            {hasBirthday ? (
+              <>
+                <label
+                  className="choice-row"
+                  htmlFor="related-person-show-birthday-on-dashboard"
+                >
+                  <input
+                    id="related-person-show-birthday-on-dashboard"
+                    name="showBirthdayOnDashboard"
+                    type="checkbox"
+                    checked={showBirthdayOnDashboard}
+                    onChange={(event) =>
+                      setShowBirthdayOnDashboard(event.currentTarget.checked)
+                    }
+                  />
+                  <span>{t('people.birthdayShowOnDashboard')}</span>
+                </label>
+                <p className="field-help">
+                  {t('people.birthdayShowOnDashboardHelp')}
+                </p>
+              </>
+            ) : null}
           </div>
 
           <div className="field-group">
