@@ -34,18 +34,43 @@
   min-width: 0;
 }
 
-/* The private-context badge already leaves the visual compact topbar at the
-   established <=839px viewport breakpoint. Mirror that existing shell contract
-   when root zoom makes the shell itself effectively narrow. The label stays in
-   the accessibility tree; only its visual space is removed. */
+/* Mirror the established <=839px Compact shell from the space the product
+   actually receives. Root zoom does not change viewport media queries, so a
+   desktop viewport at 400% otherwise keeps the full desktop nav inside a
+   320-CSS-px shell, making the wrapped sticky topbar cover product controls. */
 @container product-shell (max-width: 52.4375rem) {
-  .product-topbar .private-context {
+  .product-topbar .brand-name,
+  .product-topbar .shared-context,
+  .product-topbar .theme-control label,
+  .product-topbar .theme-control-icon {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+  }
+
+  .product-topbar .theme-control-inline select {
+    max-width: 6rem;
+  }
+
+  .shell-nav,
+  .shell-primary-action {
+    display: none;
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+  }
+
+  .mobile-quick-create {
+    display: flex;
+  }
+
+  .product-shell .product-main {
+    width: calc(100% - 2rem);
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom));
   }
 }
 
