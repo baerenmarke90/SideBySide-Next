@@ -562,25 +562,34 @@ internal fun PlanScheduleSheet(
     }
     if (timePickerOpen) {
         val initial = time?.let { LocalTime.parse(it) } ?: suggestedTime
+        // Hoisted above the dialog so the confirm button and the picker share
+        // one state, which is what lets the buttons sit where the platform
+        // puts them instead of inside the picker's own content.
+        val state = rememberTimePickerState(
+            initialHour = initial.hour,
+            initialMinute = initial.minute,
+            is24Hour = true,
+        )
         TimePickerDialog(
             onDismissRequest = { timePickerOpen = false },
             title = { Text(stringResource(R.string.plan_schedule_pick_time)) },
-            confirmButton = {},
-            dismissButton = {},
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        timePickerOpen = false
+                        time = LocalTime.of(state.hour, state.minute).toString()
+                    },
+                ) {
+                    Text(stringResource(R.string.plan_picker_take))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { timePickerOpen = false }) {
+                    Text(stringResource(R.string.plan_cancel))
+                }
+            },
         ) {
-            val state = rememberTimePickerState(
-                initialHour = initial.hour,
-                initialMinute = initial.minute,
-                is24Hour = true,
-            )
             TimePicker(state = state)
-            PickerDecision(
-                onDismiss = { timePickerOpen = false },
-                onTake = {
-                    timePickerOpen = false
-                    time = LocalTime.of(state.hour, state.minute).toString()
-                },
-            )
         }
     }
 }
@@ -685,32 +694,6 @@ private fun DayPicker(
         },
     ) {
         DatePicker(state = state)
-    }
-}
-
-/**
- * `TimePickerDialog` places its own buttons, so the time picker carries its
- * decision inside its content to keep both pickers reading the same way.
- */
-@Composable
-private fun PickerDecision(onDismiss: () -> Unit, onTake: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        TextButton(
-            onClick = onTake,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
-        ) {
-            Text(stringResource(R.string.plan_picker_take))
-        }
-        TextButton(
-            onClick = onDismiss,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
-        ) {
-            Text(stringResource(R.string.plan_cancel))
-        }
     }
 }
 
