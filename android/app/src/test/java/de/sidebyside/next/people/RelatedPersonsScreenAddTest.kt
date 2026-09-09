@@ -162,6 +162,7 @@ class RelatedPersonsScreenAddTest {
             updatedAt = OffsetDateTime.now(),
             version = 1,
             visibility = ContentVisibility.SHARED,
+            showBirthdayOnDashboard = false,
         )
         composeRule.setContent {
             SideBySideTheme {
