@@ -48,9 +48,7 @@ const date: ImportantDateView = {
   updatedAt: new Date('2026-01-02T00:00:00Z'),
 };
 
-function createMockPeopleApi(
-  dates: ImportantDateView[] = [date],
-): PeopleApi {
+function createMockPeopleApi(dates: ImportantDateView[] = [date]): PeopleApi {
   return {
     listImportantDatesApiV1SpacesSpaceIdImportantDatesGet: vi
       .fn()
@@ -112,7 +110,9 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     expect(card.textContent).toContain(importantDates.type.ANNIVERSARY);
     expect(card.textContent).toContain(importantDates.repeats.ANNUALLY);
     expect(card.textContent).toContain(importantDates.visibility.SHARED);
-    expect(card.querySelector('.important-date-visibility-icon svg')).not.toBeNull();
+    expect(
+      card.querySelector('.important-date-visibility-icon svg'),
+    ).not.toBeNull();
     expect(container.querySelector('.important-date-chip')).toBeNull();
   });
 
@@ -149,7 +149,9 @@ describe('ImportantDatesPanel mobile-first surface', () => {
     ) as HTMLDetailsElement | null;
     expect(disclosure).not.toBeNull();
     expect(disclosure?.open).toBe(false);
-    expect(screen.getByLabelText(importantDates.visibilityLabel)).not.toBeNull();
+    expect(
+      screen.getByLabelText(importantDates.visibilityLabel),
+    ).not.toBeNull();
     expect(
       within(dialog).getByRole('button', { name: importantDates.create }),
     ).not.toBeNull();
