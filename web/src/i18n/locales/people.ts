@@ -12,7 +12,8 @@ const people = {
   nameLabel: 'Name',
   relationshipLabel: 'Beziehung',
   birthdayLabel: 'Geburtstag',
-  birthdayOptionalHelp: 'Optional – nur ergänzen, wenn es für euch hilfreich ist.',
+  birthdayOptionalHelp:
+    'Optional – nur ergänzen, wenn es für euch hilfreich ist.',
   birthdayDateLabel: 'Geburtsdatum',
   birthdayYearKnown: 'Das Geburtsjahr ist bekannt',
   birthdayDayLabel: 'Tag',
