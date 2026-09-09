@@ -182,6 +182,21 @@ describe('theme token contrast', () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('never uses the decorative shared accent as normal text on the shared surface', () => {
+    // Regression guard for #841: --color-shared-accent is calibrated for
+    // decorative uses (borders, gradient stops, marker fills) and fails
+    // WCAG AA (~3.76:1) as normal text on --color-shared-surface in Light.
+    // Normal shared-kind text must use --color-shared, which already meets
+    // AA (see 'keeps status text readable on its semantic surface' above).
+    const textColorPattern = /^\s*color:\s*var\(--color-shared-accent\)/m;
+    for (const relativePath of [
+      './components/TodayPage.css',
+      './components/SharedPlanningSanctuary.css',
+    ]) {
+      expect(textColorPattern.test(readSource(relativePath))).toBe(false);
+    }
+  });
+
   it('keeps the focus indicator above the 3:1 UI contrast threshold', () => {
     expect(
       contrast(
