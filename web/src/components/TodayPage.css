@@ -807,7 +807,7 @@
 .today-kind-milestone {
   background: var(--color-shared-surface);
   border-color: var(--color-shared-border);
-  color: var(--color-shared-accent);
+  color: var(--color-shared);
 }
 
 .today-kind-wish,
