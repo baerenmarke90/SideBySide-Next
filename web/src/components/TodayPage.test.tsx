@@ -293,7 +293,7 @@ describe('TodayPage', () => {
     expect(html).not.toContain('new-space-experience');
   });
 
-  it('does not become plan-first when no retrospective exists but a Keepsake is available (regression #790)', () => {
+  it('does not let a generic Keepsake outrank a genuinely current/upcoming signal (#840)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -333,14 +333,210 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // The Keepsake precedes the planning area: the page leads with the
-    // shared photographic memory, not the upcoming plan.
-    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    // A genuinely current/upcoming signal exists, so the Shared Planning
+    // Horizon precedes the merely generic (non-retrospective) Keepsake.
     const planningIndex = html.indexOf('today-planning-area');
-    expect(keepsakeIndex).toBeGreaterThan(-1);
-    expect(planningIndex).toBeGreaterThan(keepsakeIndex);
+    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    expect(planningIndex).toBeGreaterThan(-1);
+    expect(keepsakeIndex).toBeGreaterThan(planningIndex);
+
+    // The Keepsake still appears, still warm/editorial, just not first.
     expect(html).toContain('Beach Day');
     expect(html).toContain('Weekend trip');
+    expect(html.split('Beach Day').length - 1).toBe(1);
+  });
+
+  it('keeps a generic Keepsake as the prominent focal point when no current/upcoming signal exists (#840)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      keepsake: {
+        id: 'mem-photo',
+        type: 'MEMORY',
+        titleOrText: 'Beach Day',
+        occurredOn: new Date('2026-09-01T12:00:00Z'),
+        previewAttachmentId: 'att-123',
+      },
+      recentShared: [
+        {
+          id: 'mem-text',
+          type: 'MEMORY',
+          titleOrText: 'Text Memory',
+          occurredOn: new Date('2026-08-30T12:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+            loadMemoryImage={() =>
+              Promise.resolve('blob:http://localhost/mock')
+            }
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // No planning area exists at all, so the Keepsake remains the
+    // page's leading editorial focus, ahead of the quiet Shared Trace.
+    expect(html).not.toContain('today-planning-area');
+    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const traceIndex = html.indexOf('today-section-recent');
+    expect(keepsakeIndex).toBeGreaterThan(-1);
+    expect(traceIndex).toBeGreaterThan(keepsakeIndex);
+  });
+
+  it("keeps the planning area's internal upcoming/signal order intact when a generic Keepsake also exists (#840)", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Candlelight Dinner',
+          scheduledAt: new Date('2026-09-10T19:00:00Z'),
+        },
+      ],
+      keepsake: {
+        id: 'mem-photo',
+        type: 'MEMORY',
+        titleOrText: 'Sunset Photo',
+        occurredOn: new Date('2026-09-01T12:00:00Z'),
+        previewAttachmentId: 'att-123',
+      },
+      recentShared: [],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: 'partner-1',
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T12:00:00Z'),
+          occurredAt: new Date('2026-09-03T12:00:00Z'),
+          sourceEventId: 'ev-1',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+            loadMemoryImage={() =>
+              Promise.resolve('blob:http://localhost/mock')
+            }
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Both planning modules still share the existing two-zone layout, in
+    // their existing relative order, ahead of the deferred generic Keepsake.
+    expect(html).toContain('today-planning-dual');
+    const agendaIndex = html.indexOf('today-agenda-row');
+    const signalIndex = html.indexOf('today-signal-card');
+    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    expect(agendaIndex).toBeGreaterThan(-1);
+    expect(signalIndex).toBeGreaterThan(agendaIndex);
+    expect(keepsakeIndex).toBeGreaterThan(signalIndex);
+  });
+
+  it('keeps a genuine date-specific retrospective ahead of the planning area, unlike a generic Keepsake (#840)', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Weekend trip',
+          scheduledAt: new Date('2026-09-15T10:00:00Z'),
+        },
+      ],
+      retrospective: {
+        id: 'heart-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'One year ago today',
+        createdAt: new Date('2025-09-09T08:00:00Z'),
+      },
+      recentShared: [],
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // A genuine date-specific retrospective is not a generic fallback: it
+    // keeps its established prominence ahead of the planning area even
+    // though a current/upcoming signal exists.
+    const retrospectiveIndex = html.indexOf('today-section-retrospective');
+    const planningIndex = html.indexOf('today-planning-area');
+    expect(retrospectiveIndex).toBeGreaterThan(-1);
+    expect(planningIndex).toBeGreaterThan(retrospectiveIndex);
+    expect(html).toContain('One year ago today');
+    expect(html).not.toContain('today-section-keepsake');
   });
 
   it('omits the Keepsake when no loadMemoryImage is supplied', () => {

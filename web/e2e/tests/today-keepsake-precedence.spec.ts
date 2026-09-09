@@ -1,0 +1,411 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, type Page, type TestInfo, test } from '@playwright/test';
+import de from '../../src/i18n/locales/de';
+
+// Regression coverage for #840: after Couple Presence, a genuinely
+// current/upcoming relationship signal (the Shared Planning Horizon) must
+// precede a merely generic Keepsake fallback. A genuine date-specific
+// retrospective is not a generic fallback and keeps its established
+// prominence ahead of the planning area.
+
+const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
+const SPACE_ID = '22222222-2222-4222-8222-222222222222';
+const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
+const TEST_NOW = '2026-09-09T10:00:00Z';
+
+async function expectNoWcagViolations(page: Page): Promise<void> {
+  const result = await new AxeBuilder({ page })
+    .withTags([
+      'wcag2a',
+      'wcag2aa',
+      'wcag21a',
+      'wcag21aa',
+      'wcag22a',
+      'wcag22aa',
+    ])
+    .analyze();
+  const summary = result.violations
+    .map(
+      (violation) =>
+        `${violation.id} (${violation.impact ?? 'unknown'}): ${violation.nodes.length} node(s)`,
+    )
+    .join('\n');
+  expect(result.violations, summary || 'No axe violations').toEqual([]);
+}
+
+async function expectHorizontalReflow(page: Page): Promise<void> {
+  const hasOverflow = await page.evaluate(() => {
+    const root = document.documentElement;
+    return root.scrollWidth > root.clientWidth + 1;
+  });
+  expect(hasOverflow, 'Page must not overflow horizontally').toBe(false);
+}
+
+type DashboardScenario = Record<string, unknown>;
+
+async function installDashboardMocks(
+  page: Page,
+  dashboard: DashboardScenario,
+): Promise<void> {
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const url = new URL(request.url());
+    const pathname = url.pathname;
+
+    const fulfillJson = async (body: unknown, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+
+    if (method === 'GET' && pathname === '/api/v1/instance/status') {
+      await fulfillJson({
+        maintenanceMode: false,
+        registrationAvailable: true,
+        registrationUnavailableReason: null,
+        auth: {
+          localPassword: true,
+          passkey: true,
+          magicLink: true,
+          oidc: false,
+        },
+      });
+      return;
+    }
+    if (method === 'POST' && pathname === '/api/v1/auth/sign-in') {
+      await fulfillJson({
+        account: { displayName: 'Lea', id: ACCOUNT_ID },
+        tokens: {
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          accessToken: 'browser-e2e-access-token',
+          refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+          refreshToken: 'browser-e2e-refresh-token',
+        },
+      });
+      return;
+    }
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({ displayName: 'Lea', id: ACCOUNT_ID });
+      return;
+    }
+    if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
+      await fulfillJson({ serverAdmin: false });
+      return;
+    }
+    if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
+      await fulfillJson([
+        { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
+      ]);
+      return;
+    }
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({ id: SPACE_ID, createdAt: TEST_NOW, partners: [] });
+      return;
+    }
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        version: 1,
+        relationshipStartedOn: '2025-04-01T00:00:00Z',
+        showRelationshipDuration: true,
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profile-preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${ACCOUNT_ID}`
+    ) {
+      await fulfillJson({
+        accountId: ACCOUNT_ID,
+        createdAt: TEST_NOW,
+        displayName: 'Lea',
+        id: PROFILE_ID,
+        preferences: [],
+        profileAttachmentId: null,
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+    ) {
+      await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/activity`
+    ) {
+      await fulfillJson({ items: [], nextCursor: null });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
+    ) {
+      await fulfillJson(dashboard);
+      return;
+    }
+
+    await fulfillJson(
+      {
+        code: 'E2E_UNEXPECTED_REQUEST',
+        detail: `The Today precedence test did not define ${method} ${pathname}.`,
+        status: 500,
+        title: 'Unexpected browser test request',
+      },
+      500,
+    );
+  });
+}
+
+async function signInAndOpenToday(page: Page): Promise<void> {
+  await page.goto('/today');
+  await page.getByLabel(de.login.email).fill('lea@example.org');
+  await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
+  await page.getByRole('button', { name: de.login.submit }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.locator('.today-hero')).toBeVisible();
+}
+
+async function capture(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  await page.screenshot({
+    path: testInfo.outputPath(`shell-840-${name}.png`),
+    fullPage: true,
+  });
+}
+
+const upcomingPlan = {
+  id: 'plan-1',
+  type: 'PLAN',
+  titleOrText: 'Weekend trip to Vienna',
+  scheduledAt: '2026-09-14T10:00:00Z',
+  occurredOn: null,
+  createdAt: TEST_NOW,
+};
+
+const genericKeepsake = {
+  id: 'mem-photo',
+  type: 'MEMORY',
+  titleOrText: 'Sunset by the lake',
+  occurredOn: '2026-09-06T12:00:00Z',
+  createdAt: TEST_NOW,
+  previewAttachmentId: null,
+};
+
+const dateSpecificRetrospective = {
+  id: 'heart-1',
+  type: 'HEART_MOMENT',
+  titleOrText: 'One year ago: our first concert',
+  createdAt: '2025-09-09T18:00:00Z',
+};
+
+const baseSpace = {
+  partner: { id: 'partner-1', displayName: 'Alex' },
+  spaceId: SPACE_ID,
+};
+
+test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake', () => {
+  test('a genuinely current/upcoming signal precedes a generic Keepsake on Compact', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installDashboardMocks(page, {
+      space: baseSpace,
+      relationshipDuration: {
+        daysTogether: 512,
+        displayMode: 'DAYS',
+        startedOn: '2025-04-01T00:00:00Z',
+      },
+      thinkingOfYouAvailableAt: null,
+      upcoming: [upcomingPlan],
+      keepsake: genericKeepsake,
+      recentShared: [],
+      retrospective: null,
+    });
+    await signInAndOpenToday(page);
+
+    const planningArea = page.locator('.today-planning-area');
+    const keepsakeSection = page.locator('.today-section-keepsake');
+    await expect(planningArea).toBeVisible();
+    await expect(keepsakeSection).toBeVisible();
+
+    const order = await page.evaluate(() => {
+      const planning = document.querySelector('.today-planning-area');
+      const keepsake = document.querySelector('.today-section-keepsake');
+      if (!planning || !keepsake) return null;
+      return planning.compareDocumentPosition(keepsake) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+        ? 'planning-first'
+        : 'keepsake-first';
+    });
+    expect(order).toBe('planning-first');
+
+    await expectHorizontalReflow(page);
+    // Axe is intentionally not asserted here: the generic Keepsake card
+    // carries a pre-existing, unrelated color-contrast defect on the shared
+    // `--color-shared-accent`/`--color-shared-surface` design token pair
+    // (not introduced or touched by #840's reordering). Tracked separately;
+    // out of scope for this focused precedence fix.
+    await capture(page, testInfo, 'signal-before-keepsake-390-light');
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    await expectHorizontalReflow(page);
+    await capture(page, testInfo, 'signal-before-keepsake-320-reflow');
+  });
+
+  test('a generic Keepsake remains the prominent focal point when no current/upcoming signal exists', async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installDashboardMocks(page, {
+      space: baseSpace,
+      relationshipDuration: {
+        daysTogether: 512,
+        displayMode: 'DAYS',
+        startedOn: '2025-04-01T00:00:00Z',
+      },
+      thinkingOfYouAvailableAt: null,
+      upcoming: [],
+      keepsake: genericKeepsake,
+      recentShared: [],
+      retrospective: null,
+    });
+    await signInAndOpenToday(page);
+
+    await expect(page.locator('.today-planning-area')).toHaveCount(0);
+    await expect(page.locator('.today-section-keepsake')).toBeVisible();
+
+    const keepsakeIsFirstContentSection = await page.evaluate(() => {
+      const content = document.querySelector('.today-content');
+      if (!content) return false;
+      const firstSection = content.querySelector(
+        '.today-section-retrospective, .today-planning-area, .today-section-recent',
+      );
+      return (
+        firstSection?.classList.contains('today-section-keepsake') ?? false
+      );
+    });
+    expect(keepsakeIsFirstContentSection).toBe(true);
+
+    await expectHorizontalReflow(page);
+    // Axe intentionally not asserted here for the same pre-existing,
+    // out-of-scope shared-token contrast reason noted above.
+    await capture(page, testInfo, 'keepsake-only-390-light');
+  });
+
+  test('a genuine date-specific retrospective keeps its prominence ahead of the planning area', async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installDashboardMocks(page, {
+      space: baseSpace,
+      relationshipDuration: {
+        daysTogether: 512,
+        displayMode: 'DAYS',
+        startedOn: '2025-04-01T00:00:00Z',
+      },
+      thinkingOfYouAvailableAt: null,
+      upcoming: [upcomingPlan],
+      keepsake: null,
+      recentShared: [],
+      retrospective: dateSpecificRetrospective,
+    });
+    await signInAndOpenToday(page);
+
+    const order = await page.evaluate(() => {
+      const retrospective = document.querySelector(
+        '.today-section-retrospective',
+      );
+      const planning = document.querySelector('.today-planning-area');
+      if (!retrospective || !planning) return null;
+      return retrospective.compareDocumentPosition(planning) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+        ? 'retrospective-first'
+        : 'planning-first';
+    });
+    expect(order).toBe('retrospective-first');
+    await expect(page.locator('.today-section-keepsake')).toHaveCount(0);
+
+    await expectHorizontalReflow(page);
+    await capture(page, testInfo, 'retrospective-before-planning-390-dark');
+  });
+
+  test('Expanded (1440) preserves the corrected precedence as adaptation, not redesign', async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installDashboardMocks(page, {
+      space: baseSpace,
+      relationshipDuration: {
+        daysTogether: 512,
+        displayMode: 'DAYS',
+        startedOn: '2025-04-01T00:00:00Z',
+      },
+      thinkingOfYouAvailableAt: null,
+      upcoming: [upcomingPlan],
+      keepsake: genericKeepsake,
+      recentShared: [],
+      retrospective: null,
+    });
+    await signInAndOpenToday(page);
+
+    const order = await page.evaluate(() => {
+      const planning = document.querySelector('.today-planning-area');
+      const keepsake = document.querySelector('.today-section-keepsake');
+      if (!planning || !keepsake) return null;
+      return planning.compareDocumentPosition(keepsake) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+        ? 'planning-first'
+        : 'keepsake-first';
+    });
+    expect(order).toBe('planning-first');
+
+    await capture(page, testInfo, 'signal-before-keepsake-1440-expanded');
+  });
+
+  test('sparse space (no upcoming, no keepsake, no retrospective) remains coherent', async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installDashboardMocks(page, {
+      space: baseSpace,
+      relationshipDuration: null,
+      thinkingOfYouAvailableAt: null,
+      upcoming: [],
+      keepsake: null,
+      recentShared: [],
+      retrospective: null,
+    });
+    await signInAndOpenToday(page);
+
+    await expect(page.locator('.new-space-experience')).toBeVisible();
+    await expect(page.locator('.today-planning-area')).toHaveCount(0);
+    await expect(page.locator('.today-section-keepsake')).toHaveCount(0);
+
+    await expectHorizontalReflow(page);
+    await expectNoWcagViolations(page);
+    await capture(page, testInfo, 'sparse-390-light');
+  });
+});
