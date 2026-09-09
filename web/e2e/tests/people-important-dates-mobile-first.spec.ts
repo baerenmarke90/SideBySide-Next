@@ -424,7 +424,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await dateCard.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/important-date-editor/);
-  await expect(dialog.getByLabel(importantDates.labelLabel)).toHaveValue(\n    LONG_DATE_LABEL,\n  );
+  await expect(dialog.getByLabel(importantDates.labelLabel)).toHaveValue(
+    LONG_DATE_LABEL,
+  );
   await expect(
     dialog.locator('.focused-editor-danger-zone').getByRole('button', {
       name: importantDates.delete,
@@ -462,7 +464,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await personCard.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
-  await expect(dialog.getByLabel(people.nameLabel)).toHaveValue(\n    LONG_PERSON_NAME,\n  );
+  await expect(dialog.getByLabel(people.nameLabel)).toHaveValue(
+    LONG_PERSON_NAME,
+  );
   await expect(
     dialog.locator('.focused-editor-danger-zone').getByRole('button', {
       name: people.delete,
@@ -515,7 +519,7 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   });
   await dateCard.click();
   dialog = page.getByRole('dialog');
-  await expectHorizontalReflow(page);
+  await expectHorizontalReflow(pae);
   await capture(page, testInfo, 'w52-400-percent-dark');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -525,7 +529,7 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   });
   await personCreate.click();
   dialog = page.getByRole('dialog');
-  await expectHorizontalReflow(page);
+  await expectHorizontalReflow(pae);
   await capture(page, testInfo, 'w54-400-percent-dark');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -609,7 +613,7 @@ test('focused editors keep completion reachable at small height and adapt withou
   await expect(page.locator('.layout-split')).toHaveCount(0);
   await expect(page.locator('.layout-rail')).toHaveCount(0);
   await expectHorizontalReflow(page);
-  await expectNoWcagViolations(page);
+  await expectNoWcagViolations(pae);
   await capture(page, testInfo, 'w52-expanded-1440-dark');
 
   expect(unexpectedRequests).toEqual([]);
