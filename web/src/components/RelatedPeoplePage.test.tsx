@@ -6,6 +6,7 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  within,
 } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ const person: RelatedPersonView = {
   birthday: new Date('1995-05-12T00:00:00Z'),
   birthdayYearKnown: true,
   visibility: ContentVisibility.SHARED,
+  showBirthdayOnDashboard: false,
   avatarAttachmentId: null,
   version: 3,
   createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -229,6 +231,113 @@ describe('RelatedPeoplePage redesigned surface', () => {
     const cancelBtn = screen.getByRole('button', { name: de.common.cancel });
     fireEvent.click(cancelBtn);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('hides the Dashboard-visibility toggle until a birthday exists, then defaults it off', async () => {
+    const { container } = renderRelatedPeoplePage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(people.addPersonAction, 'i'),
+      }),
+    );
+
+    expect(screen.queryByLabelText(people.birthdayShowOnDashboard)).toBeNull();
+
+    // Create mode starts with a known-year birthday field already active.
+    const birthdayInput = container.querySelector<HTMLInputElement>(
+      '#related-person-birthday',
+    );
+    if (!birthdayInput) throw new Error('birthday input not found');
+    fireEvent.change(birthdayInput, { target: { value: '1990-06-15' } });
+
+    const toggle = screen.getByLabelText(
+      people.birthdayShowOnDashboard,
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+  });
+
+  it('submits the enabled Dashboard-visibility toggle for a new person', async () => {
+    const peopleApi = createMockPeopleApi();
+    const { container } = renderRelatedPeoplePage(peopleApi);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(people.addPersonAction, 'i'),
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(people.nameLabel), {
+      target: { value: 'Nina' },
+    });
+    const birthdayInput = container.querySelector<HTMLInputElement>(
+      '#related-person-birthday',
+    );
+    if (!birthdayInput) throw new Error('birthday input not found');
+    fireEvent.change(birthdayInput, { target: { value: '1990-06-15' } });
+    fireEvent.click(screen.getByLabelText(people.birthdayShowOnDashboard));
+
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: people.create,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(
+        peopleApi.createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost,
+      ).toHaveBeenCalledTimes(1);
+    });
+    const call = (
+      peopleApi.createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost as ReturnType<
+        typeof vi.fn
+      >
+    ).mock.calls[0][0];
+    expect(call.relatedPersonFields.showBirthdayOnDashboard).toBe(true);
+  });
+
+  it('reflects and persists the existing person Dashboard-visibility state on edit', async () => {
+    const shownPerson: RelatedPersonView = {
+      ...person,
+      showBirthdayOnDashboard: true,
+    };
+    const peopleApi = createMockPeopleApi([shownPerson]);
+    renderRelatedPeoplePage(peopleApi);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
+    });
+    const card = screen
+      .getByRole('heading', { name: 'Lisa' })
+      .closest('.people-card');
+    if (!card) throw new Error('card not found');
+    fireEvent.click(card);
+
+    const toggle = screen.getByLabelText(
+      people.birthdayShowOnDashboard,
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: people.saveChanges }));
+
+    await waitFor(() => {
+      expect(
+        peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut,
+      ).toHaveBeenCalledTimes(1);
+    });
+    const call = (
+      peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut as ReturnType<
+        typeof vi.fn
+      >
+    ).mock.calls[0][0];
+    expect(call.relatedPersonFields.showBirthdayOnDashboard).toBe(false);
   });
 
   it('manages body scroll lock and revokes avatar object URLs on replacement and unmount', async () => {

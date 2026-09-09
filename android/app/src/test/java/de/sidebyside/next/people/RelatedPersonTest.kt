@@ -257,6 +257,7 @@ private fun person(name: String, avatarAttachmentId: UUID? = null) = RelatedPers
     updatedAt = OffsetDateTime.now(),
     version = 1,
     visibility = ContentVisibility.SHARED,
+    showBirthdayOnDashboard = false,
     avatarAttachmentId = avatarAttachmentId,
 )
 

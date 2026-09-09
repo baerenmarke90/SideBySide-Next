@@ -7,6 +7,13 @@ serialization.
 Rules beyond pure visibility live in exactly two places: as a schema
 constraint and - so the client receives an understandable response instead
 of a database error - as a corresponding check here before persistence.
+
+Lock order is part of the People contract: lock the ``RelatedPerson`` first,
+then write or lock any linked ``ImportantDate`` rows, and only afterwards run
+reminder reconciliation. Privacy updates and deletes take the parent lock
+exclusively; date create/relink takes it in shared mode. No operation may lock
+an ImportantDate and then acquire its RelatedPerson lock, because that would
+create a deadlock cycle with privacy transitions and deletes.
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ from sidebyside.authorization import (
     privacy_for,
     readable,
     require_readable,
+    require_readable_shared,
     require_writable,
     require_writable_locked,
 )
@@ -50,6 +58,7 @@ from sidebyside.reminders import runtime as reminder_runtime
 class PeopleErrorCode:
     DISPLAY_NAME_REQUIRED = "RELATED_PERSON_DISPLAY_NAME_REQUIRED"
     BIRTHDAY_REQUIRED = "RELATED_PERSON_BIRTHDAY_REQUIRED"
+    DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY = "RELATED_PERSON_DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY"
     HAS_SHARED_DATES = "RELATED_PERSON_HAS_SHARED_DATES"
     AVATAR_IMAGE_REQUIRED = "RELATED_PERSON_AVATAR_IMAGE_REQUIRED"
     LABEL_REQUIRED = "IMPORTANT_DATE_LABEL_REQUIRED"
@@ -88,6 +97,21 @@ def normalize_birthday(birthday: date | None, *, year_known: bool) -> date | Non
     if year_known:
         return birthday
     return birthday.replace(year=UNKNOWN_BIRTH_YEAR)
+
+
+def _validate_dashboard_visibility(
+    birthday: date | None, *, show_birthday_on_dashboard: bool
+) -> None:
+    """A birthday must exist before it can be opted into the Dashboard.
+
+    Mirrors the schema's `dashboard_visibility_needs_a_birthday` check so the
+    client receives a 422 instead of a database error.
+    """
+    if show_birthday_on_dashboard and birthday is None:
+        raise ValidationError(
+            "A birthday is required to show it on the Dashboard.",
+            PeopleErrorCode.DASHBOARD_VISIBILITY_NEEDS_A_BIRTHDAY,
+        )
 
 
 def list_persons(session: Session, context: AuthorizationContext) -> Sequence[RelatedPerson]:
@@ -163,15 +187,21 @@ def create_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    show_birthday_on_dashboard: bool = False,
     avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
+    normalized_birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    _validate_dashboard_visibility(
+        normalized_birthday, show_birthday_on_dashboard=show_birthday_on_dashboard
+    )
     person = RelatedPerson(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=privacy_for(visibility).value,
         relationship=relationship.value,
-        birthday=normalize_birthday(birthday, year_known=birthday_year_known),
+        birthday=normalized_birthday,
         birthday_year_known=birthday_year_known,
+        show_birthday_on_dashboard=show_birthday_on_dashboard,
         payload=RelatedPersonPayload(
             display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
         ),
@@ -215,9 +245,10 @@ def update_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    show_birthday_on_dashboard: bool = False,
     avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
-    person = require_writable(session, RelatedPerson, context, person_id)
+    person = require_writable_locked(session, RelatedPerson, context, person_id)
     _ensure_expected_version(person.version, expected_version, "related person")
 
     privacy = privacy_for(visibility)
@@ -234,11 +265,17 @@ def update_person(
             PeopleErrorCode.HAS_SHARED_DATES,
         )
 
+    normalized_birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    _validate_dashboard_visibility(
+        normalized_birthday, show_birthday_on_dashboard=show_birthday_on_dashboard
+    )
+
     _rebind_avatar(session, context, person, avatar_attachment_id)
     person.privacy_class = privacy.value
     person.relationship = relationship.value
-    person.birthday = normalize_birthday(birthday, year_known=birthday_year_known)
+    person.birthday = normalized_birthday
     person.birthday_year_known = birthday_year_known
+    person.show_birthday_on_dashboard = show_birthday_on_dashboard
     person.payload = RelatedPersonPayload(
         display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
     )
@@ -310,13 +347,18 @@ def _person_link(
 ) -> tuple[UUID | None, str | None]:
     """Resolve an important date's person and carry along its privacy class.
 
-    Resolution goes through the guard: callers who may not read a person also
-    cannot attach a date to that person, and the response does not reveal
-    whether the person exists.
+    Resolution takes a shared parent lock before an ImportantDate is inserted
+    or updated. A concurrent privacy transition takes the exclusive version of
+    the same lock, so whichever operation locks the person first defines the
+    domain outcome. Readability is checked again while the lock is held because
+    the person's privacy may have changed while the first guarded lookup waited
+    for the lock. Callers who may no longer read the person therefore still get
+    the privacy-safe absence response.
     """
     if related_person_id is None:
         return None, None
 
+    person = require_readable_shared(session, RelatedPerson, context, related_person_id)
     person = require_readable(session, RelatedPerson, context, related_person_id)
     if (
         person.privacy_class == PrivacyClass.OWNER_ONLY.value
