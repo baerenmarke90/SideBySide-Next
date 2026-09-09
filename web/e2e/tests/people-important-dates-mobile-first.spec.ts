@@ -520,6 +520,41 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   expect(unexpectedRequests).toEqual([]);
 });
 
+test('People and Important Dates remain usable at 200 percent zoom', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 780, height: 844 });
+  const unexpectedRequests = await installPeopleApiMocks(page);
+  await signInAndOpenPeople(page);
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+
+  await expectHorizontalReflow(page);
+  const dateCreate = page.getByRole('button', { name: importantDates.create });
+  await dateCreate.click();
+  const dialog = page.getByRole('dialog');
+  await expect(
+    dialog.getByRole('button', { name: importantDates.create }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: de.common.cancel }),
+  ).toBeVisible();
+  await expectHorizontalReflow(page);
+  await expectNoWcagViolations(page);
+  await capture(page, testInfo, 'w51-200-percent-light');
+
+  expect(unexpectedRequests).toEqual([]);
+});
+
 test('focused editors keep completion reachable at small height and adapt without desktop density at 1440', async ({
   page,
 }, testInfo) => {
