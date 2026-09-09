@@ -21,6 +21,7 @@ describe('ImportantDatesPanel', () => {
     birthdayYearKnown: true,
     avatarAttachmentId: null,
     visibility: ContentVisibility.SHARED,
+    showBirthdayOnDashboard: false,
     version: 1,
     createdAt: new Date(),
     updatedAt: new Date(),

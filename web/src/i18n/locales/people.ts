@@ -15,6 +15,9 @@ const people = {
   birthdayMonthPlaceholder: 'Monat auswählen',
   birthdayUnknownYearHelp:
     'Wenn das Geburtsjahr unbekannt ist, speichert und zeigt eimir. nur Tag und Monat.',
+  birthdayShowOnDashboard: 'Geburtstag auf Wir anzeigen',
+  birthdayShowOnDashboardHelp:
+    'Erscheint dann für euch beide unter Wir. Unabhängig von Erinnerungen, die ihr separat einstellt.',
   visibilityLabel: 'Sichtbarkeit',
   visibilityHelp:
     'Geteilte Personen sind für euch beide sichtbar. Private Personen bleiben nur bei dir.',

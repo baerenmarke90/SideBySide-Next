@@ -110,6 +110,16 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
     birthday_year_known: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    show_birthday_on_dashboard: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    """Explicit opt-in for this birthday to appear in Dashboard `upcoming`.
+
+    Default off: a `RelatedPerson` is not automatically a Dashboard source
+    just because it has a birthday (#617/#699). Independent of `visibility`
+    and of any Reminder preference - enabling or disabling either one must
+    not implicitly change the other.
+    """
     crypto_version: Mapped[int] = mapped_column(
         SmallInteger,
         nullable=False,
@@ -152,6 +162,10 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
             f"birthday IS NULL OR birthday_year_known IS TRUE "
             f"OR EXTRACT(YEAR FROM birthday) = {UNKNOWN_BIRTH_YEAR}",
             name="unknown_year_is_normalized",
+        ),
+        CheckConstraint(
+            "show_birthday_on_dashboard IS FALSE OR birthday IS NOT NULL",
+            name="dashboard_visibility_needs_a_birthday",
         ),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
     )

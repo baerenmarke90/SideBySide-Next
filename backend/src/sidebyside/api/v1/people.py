@@ -39,6 +39,12 @@ class RelatedPersonFields(ApiModel):
     birthday: date | None = None
     birthday_year_known: bool = False
     visibility: ContentVisibility
+    show_birthday_on_dashboard: bool = False
+    """Explicit opt-in for this birthday to appear on the shared Dashboard.
+
+    Independent of ``visibility`` and of Reminder preferences (#699): default
+    off, and requires ``birthday`` to be set.
+    """
     avatar_attachment_id: UUID | None = None
 
     @field_validator("display_name")
@@ -61,6 +67,7 @@ class RelatedPersonView(ApiModel):
     Clients then display only the day and month.
     """
     visibility: ContentVisibility
+    show_birthday_on_dashboard: bool
     avatar_attachment_id: UUID | None = None
     version: int
     created_at: datetime
@@ -105,6 +112,7 @@ def _person_view(person: RelatedPerson) -> RelatedPersonView:
         birthday=person.birthday,
         birthday_year_known=person.birthday_year_known,
         visibility=visibility_of(person.privacy_class),
+        show_birthday_on_dashboard=person.show_birthday_on_dashboard,
         avatar_attachment_id=person.avatar_attachment_id,
         version=person.version,
         created_at=person.created_at,
@@ -162,6 +170,7 @@ def create_related_person(
         birthday=body.birthday,
         birthday_year_known=body.birthday_year_known,
         visibility=body.visibility,
+        show_birthday_on_dashboard=body.show_birthday_on_dashboard,
         avatar_attachment_id=body.avatar_attachment_id,
     )
     response.headers["ETag"] = etag_for(person.version)
@@ -213,6 +222,7 @@ def update_related_person(
         birthday=body.birthday,
         birthday_year_known=body.birthday_year_known,
         visibility=body.visibility,
+        show_birthday_on_dashboard=body.show_birthday_on_dashboard,
         avatar_attachment_id=body.avatar_attachment_id,
     )
     response.headers["ETag"] = etag_for(person.version)
