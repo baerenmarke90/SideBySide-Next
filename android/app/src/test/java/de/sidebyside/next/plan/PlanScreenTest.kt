@@ -1,6 +1,12 @@
 package de.sidebyside.next.plan
 
 import android.content.Context
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -490,6 +496,45 @@ class PlanScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.plan_wish_edit)).assertDoesNotExist()
         composeRule.onNodeWithText(context.getString(R.string.plan_wish_remove)).assertDoesNotExist()
     }
+
+    // --- Accessible semantics -------------------------------------------
+
+    @Test
+    fun cardsAnnounceThemselvesAsSomethingToOpen() {
+        render(
+            wishes = listOf(aWish("A weekend by the sea")),
+            plans = listOf(aPlan(PlanStatus.IDEA, title = "A weekend away")),
+        )
+
+        // A screen reader has to learn that the content is the control, now
+        // that no button sits beside it. Asserted on the Compose semantics
+        // tree, which is what the platform accessibility bridge reads.
+        composeRule.onNodeWithText("A weekend by the sea")
+            .performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assert(hasClickLabel(context.getString(R.string.plan_wish_open)))
+        composeRule.onNodeWithText("A weekend away")
+            .performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assert(hasClickLabel(context.getString(R.string.plan_open)))
+    }
+
+    @Test
+    fun theSectionsAreHeadings() {
+        render(wishes = listOf(aWish("A weekend by the sea")))
+
+        for (heading in listOf(R.string.plan_title, R.string.plan_wishes_heading)) {
+            composeRule.onNodeWithText(context.getString(heading))
+                .performScrollTo()
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        }
+    }
+
+    /** The label a screen reader reads for the card's own click action. */
+    private fun hasClickLabel(label: String) =
+        SemanticsMatcher("click action is labelled '" + label + "'") { node ->
+            node.config.getOrNull(SemanticsActions.OnClick)?.label == label
+        }
 
     private fun render(
         wishes: List<WishDetail> = emptyList(),
