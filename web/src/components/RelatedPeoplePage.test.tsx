@@ -363,7 +363,7 @@ describe('RelatedPeoplePage mobile-first surface', () => {
 
   it('preserves long names in the editor without changing the stored value', async () => {
     const longName =
-      'Alexandra Maximiliane von Beispielhausen mit einem außergewöhnlich langen Namen';
+      'Alexandra Maximiliane Example-Surname With An Exceptionally Long Display Name';
     const longPerson = { ...person, displayName: longName };
     renderRelatedPeoplePage(createMockPeopleApi([longPerson]));
 
