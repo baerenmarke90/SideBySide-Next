@@ -1,13 +1,15 @@
 # SideBySide UX Patterns
 
 **Status:** Binding product foundation  
-**Version:** 1.1  
-**As of:** August 24, 2026
+**Version:** 1.2  
+**As of:** September 9, 2026
 
 This document defines recurring interaction patterns for the WebApp and
 smartphone app. Both surfaces share the same information architecture,
 semantics, and state logic. Concrete presentation adapts to platform, window
 width, and input method.
+
+The patterns below are platform-appropriate defaults, not a mandatory formula: the human task decides the pattern, and a table/list/master-detail composition is used only when it is genuinely the correct interaction for that task (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` sections 0 and 16).
 
 ## 1. Core rules
 
@@ -230,6 +232,9 @@ Media passes through `selected → preparing → uploading → processing → re
 - Different terminology for the same feature on Web and Mobile.
 - Privacy claims not backed by technology and operations.
 - Desktop layout merely compressed onto a smartphone.
+- A list, table, or card grid chosen because multiple records exist, rather than because it is the correct task pattern.
+- An existing row/card/table/form component reused for a couple-facing task it was never designed for, merely because it already exists (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 17).
+- Expanded/Web adding more columns, boxes, or permanent actions than Compact merely because width is available.
 
 ## 14. Acceptance criteria
 

@@ -1,8 +1,8 @@
 # Design Principles for eimir.
 
 **Status:** Mandatory foundation for Web and App<br/>
-**Version:** 2.0<br/>
-**Effective from:** September 7, 2026
+**Version:** 2.1<br/>
+**Effective from:** September 9, 2026
 
 This document translates the eimir. product idea into mandatory
 design rules. It applies to product surfaces, the website, store listings,
@@ -14,9 +14,13 @@ When requirements conflict, use this priority order:
 1. privacy and security
 2. accessibility
 3. comprehensibility and usability
-4. consistency
-5. brand impact
-6. visual novelty
+4. smartphone-first partner-app invariant for couple-facing product interaction (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md`)
+5. domain-specific product decision
+6. shared design-system consistency
+7. generic Screen Template default / brand impact
+8. visual novelty
+
+This order matches `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0; that document is authoritative for the smartphone-first invariant itself.
 
 ## 1. Design goal
 
@@ -277,6 +281,8 @@ Every asynchronous action needs a visible state:
 
 ## 5. Responsive behavior
 
+For couple-facing product interaction, the Compact/smartphone experience is designed first and Web/Expanded adapts it; see `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0. The following platform behaviors implement that invariant.
+
 ### App
 
 - Mobile-first with one-handed core actions.
@@ -287,7 +293,7 @@ Every asynchronous action needs a visible state:
 ### Web
 
 - Viewports from 320 px through 1440+ px are supported.
-- One column on mobile, up to two content zones on desktop.
+- One column on mobile, up to two content zones on desktop; the second zone adds context or supporting content, not a duplicate set of primary controls.
 - Hover may add information but is never required.
 - Dialogs become bottom sheets or full-screen steps on small viewports.
 - Focus order follows the visible reading order.

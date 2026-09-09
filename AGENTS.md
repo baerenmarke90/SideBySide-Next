@@ -132,6 +132,18 @@ Unless an explicit product decision justifies them, do not use these as the prim
 
 Administration and diagnostics may legitimately use denser information design, but that visual language must not leak into normal couple-facing surfaces.
 
+### Smartphone-first is a mandatory implementation invariant
+
+The Product Owner decision in `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0 is binding for all AI-assisted and human implementation work:
+
+- Smartphone/Compact is the normative product reference for couple-facing client work, not a later reduction of a desktop design.
+- Read the relevant design foundations (`docs/DESIGN-PRINCIPLES.md`, `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`, `docs/UX-PATTERNS.md`, `docs/SCREEN-TEMPLATES.md`) before writing UI code, not after.
+- A Mobile Interaction Contract (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 10) must exist before UI implementation starts. If the owning issue lacks one, perform and document a Product Design Preflight first (section 15) rather than implementing against an incomplete brief.
+- Implementing a desktop/table/CRUD-first UI and making it responsive afterward is not an acceptable delivery strategy. Such a PR is not merge-ready regardless of functional correctness.
+- A technically complete UI is not automatically product-complete. Functional acceptance criteria do not by themselves satisfy this invariant.
+- Screen Templates (`docs/SCREEN-TEMPLATES.md`) are subordinate to this invariant: when a template's wording conflicts with it, the invariant wins. Correct the template, or document the conflict in the issue/PR, rather than following the template literally.
+- `Reuse before build` remains mandatory, but reuse is not a design justification by itself. No agent may argue "I reused the existing table/list component, therefore the design is correct" — an existing pattern that produces the wrong UX for the task is a design-system gap to close (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 17), not a pattern to keep reusing.
+
 ### Motion is required behavior
 
 Every material interaction must deliberately decide whether motion or feedback is needed. Reuse motion tokens and platform capabilities. State changes, reordering, sheets/panes, success feedback, and emotionally meaningful actions should not feel like abrupt DOM/data replacement.

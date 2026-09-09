@@ -24,31 +24,39 @@ Exactly one of the following options must be checked:
 
 ### If user-facing UI / UX is affected
 
-All applicable items are mandatory before merge:
+Smartphone/Compact is the normative product reference (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0); Web/Expanded adapts the same product, it does not replace it with a desktop management pattern. All applicable items are mandatory before merge:
 
 - [ ] Partner-app experience standard applied
+- [ ] Designed from Compact/smartphone outward
+- [ ] Mobile Interaction Contract implemented or deviations documented
 - [ ] Screen Template selected or a documented design-system gap explains why no existing template fits
 - [ ] Existing design-system components and semantic tokens reused or the gap is documented
 - [ ] Primary human/content focal point and dominant action are clear
-- [ ] Couple-facing UI does not default to spreadsheet/admin/CRUD composition
+- [ ] Primary actions smartphone-reachable and touch-target behavior reviewed
+- [ ] Progressive disclosure applied where appropriate
+- [ ] Couple-facing composition is not spreadsheet/table/admin/CRM by default, or this is an explicit documented administrative/diagnostic exception
+- [ ] If table/list/master-detail is used, its necessity is explicitly justified
 - [ ] Result feels warm, modern, lively, beautiful, and not visually cold or sterile
 - [ ] Gentle playfulness / relationship personality deliberately applied or consciously not appropriate for this context
 - [ ] Love-message / relationship microcopy opportunity deliberately considered
-- [ ] Compact and Expanded behavior reviewed
+- [ ] Expanded/Web adapts the product instead of replacing it with a desktop management UI
 - [ ] Loading / Empty / Error / Offline / Success states reviewed where applicable
 - [ ] Motion / feedback behavior reviewed, including reduced motion
 - [ ] Privacy and relationship-state presentation reviewed where applicable
-- [ ] Visual evidence attached or linked
+- [ ] Representative Compact visual evidence attached or linked
+- [ ] Expanded visual evidence attached or linked when Web is affected
+- [ ] Light/Dark reviewed where theme-sensitive
+- [ ] Large text/reflow reviewed where relevant
 
 **Design result / rationale**
 
-<!-- Name the selected template/pattern, focal point, key hierarchy decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception. -->
+<!-- Name the selected template/pattern, focal point, key hierarchy decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception (including administrative/diagnostic or table/list/master-detail justifications). -->
 
 -
 
 **Visual evidence**
 
-<!-- Link or attach representative screenshots/recordings. Include Compact and Expanded where applicable; include Light/Dark when theme-sensitive styling changed. -->
+<!-- Link or attach representative screenshots/recordings. Include Compact and Expanded where applicable; include Light/Dark when theme-sensitive styling changed; include large-text/reflow where relevant. -->
 
 -
 

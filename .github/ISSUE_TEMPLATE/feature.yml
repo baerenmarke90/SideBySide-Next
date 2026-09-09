@@ -7,7 +7,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        User-facing features are product-design work from the start. Read `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` before describing a client feature. SideBySide should feel warm, modern, lively, beautiful, and lightly playful rather than cold or administrative.
+        User-facing features are product-design work from the start. Read `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` before describing a client feature. Smartphone/Compact is the normative product reference (see its section 0); Web/Expanded adapts that same experience rather than the other way around. SideBySide should feel warm, modern, lively, beautiful, and lightly playful rather than cold or administrative.
+
+        For `User-facing UI / UX impact = Yes`, the Product design / UX plan below must document the Mobile Interaction Contract before implementation starts. This is not optional bureaucracy: an issue without it must go through a Product Design Preflight before UI code is written.
 
         **Engineering language is English.** Issue titles, bodies, acceptance criteria, model/tool routing, technical comments, and follow-up engineering discussion must be written in English. User-facing product copy remains governed by i18n and may of course be localized.
 
@@ -41,20 +43,27 @@ body:
   - type: textarea
     id: product_design
     attributes:
-      label: Product design / UX plan
-      description: For UI work, identify the Screen Template, primary human/content focal point, dominant action, reused design tokens and components, responsive layout composition, warmth/playfulness, relationship microcopy or love-message opportunity, motion/reduced-motion behavior, relevant states, and privacy/relationship presentation. For non-UI work, explain why this is not applicable.
+      label: Product design / UX plan — Mobile Interaction Contract
+      description: |
+        For UI work, document the Mobile Interaction Contract (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 10) before implementation starts. Compact/smartphone is the reference composition; Web/Expanded adapts it, it does not replace it with a denser desktop composition. For non-UI work, explain why this is not applicable.
       placeholder: |
-        Screen Template:
-        Focal point:
-        Primary action:
-        Reused design-system components/tokens:
+        User goal / human outcome:
+        Relationship / emotional value (if relevant):
+        Compact reference composition (screen/state, dominant action, thumb-zone/one-handed reachability):
+        Content hierarchy / progressive disclosure (immediate vs. disclosed):
+        Chosen mobile-native pattern (page, sheet, menu, inline, gesture, ...):
+        If a table/list/master-detail is used, why it is genuinely appropriate here:
+        Screen Template used, or why no existing template fits:
+        Reused design-system components/tokens, or the design-system gap:
         Warmth / modernity / visual personality:
         Gentle playfulness / delight moment:
         Love-message / relationship microcopy opportunity:
-        Compact / Expanded:
+        Expanded/Web adaptation (what it adds without changing product meaning):
+        Loading / Empty / Error / Offline / Success states:
+        Large text / narrow-viewport behavior:
         Motion / feedback / reduced motion:
-        Loading / Empty / Error / Offline / Success:
         Privacy / relationship state:
+        Visual acceptance / evidence plan:
     validations:
       required: true
 

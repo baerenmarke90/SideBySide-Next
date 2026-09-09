@@ -1,10 +1,12 @@
 # SideBySide Screen Templates
 
 **Status:** Binding product foundation  
-**Version:** 1.1  
-**As of:** August 24, 2026
+**Version:** 1.2  
+**As of:** September 9, 2026
 
 Screen Templates translate Information Architecture, UX Patterns, and Components into repeatable page structures. They are not finished screens, but binding layout and behavior frameworks.
+
+Screen Templates are a starting hypothesis, not a mandate that overrides the product model. `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0 defines Compact/smartphone as the normative reference and is authoritative whenever a Compact description below is thin or an Expanded description could be read as license to add tables, columns, boxes, widgets, or metadata merely because room exists. Where a template's wording conflicts with that standard, the standard governs.
 
 ## 1. Window classes
 
@@ -49,10 +51,10 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 
 ### Expanded
 
-- Two-column Dashboard.
-- Main column: day flow and next tasks.
-- Secondary column: Quick Actions, Sync/Privacy notices, and compact summary.
-- No freely configurable widget wall in version 1.
+- The same orchestration surface as Compact, enriched with more space — not a two-column widget dashboard and not an equal-card dashboard wall (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 3).
+- Primary column: day flow and next tasks, matching the Compact hierarchy.
+- Secondary column, only when it adds real value: Quick Actions, Sync/Privacy notices, or a compact summary.
+- No freely configurable widget wall, and no permanent secondary column added merely because Expanded width is available.
 
 **Required states:** first launch, everything completed, offline with local data, partial loading failure.
 
@@ -63,7 +65,7 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 ### Compact
 
 - Filter/search in a Sheet.
-- Timeline as a vertical list.
+- Timeline as a chronological feed. A vertically scrolling arrangement is valid here because reliving Memories in chronological order is genuinely the task, not because a list is the default rendering for multiple objects (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 16).
 - Detail opens as a new page.
 - Intentional de-DE primary action **„Erinnerung hinzufügen“**.
 
@@ -89,7 +91,7 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 ### Expanded
 
 - Local navigation or segmentation for Wishes and Plans; Shopping later.
-- List-Detail structure for the selected area.
+- Task-appropriate composition for the selected area: List-Detail only when browsing many comparable entries is genuinely the task; otherwise the same focused entry points as Compact, enriched with more context.
 - Supporting pane only when it provides real additional value.
 
 **Primary action:** changes with the active area, for example the intentional de-DE label **„Wunsch hinzufügen“**.
@@ -241,6 +243,7 @@ template is a reserved target rather than a screen to build. See
 
 ## 13. Responsive behavior
 
+- A template describes the task-appropriate default, not a mandatory visual formula; the actual pattern follows the user's task (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 16).
 - Order follows meaning, not desktop position.
 - Two panes become two navigable pages on Compact.
 - Supporting content follows the main content on Compact or opens contextually.
