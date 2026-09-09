@@ -79,7 +79,9 @@ describe('ThinkingOfYouButton', () => {
 
     await waitFor(() => {
       expect(btn.getAttribute('aria-busy')).toBeNull();
-      expect(btn.getAttribute('aria-label')).toBe(relationshipComponents.thinkingOfYouError);
+      expect(btn.getAttribute('aria-label')).toBe(
+        relationshipComponents.thinkingOfYouError,
+      );
       expect(btn.className).toContain('state-error');
     });
   });

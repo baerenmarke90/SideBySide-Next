@@ -36,7 +36,9 @@ export function ThinkingOfYouButton({
   cooldownUntil = null,
 }: ThinkingOfYouButtonProps) {
   const { t } = useTranslation();
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>(
+    'idle',
+  );
   const [now, setNow] = useState(() => Date.now());
 
   const isCoolingDown = cooldownUntil != null && cooldownUntil.getTime() > now;

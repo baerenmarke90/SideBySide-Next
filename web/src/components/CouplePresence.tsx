@@ -71,9 +71,7 @@ export function CouplePresence({
   const heroSecondaryPerson = secondaryPerson
     ? {
         ...secondaryPerson,
-        displayName:
-          secondaryFirstName ||
-          t('couplePresencePartnerFallback'),
+        displayName: secondaryFirstName || t('couplePresencePartnerFallback'),
       }
     : null;
 
@@ -115,10 +113,7 @@ export function CouplePresence({
                   <Link
                     to={durationLinkTo}
                     className="couple-presence-duration-btn today-hero-duration-link"
-                    title={
-                      durationTitle ||
-                      t('couplePresenceDurationAction')
-                    }
+                    title={durationTitle || t('couplePresenceDurationAction')}
                   >
                     <span className="today-hero-pill-icon" aria-hidden="true">
                       <svg
@@ -138,10 +133,7 @@ export function CouplePresence({
                     type="button"
                     className="couple-presence-duration-btn"
                     onClick={onDurationClick}
-                    title={
-                      durationTitle ||
-                      t('couplePresenceDurationAction')
-                    }
+                    title={durationTitle || t('couplePresenceDurationAction')}
                   >
                     {relationshipDuration}
                   </button>
