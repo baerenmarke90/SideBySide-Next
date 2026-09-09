@@ -18,12 +18,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -71,13 +73,13 @@ fun PlacesScreen(
         contentPadding = PaddingValues(SideBySideTheme.spacing.pageMargin),
         verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step5),
     ) {
-        item {
+        item(key = "back") {
             TextButton(onClick = onBack) { Text(stringResource(R.string.memory_back)) }
         }
 
-        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
+        cachedAt?.let { item(key = "cachedAt") { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
-        item {
+        item(key = "header") {
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
                 Text(
                     text = stringResource(R.string.places_title),
@@ -94,9 +96,14 @@ fun PlacesScreen(
             }
         }
 
-        problem?.let { item { UiStatePanel(problem = it) } }
+        // Keyed explicitly (like every other top-level item here): without a
+        // stable key, this conditional item shifts every later item's
+        // position-derived identity when `problem` toggles, which disposed
+        // and recreated PlaceForm — including the in-flight `submitting`
+        // state this fix (#684) depends on — right as an API error arrived.
+        problem?.let { item(key = "problem") { UiStatePanel(problem = it) } }
 
-        item {
+        item(key = "form") {
             Surface(
                 shape = RoundedCornerShape(SideBySideTheme.radii.card),
                 color = SideBySideTheme.colors.surface,
@@ -106,6 +113,7 @@ fun PlacesScreen(
                     PlaceForm(
                         submitLabel = stringResource(R.string.place_add),
                         busy = busy,
+                        problem = problem,
                         onSubmit = onAdd,
                     )
                 }
@@ -113,7 +121,7 @@ fun PlacesScreen(
         }
 
         if (places.isEmpty() && !busy) {
-            item {
+            item(key = "empty") {
                 Text(
                     text = stringResource(R.string.places_empty),
                     style = MaterialTheme.typography.bodyMedium,
@@ -203,9 +211,9 @@ fun PlacesScreen(
         EditPlaceDialog(
             place = target,
             busy = busy,
+            problem = problem,
             onDismiss = { editing = null },
             onSave = { name, description, address, latitude, longitude ->
-                editing = null
                 onEdit(target, name, description, address, latitude, longitude)
             },
         )
@@ -242,6 +250,7 @@ fun PlacesScreen(
 private fun PlaceForm(
     submitLabel: String,
     busy: Boolean,
+    problem: UiProblem?,
     initialName: String = "",
     initialDescription: String = "",
     initialAddress: String = "",
@@ -255,9 +264,33 @@ private fun PlaceForm(
     var latitude by rememberSaveable { mutableStateOf(initialLatitude) }
     var longitude by rememberSaveable { mutableStateOf(initialLongitude) }
 
-    // Mirrors the server's own PLACE_COORDINATE_PAIR_REQUIRED rule: either
-    // both set or both blank, never exactly one.
-    val coordinatesPaired = latitude.isBlank() == longitude.isBlank()
+    // Tracks a submission this form itself started, so the draft is only
+    // cleared once persistence is confirmed — never merely because the
+    // button was tapped (#684). `busy`/`problem` are the ViewModel's shared
+    // async-mutation state (also used by load/delete); this form only acts
+    // on their transition while it is the one that set `submitting`.
+    var submitting by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(busy, problem) {
+        if (submitting && !busy) {
+            submitting = false
+            if (problem == null) {
+                name = ""
+                description = ""
+                address = ""
+                latitude = ""
+                longitude = ""
+            }
+        }
+    }
+
+    val coordinateResult = parsePlaceCoordinates(latitude, longitude)
+    val coordinatesValid = coordinateResult is PlaceCoordinatesResult.Valid
+    val coordinateErrorText = when (coordinateResult) {
+        is PlaceCoordinatesResult.Valid -> null
+        PlaceCoordinatesResult.Unpaired -> stringResource(R.string.place_coordinate_error)
+        PlaceCoordinatesResult.NotNumeric -> stringResource(R.string.place_coordinate_not_numeric)
+        PlaceCoordinatesResult.OutOfRange -> stringResource(R.string.place_coordinate_out_of_range)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
         OutlinedTextField(
@@ -286,25 +319,27 @@ private fun PlaceForm(
             onValueChange = { latitude = it },
             label = { Text(stringResource(R.string.place_latitude_hint)) },
             singleLine = true,
-            isError = !coordinatesPaired,
+            isError = !coordinatesValid,
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                coordinateErrorText?.let { error(it) }
+            },
         )
         OutlinedTextField(
             value = longitude,
             onValueChange = { longitude = it },
             label = { Text(stringResource(R.string.place_longitude_hint)) },
             singleLine = true,
-            isError = !coordinatesPaired,
+            isError = !coordinatesValid,
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                coordinateErrorText?.let { error(it) }
+            },
         )
         Text(
-            text = stringResource(
-                if (coordinatesPaired) R.string.place_coordinate_help else R.string.place_coordinate_error,
-            ),
+            text = coordinateErrorText ?: stringResource(R.string.place_coordinate_help),
             style = MaterialTheme.typography.bodySmall,
-            color = if (coordinatesPaired) {
+            color = if (coordinatesValid) {
                 SideBySideTheme.colors.textSecondary
             } else {
                 MaterialTheme.colorScheme.error
@@ -312,14 +347,12 @@ private fun PlaceForm(
         )
         Button(
             onClick = {
-                onSubmit(name, description, address, latitude, longitude)
-                name = ""
-                description = ""
-                address = ""
-                latitude = ""
-                longitude = ""
+                if (name.isNotBlank() && coordinatesValid) {
+                    onSubmit(name, description, address, latitude, longitude)
+                    submitting = true
+                }
             },
-            enabled = !busy && name.isNotBlank() && coordinatesPaired,
+            enabled = !busy && name.isNotBlank() && coordinatesValid,
             modifier = Modifier.heightIn(min = MinimumTouchTarget),
         ) {
             Text(submitLabel)
@@ -331,9 +364,21 @@ private fun PlaceForm(
 private fun EditPlaceDialog(
     place: PlaceDetail,
     busy: Boolean,
+    problem: UiProblem?,
     onDismiss: () -> Unit,
     onSave: (name: String, description: String, address: String, latitude: String, longitude: String) -> Unit,
 ) {
+    // The dialog itself decides when to close: only once a save it started
+    // is confirmed to have persisted. A validation or API error leaves it
+    // open with the entered values still visible (#684).
+    var submitting by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(busy, problem) {
+        if (submitting && !busy) {
+            submitting = false
+            if (problem == null) onDismiss()
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.place_edit_title)) },
@@ -343,6 +388,7 @@ private fun EditPlaceDialog(
                     PlaceForm(
                         submitLabel = stringResource(R.string.place_save_changes),
                         busy = busy,
+                        problem = problem,
                         initialName = place.name,
                         initialDescription = place.description.orEmpty(),
                         initialAddress = place.address.orEmpty(),
@@ -350,6 +396,7 @@ private fun EditPlaceDialog(
                         initialLongitude = place.longitude?.toPlainString().orEmpty(),
                         onSubmit = { name, description, address, latitude, longitude ->
                             onSave(name, description, address, latitude, longitude)
+                            submitting = true
                         },
                     )
                 }

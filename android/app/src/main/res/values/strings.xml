@@ -459,6 +459,8 @@
     <string name="place_longitude_hint">Längengrad</string>
     <string name="place_coordinate_help">Koordinaten sind optional. Wenn du sie angibst, müssen Breitengrad und Längengrad gemeinsam gesetzt sein.</string>
     <string name="place_coordinate_error">Bitte gib Breitengrad und Längengrad gemeinsam an oder lasse beide Felder leer.</string>
+    <string name="place_coordinate_not_numeric">Breitengrad und Längengrad müssen Dezimalzahlen sein, zum Beispiel 52.5.</string>
+    <string name="place_coordinate_out_of_range">Breitengrad muss zwischen -90 und 90 liegen, Längengrad zwischen -180 und 180.</string>
     <string name="place_no_address">Keine Adresse hinterlegt</string>
     <string name="place_no_coordinates">Dieser Ort ist bewusst ohne Koordinaten gespeichert.</string>
     <string name="place_coordinates">%1$s, %2$s</string>

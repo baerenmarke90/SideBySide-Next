@@ -116,6 +116,7 @@ def reconcile_all(session: Session) -> None:
             select(Membership.space_id)
             .where(Membership.status == MembershipStatus.ACTIVE.value)
             .distinct()
+            .order_by(Membership.space_id)
         ).scalars()
     )
     for space_id in space_ids:
@@ -125,7 +126,11 @@ def reconcile_all(session: Session) -> None:
 def reconcile_space(session: Session, space_id: UUID) -> None:
     _reconcile_generated_reminders(session, space_id)
     reminders = list(
-        session.execute(select(Reminder).where(Reminder.space_id == space_id)).scalars()
+        session.execute(
+            select(Reminder)
+            .where(Reminder.space_id == space_id)
+            .order_by(Reminder.source, Reminder.id)
+        ).scalars()
     )
     recipients = list(
         session.execute(
@@ -144,7 +149,7 @@ def reconcile_space(session: Session, space_id: UUID) -> None:
 
 
 def reconcile_reminder(session: Session, reminder_id: UUID) -> None:
-    reminder = session.get(Reminder, reminder_id)
+    reminder = _lock_reminder(session, reminder_id)
     if reminder is None:
         return
     recipients = list(
@@ -171,17 +176,22 @@ def reconcile_account(
     """Replan current Reminder occurrences for one Account after timezone changes."""
     space_ids = list(
         session.execute(
-            select(Membership.space_id).where(
+            select(Membership.space_id)
+            .where(
                 Membership.account_id == account.id,
                 Membership.status == MembershipStatus.ACTIVE.value,
             )
+            .order_by(Membership.space_id)
         ).scalars()
     )
-    if not space_ids:
-        return
-    reminders = session.execute(select(Reminder).where(Reminder.space_id.in_(space_ids))).scalars()
-    for reminder in reminders:
-        _plan_for_recipient(session, reminder, account, timezone_name=timezone_name)
+    for space_id in space_ids:
+        reminders = session.execute(
+            select(Reminder)
+            .where(Reminder.space_id == space_id)
+            .order_by(Reminder.source, Reminder.id)
+        ).scalars()
+        for reminder in reminders:
+            _plan_for_recipient(session, reminder, account, timezone_name=timezone_name)
     session.flush()
 
 
@@ -198,6 +208,22 @@ def _active_owner(session: Session, space_id: UUID) -> UUID | None:
 
 
 def _reconcile_generated_reminders(session: Session, space_id: UUID) -> None:
+    # Existing generated definitions are the stable parent rows for source-derived
+    # planning. Lock them before reading source state so a waiter always observes
+    # the source commit that released the lock instead of writing an older schedule
+    # afterwards. The ID ordering matches every other multi-Reminder planner.
+    existing = list(
+        session.execute(
+            select(Reminder)
+            .where(
+                Reminder.space_id == space_id,
+                Reminder.source == ReminderSource.GENERATED.value,
+            )
+            .order_by(Reminder.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars()
+    )
     desired: dict[tuple[str, UUID, str], dict[str, Any]] = {}
 
     important_dates = session.execute(
@@ -266,14 +292,6 @@ def _reconcile_generated_reminders(session: Session, space_id: UUID) -> None:
             "once_at": clock.ensure_utc(plan.planned_start),
         }
 
-    existing = list(
-        session.execute(
-            select(Reminder).where(
-                Reminder.space_id == space_id,
-                Reminder.source == ReminderSource.GENERATED.value,
-            )
-        ).scalars()
-    )
     existing_by_identity = {
         (row.source_type or "", row.source_id, row.rule_key or ""): row for row in existing
     }
@@ -385,11 +403,13 @@ def set_rule_preference(
 
     reminders = list(
         session.execute(
-            select(Reminder).where(
+            select(Reminder)
+            .where(
                 Reminder.space_id == space_id,
                 Reminder.rule_key == rule.key,
                 Reminder.source == ReminderSource.GENERATED.value,
             )
+            .order_by(Reminder.id)
         ).scalars()
     )
     account = session.get(Account, account_id)
@@ -420,6 +440,23 @@ def _manual_parameters(session: Session, reminder: Reminder) -> RuleParameters:
     return RuleParameters(days_before=offsets, local_time=reminder.local_time)
 
 
+def _lock_reminder(session: Session, reminder_id: UUID) -> Reminder | None:
+    """Serialize one Reminder plan before any occurrence rows are read or written."""
+    return session.execute(
+        select(Reminder)
+        .where(Reminder.id == reminder_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+
+def _current_account(session: Session, account_id: UUID) -> Account | None:
+    """Reload account state after a planner may have waited on its Reminder lock."""
+    return session.execute(
+        select(Account).where(Account.id == account_id).execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+
 def _plan_for_recipient(
     session: Session,
     reminder: Reminder,
@@ -427,6 +464,18 @@ def _plan_for_recipient(
     *,
     timezone_name: str | None = None,
 ) -> None:
+    # Reminder -> ReminderOccurrence is the planning lock order. Multi-Reminder
+    # callers visit GENERATED before MANUAL and then IDs in ascending order.
+    locked_reminder = _lock_reminder(session, reminder.id)
+    if locked_reminder is None:
+        return
+    reminder = locked_reminder
+    if timezone_name is None:
+        current_account = _current_account(session, account.id)
+        if current_account is None:
+            return
+        account = current_account
+
     if _is_muted(session, reminder.id, account.id):
         _supersede_pending(session, reminder.id, account.id, set())
         return
@@ -470,11 +519,14 @@ def _supersede_pending(
     desired: set[tuple[str, int]],
 ) -> None:
     rows = session.execute(
-        select(ReminderOccurrence).where(
+        select(ReminderOccurrence)
+        .where(
             ReminderOccurrence.reminder_id == reminder_id,
             ReminderOccurrence.recipient_account_id == account_id,
             ReminderOccurrence.state == OccurrenceState.PENDING.value,
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     ).scalars()
     for row in rows:
         if (row.occurrence_key, row.days_before) not in desired:
@@ -492,12 +544,15 @@ def _upsert_occurrence(
     due_at: datetime,
 ) -> None:
     row = session.execute(
-        select(ReminderOccurrence).where(
+        select(ReminderOccurrence)
+        .where(
             ReminderOccurrence.reminder_id == reminder.id,
             ReminderOccurrence.recipient_account_id == account.id,
             ReminderOccurrence.occurrence_key == occurrence_key,
             ReminderOccurrence.days_before == days_before,
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     ).scalar_one_or_none()
 
     enqueue = False

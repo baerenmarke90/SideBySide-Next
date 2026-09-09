@@ -3303,24 +3303,27 @@ class ReferenceViewModel(
     }
 
     /**
-     * Enforces the same latitude/longitude pairing the server enforces as
-     * `PLACE_COORDINATE_PAIR_REQUIRED`, so a client mistake is refused before
-     * the request rather than surfacing only as a 400.
+     * Enforces the same latitude/longitude pairing, decimal parsing, and
+     * `-90..90` / `-180..180` range the server enforces (`PLACE_COORDINATE_
+     * PAIR_REQUIRED` and its range contract), so a client mistake is refused
+     * before the request rather than surfacing only as a 422. Delegates to
+     * [de.sidebyside.next.place.parsePlaceCoordinates], the same predicate
+     * the create/edit form uses for its own field-level feedback (#684) —
+     * one coordinate-validation domain, not two.
      *
-     * Returns `null` when the pairing is invalid (exactly one of the two set,
-     * or either unparsable); both blank is valid and yields `null to null`.
+     * Returns `null` when invalid (exactly one of the two set, either
+     * unparsable, or out of range); both blank is valid and yields
+     * `null to null`. In normal use the UI already withholds invalid input,
+     * so this remains a defensive guard rather than a reachable error path.
      */
     private fun pairedCoordinates(
         latitude: String,
         longitude: String,
     ): Pair<java.math.BigDecimal?, java.math.BigDecimal?>? {
-        val lat = latitude.trim()
-        val lng = longitude.trim()
-        if (lat.isBlank() && lng.isBlank()) return null to null
-        if (lat.isBlank() || lng.isBlank()) return null
-        val parsedLat = runCatching { java.math.BigDecimal(lat) }.getOrNull() ?: return null
-        val parsedLng = runCatching { java.math.BigDecimal(lng) }.getOrNull() ?: return null
-        return parsedLat to parsedLng
+        val result = de.sidebyside.next.place.parsePlaceCoordinates(latitude, longitude)
+        return (result as? de.sidebyside.next.place.PlaceCoordinatesResult.Valid)?.let {
+            it.latitude to it.longitude
+        }
     }
 
     fun loadPlaces() {
