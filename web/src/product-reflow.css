@@ -340,10 +340,7 @@
 /* People cards keep their established 17.5rem target minimum when space allows,
    but must never force a track wider than the product column at extreme zoom. */
 .people-grid {
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(min(100%, 17.5rem), 1fr)
-  );
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
 }
 
 /* Intrinsic card minima: only collapse when the content is actually narrower. */
