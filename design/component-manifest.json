@@ -1,9 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "schemaVersion": 1,
-  "updated": "2026-08-26",
-  "statusValues": ["planned", "in_progress", "implemented", "verified", "deprecated"],
-  "platforms": ["web", "android"],
+  "updated": "2026-09-09",
+  "statusValues": [
+    "planned",
+    "in_progress",
+    "implemented",
+    "verified",
+    "deprecated"
+  ],
+  "platforms": [
+    "web",
+    "android"
+  ],
   "components": [
     {
       "id": "button",
@@ -129,6 +138,27 @@
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#101-media-tile",
       "web": "planned",
+      "android": "planned"
+    },
+    {
+      "id": "couple-presence",
+      "tier": "P0",
+      "contract": "docs/COMPONENT-CONTRACTS.md#couple-presence",
+      "web": "implemented",
+      "android": "planned"
+    },
+    {
+      "id": "partner-avatar-pair",
+      "tier": "P0",
+      "contract": "docs/COMPONENT-CONTRACTS.md#partner-avatar-pair",
+      "web": "implemented",
+      "android": "planned"
+    },
+    {
+      "id": "thinking-of-you-button",
+      "tier": "P0",
+      "contract": "docs/COMPONENT-CONTRACTS.md#thinking-of-you-button",
+      "web": "implemented",
       "android": "planned"
     }
   ],

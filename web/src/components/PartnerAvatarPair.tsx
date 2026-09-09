@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import relationshipComponents from '../i18n/locales/relationshipComponents';
+import { useTranslation } from 'react-i18next';
 import { personInitials } from './PersonIdentity';
 import './PartnerAvatarPair.css';
 
@@ -66,17 +66,18 @@ export function PartnerAvatarPair({
   className = '',
   onInviteClick,
 }: PartnerAvatarPairProps) {
+  const { t } = useTranslation();
   const groupLabel = useMemo(() => {
     if (secondaryPerson) {
-      return relationshipComponents.partnerAvatarConnected
+      return t('partnerAvatarConnected')
         .replace('{{user}}', primaryPerson.displayName)
         .replace('{{partner}}', secondaryPerson.displayName);
     }
-    return relationshipComponents.partnerAvatarWaiting.replace(
+    return t('partnerAvatarWaiting').replace(
       '{{user}}',
       primaryPerson.displayName,
     );
-  }, [primaryPerson.displayName, secondaryPerson]);
+  }, [primaryPerson.displayName, secondaryPerson, t]);
 
   return (
     <section
@@ -101,8 +102,8 @@ export function PartnerAvatarPair({
             type="button"
             className={`partner-avatar partner-avatar-${size} partner-avatar-waiting`}
             onClick={onInviteClick}
-            aria-label={relationshipComponents.partnerAvatarInvite}
-            title={relationshipComponents.partnerAvatarInvite}
+            aria-label={t('partnerAvatarInvite')}
+            title={t('partnerAvatarInvite')}
             disabled={!onInviteClick}
           >
             <span className="partner-avatar-waiting-icon" aria-hidden="true">
@@ -116,7 +117,7 @@ export function PartnerAvatarPair({
         <span
           className="partner-presence-pip"
           aria-hidden="true"
-          title={relationshipComponents.couplePresenceConnected}
+          title={t('couplePresenceConnected')}
         />
       )}
     </section>

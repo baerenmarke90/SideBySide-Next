@@ -1,8 +1,8 @@
 const serverAdmin = {
   title: 'Serververwaltung',
-  eyebrow: 'SideBySide Betrieb',
+  eyebrow: 'eimir. Betrieb',
   intro:
-    'Betriebszustand, Benutzerverwaltung und sichere Anwendungsinformationen dieser SideBySide-Installation.',
+    'Betriebszustand, Benutzerverwaltung und sichere Anwendungsinformationen dieser eimir.-Installation.',
   backToApp: 'Zur Übersicht',
   logout: 'Abmelden',
   refresh: 'Aktualisieren',
@@ -189,7 +189,7 @@ const serverAdmin = {
   },
   settings: {
     title: 'Anwendungssteuerung',
-    body: 'Diese Einstellungen werden in SideBySide gespeichert und gelten sofort für diese Installation.',
+    body: 'Diese Einstellungen werden in eimir. gespeichert und gelten sofort für diese Installation.',
     loadingTitle: 'Anwendungssteuerung wird geladen',
     loadingBody: 'Registrierungs- und Wartungsstatus werden abgefragt.',
     errorTitle: 'Anwendungssteuerung nicht verfügbar',
