@@ -77,7 +77,7 @@ export function PartnerAvatarPair({
       '{{user}}',
       primaryPerson.displayName,
     );
-  }, [primaryPerson.displayName, secondaryPerson]);
+  }, [primaryPerson.displayName, secondaryPerson, t]);
 
   return (
     <section
