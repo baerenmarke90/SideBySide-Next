@@ -8,6 +8,7 @@ const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const PARTNER_ID = '44444444-4444-4444-8444-444444444444';
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
+const PARTNER_PROFILE_ID = '55555555-5555-4555-8555-555555555555';
 const TEST_NOW = '2026-09-09T10:00:00Z';
 const LONG_PERSON_NAME =
   'Alexandra Maximiliane Example-Surname With An Exceptionally Long Display Name';
@@ -186,6 +187,23 @@ async function installPeopleApiMocks(page: Page): Promise<string[]> {
         createdAt: TEST_NOW,
         displayName: 'Lea Summer',
         id: PROFILE_ID,
+        preferences: [],
+        profileAttachmentId: null,
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${PARTNER_ID}`
+    ) {
+      await fulfillJson({
+        accountId: PARTNER_ID,
+        createdAt: TEST_NOW,
+        displayName: 'Alex Winter',
+        id: PARTNER_PROFILE_ID,
         preferences: [],
         profileAttachmentId: null,
         updatedAt: TEST_NOW,
@@ -406,7 +424,7 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await dateCard.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/important-date-editor/);
-  await expect(page.getByDisplayValue(LONG_DATE_LABEL)).toBeVisible();
+  await expect(dialog.getByLabel(importantDates.labelLabel)).toHaveValue(\n    LONG_DATE_LABEL,\n  );
   await expect(
     dialog.locator('.focused-editor-danger-zone').getByRole('button', {
       name: importantDates.delete,
@@ -444,7 +462,7 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await personCard.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
-  await expect(page.getByDisplayValue(LONG_PERSON_NAME)).toBeVisible();
+  await expect(dialog.getByLabel(people.nameLabel)).toHaveValue(\n    LONG_PERSON_NAME,\n  );
   await expect(
     dialog.locator('.focused-editor-danger-zone').getByRole('button', {
       name: people.delete,
@@ -478,6 +496,9 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
       ),
   );
 
+  await expect(page.locator('.product-topbar .shell-nav')).toBeHidden();
+  await expect(page.locator('.mobile-bottom-nav')).toBeVisible();
+  await expect(page.locator('.mobile-quick-create')).toBeVisible();
   await expectHorizontalReflow(page);
   await capture(page, testInfo, 'w50-400-percent-dark');
 
