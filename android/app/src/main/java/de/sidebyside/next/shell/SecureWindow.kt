@@ -6,6 +6,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 
 /**
@@ -32,9 +34,11 @@ private fun Window.setContentCaptureBlocked(blocked: Boolean) {
  * thumbnail for this window — the same one decision satisfies both halves
  * of the screenshot and Recents acceptance criterion. Navigation invokes its
  * destination listeners synchronously while committing a destination, before
- * Compose observes and renders that destination's content. The flag is thus
- * already correct when the new destination's content can enter a frame or
- * Recents preview.
+ * Compose observes and renders that destination's content. Entering a secure
+ * destination therefore blocks capture immediately. Leaving one retains the
+ * flag until Navigation promotes the replacement entry to `RESUMED`, which it
+ * does only after outgoing transition content can no longer contribute to a
+ * frame.
  */
 @Composable
 internal fun SecureWindowNavigationEffect(
@@ -43,13 +47,45 @@ internal fun SecureWindowNavigationEffect(
 ) {
     val activity = LocalActivity.current
     val currentSecureWhen = rememberUpdatedState(secureWhen)
+
     DisposableEffect(navController, activity) {
         val window = activity?.window
+        var pendingRelease: Pair<Lifecycle, LifecycleEventObserver>? = null
+
+        fun cancelPendingRelease() {
+            pendingRelease?.let { (lifecycle, observer) -> lifecycle.removeObserver(observer) }
+            pendingRelease = null
+        }
+
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
-            window?.setContentCaptureBlocked(currentSecureWhen.value(destination.route))
+            cancelPendingRelease()
+            if (currentSecureWhen.value(destination.route)) {
+                window?.setContentCaptureBlocked(true)
+            } else {
+                val entry = navController.currentBackStackEntry
+                if (entry != null) {
+                    val lifecycle = entry.lifecycle
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (
+                            event == Lifecycle.Event.ON_RESUME &&
+                            navController.currentBackStackEntry === entry
+                        ) {
+                            window?.setContentCaptureBlocked(false)
+                            cancelPendingRelease()
+                        }
+                    }
+                    pendingRelease = lifecycle to observer
+                    lifecycle.addObserver(observer)
+                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        window?.setContentCaptureBlocked(false)
+                        cancelPendingRelease()
+                    }
+                }
+            }
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose {
+            cancelPendingRelease()
             navController.removeOnDestinationChangedListener(listener)
             window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }

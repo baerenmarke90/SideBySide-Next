@@ -48,7 +48,6 @@ class SecureWindowNavigationTest {
         lateinit var navController: NavHostController
         var activity: Activity? = null
         var secureContentComposedWithFlag = false
-        var sharedContentComposedWithoutFlag = false
 
         composeRule.setContent {
             activity = LocalActivity.current
@@ -63,7 +62,6 @@ class SecureWindowNavigationTest {
                         Text("secure-content")
                     }
                     composable(SHARED_ROUTE) {
-                        sharedContentComposedWithoutFlag = !isSecure(activity)
                         Text("shared-content")
                     }
                 },
@@ -81,10 +79,13 @@ class SecureWindowNavigationTest {
 
         composeRule.runOnIdle {
             navController.navigate(SHARED_ROUTE)
-            assertFalse("Shared content must not retain the prior secure state", isSecure(activity))
+            assertTrue(
+                "The outgoing private composition must remain protected until shared content commits",
+                isSecure(activity),
+            )
         }
         composeRule.waitForIdle()
-        assertTrue(sharedContentComposedWithoutFlag)
+        assertFalse("Shared content must not retain the prior secure state", isSecure(activity))
 
         composeRule.runOnIdle {
             assertTrue(navController.popBackStack())
@@ -117,7 +118,7 @@ class SecureWindowNavigationTest {
             navController.navigate(SECURE_ROUTE)
             assertTrue(isSecure(activity))
             navController.navigate(SHARED_ROUTE)
-            assertFalse(isSecure(activity))
+            assertTrue(isSecure(activity))
         }
         composeRule.waitForIdle()
         assertFalse(isSecure(activity))
@@ -132,8 +133,10 @@ class SecureWindowNavigationTest {
 
         composeRule.runOnIdle {
             assertTrue(navController.popBackStack())
-            assertFalse(isSecure(activity))
+            assertTrue(isSecure(activity))
         }
+        composeRule.waitForIdle()
+        assertFalse(isSecure(activity))
     }
 
     private fun isSecure(activity: Activity?): Boolean =
