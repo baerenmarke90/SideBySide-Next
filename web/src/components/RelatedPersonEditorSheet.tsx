@@ -54,7 +54,9 @@ function personFields(
     relationship: String(
       form.get('relationship'),
     ) as RelatedPersonFields['relationship'],
-    visibility: String(form.get('visibility')) as RelatedPersonFields['visibility'],
+    visibility: String(
+      form.get('visibility'),
+    ) as RelatedPersonFields['visibility'],
     birthday,
     birthdayYearKnown: Boolean(birthday && birthdayYearKnown),
     showBirthdayOnDashboard: Boolean(
@@ -127,7 +129,10 @@ export function RelatedPersonEditorSheet({
   );
   const displayedAvatarUrl =
     avatarPreviewUrl || (currentAvatarId ? existingAvatarUrl : null);
-  const initials = useMemo(() => (person ? personInitials(person.displayName) : '?'), [person]);
+  const initials = useMemo(
+    () => (person ? personInitials(person.displayName) : '?'),
+    [person],
+  );
 
   const monthOptions = useMemo(
     () =>
@@ -336,7 +341,9 @@ export function RelatedPersonEditorSheet({
                     )}
                   </div>
                   <div className="people-editor-avatar-actions">
-                    <span className="field-label">{t('people.avatarLabel')}</span>
+                    <span className="field-label">
+                      {t('people.avatarLabel')}
+                    </span>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -444,9 +451,7 @@ export function RelatedPersonEditorSheet({
                           const knownDate = new Date(
                             `${knownBirthday}T00:00:00.000Z`,
                           );
-                          setBirthdayMonth(
-                            String(knownDate.getUTCMonth() + 1),
-                          );
+                          setBirthdayMonth(String(knownDate.getUTCMonth() + 1));
                           setBirthdayDay(String(knownDate.getUTCDate()));
                         }
                         setBirthdayYearKnown(nextYearKnown);
@@ -552,7 +557,10 @@ export function RelatedPersonEditorSheet({
                 className="focused-editor-privacy"
                 aria-labelledby="related-person-privacy-title"
               >
-                <span className="focused-editor-privacy-icon" aria-hidden="true">
+                <span
+                  className="focused-editor-privacy-icon"
+                  aria-hidden="true"
+                >
                   <DestinationIcon icon={privacyIcon} />
                 </span>
                 <div className="focused-editor-privacy-content">
