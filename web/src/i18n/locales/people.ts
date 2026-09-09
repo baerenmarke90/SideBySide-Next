@@ -6,9 +6,14 @@ const people = {
   formRailAria: 'Person anlegen oder bearbeiten',
   createTitle: 'Person hinzufügen',
   editTitle: 'Person bearbeiten',
+  identitySectionTitle: 'Wer ist diese Person?',
+  identitySectionHelp:
+    'Name, Foto und eure Beziehung stehen hier im Mittelpunkt.',
   nameLabel: 'Name',
   relationshipLabel: 'Beziehung',
   birthdayLabel: 'Geburtstag',
+  birthdayOptionalHelp: 'Optional – nur ergänzen, wenn es für euch hilfreich ist.',
+  birthdayDateLabel: 'Geburtsdatum',
   birthdayYearKnown: 'Das Geburtsjahr ist bekannt',
   birthdayDayLabel: 'Tag',
   birthdayMonthLabel: 'Monat',
@@ -21,6 +26,9 @@ const people = {
   visibilityLabel: 'Sichtbarkeit',
   visibilityHelp:
     'Geteilte Personen sind für euch beide sichtbar. Private Personen bleiben nur bei dir.',
+  lifecycleTitle: 'Person entfernen',
+  lifecycleHelp:
+    'Das Löschen bleibt bewusst getrennt vom Speichern. Verknüpfte Termine werden erst im nächsten Schritt behandelt.',
   create: 'Person hinzufügen',
   saveChanges: 'Änderungen speichern',
   saving: 'Wird gespeichert …',
