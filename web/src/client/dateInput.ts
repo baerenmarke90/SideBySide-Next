@@ -7,6 +7,40 @@ export function localDateInputValue(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+export function effectiveDateInputValue(
+  value: string,
+  date: Date = new Date(),
+): string {
+  return value.trim() || localDateInputValue(date);
+}
+
+export function dateInputValueToApiDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new RangeError(`Invalid date input value: ${value}`);
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new RangeError(`Invalid date input value: ${value}`);
+  }
+  return date;
+}
+
+export function formatDateInputValue(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC',
+  }).format(dateInputValueToApiDate(value));
+}
+
 export function openNativeDatePicker(
   event: MouseEvent<HTMLInputElement>,
 ): void {

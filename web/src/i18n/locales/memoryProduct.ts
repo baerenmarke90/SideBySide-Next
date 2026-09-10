@@ -42,6 +42,7 @@ const memoryProduct = {
   editNotAllowedTitle: 'Diese Erinnerung kann nicht bearbeitet werden.',
   editNotAllowedBody:
     'Dein aktueller Zugriff erlaubt keine Änderungen an dieser Erinnerung.',
+  createFallbackTitle: 'Erinnerung vom {{date}}',
 } as const;
 
 export default memoryProduct;

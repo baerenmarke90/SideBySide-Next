@@ -24,6 +24,12 @@ import { ProfilesApi } from './api/generated/apis/ProfilesApi';
 import { Configuration } from './api/generated/runtime';
 import { loadReferenceClientConfig } from './client/config';
 import {
+  dateInputValueToApiDate,
+  effectiveDateInputValue,
+  formatDateInputValue,
+  localDateInputValue,
+} from './client/dateInput';
+import {
   readSensitiveEntryToken,
   stripSensitiveEntryToken,
 } from './client/entryToken';
@@ -130,7 +136,7 @@ import { ThemeControl } from './components/ThemeControl';
 import { TodayPage } from './components/TodayPage';
 import { UiState } from './components/UiState';
 import { WishProductPage } from './components/WishProductPage';
-import { useTranslation } from './i18n';
+import { resolvedLocale, useTranslation } from './i18n';
 
 function SpaceContextGate({
   loading,
@@ -278,13 +284,19 @@ function MemoryCreatePage({
     event.preventDefault();
     if (attachments.hasPending) return;
     const data = new FormData(event.currentTarget);
-    const happenedOnValue = String(data.get('happenedOn') || '');
+    const happenedOnValue = effectiveDateInputValue(
+      String(data.get('happenedOn') || ''),
+    );
+    const authoredTitle = String(data.get('title') || '');
+    const effectiveTitle = authoredTitle.trim()
+      ? authoredTitle
+      : t('memoryProduct.createFallbackTitle', {
+          date: formatDateInputValue(happenedOnValue, resolvedLocale()),
+        });
     mutation.mutate({
-      title: String(data.get('title')),
+      title: effectiveTitle,
       body: String(data.get('body')),
-      happenedOn: happenedOnValue
-        ? new Date(`${happenedOnValue}T00:00:00Z`)
-        : undefined,
+      happenedOn: dateInputValueToApiDate(happenedOnValue),
     });
   }
 
@@ -339,7 +351,6 @@ function MemoryCreatePage({
             <input
               id="title"
               name="title"
-              required
               maxLength={200}
               placeholder={t('memory.titlePlaceholder')}
               defaultValue={defaultTitle}
@@ -369,7 +380,12 @@ function MemoryCreatePage({
               </div>
               <div className="field-group">
                 <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
-                <input id="happenedOn" name="happenedOn" type="date" />
+                <input
+                  id="happenedOn"
+                  name="happenedOn"
+                  type="date"
+                  defaultValue={localDateInputValue()}
+                />
                 <p className="field-help">{t('memory.dateHelp')}</p>
               </div>
             </div>
