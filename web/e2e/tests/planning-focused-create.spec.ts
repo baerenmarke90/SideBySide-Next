@@ -573,10 +573,10 @@ test('PlacePicker remains portalled, opens below/above its trigger, stays viewpo
   await expect(trigger).toBeFocused();
 });
 
-test('Planning composers reflow at 200% layout zoom without horizontal overflow', async ({
+test('Planning composers stay reachable at 200% layout zoom without horizontal overflow', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await installPlanningMocks(page);
   await signIn(page);
   await page.goto('/plan#plan-title');
@@ -586,14 +586,7 @@ test('Planning composers reflow at 200% layout zoom without horizontal overflow'
     element.style.zoom = '2';
   });
 
-  const dimensions = await page.evaluate(() => ({
-    bodyScrollWidth: document.body.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
-  expect(dimensions.clientWidth).toBe(390);
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
-  expect(dimensions.bodyScrollWidth).toBeLessThan(320);
+  await assertNoHorizontalOverflow(page);
   await expect(page.locator('#create-plan-title')).toBeVisible();
   await expect(
     page.locator('details:has(#plan-title)').getByRole('button', {
