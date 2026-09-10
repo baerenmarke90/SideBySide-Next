@@ -50,6 +50,30 @@ const m5s5 = {
     keepsake: {
       kicker: 'Euer Moment',
       title: 'Zuletzt gemeinsam festgehalten',
+      compactTitle: 'Euer nächster gemeinsamer Moment',
+      compactBody:
+        'Sobald ihr ein Foto zu einer Erinnerung legt, steht es hier groß.',
+      compactAction: 'Moment festhalten',
+    },
+    upcoming: {
+      allAction: 'Alle anzeigen',
+      allAriaLabel: 'Alle gemeinsamen Termine ansehen',
+    },
+    living: {
+      kicker: 'Gerade bei euch',
+      wishLabel: 'Einer eurer Wünsche',
+      wishAction: 'Zum Wunsch',
+      planLabel: 'Einer eurer Pläne',
+      planAction: 'Zum Plan',
+      milestoneLabel: 'Ein gemeinsamer Meilenstein',
+      milestoneAction: 'Ansehen',
+      retrospectiveLabel: 'Weißt du noch?',
+      retrospectiveAction: 'Erinnerung ansehen',
+    },
+    monthly: {
+      title: 'Diesen Monat',
+      allAction: 'Alle anzeigen',
+      allAriaLabel: 'Alle gemeinsamen Momente ansehen',
     },
     relationshipSignal: {
       kicker: 'Bei euch passiert',

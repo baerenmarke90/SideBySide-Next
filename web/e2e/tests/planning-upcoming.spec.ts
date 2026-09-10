@@ -365,7 +365,7 @@ test('Bald & Geplant contains only dated upcoming Plans in Today order and shows
 
   await page.goto('/today');
   const todayTitles = page.locator(
-    '.today-planning-agenda .today-agenda-title',
+    '.today-section-upcoming .today-agenda-title',
   );
   await expect(todayTitles).toHaveText([EARLY_TITLE, LATE_TITLE]);
 });

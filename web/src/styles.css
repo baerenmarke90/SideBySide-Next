@@ -86,6 +86,19 @@
   --radius-pill: 999px;
   --shadow-card: 0 20px 60px var(--color-shadow-card);
   --shadow-soft: 0 12px 32px var(--color-shadow-soft);
+  /*
+   * Close, tactile elevation for a raised content surface.
+   *
+   * `--shadow-card` and `--shadow-soft` are wide ambient shadows: they make a
+   * surface float above the page, which is right for sheets and overlays but
+   * reads as haze under a small in-page tile. This is the third step of the
+   * same scale - a short contact shadow plus a tight ambient one - so a tile
+   * can feel physically lifted off the canvas without the page turning into a
+   * field of glowing rectangles (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md`
+   * section 5, warmth and materiality).
+   */
+  --shadow-raised:
+    0 1px 2px var(--color-shadow-card), 0 6px 16px var(--color-shadow-soft);
   --motion-fast: 180ms ease-out;
 }
 

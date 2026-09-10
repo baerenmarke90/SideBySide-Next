@@ -262,7 +262,7 @@ test('Today "Demnächst" renders compact, bounded-width planning tiles instead o
   expect(result.violations).toEqual([]);
 });
 
-test('Today "Demnächst" stays a single stacked column with no overflow on mobile (no regression)', async ({
+test('Today "Demnächst" renders a horizontal swipe carousel with two items on mobile, contained inside the component (#858)', async ({
   page,
 }) => {
   await installMocks(page);
@@ -271,12 +271,26 @@ test('Today "Demnächst" stays a single stacked column with no overflow on mobil
   await signIn(page);
   await page.waitForSelector('.today-agenda-row');
 
-  const rowLefts = await page
+  const rects = await page
     .locator('.today-agenda-row')
-    .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().left));
-  expect(new Set(rowLefts).size).toBe(1);
-  expect(rowLefts).toHaveLength(2);
+    .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect()));
+  expect(rects).toHaveLength(2);
   await expect(page.getByText(UPCOMING_ITEMS[2].titleOrText)).toHaveCount(0);
+
+  // Side by side on one row, not stacked - and the first card leaves a
+  // deliberate peek of the second at the edge instead of filling the
+  // viewport on its own.
+  expect(Math.round(rects[0].top)).toBe(Math.round(rects[1].top));
+  expect(rects[1].left).toBeGreaterThan(rects[0].left);
+  expect(rects[0].width).toBeLessThan(390);
+  expect(rects[1].left).toBeLessThan(390);
+
+  // The overflow that makes swiping possible is contained inside the
+  // carousel itself, never leaking out to the page.
+  const listOverflow = await page
+    .locator('.today-agenda-list')
+    .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+  expect(listOverflow).toBe(true);
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -287,6 +301,67 @@ test('Today "Demnächst" stays a single stacked column with no overflow on mobil
   const result = await new AxeBuilder({ page }).analyze();
   expect(result.violations).toEqual([]);
 });
+
+test('Today "Demnächst" keeps a single item as one plain compact card on mobile, no carousel behavior (#858)', async ({
+  page,
+}) => {
+  await installMocks(page, 1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/today');
+  await signIn(page);
+  await page.waitForSelector('.today-agenda-row');
+
+  await expect(page.locator('.today-agenda-row')).toHaveCount(1);
+
+  const row = await page
+    .locator('.today-agenda-row')
+    .evaluate((node) => node.getBoundingClientRect());
+  // A lone item still reads as one normal full-width card, not a
+  // peek-sized carousel tile.
+  expect(row.width).toBeGreaterThan(300);
+
+  const listOverflow = await page
+    .locator('.today-agenda-list')
+    .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+  expect(listOverflow).toBe(false);
+
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+
+  const result = await new AxeBuilder({ page }).analyze();
+  expect(result.violations).toEqual([]);
+});
+
+for (const width of [320, 390]) {
+  test(`Today "Demnächst" renders a three-item swipe carousel with no vertical stacking or page overflow at ${width}px (#858)`, async ({
+    page,
+  }) => {
+    await installMocks(page, 3);
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/today');
+    await signIn(page);
+    await page.waitForSelector('.today-agenda-row');
+
+    const rects = await page
+      .locator('.today-agenda-row')
+      .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect()));
+    expect(rects).toHaveLength(3);
+
+    const tops = new Set(rects.map((rect) => Math.round(rect.top)));
+    expect(tops.size).toBe(1);
+    const lefts = new Set(rects.map((rect) => Math.round(rect.left)));
+    expect(lefts.size).toBe(3);
+
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  });
+}
 
 test('compact Dashboard settings persist the personal horizon and update Today without a reload', async ({
   page,

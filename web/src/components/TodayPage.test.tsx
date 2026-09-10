@@ -40,7 +40,7 @@ function renderTodayPage(
 }
 
 describe('TodayPage', () => {
-  it('renders couple presence hero, days together, thinking-of-you button, and cards', () => {
+  it('renders couple presence hero, days together, thinking-of-you button, and the composed modules', () => {
     const html = renderTodayPage({
       space: {
         id: 'space-1',
@@ -77,7 +77,25 @@ describe('TodayPage', () => {
     expect(html).toContain('Weekend trip to Paris');
     expect(html).toContain('Park Picnic');
     expect(html).toContain('Morning Smile');
-    expect(html).toContain('today-card-badges');
+
+    // The normative #850 order, top to bottom.
+    const order = [
+      'today-hero',
+      'today-section-upcoming',
+      'today-section-moment',
+      'today-section-living',
+      'today-section-recent',
+    ].map((section) => html.indexOf(section));
+    expect(order).not.toContain(-1);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+    // Content-type grammars stay distinct: the retired generic content card
+    // (media well + kind badge row + title + date) is gone, replaced by an
+    // image-led feature, a tinted contextual module and quiet trace tiles.
+    expect(html).not.toContain('today-card-badges');
+    expect(html).toContain('today-agenda-row');
+    expect(html).toContain('today-living-retrospective');
+    expect(html).toContain('today-recent-tile');
   });
 
   it('reflects the server-authoritative Thinking-of-you cooldown from the Dashboard on load (regression #790/#791)', () => {
@@ -278,12 +296,12 @@ describe('TodayPage', () => {
     );
 
     // The server-provided keepsake becomes the large editorial focal point
-    expect(html).toContain('today-section-keepsake');
-    expect(html).toContain('today-card-has-media');
+    expect(html).toContain('today-section-moment');
+    expect(html).toContain('today-moment-media');
     expect(html).toContain('Photo Memory');
 
     // It is not duplicated further down in the Shared Trace
-    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const keepsakeIndex = html.indexOf('today-section-moment');
     const traceIndex = html.indexOf('today-section-recent');
     const photoOccurrences = html.split('Photo Memory').length - 1;
     expect(photoOccurrences).toBe(1);
@@ -350,7 +368,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-section-keepsake');
+    expect(html).toContain('today-section-moment');
     expect(html).toContain('Anniversary Trip');
     expect(html).not.toContain('new-space-experience');
   });
@@ -397,8 +415,8 @@ describe('TodayPage', () => {
 
     // A genuinely current/upcoming signal exists, so the Shared Planning
     // Horizon precedes the merely generic (non-retrospective) Keepsake.
-    const planningIndex = html.indexOf('today-planning-area');
-    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const planningIndex = html.indexOf('today-section-upcoming');
+    const keepsakeIndex = html.indexOf('today-section-moment');
     expect(planningIndex).toBeGreaterThan(-1);
     expect(keepsakeIndex).toBeGreaterThan(planningIndex);
 
@@ -461,8 +479,8 @@ describe('TodayPage', () => {
 
     // No planning area exists at all, so the Keepsake remains the
     // page's leading editorial focus, ahead of the quiet Shared Trace.
-    expect(html).not.toContain('today-planning-area');
-    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    expect(html).not.toContain('today-section-upcoming');
+    const keepsakeIndex = html.indexOf('today-section-moment');
     const traceIndex = html.indexOf('today-section-recent');
     expect(keepsakeIndex).toBeGreaterThan(-1);
     expect(traceIndex).toBeGreaterThan(keepsakeIndex);
@@ -533,18 +551,20 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // Both planning modules still share the existing two-zone layout, in
-    // their existing relative order, ahead of the deferred generic Keepsake.
-    expect(html).toContain('today-planning-dual');
+    // #850 replaced the shared two-zone planning area with the normative
+    // section order, which keeps #840's invariant structurally rather than
+    // conditionally: the upcoming agenda always precedes the Keepsake, and
+    // the partner signal is now the `Gerade bei euch` module below it.
+    expect(html).not.toContain('today-planning-dual');
     const agendaIndex = html.indexOf('today-agenda-row');
-    const signalIndex = html.indexOf('today-signal-card');
-    const keepsakeIndex = html.indexOf('today-section-keepsake');
+    const momentIndex = html.indexOf('today-section-moment');
+    const signalIndex = html.indexOf('today-living');
     expect(agendaIndex).toBeGreaterThan(-1);
-    expect(signalIndex).toBeGreaterThan(agendaIndex);
-    expect(keepsakeIndex).toBeGreaterThan(signalIndex);
+    expect(momentIndex).toBeGreaterThan(agendaIndex);
+    expect(signalIndex).toBeGreaterThan(momentIndex);
   });
 
-  it('keeps a genuine date-specific retrospective ahead of the planning area, unlike a generic Keepsake (#840)', () => {
+  it('places a genuine date-specific retrospective in the single `Gerade bei euch` slot (#850 supersedes #840 ordering)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -590,18 +610,22 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // A genuine date-specific retrospective is not a generic fallback: it
-    // keeps its established prominence ahead of the planning area even
-    // though a current/upcoming signal exists.
-    const retrospectiveIndex = html.indexOf('today-section-retrospective');
-    const planningIndex = html.indexOf('today-planning-area');
-    expect(retrospectiveIndex).toBeGreaterThan(-1);
-    expect(planningIndex).toBeGreaterThan(retrospectiveIndex);
+    // #840 let a date-specific retrospective float ahead of the planning
+    // area. #850's normative order is fixed, and the retrospective is now
+    // the highest-value candidate for the one `Gerade bei euch` slot after a
+    // live partner signal - so it renders there, below `Demnächst`. The
+    // retrospective is still shown, still exactly once, and still never
+    // displaced by a generic Keepsake, which is what #840 was protecting.
+    const planningIndex = html.indexOf('today-section-upcoming');
+    const livingIndex = html.indexOf('today-section-living');
+    expect(planningIndex).toBeGreaterThan(-1);
+    expect(livingIndex).toBeGreaterThan(planningIndex);
     expect(html).toContain('One year ago today');
-    expect(html).not.toContain('today-section-keepsake');
+    expect(html.split('One year ago today').length - 1).toBe(1);
+    expect(html).toContain('today-living-retrospective');
   });
 
-  it('omits the Keepsake when no loadMemoryImage is supplied', () => {
+  it('falls back to the compact `Euer Moment` state, never an empty photo frame, when no loadMemoryImage is supplied', () => {
     const html = renderTodayPage({
       space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
       relationshipDuration: null,
@@ -625,7 +649,12 @@ describe('TodayPage', () => {
       retrospective: null,
     });
 
-    expect(html).not.toContain('today-section-keepsake');
+    // No image loader means no photo to lead with. The anchor keeps its
+    // place as a quiet one-line state rather than rendering an empty frame,
+    // and the memory itself is still reachable from the trace below.
+    expect(html).not.toContain('today-moment-figure');
+    expect(html).toContain('today-moment-compact');
+    expect(html).toContain(m5s5.today.keepsake.compactTitle);
     expect(html).toContain('today-section-recent');
     expect(html).toContain('Photo Memory');
   });
@@ -666,8 +695,14 @@ describe('TodayPage', () => {
         {
           id: 'item-5',
           type: 'MEMORY',
-          titleOrText: 'Should be sliced out',
+          titleOrText: 'Fifth entry',
           occurredOn: new Date('2026-07-01T10:00:00Z'),
+        },
+        {
+          id: 'item-6',
+          type: 'MEMORY',
+          titleOrText: 'Should be sliced out',
+          occurredOn: new Date('2026-06-01T10:00:00Z'),
         },
       ],
       retrospective: null,
@@ -704,6 +739,11 @@ describe('TodayPage', () => {
 
     // Slices to max 4 items
     expect(html).not.toContain('Should be sliced out');
+
+    // Whatever the page already features above (here the Milestone, promoted
+    // into the single `Gerade bei euch` slot) is not repeated as a trace row.
+    expect(html).toContain('today-living-milestone');
+    expect(html.split('First Shared Home').length - 1).toBe(1);
 
     // Offers secondary action to full activity page
     expect(html).toContain('href="/today/activity"');
@@ -772,21 +812,26 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    // Shared Planning Horizon: the upcoming item is a calm agenda row, not a
-    // dashboard-style status card, and shares the planning area two-up with
-    // the relationship signal.
-    expect(html).toContain('today-planning-area');
-    expect(html).toContain('today-planning-dual');
+    // Demnächst: the upcoming item is a calm agenda row, not a
+    // dashboard-style status card. Under #850 it owns its own section rather
+    // than sharing a two-zone planning area with the partner signal.
+    expect(html).toContain('today-section-upcoming');
+    expect(html).not.toContain('today-planning-dual');
     expect(html).toContain('today-agenda-row');
     expect(html).toContain('Candlelight Dinner');
     expect(html).not.toContain('today-context-card');
 
-    // Relationship signal card
-    expect(html).toContain('today-signal-card');
-    expect(html).toContain('today-signal-kicker');
-    expect(html).toContain('today-signal-message');
+    // The partner signal is the single `Gerade bei euch` module, below.
+    expect(html).toContain('today-section-living');
+    expect(html).toContain('today-living-partner_signal');
     expect(html).toContain('href="/story/memories/mem-1"');
-    expect(html).toContain('today-signal-action');
+    expect(html).toContain('today-living-action');
+    expect(html.indexOf('today-section-living')).toBeGreaterThan(
+      html.indexOf('today-section-upcoming'),
+    );
+
+    // Exactly one contextual module, never a stack.
+    expect(html.split('today-section-living').length - 1).toBe(1);
 
     // Zero duplication: the upcoming item appears exactly once
     expect(html.split('Candlelight Dinner').length - 1).toBe(1);
@@ -837,15 +882,15 @@ describe('TodayPage', () => {
     );
 
     // Planning area is completely omitted
-    expect(html).not.toContain('today-planning-area');
-    expect(html).not.toContain('today-signal-card');
+    expect(html).not.toContain('today-section-upcoming');
+    expect(html).not.toContain('today-living');
 
     // Page flows directly into recent shared
     expect(html).toContain('today-section-recent');
     expect(html).toContain('Lake Walk');
   });
 
-  it('renders single-column planning area when only an upcoming item exists', () => {
+  it('renders `Demnächst` alone, with no `Gerade bei euch` module, when only an upcoming item exists', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -889,14 +934,15 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-planning-area');
-    expect(html).toContain('today-planning-single');
+    expect(html).toContain('today-section-upcoming');
     expect(html).toContain('today-agenda-row');
     expect(html).toContain('Cooking Night');
-    expect(html).not.toContain('today-signal-card');
+    // Nothing qualifies for the contextual slot, so the section is omitted
+    // entirely rather than rendered as an empty placeholder.
+    expect(html).not.toContain('today-section-living');
   });
 
-  it('renders single-column planning area when only relationship signal exists', () => {
+  it('renders only the `Gerade bei euch` module, and no `Demnächst`, when just a partner signal exists', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -944,11 +990,13 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-planning-area');
-    expect(html).toContain('today-planning-single');
-    expect(html).toContain('today-signal-card');
-    expect(html).toContain('href="/story/memories/mem-99"');
+    // No upcoming item means no `Demnächst` section at all; the partner
+    // signal still gets its own contextual slot.
+    expect(html).not.toContain('today-section-upcoming');
     expect(html).not.toContain('today-agenda-row');
+    expect(html).toContain('today-section-living');
+    expect(html).toContain('today-living-partner_signal');
+    expect(html).toContain('href="/story/memories/mem-99"');
   });
 
   it('renders every upcoming item as a calm agenda row in one Shared Planning Horizon, not a split primary card + secondary section', () => {
@@ -1006,7 +1054,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('today-planning-area');
+    expect(html).toContain('today-section-upcoming');
     expect(html).toContain('today-agenda-list');
     expect(html).not.toContain('today-context-card');
 
@@ -1072,7 +1120,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).not.toContain('today-signal-card');
+    expect(html).not.toContain('today-living');
   });
 
   it('does not render relationship signal when comment actorId is null', () => {
@@ -1130,7 +1178,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).not.toContain('today-signal-card');
+    expect(html).not.toContain('today-living');
   });
 
   it('does not render relationship signal when space has no partner', () => {
@@ -1188,7 +1236,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).not.toContain('today-signal-card');
+    expect(html).not.toContain('today-living');
   });
 
   it('does not render relationship signal for non-comment activity', () => {
@@ -1246,7 +1294,7 @@ describe('TodayPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).not.toContain('today-signal-card');
+    expect(html).not.toContain('today-living');
   });
 
   it('renders neutral settings CTA when relationshipDuration is null without assuming missing start date', () => {
@@ -1330,6 +1378,448 @@ describe('TodayPage', () => {
     expect(html).toContain('3 Jahre, 2 Monate zusammen');
     expect(html).not.toContain('today-hero-settings-link');
   });
+});
+
+/*
+ * The no-duplicate composition contract for a partner signal.
+ *
+ * A partner comment renders as `Gerade bei euch`, but what it is *about* is an
+ * ordinary shared item that `Diesen Monat` and `Zuletzt bei euch` would
+ * otherwise show again. The commented item's id therefore counts as featured
+ * content for both sections.
+ */
+function renderWithPartnerComment(commentTargetId: string): string {
+  const now = new Date();
+  const thisMonth = (day: number) =>
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: {
+      id: 'space-1',
+      partner: { id: 'partner-1', displayName: 'Marie' },
+    },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: {
+      id: 'mem-featured',
+      type: 'MEMORY',
+      titleOrText: 'Featured Photo',
+      occurredOn: thisMonth(2),
+      previewAttachmentId: 'att-featured',
+    },
+    recentShared: [
+      {
+        id: 'mem-featured',
+        type: 'MEMORY',
+        titleOrText: 'Featured Photo',
+        occurredOn: thisMonth(2),
+        previewAttachmentId: 'att-featured',
+      },
+      {
+        id: 'mem-commented',
+        type: 'MEMORY',
+        titleOrText: 'Commented Photo',
+        occurredOn: thisMonth(3),
+        previewAttachmentId: 'att-commented',
+      },
+      {
+        id: 'mem-other',
+        type: 'MEMORY',
+        titleOrText: 'Other Photo',
+        occurredOn: thisMonth(4),
+        previewAttachmentId: 'att-other',
+      },
+      {
+        id: 'ms-1',
+        type: 'MILESTONE',
+        titleOrText: 'Shared Milestone',
+        occurredOn: thisMonth(5),
+      },
+    ],
+    retrospective: null,
+  });
+  queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+    items: [
+      {
+        id: 'act-1',
+        kind: 'COMMENT_CREATED',
+        actorId: 'partner-1',
+        targetId: commentTargetId,
+        targetType: 'MEMORY',
+        createdAt: new Date(),
+        occurredAt: new Date(),
+        sourceEventId: 'ev-1',
+      },
+    ],
+    nextCursor: null,
+  });
+
+  return renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={
+            {
+              activity: {
+                getActivity: () =>
+                  Promise.resolve({ items: [], nextCursor: null }),
+              },
+            } as unknown as M4ProductApis
+          }
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+it('skips a partner comment about the current `Euer Moment` and selects the next eligible module', () => {
+  const html = renderWithPartnerComment('mem-featured');
+
+  // The signal would have duplicated the photo shown large above, so the
+  // chain continued to the next eligible candidate.
+  expect(html).not.toContain('today-living-partner_signal');
+  expect(html).toContain('today-living-milestone');
+  expect(html).toContain('Shared Milestone');
+  // Exactly one contextual module, as always.
+  expect(html.split('today-section-living').length - 1).toBe(1);
+});
+
+it('never repeats the memory a partner commented on in `Diesen Monat` or the trace', () => {
+  const html = renderWithPartnerComment('mem-commented');
+
+  // The partner signal wins precedence, because its target is not featured.
+  expect(html).toContain('today-living-partner_signal');
+
+  // Its underlying memory is featured content now, so neither later section
+  // shows it again.
+  expect(html).toContain('today-section-monthly');
+  expect(html).not.toContain('Commented Photo');
+
+  // The unrelated entries are still there, so nothing was over-filtered.
+  expect(html).toContain('Other Photo');
+  expect(html).toContain('Shared Milestone');
+});
+
+it('keeps an unrelated partner signal winning precedence over the stable candidates', () => {
+  const html = renderWithPartnerComment('mem-elsewhere');
+
+  expect(html).toContain('today-living-partner_signal');
+  expect(html).not.toContain('today-living-milestone');
+  // Nothing is filtered out of the later sections by an off-page target.
+  expect(html).toContain('Commented Photo');
+  expect(html).toContain('Other Photo');
+});
+
+/**
+ * The markup of one composed section, so an assertion can say *where* a title
+ * appears. `Diesen Monat` carries its titles in an `sr-only` span and the
+ * trace carries them in a visible one, so a whole-page `toContain` cannot
+ * tell a thumbnail apart from a row. Sections are siblings and never nested,
+ * so slicing to the next `<section` is exact.
+ */
+function sectionHtml(html: string, className: string): string {
+  const start = html.indexOf(`today-section ${className}`);
+  if (start === -1) return '';
+  const rest = html.slice(start);
+  const next = rest.indexOf('<section', 1);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+/*
+ * A Space with more this-month photos than the strip can hold, plus content
+ * the strip never takes. It pins both halves of the trace's exclusion rule:
+ * the photos the strip actually selected are gone from the trace, and
+ * everything it did not select is still there.
+ */
+function renderMonthlyOverflowSpace(): string {
+  const now = new Date();
+  const thisMonth = (day: number) =>
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+  const photo = (id: string, title: string, day: number) => ({
+    id,
+    type: 'MEMORY',
+    titleOrText: title,
+    occurredOn: thisMonth(day),
+    previewAttachmentId: `att-${id}`,
+  });
+
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: photo('mem-hero', 'Hero Photo', 1),
+    recentShared: [
+      photo('mem-hero', 'Hero Photo', 1),
+      photo('mem-a', 'Strip Photo A', 2),
+      photo('mem-b', 'Strip Photo B', 3),
+      photo('mem-c', 'Strip Photo C', 4),
+      // A fourth this-month photo the three-item cap leaves unselected.
+      photo('mem-d', 'Overflow Photo D', 5),
+      {
+        id: 'hm-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'Quiet Heart Moment',
+        occurredOn: thisMonth(6),
+        previewAttachmentId: null,
+      },
+      {
+        id: 'ms-1',
+        type: 'MILESTONE',
+        titleOrText: 'Shared Milestone',
+        occurredOn: thisMonth(7),
+        previewAttachmentId: null,
+      },
+    ],
+    retrospective: null,
+  });
+  queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+    items: [],
+    nextCursor: null,
+  });
+
+  return renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={{} as M4ProductApis}
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+it('never repeats a `Diesen Monat` photo as a `Zuletzt bei euch` row', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // The strip took the three eligible photos below the featured one.
+  expect(html).toContain('today-monthly-strip-3');
+  for (const title of ['Strip Photo A', 'Strip Photo B', 'Strip Photo C']) {
+    expect(monthly).toContain(title);
+    expect(trace).not.toContain(title);
+  }
+});
+
+it('keeps content the monthly strip did not select eligible for the trace', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // The fourth this-month photo lost only to the three-item cap, so it is
+  // not featured anywhere and the trace must still offer it.
+  expect(monthly).not.toContain('Overflow Photo D');
+  expect(trace).toContain('Overflow Photo D');
+
+  // Content the strip can never take stays in the trace too.
+  expect(trace).toContain('Quiet Heart Moment');
+});
+
+it('keeps `Euer Moment` and the `Gerade bei euch` module out of the trace as before', () => {
+  const html = renderMonthlyOverflowSpace();
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // Featured above as the photo anchor.
+  expect(html).toContain('today-moment-figure');
+  expect(trace).not.toContain('Hero Photo');
+
+  // Featured above as the single contextual module.
+  expect(html).toContain('today-living-milestone');
+  expect(trace).not.toContain('Shared Milestone');
+});
+
+it('leaves the trace untouched when the month contributes no photos', () => {
+  const html = renderTodayPage({
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    recentShared: [
+      {
+        id: 'hm-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'Text Only Moment',
+        occurredOn: new Date(),
+      },
+      {
+        id: 'ch-1',
+        type: 'CHAPTER',
+        titleOrText: 'Shared Chapter',
+        occurredOn: new Date(),
+      },
+    ],
+    retrospective: null,
+  });
+
+  // No strip at all, so it can exclude nothing from the trace.
+  expect(html).not.toContain('today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+  expect(trace).toContain('Text Only Moment');
+  expect(trace).toContain('Shared Chapter');
+});
+
+it('renders `Diesen Monat` as up to three real shared photos, never a count derived from the capped feed', () => {
+  const now = new Date();
+  // `occurredOn` is a date-only API value: the generated client materializes
+  // it at midnight UTC, so the fixture is built the same way.
+  const thisMonth = (day: number) =>
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: {
+      id: 'featured',
+      type: 'MEMORY',
+      titleOrText: 'Featured Photo',
+      occurredOn: thisMonth(2),
+      previewAttachmentId: 'att-featured',
+    },
+    recentShared: [
+      {
+        id: 'featured',
+        type: 'MEMORY',
+        titleOrText: 'Featured Photo',
+        occurredOn: thisMonth(2),
+        previewAttachmentId: 'att-featured',
+      },
+      ...[1, 2, 3, 4].map((n) => ({
+        id: `strip-${n}`,
+        type: 'MEMORY',
+        titleOrText: `Strip Photo ${n}`,
+        occurredOn: thisMonth(3),
+        previewAttachmentId: `att-strip-${n}`,
+      })),
+    ],
+    retrospective: null,
+  });
+
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={{} as M4ProductApis}
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  expect(html).toContain('today-monthly-strip-3');
+  expect(html.split('today-monthly-tile"').length - 1).toBe(3);
+  // The photo already shown large above is not repeated in the strip.
+  expect(html).toContain('today-monthly-strip');
+  expect(html).not.toContain('att-featured-strip');
+  // No total is claimed: recentShared is capped server-side, so a count
+  // derived from it could be wrong.
+  expect(html).not.toMatch(/\d+\s+gemeinsame Momente/);
+});
+
+it('`Diesen Monat` -> Alle anzeigen opens Momente on the Zeitleiste tab, not Entdecken', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+
+  // The real-smartphone Product Owner decision (#858 follow-up): the
+  // monthly strip's header action must resolve to the Story view's
+  // Zeitleiste tab, not the bare `/story` root (which defaults to
+  // Entdecken).
+  expect(monthly).toContain('href="/story?tab=timeline"');
+});
+
+it('omits `Diesen Monat` entirely when the month has no shared photo', () => {
+  const html = renderTodayPage({
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    recentShared: [
+      {
+        id: 'hm-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'Nur Text',
+        occurredOn: new Date(),
+      },
+    ],
+    retrospective: null,
+  });
+
+  expect(html).not.toContain('today-section-monthly');
+  expect(html).not.toContain('today-monthly-strip');
+});
+
+it('never exposes the internal `keepsake` term to users', () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: {
+      id: 'mem-photo',
+      type: 'MEMORY',
+      titleOrText: 'Photo Memory',
+      occurredOn: new Date('2026-09-01T12:00:00Z'),
+      previewAttachmentId: 'att-123',
+    },
+    recentShared: [],
+    retrospective: null,
+  });
+
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={{} as M4ProductApis}
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  // Visible copy only - class names may still carry internal role names.
+  const visibleText = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+  expect(visibleText).not.toContain('keepsake');
+  expect(html).toContain(m5s5.today.keepsake.kicker);
+});
+
+it('keeps the Thinking-of-you action in the hero, unchanged by the recomposition', () => {
+  const html = renderTodayPage({
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: { daysTogether: 100 },
+    upcoming: [
+      {
+        id: 'plan-1',
+        type: 'PLAN',
+        titleOrText: 'Kino',
+        scheduledAt: new Date('2026-09-20T18:00:00Z'),
+      },
+    ],
+    recentShared: [],
+    retrospective: null,
+  });
+
+  const heroIndex = html.indexOf('today-hero');
+  const actionIndex = html.indexOf('today-hero-action');
+  const upcomingIndex = html.indexOf('today-section-upcoming');
+  expect(actionIndex).toBeGreaterThan(heroIndex);
+  expect(upcomingIndex).toBeGreaterThan(actionIndex);
+  expect(html).toContain(m5s5.dashboard.thinkingOfYouButton);
 });
 
 describe('formatRelationshipDuration', () => {
@@ -1460,7 +1950,7 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-planning-area');
+      expect(html).toContain('today-section-upcoming');
       expect(html).toContain('Weekend by the lake');
     });
 
@@ -1499,7 +1989,7 @@ describe('formatRelationshipDuration', () => {
       );
 
       // Planning area must disappear cleanly; page flows directly into recent shared
-      expect(html).not.toContain('today-planning-area');
+      expect(html).not.toContain('today-section-upcoming');
       expect(html).toContain('Konzertbesuch');
     });
 
@@ -1522,7 +2012,7 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-planning-area');
+      expect(html).toContain('today-section-upcoming');
       expect(html).toContain('today-agenda-row');
       expect(html).toContain('Jahrestag');
     });
@@ -1546,7 +2036,7 @@ describe('formatRelationshipDuration', () => {
         retrospective: null,
       });
 
-      expect(html).toContain('today-planning-area');
+      expect(html).toContain('today-section-upcoming');
       expect(html).toContain('Zusammengezogen');
     });
   });

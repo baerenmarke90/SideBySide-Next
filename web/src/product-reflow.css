@@ -87,27 +87,25 @@
     min-width: 0;
   }
 
-  /* Today: undo desktop-only split layouts when the content column is narrow. */
+  /*
+   * Today: undo desktop-only split layouts when the content column is narrow.
+   *
+   * This rule is also the last link in the vertical chain that pushed the
+   * relationship hero down the first smartphone viewport (#850). It sets the
+   * hero's compact padding from the *container*, so it wins over the page
+   * stylesheet at equal specificity and quietly restored the 24 px top gap
+   * that TodayPage.css had already given up. Compact and container-compact
+   * must agree, so the value lives in both places deliberately.
+   */
   .today-hero.couple-presence-card {
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    padding: var(--space-6) 0 var(--space-6);
+    padding: var(--space-2) 0 var(--space-5);
   }
 
   .today-hero-action-container {
     justify-content: center;
-  }
-
-  .today-planning-dual,
-  .today-card-retrospective.today-card-has-media,
-  .today-card-keepsake.today-card-has-media {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .today-card-retrospective .today-card-media,
-  .today-card-keepsake .today-card-media {
-    min-height: 220px;
   }
 
   /* Momente: hero/tapestry must follow the content column, not window width. */

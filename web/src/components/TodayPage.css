@@ -1,5 +1,18 @@
+/*
+ * Reclaiming the top of the first smartphone viewport (#850).
+ *
+ * The blank band above the relationship hero was never one bad margin. It was
+ * a stack: the shell's own content padding, then this page's padding, then the
+ * hero card's padding, then the hero's internal gaps - each individually
+ * defensible, together roughly 150 px of nothing before the couple appeared.
+ *
+ * The page now contributes no top gap at all and the hero opens almost
+ * immediately under the shell padding, which is the only breathing room the
+ * composition still pays for up here. The calm comes from the hero's internal
+ * rhythm and its ambient tint instead of from stacked empty space.
+ */
 .today-page {
-  padding-top: var(--space-6);
+  padding-top: 0;
 }
 
 .today-hero.couple-presence-card {
@@ -7,14 +20,36 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
   border: none;
   border-bottom: 1px solid var(--color-border-subtle);
   border-radius: 0;
-  padding: var(--space-6) 0 var(--space-6);
+  padding: var(--space-2) 0 var(--space-5);
   background: transparent;
   box-shadow: none;
-  gap: var(--space-5);
+  gap: var(--space-4);
+}
+
+/*
+ * Warmth without another card: a soft brand aura bleeding out of the top of
+ * the page behind the couple, so the hero reads as a lit place rather than a
+ * bordered header block. Purely decorative, so it never affects layout.
+ */
+.today-hero.couple-presence-card::before {
+  content: "";
+  position: absolute;
+  /* The bleed stops exactly at the shell's 1rem compact gutter. Anything
+     wider pushes the document's scroll width past the viewport and breaks
+     WCAG 2.2 SC 1.4.10 reflow at 320 CSS px. */
+  inset: calc(-1 * var(--space-8)) calc(-1 * var(--space-4)) auto;
+  height: 16rem;
+  background: radial-gradient(
+    120% 80% at 30% 0%,
+    var(--color-brand-glow),
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
 }
 
 @media (min-width: 768px) {
@@ -22,7 +57,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-8) 0 var(--space-6);
+    padding: var(--space-5) 0 var(--space-6);
   }
 }
 
@@ -51,17 +86,28 @@
   transition: color var(--motion-fast);
 }
 
+/*
+ * On a phone the connection status and the relationship duration never fit on
+ * one line, and letting them wrap inside a horizontal flex row left the "·"
+ * separator stranded at the end of the first line with the duration pushed
+ * off to the right. Two quiet left-aligned lines read as one calm identity
+ * block instead. The duration keeps its 44 px target height.
+ */
+@container product-content (max-width: 30rem) {
+  .today-hero .couple-presence-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .today-hero .couple-presence-separator {
+    display: none;
+  }
+}
+
 .today-hero-duration-link:hover,
 .today-hero-duration-link:focus-visible {
   color: var(--color-brand-strong);
-}
-
-.today-signal-avatar .person-identity-avatar-small {
-  width: 1.6rem;
-  height: 1.6rem;
-  font-size: 0.72rem;
-  border: 1.5px solid var(--color-surface);
-  box-shadow: 0 1px 4px var(--color-shadow-soft);
 }
 
 .today-hero-pill-icon {
@@ -164,129 +210,16 @@
   animation: heart-sparkle 0.6s ease-out;
 }
 
-/* Shared Planning Horizon (calm agenda) + Relationship Signal */
-.today-planning-area {
-  margin-bottom: var(--space-8);
-}
-
-.today-planning-dual {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-4);
-}
-
-@media (min-width: 840px) {
-  .today-planning-dual {
-    grid-template-columns: 1.4fr 1fr;
-    align-items: stretch;
-  }
-}
-
-.today-planning-single {
-  display: block;
-}
-
-.today-planning-agenda {
-  display: flex;
-  flex-direction: column;
-}
-
-.today-planning-heading {
-  margin: 0 0 var(--space-3);
-  padding-left: var(--space-2);
-  color: var(--color-text);
-  font-family: var(--font-ui);
-  font-size: 1.25rem;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-.today-signal-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: var(--space-5);
-  border: 1px solid var(--color-brand-glow);
-  border-radius: var(--radius-card);
-  background: var(--color-surface-raised);
-  box-shadow: var(--shadow-card);
-}
-
-.today-signal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.today-signal-kicker {
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-brand-text);
-}
-
-.today-signal-badge {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.today-signal-message {
-  margin: var(--space-1) 0 var(--space-3);
-  font-family: var(--font-ui);
-  font-size: 1.05rem;
-  font-weight: 650;
-  line-height: 1.4;
-  color: var(--color-text);
-}
-
-.today-signal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.today-signal-date {
-  font-weight: 600;
-}
-
-.today-signal-action {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.84rem;
-  font-weight: 750;
-  color: var(--color-brand-text);
-  padding: 0.25rem 0.65rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand-surface);
-  border: 1px solid var(--color-brand-glow);
-  text-decoration: none;
-  transition:
-    background var(--motion-fast),
-    color var(--motion-fast),
-    transform var(--motion-fast);
-}
-
-.today-signal-action:hover {
-  background: var(--color-brand);
-  color: var(--color-on-accent, #fff);
-  transform: translateX(2px);
-}
-
-.today-signal-action:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
 .today-section {
+  margin-bottom: var(--space-6);
+}
+
+/*
+ * `Euer Moment` is the page's dominant surface, so it gets the one deliberate
+ * pause in the rhythm - before it, to set it apart, and after it, so the
+ * contextual module below is read as a new thought rather than a caption.
+ */
+.today-section-moment {
   margin-bottom: var(--space-8);
 }
 
@@ -294,8 +227,40 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--space-4);
-  padding-left: var(--space-2);
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-1);
+}
+
+.today-section-header > * {
+  min-width: 0;
+}
+
+/*
+ * A section's "see everything" affordance is a quiet trailing link, not a
+ * button: it must stay clearly subordinate to the content it sits above.
+ */
+.today-section-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  flex: 0 0 auto;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color var(--motion-fast);
+}
+
+.today-section-link:hover {
+  color: var(--color-brand-text);
+}
+
+.today-section-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-small);
 }
 
 .today-section-kicker {
@@ -328,66 +293,73 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.today-card-shell {
-  flex: 0 0 280px;
-  border-radius: var(--radius-card);
-  color: inherit;
-  text-decoration: none;
-  scroll-snap-align: start;
-}
-
-.today-card-shell-retrospective,
-.today-card-shell-keepsake {
-  flex-basis: min(340px, 80vw);
-  width: 100%;
-}
-
-/* The Keepsake/retrospective is the page's photographic focal point, so it
-   uses the full available page width instead of a narrow inset column. */
-.today-retrospective-container {
-  width: 100%;
-}
-
-.today-section-keepsake .today-section-title {
-  font-family: var(--font-display);
-}
-
-.today-retrospective-container .today-card-shell {
-  flex: none;
-  width: 100%;
-  max-width: 100%;
-}
-
 /* Shared Planning Horizon (#790/#791 follow-up): a full-width bordered row
    is still a table row once the container is wider than its content - the
    title sits far left, the date far right, and nearly all of the box is
    empty. Each item is instead a compact tile (icon + stacked title/date,
    like the Momente archive entries' icon + copy convention) that wraps into
    as many columns as the available width allows, instead of stretching one
-   item across the whole row. Below the tablet breakpoint the tiles stay
-   full-width and stacked - narrow phone widths don't have room for more
-   than one anyway, so this keeps mobile's already-approved presentation. */
+   item across the whole row.
+   Compact real-device follow-up (#858): a lone item is still one plain
+   card, but two or three stacked full-width cards under the fold read as a
+   scrolling list, not a short shared horizon glanced at once. Below the
+   tablet breakpoint they become a native horizontal swipe carousel instead
+   - `overflow-x` + `scroll-snap`, no drag library - sized so the next card
+   always peeks in at the edge as an invitation to swipe. A single item has
+   nothing to peek at, so `:has()` keeps it the plain, non-scrolling card. */
 .today-agenda-list {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-@media (min-width: 640px) {
-  .today-agenda-list {
-    flex-flow: row wrap;
-    gap: var(--space-3);
-  }
+  flex-direction: row;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-4);
+  -webkit-overflow-scrolling: touch;
 }
 
 .today-agenda-row {
+  scroll-snap-align: start;
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+.today-agenda-list:has(> .today-agenda-row:nth-child(2)) > .today-agenda-row {
+  /* Most of the current card, plus a deliberate sliver of the next one. */
+  flex: 0 0 85%;
+  max-width: 85%;
+}
+
+@media (min-width: 640px) {
+  .today-agenda-list,
+  .today-agenda-list:has(> .today-agenda-row:nth-child(2)) {
+    flex-flow: row wrap;
+    gap: var(--space-3);
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .today-agenda-row,
+  .today-agenda-list:has(> .today-agenda-row:nth-child(2)) > .today-agenda-row {
+    flex: 1 1 220px;
+    max-width: 18rem;
+  }
+}
+
+/*
+ * Materiality (#850): the agenda tile is the page's one genuinely *raised*
+ * surface - a small warm card you could pick up. `--shadow-raised` is a close
+ * contact shadow rather than the wide ambient `--shadow-card`, which is what
+ * keeps a single default tile feeling substantial instead of floating.
+ */
+.today-agenda-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-medium);
-  background: var(--color-surface);
+  border-radius: var(--radius-large);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-raised);
   color: inherit;
   text-decoration: none;
   box-sizing: border-box;
@@ -418,13 +390,17 @@
   outline-offset: 2px;
 }
 
+/* A warm tinted plate rather than a bare glyph: the icon is the tile's
+   material accent, and it is what tells plans apart from dates at a glance. */
 .today-agenda-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-medium);
+  background: var(--color-brand-surface);
   color: var(--color-brand-text);
 }
 
@@ -491,14 +467,20 @@
   }
 }
 
+/*
+ * Secondary by construction (#850): the trace keeps the approved bordered
+ * mini-tile shape - it must not regress into an unstyled text list - but it
+ * sits *flat* on the canvas while `Demnächst` above it is raised. Elevation,
+ * not size, is what now separates the page's primary and secondary registers.
+ */
 .today-recent-tile {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-medium);
-  background: var(--color-surface);
+  background: var(--color-surface-subtle);
   color: inherit;
   text-decoration: none;
   box-sizing: border-box;
@@ -538,6 +520,11 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.today-agenda-icon .recent-type-icon {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 /* Type is still conveyed (the icon shape differs per kind), just not as its
@@ -607,376 +594,6 @@
   line-height: 1.4;
 }
 
-.today-card-link:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
-}
-
-.today-card {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  min-height: 190px;
-  flex-direction: column;
-  justify-content: flex-end;
-  overflow: hidden;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-surface-overlay);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
-  transition:
-    transform var(--motion-duration-medium) var(--motion-easing-lift),
-    border-color var(--motion-fast),
-    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
-}
-
-.today-card-content {
-  position: relative;
-  z-index: 1;
-  max-width: 92%;
-}
-
-.today-card-title {
-  margin-bottom: var(--space-4);
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: 1.28rem;
-  font-weight: 750;
-  line-height: 1.3;
-}
-
-.today-card-typography-first {
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-left: 3.5px solid var(--color-brand);
-  background: var(--color-surface-raised);
-}
-
-.today-card-typography-first .today-card-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  line-height: 1.35;
-  color: var(--color-text);
-  margin-top: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.today-card-has-media {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: var(--color-surface-raised);
-}
-
-.today-card-media {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  background: var(--color-surface-subtle);
-}
-
-.today-card-media .story-media-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform var(--motion-fast);
-}
-
-.today-card-link:hover .today-card-media .story-media-preview {
-  transform: scale(1.04);
-}
-
-.today-card-has-media .today-card-content {
-  padding: var(--space-4) var(--space-5) var(--space-5);
-  max-width: 100%;
-}
-
-.today-card-link:hover .today-card {
-  transform: translateY(-3px);
-  border-color: var(--color-brand-glow);
-  box-shadow: var(--shadow-card);
-}
-
-.today-card-visual {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.today-card-visual-orb {
-  position: absolute;
-  top: -3rem;
-  right: -2.5rem;
-  width: 11rem;
-  height: 11rem;
-  border-radius: 50%;
-  background: var(--color-entry-aura-brand);
-  filter: blur(2px);
-  opacity: 0.9;
-}
-
-.today-card-visual-line {
-  position: absolute;
-  right: -1.5rem;
-  bottom: 2.5rem;
-  width: 9rem;
-  height: 3.5rem;
-  transform: rotate(-14deg);
-  border: 1px solid var(--color-brand-glow);
-  border-radius: var(--radius-pill);
-  opacity: 0.6;
-}
-
-.today-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.today-card-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-pill);
-  padding: 0.2rem 0.65rem;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: normal;
-  text-transform: none;
-  line-height: 1.3;
-}
-
-.today-type-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.today-type-icon .recent-type-icon {
-  width: 0.95rem;
-  height: 0.95rem;
-}
-
-.today-agenda-icon .recent-type-icon {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-/* Semantic type badges — reuse the shared brand/shared/technical/discovery/
-   private design tokens (docs/DESIGN-PRINCIPLES.md §3.1) instead of inventing
-   a page-local rainbow palette. Each token already carries a correct dark-mode
-   value, so no per-kind dark override is needed here. */
-.today-kind-heart_moment,
-.today-kind-anniversary {
-  background: var(--color-brand-surface);
-  border-color: var(--color-brand-glow);
-  color: var(--color-brand-text);
-}
-
-.today-kind-birthday {
-  background: var(--color-private-surface-soft);
-  border-color: var(--color-private-surface-soft);
-  color: var(--color-private);
-}
-
-.today-kind-plan,
-.today-kind-important_date {
-  background: var(--color-technical-surface);
-  border-color: var(--color-technical-surface);
-  color: var(--color-technical);
-}
-
-.today-kind-memory,
-.today-kind-chapter,
-.today-kind-collection,
-.today-kind-collection_item,
-.today-kind-milestone {
-  background: var(--color-shared-surface);
-  border-color: var(--color-shared-border);
-  color: var(--color-shared);
-}
-
-.today-kind-wish,
-.today-kind-place {
-  background: var(--color-discovery-surface-soft);
-  border-color: var(--color-discovery-surface-soft);
-  color: var(--color-discovery);
-}
-
-.today-card-retrospective-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-brand-glow);
-  border-radius: var(--radius-pill);
-  padding: 0.25rem 0.75rem;
-  background: var(--color-brand-surface);
-  color: var(--color-brand-text);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.today-card-retrospective,
-.today-card-keepsake {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  box-shadow: 0 10px 32px var(--color-shadow-card);
-  overflow: hidden;
-}
-
-.today-card-retrospective.today-card-has-media,
-.today-card-keepsake.today-card-has-media {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 840px) {
-  .today-card-retrospective.today-card-has-media,
-  .today-card-keepsake.today-card-has-media {
-    grid-template-columns: 1.15fr 1fr;
-    align-items: center;
-  }
-}
-
-@media (min-width: 1100px) {
-  .today-card-retrospective.today-card-has-media,
-  .today-card-keepsake.today-card-has-media {
-    grid-template-columns: 1.5fr 1fr;
-  }
-
-  .today-card-retrospective .today-card-media,
-  .today-card-keepsake .today-card-media {
-    min-height: 320px;
-  }
-}
-
-.today-card-retrospective .today-card-media,
-.today-card-keepsake .today-card-media {
-  width: 100%;
-  height: 100%;
-  min-height: 220px;
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-}
-
-.today-card-retrospective .today-card-content,
-.today-card-keepsake .today-card-content {
-  padding: var(--space-6) var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  justify-content: center;
-}
-
-.today-card-retrospective .today-card-title,
-.today-card-keepsake .today-card-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
-  font-weight: 750;
-  line-height: 1.35;
-  color: var(--color-text);
-}
-
-.today-card-date {
-  color: var(--color-text-secondary);
-  font-size: 0.86rem;
-  font-weight: 650;
-}
-
-.today-card-heart_moment {
-  background: linear-gradient(
-    145deg,
-    var(--color-private-surface-soft),
-    var(--color-surface-overlay)
-  );
-}
-
-.today-card-heart_moment .today-card-visual-orb {
-  background: var(--color-private-surface-soft);
-}
-
-.today-card-milestone {
-  background: linear-gradient(
-    145deg,
-    var(--color-brand-surface),
-    var(--color-surface-overlay)
-  );
-}
-
-.today-card-milestone .today-card-visual-line {
-  border-width: 2px;
-  border-color: var(--color-brand);
-}
-
-.today-card-plan,
-.today-card-chapter {
-  background: linear-gradient(
-    145deg,
-    var(--color-discovery-surface-soft),
-    var(--color-surface-overlay)
-  );
-}
-
-.today-card-plan .today-card-visual-orb,
-.today-card-chapter .today-card-visual-orb {
-  background: var(--color-discovery-surface-soft);
-}
-
-.today-card-collection {
-  background: linear-gradient(
-    145deg,
-    var(--color-shared-surface),
-    var(--color-surface-overlay)
-  );
-}
-
-.today-card-collection .today-card-visual-orb {
-  background: var(--color-shared-surface);
-}
-
-.today-card-wish,
-.today-card-place {
-  background: linear-gradient(
-    145deg,
-    var(--color-brand-surface),
-    var(--color-surface-raised)
-  );
-}
-
-.today-card-important_date,
-.today-card-birthday,
-.today-card-anniversary {
-  background: linear-gradient(
-    145deg,
-    var(--color-entry-aura-shared),
-    var(--color-surface-overlay)
-  );
-}
-
-.today-empty {
-  min-width: min(340px, 78vw);
-  border: 1px dashed var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  padding: var(--space-5);
-  background: var(--color-surface-overlay);
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
 .new-space-experience {
   margin-top: var(--space-8);
   padding: var(--space-8) var(--space-4);
@@ -1014,36 +631,447 @@
 }
 
 @media (max-width: 599px) {
+  /*
+   * Compact is the normative composition (#850). The page owns no top gap of
+   * its own here: the shell already provides the only breathing room the
+   * first viewport can afford before relationship content starts.
+   */
   .today-page {
-    padding-top: var(--space-3);
-  }
-
-  .today-hero {
-    margin-bottom: var(--space-6);
-    padding: var(--space-6) var(--space-3);
-  }
-
-  .today-card-shell,
-  .today-card-shell-retrospective,
-  .today-card-shell-keepsake {
-    flex-basis: min(300px, 84vw);
-  }
-
-  .today-card {
-    min-height: 190px;
-    padding: var(--space-5);
+    padding-top: 0;
   }
 }
 
+/* Euer Moment — the page's dominant emotional anchor ----------------------
+ *
+ * No card, no badge row, no metadata strip: the photograph carries its own
+ * frame and the title and date sit on it under a legibility scrim. That is
+ * what keeps this the strongest surface on the page while still being the
+ * one with the least chrome.
+ */
+.today-moment {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.today-moment-figure {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  box-shadow: var(--shadow-raised);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.today-moment-link:hover .today-moment-figure {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.today-moment-link:focus-visible {
+  outline: none;
+}
+
+.today-moment-link:focus-visible .today-moment-figure {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.today-moment-media {
+  display: block;
+}
+
+.today-moment-media .story-media-preview,
+.today-moment-media .story-media-skeleton,
+.today-moment-media .story-media-placeholder {
+  aspect-ratio: 4 / 3;
+  margin: 0;
+  border-radius: 0;
+}
+
+.today-moment-caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-8) var(--space-4) var(--space-4);
+  background: linear-gradient(
+    to top,
+    var(--color-media-scrim-strong),
+    var(--color-media-scrim-mid) 55%,
+    var(--color-media-scrim-clear)
+  );
+  color: var(--color-text-inverse);
+}
+
+.today-moment-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 5.2vw, 1.6rem);
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--color-text-inverse);
+}
+
+.today-moment-date {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-inverse-muted);
+}
+
+/* Wider viewports get a taller frame instead of a wider one, so the photo
+   stays a portrait-friendly editorial surface rather than a letterbox. */
+@container product-content (min-width: 47.5rem) {
+  .today-moment-media .story-media-preview,
+  .today-moment-media .story-media-skeleton,
+  .today-moment-media .story-media-placeholder {
+    aspect-ratio: 21 / 9;
+  }
+
+  .today-moment-caption {
+    padding: var(--space-10) var(--space-6) var(--space-6);
+  }
+}
+
+/* The Keepsake role exists but has no usable photo: a quiet single line, not
+   an empty image well. */
+.today-moment-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  background: var(--color-surface-subtle);
+}
+
+.today-moment-compact-body {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 14rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.today-moment-compact-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--color-brand-text);
+  text-decoration: none;
+}
+
+.today-moment-compact-action:hover {
+  color: var(--color-brand-strong);
+}
+
+.today-moment-compact-action:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Gerade bei euch — the one contextual relationship module ----------------
+ *
+ * Its own physical language: a warm tinted panel with an accent edge, so it
+ * cannot be mistaken for the raised agenda tiles above it or the flat trace
+ * below it. There is only ever one of these on the page.
+ */
+.today-living {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  border: 1px solid var(--color-brand-glow);
+  border-left: 3px solid var(--color-brand);
+  border-radius: var(--radius-large);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-surface),
+    var(--color-surface-raised) 78%
+  );
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+}
+
+.today-living-has-media {
+  padding: 0;
+  border-left-width: 1px;
+}
+
+.today-living-media {
+  width: 100%;
+}
+
+.today-living-media .story-media-preview,
+.today-living-media .story-media-skeleton,
+.today-living-media .story-media-placeholder {
+  aspect-ratio: 21 / 9;
+  margin: 0;
+  border-radius: 0;
+}
+
+.today-living-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  width: 100%;
+}
+
+.today-living-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-brand-text);
+}
+
+.today-living-avatar .person-identity-avatar-small {
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.6rem;
+  border: 1.5px solid var(--color-surface);
+  box-shadow: 0 1px 4px var(--color-shadow-soft);
+}
+
+.today-living-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.today-living-meta {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The accent surface pairs with `--color-brand-strong`, not `--color-brand`.
+ * `--color-brand` lightens in Dark (#ff6b85), where white copy on it falls to
+ * 2.7:1 and fails WCAG 2.2 SC 1.4.3 - the same reason the shared button
+ * primitive uses `--color-brand-strong` for filled actions in both themes.
+ */
+.today-living-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-strong);
+  color: var(--color-on-accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    filter var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.today-living-action:hover {
+  filter: brightness(1.08);
+  transform: translateX(2px);
+}
+
+.today-living-action:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.today-living-has-media .today-living-body {
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.today-living-has-media .today-living-action {
+  margin: 0 var(--space-4) var(--space-4);
+}
+
+/* Diesen Monat — a small strip of this month's real shared photos ---------
+ *
+ * Photographs, edge to edge, with no card around them: the material here is
+ * the image itself. No titles, no counts (see `selectMonthlyStrip`).
+ */
+.today-monthly-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-monthly-strip-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.today-monthly-strip-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.today-monthly-item {
+  min-width: 0;
+}
+
+/* Compact real-device follow-up (#858 second pass): two or three photos now
+ * scroll horizontally on Compact instead of squeezing into a static grid -
+ * `overflow-x` + `scroll-snap`, no drag library or JS carousel, the same
+ * native-scroll principle as the Demnächst carousel above. The tile width is
+ * tuned narrower than that carousel's 85%: a photo tile stretched that wide
+ * is close to a full-screen square, not a strip. ~60% keeps one photo
+ * primary while a deliberate slice of the next is already visible as the
+ * swipe invitation. A single photo has nothing to peek at, so
+ * `today-monthly-strip-1` stays the plain, non-scrolling wide band above.
+ *
+ * `contain: paint` makes the scroll boundary airtight: without it, the
+ * section's own `sbs-motion-reveal` transform (elsewhere purely cosmetic)
+ * lets the swiped-off photos leak into the section's own scrollable
+ * overflow and widen the document horizontally, even though the strip's
+ * `overflow-x: auto` already clips them visually.
+ */
+.today-monthly-strip-2,
+.today-monthly-strip-3 {
+  display: flex;
+  flex-flow: row nowrap;
+  overflow-x: auto;
+  contain: paint;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-2);
+  -webkit-overflow-scrolling: touch;
+}
+
+.today-monthly-strip-2 .today-monthly-item,
+.today-monthly-strip-3 .today-monthly-item {
+  flex: 0 0 60%;
+  max-width: 60%;
+  scroll-snap-align: start;
+}
+
+.today-monthly-tile {
+  display: block;
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+  box-shadow: var(--shadow-raised);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.today-monthly-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.today-monthly-tile:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.today-monthly-tile-media {
+  display: block;
+}
+
+.today-monthly-tile-media .story-media-preview,
+.today-monthly-tile-media .story-media-skeleton,
+.today-monthly-tile-media .story-media-placeholder {
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* A single photo is composed as a wide band rather than a lonely square. */
+.today-monthly-strip-1 .today-monthly-tile-media .story-media-preview,
+.today-monthly-strip-1 .today-monthly-tile-media .story-media-skeleton,
+.today-monthly-strip-1 .today-monthly-tile-media .story-media-placeholder {
+  aspect-ratio: 16 / 9;
+}
+
+/* Expanded adaptation ------------------------------------------------------
+ *
+ * Expanded is an adaptation of the accepted Compact composition, not a second
+ * design (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0/11). The order,
+ * the weights and the grammars are identical; the extra width is spent on
+ * breathing room and on placing the two smallest modules beside each other,
+ * so neither `Gerade bei euch` nor a three-photo strip has to stretch to
+ * 1200 px to avoid leaving the canvas empty.
+ */
+@container product-content (min-width: 47.5rem) {
+  .today-section {
+    margin-bottom: var(--space-8);
+  }
+
+  .today-section-moment {
+    margin-bottom: var(--space-10);
+  }
+
+  .today-content:has(.today-section-living):has(.today-section-monthly) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-6);
+    align-items: start;
+  }
+
+  .today-content:has(.today-section-living):has(.today-section-monthly) > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .today-content:has(.today-section-living):has(.today-section-monthly)
+    > .today-section-living {
+    grid-column: 1 / 2;
+  }
+
+  .today-content:has(.today-section-living):has(.today-section-monthly)
+    > .today-section-monthly {
+    grid-column: 2 / -1;
+  }
+
+  /* On its own, the strip stays a strip rather than three billboards. */
+  .today-content:not(:has(.today-section-living)) .today-monthly-strip {
+    grid-template-columns: repeat(3, minmax(0, 14rem));
+  }
+
+  /* Expanded/tablet+ keeps the existing non-carousel grid adaptation - the
+   * Compact swipe strip above is the only requested behavior change. */
+  .today-monthly-strip-2,
+  .today-monthly-strip-3 {
+    display: grid;
+    overflow-x: visible;
+    contain: none;
+    scroll-snap-type: none;
+  }
+
+  .today-monthly-strip-2 .today-monthly-item,
+  .today-monthly-strip-3 .today-monthly-item {
+    flex: initial;
+    max-width: none;
+    scroll-snap-align: none;
+  }
+}
+
+/*
+ * Reduced motion, last in the file on purpose.
+ *
+ * `@media` adds no specificity, so this block only wins over the module
+ * grammars above it by coming after them in source order. Keep it at the end
+ * whenever a new transition is added.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .today-card {
-    transition: none;
-  }
-
-  .today-card-link:hover .today-card {
-    transform: none;
-  }
-
   .new-space-mark,
   .today-hero-action.active {
     animation: none;
@@ -1051,7 +1079,16 @@
 
   .today-hero-action,
   .today-agenda-row-link,
-  .today-recent-tile {
+  .today-recent-tile,
+  .today-moment-figure,
+  .today-monthly-tile,
+  .today-living-action {
     transition: none;
+  }
+
+  .today-moment-link:hover .today-moment-figure,
+  .today-monthly-tile:hover,
+  .today-living-action:hover {
+    transform: none;
   }
 }

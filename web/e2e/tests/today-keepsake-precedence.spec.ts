@@ -220,8 +220,17 @@ const baseSpace = {
   spaceId: SPACE_ID,
 };
 
-test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake', () => {
-  test('a genuinely current/upcoming signal precedes a generic Keepsake on Compact', async ({
+/*
+ * #850 replaced #840's conditional ordering with a fixed normative section
+ * order: hero, Demnächst, Euer Moment, Gerade bei euch, Diesen Monat, and
+ * finally Zuletzt bei euch. The invariant #840 established survives and is
+ * now structural rather than conditional: a generic Keepsake can never
+ * outrank a genuinely current/upcoming signal, because `Demnächst` always
+ * precedes `Euer Moment`.
+ * These tests assert that invariant against the new composition.
+ */
+test.describe('Today (#840/#850): current/upcoming signals outrank a generic Keepsake', () => {
+  test('a genuinely current/upcoming signal precedes the Keepsake on Compact', async ({
     page,
   }, testInfo) => {
     test.setTimeout(120_000);
@@ -242,14 +251,14 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     });
     await signInAndOpenToday(page);
 
-    const planningArea = page.locator('.today-planning-area');
-    const keepsakeSection = page.locator('.today-section-keepsake');
+    const planningArea = page.locator('.today-section-upcoming');
+    const keepsakeSection = page.locator('.today-section-moment');
     await expect(planningArea).toBeVisible();
     await expect(keepsakeSection).toBeVisible();
 
     const order = await page.evaluate(() => {
-      const planning = document.querySelector('.today-planning-area');
-      const keepsake = document.querySelector('.today-section-keepsake');
+      const planning = document.querySelector('.today-section-upcoming');
+      const keepsake = document.querySelector('.today-section-moment');
       if (!planning || !keepsake) return null;
       return planning.compareDocumentPosition(keepsake) &
         Node.DOCUMENT_POSITION_FOLLOWING
@@ -270,7 +279,7 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     await capture(page, testInfo, 'signal-before-keepsake-320-reflow');
   });
 
-  test('a generic Keepsake remains the prominent focal point when no current/upcoming signal exists', async ({
+  test('the Keepsake becomes the first content section when no current/upcoming signal exists', async ({
     page,
   }, testInfo) => {
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
@@ -290,20 +299,21 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     });
     await signInAndOpenToday(page);
 
-    await expect(page.locator('.today-planning-area')).toHaveCount(0);
-    await expect(page.locator('.today-section-keepsake')).toBeVisible();
+    await expect(page.locator('.today-section-upcoming')).toHaveCount(0);
+    await expect(page.locator('.today-section-moment')).toBeVisible();
 
     const keepsakeIsFirstContentSection = await page.evaluate(() => {
       const content = document.querySelector('.today-content');
       if (!content) return false;
-      const firstSection = content.querySelector(
-        '.today-section-retrospective, .today-planning-area, .today-section-recent',
-      );
-      return (
-        firstSection?.classList.contains('today-section-keepsake') ?? false
-      );
+      const firstSection = content.querySelector('.today-section');
+      return firstSection?.classList.contains('today-section-moment') ?? false;
     });
     expect(keepsakeIsFirstContentSection).toBe(true);
+
+    // This Keepsake carries no ready photo, so the anchor keeps its place as
+    // the compact state rather than rendering an empty image frame.
+    await expect(page.locator('.today-moment-compact')).toBeVisible();
+    await expect(page.locator('.today-moment-figure')).toHaveCount(0);
 
     await expectHorizontalReflow(page);
     // See #841 note above: the shared-kind badge token fix means this
@@ -312,7 +322,7 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     await capture(page, testInfo, 'keepsake-only-390-light');
   });
 
-  test('a genuine date-specific retrospective keeps its prominence ahead of the planning area', async ({
+  test('a genuine date-specific retrospective fills the single `Gerade bei euch` slot below Demnächst (#850 supersedes #840 ordering)', async ({
     page,
   }, testInfo) => {
     await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
@@ -333,18 +343,25 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     await signInAndOpenToday(page);
 
     const order = await page.evaluate(() => {
-      const retrospective = document.querySelector(
-        '.today-section-retrospective',
-      );
-      const planning = document.querySelector('.today-planning-area');
-      if (!retrospective || !planning) return null;
-      return retrospective.compareDocumentPosition(planning) &
+      const living = document.querySelector('.today-section-living');
+      const planning = document.querySelector('.today-section-upcoming');
+      if (!living || !planning) return null;
+      return planning.compareDocumentPosition(living) &
         Node.DOCUMENT_POSITION_FOLLOWING
-        ? 'retrospective-first'
-        : 'planning-first';
+        ? 'planning-first'
+        : 'living-first';
     });
-    expect(order).toBe('retrospective-first');
-    await expect(page.locator('.today-section-keepsake')).toHaveCount(0);
+    expect(order).toBe('planning-first');
+
+    // The retrospective is still shown, exactly once, as the one contextual
+    // module - it is not dropped and not duplicated.
+    await expect(page.locator('.today-living-retrospective')).toHaveCount(1);
+    await expect(page.locator('.today-section-living')).toHaveCount(1);
+    await expect(
+      page.getByText('One year ago: our first concert'),
+    ).toBeVisible();
+    // No Keepsake exists in this scenario, so the photo feature is absent.
+    await expect(page.locator('.today-moment-figure')).toHaveCount(0);
 
     await expectHorizontalReflow(page);
     await capture(page, testInfo, 'retrospective-before-planning-390-dark');
@@ -371,8 +388,8 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     await signInAndOpenToday(page);
 
     const order = await page.evaluate(() => {
-      const planning = document.querySelector('.today-planning-area');
-      const keepsake = document.querySelector('.today-section-keepsake');
+      const planning = document.querySelector('.today-section-upcoming');
+      const keepsake = document.querySelector('.today-section-moment');
       if (!planning || !keepsake) return null;
       return planning.compareDocumentPosition(keepsake) &
         Node.DOCUMENT_POSITION_FOLLOWING
@@ -401,8 +418,10 @@ test.describe('Today (#840): current/upcoming signals outrank a generic Keepsake
     await signInAndOpenToday(page);
 
     await expect(page.locator('.new-space-experience')).toBeVisible();
-    await expect(page.locator('.today-planning-area')).toHaveCount(0);
-    await expect(page.locator('.today-section-keepsake')).toHaveCount(0);
+    await expect(page.locator('.today-section-upcoming')).toHaveCount(0);
+    await expect(page.locator('.today-section-moment')).toHaveCount(0);
+    await expect(page.locator('.today-section-living')).toHaveCount(0);
+    await expect(page.locator('.today-section-monthly')).toHaveCount(0);
 
     await expectHorizontalReflow(page);
     await expectNoWcagViolations(page);

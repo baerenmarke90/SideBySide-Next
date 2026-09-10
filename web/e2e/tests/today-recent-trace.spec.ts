@@ -69,7 +69,21 @@ const RECENT_SHARED_ITEMS = [
     titleOrText: 'Sommer 2026',
     occurredOn: daysAgo(6),
   },
+  {
+    id: 'r5',
+    type: 'COLLECTION',
+    titleOrText: 'Filme für Regentage',
+    occurredOn: daysAgo(8),
+  },
 ];
+
+/*
+ * #850 gives the Milestone its own place in the single `Gerade bei euch`
+ * slot, and the trace never repeats an entry the page already features above
+ * it. Four of the five fixtures therefore remain as trace tiles, which is
+ * still the section's four-item cap.
+ */
+const TRACE_TILE_COUNT = 4;
 
 async function installMocks(page: Page): Promise<void> {
   await page.route('**/api/v1/**', async (route) => {
@@ -206,7 +220,12 @@ test('Today "Zuletzt bei euch" renders as small bordered mini-tiles, not activit
   ).toHaveCount(0);
 
   const tiles = page.locator('.today-recent-tile');
-  await expect(tiles).toHaveCount(RECENT_SHARED_ITEMS.length);
+  await expect(tiles).toHaveCount(TRACE_TILE_COUNT);
+
+  // The promoted Milestone appears once, as the contextual module, and is
+  // not duplicated as a trace tile below it.
+  await expect(page.locator('.today-living-milestone')).toHaveCount(1);
+  await expect(page.getByText('Ein Jahr in unserer Wohnung')).toHaveCount(1);
 
   // Each entry is a real, deliberately bordered mini-surface - not a bare,
   // unstyled line of text (the over-corrected third follow-up) and not a
