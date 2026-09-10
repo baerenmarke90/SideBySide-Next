@@ -29,6 +29,10 @@ import {
 } from './client/entryToken';
 import { createM4ProductApis } from './client/m4Product';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
+import {
+  localCalendarDate,
+  prepareMemoryCreateSubmission,
+} from './client/memoryCreateDefaults';
 import { createPeopleApi } from './client/peopleApi';
 import { createPrivateAreaApi } from './client/privateArea';
 import { invalidateDashboard } from './client/dashboardQueries';
@@ -130,7 +134,7 @@ import { ThemeControl } from './components/ThemeControl';
 import { TodayPage } from './components/TodayPage';
 import { UiState } from './components/UiState';
 import { WishProductPage } from './components/WishProductPage';
-import { useTranslation } from './i18n';
+import { resolvedLocale, useTranslation } from './i18n';
 
 function SpaceContextGate({
   loading,
@@ -229,6 +233,7 @@ function MemoryCreatePage({
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const defaultTitle = searchParams.get('title') ?? '';
+  const defaultDate = useMemo(() => localCalendarDate(), []);
   const navigate = useNavigate();
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
@@ -251,7 +256,7 @@ function MemoryCreatePage({
     }: {
       title: string;
       body: string;
-      happenedOn?: Date;
+      happenedOn: Date;
     }) => {
       try {
         return await createMemoryWithReadyAttachments(
@@ -278,13 +283,16 @@ function MemoryCreatePage({
     event.preventDefault();
     if (attachments.hasPending) return;
     const data = new FormData(event.currentTarget);
-    const happenedOnValue = String(data.get('happenedOn') || '');
-    mutation.mutate({
+    const submission = prepareMemoryCreateSubmission({
       title: String(data.get('title')),
+      selectedDate: String(data.get('happenedOn') || ''),
+      locale: resolvedLocale(),
+      fallbackTitle: (date) => t('memory.fallbackTitle', { date }),
+    });
+    mutation.mutate({
+      title: submission.title,
       body: String(data.get('body')),
-      happenedOn: happenedOnValue
-        ? new Date(`${happenedOnValue}T00:00:00Z`)
-        : undefined,
+      happenedOn: submission.happenedOn,
     });
   }
 
@@ -339,7 +347,6 @@ function MemoryCreatePage({
             <input
               id="title"
               name="title"
-              required
               maxLength={200}
               placeholder={t('memory.titlePlaceholder')}
               defaultValue={defaultTitle}
@@ -369,7 +376,12 @@ function MemoryCreatePage({
               </div>
               <div className="field-group">
                 <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
-                <input id="happenedOn" name="happenedOn" type="date" />
+                <input
+                  id="happenedOn"
+                  name="happenedOn"
+                  type="date"
+                  defaultValue={defaultDate}
+                />
                 <p className="field-help">{t('memory.dateHelp')}</p>
               </div>
             </div>
