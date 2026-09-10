@@ -244,13 +244,14 @@ export function AppShell({
         </main>
       </div>
 
-      <div className="mobile-quick-create">
-        <QuickCreateMenu variant="mobile" />
+      <div className="mobile-bottom-shell">
+        <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>
+          <PrimaryNavigationLinks />
+        </nav>
+        <div className="mobile-quick-create">
+          <QuickCreateMenu variant="mobile" />
+        </div>
       </div>
-
-      <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>
-        <PrimaryNavigationLinks />
-      </nav>
 
       <Snackbar />
     </div>

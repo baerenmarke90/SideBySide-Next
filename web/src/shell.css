@@ -1,3 +1,17 @@
+:root {
+  --shell-floating-nav-height: 3.75rem;
+  --shell-floating-nav-offset: var(--space-3);
+  --shell-floating-nav-footprint: calc(
+    var(--shell-floating-nav-height) +
+    var(--shell-floating-nav-offset) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  --shell-content-bottom-clearance: calc(
+    var(--shell-floating-nav-footprint) +
+    var(--space-6)
+  );
+}
+
 .skip-link {
   position: fixed;
   z-index: 200;
@@ -476,7 +490,7 @@
   width: calc(100% - 2rem);
   margin: 0 auto;
   padding: clamp(var(--space-6), 4vw, var(--space-10)) 0
-    calc(7rem + env(safe-area-inset-bottom));
+    var(--shell-content-bottom-clearance);
 }
 
 .shell-nav {
@@ -604,30 +618,121 @@
   pointer-events: none;
 }
 
-.mobile-bottom-nav {
+.mobile-bottom-shell {
   position: fixed;
   z-index: 50;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(
+    var(--shell-floating-nav-offset) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  width: calc(100% - var(--space-6));
+  max-width: 28rem;
+  min-height: var(--shell-floating-nav-height);
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(44px, 1fr);
-  gap: var(--space-2);
-  border-top: 1px solid var(--color-header-border);
-  padding: var(--space-2) var(--space-3)
-    calc(var(--space-2) + env(safe-area-inset-bottom));
-  background: var(--color-header-surface);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+}
+
+.mobile-bottom-shell .mobile-bottom-nav {
+  display: contents;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.mobile-bottom-shell .mobile-quick-create {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(3) {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(4) {
+  grid-column: 5;
+  grid-row: 1;
 }
 
 .mobile-bottom-nav .shell-nav-link {
   min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  font-size: 0.75rem;
+  gap: 2px;
+  padding: var(--space-1) 2px;
+  border-radius: var(--radius-large);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 550;
+  line-height: 1.15;
   text-align: center;
+  text-decoration: none;
+  transition:
+    color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+
+.mobile-bottom-nav .shell-nav-link > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-bottom-nav .shell-nav-link .shell-nav-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+.mobile-bottom-nav .shell-nav-link .shell-nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mobile-bottom-nav .shell-nav-link-active {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.mobile-bottom-nav .shell-nav-link-active .shell-nav-icon {
+  color: var(--color-brand);
+}
+
+.mobile-bottom-nav .shell-nav-link:hover,
+.mobile-bottom-nav .shell-nav-link:focus-visible {
+  color: var(--color-text);
 }
 
 .offline-banner {
@@ -661,6 +766,12 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
   box-shadow: var(--shadow-soft);
+}
+
+@media (max-width: 839px) {
+  .snackbar {
+    bottom: calc(var(--shell-floating-nav-footprint) + var(--space-2));
+  }
 }
 
 .snackbar-message {
@@ -825,8 +936,32 @@
     display: grid;
   }
 
-  .mobile-bottom-nav {
+  .mobile-bottom-shell {
     display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-bottom-shell {
+    width: calc(100% - var(--space-3));
+    padding: var(--space-1) var(--space-1);
+  }
+
+  .mobile-bottom-nav .shell-nav-link {
+    font-size: 0.68rem;
+    padding: var(--space-1) 1px;
+  }
+}
+
+@media (forced-colors: active) {
+  .mobile-bottom-shell {
+    background-color: Canvas;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+  }
+
+  .mobile-bottom-nav .shell-nav-link-active {
+    outline: 2px solid Highlight;
   }
 }
 

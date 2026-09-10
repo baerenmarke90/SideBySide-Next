@@ -372,4 +372,46 @@ describe('AppShell', () => {
     trigger = container.querySelector('.header-notifications-trigger');
     expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
   });
+
+  it('integrates Quick Create into floating bottom shell with four-destination navigation (#882)', () => {
+    const html = renderShell('/today');
+    const shellIndex = html.indexOf('mobile-bottom-shell');
+    expect(shellIndex).toBeGreaterThanOrEqual(0);
+    const bottomShell = html.slice(shellIndex);
+
+    // Navigation landmark has exactly the 4 primary destinations
+    const navMatch = bottomShell.match(
+      /<nav\b[^>]*class="mobile-bottom-nav"[^>]*>([\s\S]*?)<\/nav>/,
+    );
+    expect(navMatch).not.toBeNull();
+    const navContent = navMatch?.[1] ?? '';
+
+    const navLinks =
+      navContent.match(/<a\b[^>]*class="shell-nav-link[^"]*"[^>]*>/g) ?? [];
+    expect(navLinks).toHaveLength(4);
+
+    expect(navContent).toContain('href="/today"');
+    expect(navContent).toContain(`>${navigation.today}<`);
+    expect(navContent).toContain('href="/story"');
+    expect(navContent).toContain(`>${navigation.story}<`);
+    expect(navContent).toContain('href="/plan"');
+    expect(navContent).toContain(`>${navigation.plan}<`);
+    expect(navContent).toContain('href="/more"');
+    expect(navContent).toContain(`>${navigation.more}<`);
+
+    // Center Quick Create is a button action sibling inside the bottom shell, not a nav link
+    expect(navContent).not.toContain('quick-create-trigger');
+
+    const quickCreateSlot = bottomShell.slice(
+      bottomShell.indexOf('mobile-quick-create'),
+    );
+    expect(quickCreateSlot).toContain('<button');
+    expect(quickCreateSlot).toContain('quick-create-trigger');
+    expect(quickCreateSlot).toContain(`aria-label="${navigation.newContent}"`);
+    expect(quickCreateSlot).toContain('aria-haspopup="dialog"');
+
+    // No standalone FAB outside the mobile-bottom-shell
+    const htmlBeforeShell = html.slice(0, shellIndex);
+    expect(htmlBeforeShell).not.toContain('mobile-quick-create');
+  });
 });
