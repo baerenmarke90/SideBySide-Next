@@ -297,7 +297,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectSharingMetadataAligned(page);
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath(`shell-memory-create-expanded-${colorScheme}.png`),
+      path: testInfo.outputPath(
+        `shell-memory-create-expanded-${colorScheme}.png`,
+      ),
       fullPage: true,
     });
 
