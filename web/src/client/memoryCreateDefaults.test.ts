@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import de from '../i18n/locales/de';
 import {
   effectiveMemoryCreateDate,
   formatDateOnly,
@@ -6,7 +7,10 @@ import {
   prepareMemoryCreateSubmission,
 } from './memoryCreateDefaults';
 
-const fallbackTitle = (date: string) => `Erinnerung vom ${date}`;
+const fallbackTitle = (date: string) =>
+  de.memory.fallbackTitle.replace('{{date}}', date);
+
+const localizedFallback = (date: string) => fallbackTitle(date);
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -44,7 +48,7 @@ describe('memory create defaults', () => {
       fallbackTitle,
     });
 
-    expect(result.title).toBe('Erinnerung vom 10.09.2026');
+    expect(result.title).toBe(localizedFallback('10.09.2026'));
     expect(result.happenedOn.toISOString()).toBe('2026-09-10T00:00:00.000Z');
   });
 
@@ -56,7 +60,7 @@ describe('memory create defaults', () => {
       fallbackTitle,
     });
 
-    expect(result.title).toBe('Erinnerung vom 10.09.2026');
+    expect(result.title).toBe(localizedFallback('10.09.2026'));
   });
 
   it('uses the selected date in the fallback title', () => {
@@ -67,19 +71,19 @@ describe('memory create defaults', () => {
       fallbackTitle,
     });
 
-    expect(result.title).toBe('Erinnerung vom 12.05.2024');
+    expect(result.title).toBe(localizedFallback('12.05.2024'));
     expect(result.effectiveDate).toBe('2024-05-12');
   });
 
-  it('preserves an authored title apart from the existing trim behavior', () => {
+  it('preserves an authored title apart from trimming surrounding whitespace', () => {
     const result = prepareMemoryCreateSubmission({
-      title: '  Unser Tag am See  ',
+      title: '  Our day at the lake  ',
       selectedDate: '2026-09-10',
       locale: 'de-DE',
       fallbackTitle,
     });
 
-    expect(result.title).toBe('Unser Tag am See');
+    expect(result.title).toBe('Our day at the lake');
   });
 
   it('uses the same effective local-today date for title and happenedOn', () => {
@@ -92,7 +96,7 @@ describe('memory create defaults', () => {
       now,
     });
 
-    expect(result.title).toBe('Erinnerung vom 10.09.2026');
+    expect(result.title).toBe(localizedFallback('10.09.2026'));
     expect(result.effectiveDate).toBe('2026-09-10');
     expect(result.happenedOn.toISOString()).toBe('2026-09-10T00:00:00.000Z');
   });
