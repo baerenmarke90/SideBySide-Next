@@ -538,9 +538,9 @@ for (const scenario of visualScenarios.filter(
       'data-theme',
       scenario.theme,
     );
-    expect(await page.evaluate(() => document.activeElement?.id ?? '')).not.toBe(
-      'create-plan-title',
-    );
+    expect(
+      await page.evaluate(() => document.activeElement?.id ?? ''),
+    ).not.toBe('create-plan-title');
     await assertPlanCreateClearsTopChrome(page);
     await assertNoHorizontalOverflow(page);
   });
