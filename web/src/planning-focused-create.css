@@ -11,6 +11,19 @@
  * to the two accepted /plan hash destinations so #856 cannot restyle those
  * unrelated create flows or pre-empt the broader #859 Planning slice.
  */
+
+/*
+ * The shared route-entry handoff calls scrollIntoView() as soon as the hash
+ * destination mounts. Keep the Plan target's sticky-shell clearance attached
+ * to the element itself instead of relying only on the transient :target
+ * selector timing. Reuse the existing shell height and spacing source of truth
+ * from styles.css; do not change shared route-entry semantics for this local
+ * Planning composition requirement.
+ */
+#plan-title {
+  scroll-margin-top: calc(var(--topbar-height, 72px) + var(--space-4));
+}
+
 .planning-create[open]:has(> summary:is(#wish-title, #plan-title)) {
   min-width: 0;
   width: 100%;
