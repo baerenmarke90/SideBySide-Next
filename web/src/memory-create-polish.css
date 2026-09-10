@@ -31,6 +31,7 @@
   width: fit-content;
   max-width: 100%;
   min-width: 0;
+  align-items: center;
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -240,12 +241,6 @@
 @media (max-width: 360px) {
   .create-page .immersive-create-card[aria-labelledby="memory-form-heading"] {
     padding: var(--space-4);
-  }
-
-  .create-page
-    .immersive-create-card[aria-labelledby="memory-form-heading"]
-    .immersive-sharing-note {
-    align-items: flex-start;
   }
 
   .create-page
