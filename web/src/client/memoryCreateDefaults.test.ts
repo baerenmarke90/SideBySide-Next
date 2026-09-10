@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   effectiveMemoryCreateDate,
   formatDateOnly,
@@ -6,11 +6,10 @@ import {
   prepareMemoryCreateSubmission,
 } from './memoryCreateDefaults';
 
-const originalTimezone = process.env.TZ;
 const fallbackTitle = (date: string) => `Erinnerung vom ${date}`;
 
 afterEach(() => {
-  process.env.TZ = originalTimezone;
+  vi.unstubAllEnvs();
 });
 
 describe('memory create defaults', () => {
@@ -20,7 +19,7 @@ describe('memory create defaults', () => {
   });
 
   it('does not drift to the UTC date at a timezone boundary', () => {
-    process.env.TZ = 'America/Los_Angeles';
+    vi.stubEnv('TZ', 'America/Los_Angeles');
     const now = new Date('2026-09-10T00:30:00.000Z');
 
     expect(now.toISOString().slice(0, 10)).toBe('2026-09-10');
@@ -99,7 +98,7 @@ describe('memory create defaults', () => {
   });
 
   it('formats date-only values without local timezone reinterpretation', () => {
-    process.env.TZ = 'America/Los_Angeles';
+    vi.stubEnv('TZ', 'America/Los_Angeles');
     expect(formatDateOnly('2026-09-10', 'de-DE')).toBe('10.09.2026');
   });
 });
