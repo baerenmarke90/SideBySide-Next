@@ -4,7 +4,7 @@ import { expect, type Page, test } from '@playwright/test';
 const LONG_AUTHOR_NAME =
   'AlexandraMargaretheVonWinterbergMitAussergewoehnlichLangemProfilnamen';
 
-async function renderMetadataFixture(
+async function renderFixture(
   page: Page,
   width: number,
   colorScheme: 'light' | 'dark',
@@ -66,6 +66,10 @@ async function renderMetadataFixture(
   });
 }
 
+function expectFits(scrollWidth: number, clientWidth: number): void {
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+}
+
 async function expectMetadataContract(
   page: Page,
   selector: string,
@@ -75,13 +79,11 @@ async function expectMetadataContract(
 
   const geometry = await metadata.evaluate((node) => {
     const row = node as HTMLElement;
-    const date = row.querySelector(':scope > time') as HTMLElement | null;
-    const author = row.querySelector(
+    const date = row.querySelector<HTMLElement>(':scope > time');
+    const author = row.querySelector<HTMLElement>(
       ':scope > .momente-author-meta',
-    ) as HTMLElement | null;
-    const authorLabel = author?.querySelector(
-      'span:last-child',
-    ) as HTMLElement | null;
+    );
+    const authorLabel = author?.querySelector<HTMLElement>('span:last-child');
     if (!date || !author || !authorLabel) {
       throw new Error('Expected date and author metadata');
     }
@@ -106,37 +108,28 @@ async function expectMetadataContract(
     };
   });
 
+  const leftOffset = Math.abs(geometry.dateLeft - geometry.rowLeft);
+  const rightOffset = Math.abs(geometry.rowRight - geometry.authorRight);
   expect(geometry.justifyContent).toBe('space-between');
-  expect(Math.abs(geometry.dateLeft - geometry.rowLeft)).toBeLessThanOrEqual(1);
-  expect(Math.abs(geometry.rowRight - geometry.authorRight)).toBeLessThanOrEqual(
-    1,
-  );
+  expect(leftOffset).toBeLessThanOrEqual(1);
+  expect(rightOffset).toBeLessThanOrEqual(1);
   expect(geometry.authorLeft).toBeGreaterThanOrEqual(geometry.dateRight);
-  expect(geometry.rowScrollWidth).toBeLessThanOrEqual(
-    geometry.rowClientWidth + 1,
-  );
-  expect(geometry.authorScrollWidth).toBeLessThanOrEqual(
-    geometry.authorClientWidth + 1,
-  );
-  expect(geometry.authorLabelScrollWidth).toBeLessThanOrEqual(
-    geometry.authorLabelClientWidth + 1,
-  );
+  expectFits(geometry.rowScrollWidth, geometry.rowClientWidth);
+  expectFits(geometry.authorScrollWidth, geometry.authorClientWidth);
+  expectFits(geometry.authorLabelScrollWidth, geometry.authorLabelClientWidth);
 }
 
-test('Featured Moment metadata follows the shared date-left author-right contract', async ({
-  page,
-}) => {
+test('Featured Moment metadata uses the shared layout', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const width of [390, 320]) {
-      await renderMetadataFixture(page, width, colorScheme);
+      await renderFixture(page, width, colorScheme);
 
       const heroMetadata = page.locator('.momente-hero-meta');
       await expect(heroMetadata).toContainText(LONG_AUTHOR_NAME);
-      expect(
-        await heroMetadata.locator(':scope > *').evaluateAll((nodes) =>
-          nodes.map((node) => node.tagName.toLowerCase()),
-        ),
-      ).toEqual(['time', 'span']);
+      const childTags = await heroMetadata
+        .locator(':scope > *')
+        .evaluateAll((nodes) => nodes.map((node) => node.tagName.toLowerCase()));
+      expect(childTags).toEqual(['time', 'span']);
 
       await expectMetadataContract(page, '.momente-hero-meta');
       await expectMetadataContract(page, '.momente-tapestry-meta');
