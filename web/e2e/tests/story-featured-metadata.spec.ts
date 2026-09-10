@@ -119,7 +119,10 @@ async function expectMetadataContract(
   expectFits(geometry.authorLabelScrollWidth, geometry.authorLabelClientWidth);
 }
 
-test('Featured Moment metadata uses the shared layout', async ({ page }) => {
+test('Featured Moment metadata uses the shared layout', async (
+  { page },
+  testInfo,
+) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const width of [390, 320]) {
       await renderFixture(page, width, colorScheme);
@@ -143,4 +146,18 @@ test('Featured Moment metadata uses the shared layout', async ({ page }) => {
       expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth);
     }
   }
+
+  await renderFixture(page, 390, 'light');
+  await expectMetadataContract(page, '.momente-hero-meta');
+  await page.screenshot({
+    path: testInfo.outputPath('shell-momente-featured-compact.png'),
+    fullPage: true,
+  });
+
+  await renderFixture(page, 1440, 'light');
+  await expectMetadataContract(page, '.momente-hero-meta');
+  await page.screenshot({
+    path: testInfo.outputPath('shell-momente-featured-expanded.png'),
+    fullPage: true,
+  });
 });
