@@ -297,7 +297,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectSharingMetadataAligned(page);
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath(`memory-create-expanded-${colorScheme}.png`),
+      path: testInfo.outputPath(`shell-memory-create-expanded-${colorScheme}.png`),
       fullPage: true,
     });
 
@@ -305,7 +305,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectSharingMetadataAligned(page);
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath(`memory-create-390-${colorScheme}.png`),
+      path: testInfo.outputPath(`shell-memory-create-390-${colorScheme}.png`),
       fullPage: true,
     });
 
@@ -313,7 +313,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectSharingMetadataAligned(page);
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath(`memory-create-small-height-${colorScheme}.png`),
+      path: testInfo.outputPath(
+        `shell-memory-create-small-height-${colorScheme}.png`,
+      ),
       fullPage: true,
     });
   });
@@ -367,7 +369,7 @@ for (const width of [390, 320] as const) {
 
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath(`memory-create-${width}-compact.png`),
+      path: testInfo.outputPath(`shell-memory-create-${width}-compact.png`),
       fullPage: true,
     });
   });
