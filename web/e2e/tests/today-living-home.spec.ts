@@ -638,6 +638,53 @@ test.describe('Today #850: the living home of a relationship', () => {
     expect(monthlyText).not.toMatch(/\d+\s+gemeinsame Momente/);
   });
 
+  test('never shows the same memory as both a `Diesen Monat` thumbnail and a `Zuletzt bei euch` row', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, RICH_SPACE);
+    await signInAndOpenToday(page);
+
+    /*
+     * Compare the content tiles themselves, not every anchor in the section.
+     * A section's own "Alle anzeigen" link and a Heart Moment row both point
+     * at `/story`, which is shared navigation rather than a repeated item.
+     */
+    const hrefsOf = async (selector: string) =>
+      page
+        .locator(selector)
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute('href') ?? ''),
+        );
+
+    const monthlyHrefs = await hrefsOf('.today-monthly-tile[href]');
+    const traceHrefs = await hrefsOf('.today-recent-tile[href]');
+
+    expect(monthlyHrefs.length).toBeGreaterThan(0);
+    expect(traceHrefs.length).toBeGreaterThan(0);
+
+    // No memory may be reachable as both a thumbnail up there and a row down
+    // here: whatever the strip claimed is featured content.
+    const shared = monthlyHrefs.filter((href) => traceHrefs.includes(href));
+    expect(shared, 'A memory must not appear in both sections').toEqual([]);
+
+    // Concretely: every photo of the month is in the strip and none of them
+    // is repeated below.
+    for (const photo of STRIP_PHOTOS) {
+      const href = `/story/memories/${photo.id}`;
+      expect(monthlyHrefs).toContain(href);
+      expect(traceHrefs).not.toContain(href);
+    }
+
+    // Content the strip cannot take is still offered by the trace, so the
+    // exclusion did not simply empty the section.
+    await expect(
+      page.locator('.today-section-recent').getByText(TRACE_ONLY.titleOrText),
+    ).toBeVisible();
+
+    await expectNormativeOrder(page);
+  });
+
   test('omits `Diesen Monat` and keeps `Euer Moment` compact when the space has no usable photo', async ({
     page,
   }, testInfo) => {

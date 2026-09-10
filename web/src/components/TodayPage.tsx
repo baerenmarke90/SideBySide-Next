@@ -837,15 +837,19 @@ export function TodayPage({
    *
    * For a partner signal that is the item the partner commented *on*, not the
    * activity entry - otherwise the same Memory could appear as the signal,
-   * again in `Diesen Monat`, and again in the trace. One id set drives every
-   * later section, so the no-duplicate rule stays a single generic rule
-   * rather than a per-module special case.
+   * again in `Diesen Monat`, and again in the trace. Comparing plain content
+   * ids keeps the no-duplicate rule one generic rule rather than a
+   * per-module special case.
+   *
+   * The set grows as the page is composed, because each section can only
+   * exclude what the sections above it have already claimed: `Diesen Monat`
+   * still gets to choose freely from everything the two blocks above did not
+   * take, and only then do its photos become featured content for the trace.
    */
   const featuredIds = new Set<string>();
   if (momentItem) featuredIds.add(momentItem.id);
   const livingContentId = livingModuleContentId(livingModule);
   if (livingContentId) featuredIds.add(livingContentId);
-  const featuredItemIds = [...featuredIds];
 
   // 5. Diesen Monat: this month's real shared photos, minus anything already
   // featured above.
@@ -853,13 +857,17 @@ export function TodayPage({
     ? selectMonthlyStrip({
         recentShared,
         now: new Date(),
-        excludeItemIds: featuredItemIds,
+        excludeItemIds: [...featuredIds],
       })
     : [];
 
-  // 6. Zuletzt bei euch: the quiet trace, minus the same featured content.
+  // 6. Zuletzt bei euch: the quiet trace, minus everything featured above it -
+  // the photos the strip just claimed included, so a Memory is never both a
+  // thumbnail up there and a row down here.
+  const traceExcludedIds = new Set(featuredIds);
+  for (const item of monthlyStrip) traceExcludedIds.add(item.id);
   const recentSharedForTrace = recentShared.filter(
-    (item) => !featuredIds.has(item.id),
+    (item) => !traceExcludedIds.has(item.id),
   );
 
   const isSparse = Boolean(

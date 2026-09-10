@@ -1514,6 +1514,158 @@ it('keeps an unrelated partner signal winning precedence over the stable candida
   expect(html).toContain('Other Photo');
 });
 
+/**
+ * The markup of one composed section, so an assertion can say *where* a title
+ * appears. `Diesen Monat` carries its titles in an `sr-only` span and the
+ * trace carries them in a visible one, so a whole-page `toContain` cannot
+ * tell a thumbnail apart from a row. Sections are siblings and never nested,
+ * so slicing to the next `<section` is exact.
+ */
+function sectionHtml(html: string, className: string): string {
+  const start = html.indexOf(`today-section ${className}`);
+  if (start === -1) return '';
+  const rest = html.slice(start);
+  const next = rest.indexOf('<section', 1);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+/*
+ * A Space with more this-month photos than the strip can hold, plus content
+ * the strip never takes. It pins both halves of the trace's exclusion rule:
+ * the photos the strip actually selected are gone from the trace, and
+ * everything it did not select is still there.
+ */
+function renderMonthlyOverflowSpace(): string {
+  const now = new Date();
+  const thisMonth = (day: number) =>
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+  const photo = (id: string, title: string, day: number) => ({
+    id,
+    type: 'MEMORY',
+    titleOrText: title,
+    occurredOn: thisMonth(day),
+    previewAttachmentId: `att-${id}`,
+  });
+
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: photo('mem-hero', 'Hero Photo', 1),
+    recentShared: [
+      photo('mem-hero', 'Hero Photo', 1),
+      photo('mem-a', 'Strip Photo A', 2),
+      photo('mem-b', 'Strip Photo B', 3),
+      photo('mem-c', 'Strip Photo C', 4),
+      // A fourth this-month photo the three-item cap leaves unselected.
+      photo('mem-d', 'Overflow Photo D', 5),
+      {
+        id: 'hm-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'Quiet Heart Moment',
+        occurredOn: thisMonth(6),
+        previewAttachmentId: null,
+      },
+      {
+        id: 'ms-1',
+        type: 'MILESTONE',
+        titleOrText: 'Shared Milestone',
+        occurredOn: thisMonth(7),
+        previewAttachmentId: null,
+      },
+    ],
+    retrospective: null,
+  });
+  queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+    items: [],
+    nextCursor: null,
+  });
+
+  return renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={{} as M4ProductApis}
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+it('never repeats a `Diesen Monat` photo as a `Zuletzt bei euch` row', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // The strip took the three eligible photos below the featured one.
+  expect(html).toContain('today-monthly-strip-3');
+  for (const title of ['Strip Photo A', 'Strip Photo B', 'Strip Photo C']) {
+    expect(monthly).toContain(title);
+    expect(trace).not.toContain(title);
+  }
+});
+
+it('keeps content the monthly strip did not select eligible for the trace', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // The fourth this-month photo lost only to the three-item cap, so it is
+  // not featured anywhere and the trace must still offer it.
+  expect(monthly).not.toContain('Overflow Photo D');
+  expect(trace).toContain('Overflow Photo D');
+
+  // Content the strip can never take stays in the trace too.
+  expect(trace).toContain('Quiet Heart Moment');
+});
+
+it('keeps `Euer Moment` and the `Gerade bei euch` module out of the trace as before', () => {
+  const html = renderMonthlyOverflowSpace();
+  const trace = sectionHtml(html, 'today-section-recent');
+
+  // Featured above as the photo anchor.
+  expect(html).toContain('today-moment-figure');
+  expect(trace).not.toContain('Hero Photo');
+
+  // Featured above as the single contextual module.
+  expect(html).toContain('today-living-milestone');
+  expect(trace).not.toContain('Shared Milestone');
+});
+
+it('leaves the trace untouched when the month contributes no photos', () => {
+  const html = renderTodayPage({
+    space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+    relationshipDuration: null,
+    upcoming: [],
+    recentShared: [
+      {
+        id: 'hm-1',
+        type: 'HEART_MOMENT',
+        titleOrText: 'Text Only Moment',
+        occurredOn: new Date(),
+      },
+      {
+        id: 'ch-1',
+        type: 'CHAPTER',
+        titleOrText: 'Shared Chapter',
+        occurredOn: new Date(),
+      },
+    ],
+    retrospective: null,
+  });
+
+  // No strip at all, so it can exclude nothing from the trace.
+  expect(html).not.toContain('today-section-monthly');
+  const trace = sectionHtml(html, 'today-section-recent');
+  expect(trace).toContain('Text Only Moment');
+  expect(trace).toContain('Shared Chapter');
+});
+
 it('renders `Diesen Monat` as up to three real shared photos, never a count derived from the capped feed', () => {
   const now = new Date();
   // `occurredOn` is a date-only API value: the generated client materializes
