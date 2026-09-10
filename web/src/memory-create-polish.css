@@ -33,7 +33,7 @@
   min-width: 0;
   align-items: center;
   gap: var(--space-2);
-  margin: 0;
+  margin: 0 0 var(--space-1) 0;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -58,9 +58,10 @@
 }
 
 /*
- * The existing 16px SVG box remains the stable geometry primitive used by
- * browser regression tests. Its obsolete heart path is not rendered; the box
- * is painted as the familiar three-node share glyph instead.
+ * Shared visibility cue refined (#881).
+ *
+ * Uses the established eimir DestinationIcon ("people") component to represent
+ * shared couple visibility. Renders clean SVG line art without CSS mask hacks.
  */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
@@ -72,24 +73,10 @@
   display: block;
   flex: 0 0 16px;
   fill: none;
-  background-color: currentcolor;
-  -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNSIgcj0iMyIvPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTkiIHI9IjMiLz48cGF0aCBkPSJtOC42IDEwLjcgNi44LTQiLz48cGF0aCBkPSJtOC42IDEzLjMgNi44IDQiLz48L3N2Zz4=");
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNSIgcj0iMyIvPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTkiIHI9IjMiLz48cGF0aCBkPSJtOC42IDEwLjcgNi44LTQiLz48cGF0aCBkPSJtOC42IDEzLjMgNi44IDQiLz48L3N2Zz4=");
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-}
-
-.create-page
-  .immersive-create-card[aria-labelledby="memory-form-heading"]
-  .immersive-sharing-note
-  .sharing-icon
-  svg
-  path {
-  display: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .create-page

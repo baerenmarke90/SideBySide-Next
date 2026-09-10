@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import storyProducts from '../../src/i18n/locales/storyProducts';
@@ -244,9 +245,10 @@ async function expectSharingMetadataAligned(page: Page): Promise<void> {
 
   const icon = note.locator('.sharing-icon');
   const svg = icon.locator('svg');
+  const path = svg.locator('path');
   await expect(icon).toBeVisible();
   await expect(svg).toBeVisible();
-  await expect(svg.locator('path')).toBeHidden();
+  await expect(path).toBeVisible();
 
   const [iconBox, svgBox, noteLayout, maskImage] = await Promise.all([
     icon.boundingBox(),
@@ -264,8 +266,7 @@ async function expectSharingMetadataAligned(page: Page): Promise<void> {
 
   expect(noteLayout.display).toBe('flex');
   expect(noteLayout.alignItems).toBe('center');
-  expect(maskImage).not.toBe('');
-  expect(maskImage).not.toBe('none');
+  expect(maskImage === 'none' || maskImage === '').toBe(true);
 
   const iconCenterX = iconBox.x + iconBox.width / 2;
   const svgCenterX = svgBox.x + svgBox.width / 2;
@@ -320,6 +321,45 @@ for (const colorScheme of ['light', 'dark'] as const) {
       ),
       fullPage: true,
     });
+
+    await page.setViewportSize({ width: 320, height: 568 });
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-320-reflow-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '24px';
+    });
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-large-text-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '';
+    });
+
+    const axeResult = await new AxeBuilder({ page })
+      .include('.immersive-sharing-note')
+      .withTags([
+        'wcag2a',
+        'wcag2aa',
+        'wcag21a',
+        'wcag21aa',
+        'wcag22a',
+        'wcag22aa',
+      ])
+      .analyze();
+    expect(axeResult.violations).toEqual([]);
   });
 }
 
@@ -360,6 +400,8 @@ for (const width of [390, 320] as const) {
     // content. Inline metadata should now remain a single quiet row.
     expect(noteBox.height).toBeLessThan(40);
     expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(titleBox.y);
+    const breathingRoom = titleBox.y - (noteBox.y + noteBox.height);
+    expect(breathingRoom).toBeGreaterThanOrEqual(10);
 
     // The former nested dashed drop zones made an empty picker visually and
     // vertically dominant. Keep one compact, solid-boundary media surface.
