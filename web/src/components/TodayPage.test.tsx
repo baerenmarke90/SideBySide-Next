@@ -1727,6 +1727,17 @@ it('renders `Diesen Monat` as up to three real shared photos, never a count deri
   expect(html).not.toMatch(/\d+\s+gemeinsame Momente/);
 });
 
+it('`Diesen Monat` -> Alle anzeigen opens Momente on the Zeitleiste tab, not Entdecken', () => {
+  const html = renderMonthlyOverflowSpace();
+  const monthly = sectionHtml(html, 'today-section-monthly');
+
+  // The real-smartphone Product Owner decision (#858 follow-up): the
+  // monthly strip's header action must resolve to the Story view's
+  // Zeitleiste tab, not the bare `/story` root (which defaults to
+  // Entdecken).
+  expect(monthly).toContain('href="/story?tab=timeline"');
+});
+
 it('omits `Diesen Monat` entirely when the month has no shared photo', () => {
   const html = renderTodayPage({
     space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },

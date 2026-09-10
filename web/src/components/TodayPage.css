@@ -928,6 +928,40 @@
   min-width: 0;
 }
 
+/* Compact real-device follow-up (#858 second pass): two or three photos now
+ * scroll horizontally on Compact instead of squeezing into a static grid -
+ * `overflow-x` + `scroll-snap`, no drag library or JS carousel, the same
+ * native-scroll principle as the Demnächst carousel above. The tile width is
+ * tuned narrower than that carousel's 85%: a photo tile stretched that wide
+ * is close to a full-screen square, not a strip. ~60% keeps one photo
+ * primary while a deliberate slice of the next is already visible as the
+ * swipe invitation. A single photo has nothing to peek at, so
+ * `today-monthly-strip-1` stays the plain, non-scrolling wide band above.
+ *
+ * `contain: paint` makes the scroll boundary airtight: without it, the
+ * section's own `sbs-motion-reveal` transform (elsewhere purely cosmetic)
+ * lets the swiped-off photos leak into the section's own scrollable
+ * overflow and widen the document horizontally, even though the strip's
+ * `overflow-x: auto` already clips them visually.
+ */
+.today-monthly-strip-2,
+.today-monthly-strip-3 {
+  display: flex;
+  flex-flow: row nowrap;
+  overflow-x: auto;
+  contain: paint;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-2);
+  -webkit-overflow-scrolling: touch;
+}
+
+.today-monthly-strip-2 .today-monthly-item,
+.today-monthly-strip-3 .today-monthly-item {
+  flex: 0 0 60%;
+  max-width: 60%;
+  scroll-snap-align: start;
+}
+
 .today-monthly-tile {
   display: block;
   border-radius: var(--radius-medium);
@@ -1010,6 +1044,23 @@
   /* On its own, the strip stays a strip rather than three billboards. */
   .today-content:not(:has(.today-section-living)) .today-monthly-strip {
     grid-template-columns: repeat(3, minmax(0, 14rem));
+  }
+
+  /* Expanded/tablet+ keeps the existing non-carousel grid adaptation - the
+   * Compact swipe strip above is the only requested behavior change. */
+  .today-monthly-strip-2,
+  .today-monthly-strip-3 {
+    display: grid;
+    overflow-x: visible;
+    contain: none;
+    scroll-snap-type: none;
+  }
+
+  .today-monthly-strip-2 .today-monthly-item,
+  .today-monthly-strip-3 .today-monthly-item {
+    flex: initial;
+    max-width: none;
+    scroll-snap-align: none;
   }
 }
 

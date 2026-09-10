@@ -138,6 +138,24 @@ const RICH_SPACE = {
   activity: [] as unknown[],
 };
 
+/** `Diesen Monat` with a single photo: the plain, non-carousel wide band. */
+const ONE_MONTHLY_PHOTO_SPACE = {
+  upcoming: [],
+  keepsake: MOMENT,
+  retrospective: null,
+  recentShared: [MOMENT, STRIP_PHOTOS[0]],
+  activity: [] as unknown[],
+};
+
+/** `Diesen Monat` with two photos: the compact swipe carousel's minimum. */
+const TWO_MONTHLY_PHOTOS_SPACE = {
+  upcoming: [],
+  keepsake: MOMENT,
+  retrospective: null,
+  recentShared: [MOMENT, STRIP_PHOTOS[0], STRIP_PHOTOS[1]],
+  activity: [] as unknown[],
+};
+
 async function expectNoWcagViolations(page: Page): Promise<void> {
   const result = await new AxeBuilder({ page })
     .withTags([
@@ -638,6 +656,87 @@ test.describe('Today #850: the living home of a relationship', () => {
     expect(monthlyText).not.toMatch(/\d+\s+gemeinsame Momente/);
   });
 
+  test('keeps a single `Diesen Monat` photo as one plain wide band, no carousel behavior (#858)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, ONE_MONTHLY_PHOTO_SPACE);
+    await signInAndOpenToday(page);
+
+    await expect(page.locator('.today-monthly-tile')).toHaveCount(1);
+
+    const listOverflow = await page
+      .locator('.today-monthly-strip')
+      .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    expect(listOverflow).toBe(false);
+
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('renders a `Diesen Monat` swipe carousel with two photos on Compact, second image discoverable (#858)', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, TWO_MONTHLY_PHOTOS_SPACE);
+    await signInAndOpenToday(page);
+    await settleMotion(page);
+
+    const rects = await page
+      .locator('.today-monthly-tile')
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect()));
+    expect(rects).toHaveLength(2);
+
+    // One horizontal row, not stacked, with the second tile already
+    // partially visible at the edge as the swipe invitation.
+    expect(Math.round(rects[0].top)).toBe(Math.round(rects[1].top));
+    expect(rects[1].left).toBeGreaterThan(rects[0].left);
+    expect(rects[1].left).toBeLessThan(390);
+
+    // The section stays a compact strip, not a near-full-screen square.
+    expect(rects[0].height).toBeLessThan(300);
+
+    // The overflow that makes swiping possible is contained in the strip
+    // itself, never leaking out to the page.
+    const stripOverflow = await page
+      .locator('.today-monthly-strip')
+      .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    expect(stripOverflow).toBe(true);
+
+    await expectNoHorizontalOverflow(page);
+    await expectNoWcagViolations(page);
+    await capture(page, testInfo, 'monthly-carousel-two-390');
+  });
+
+  for (const width of [320, 390]) {
+    test(`renders a three-photo \`Diesen Monat\` scroll-snap carousel with no vertical stacking or page overflow at ${width}px (#858)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await installMocks(page, RICH_SPACE, 3);
+      await signInAndOpenToday(page);
+      await settleMotion(page);
+
+      const rects = await page
+        .locator('.today-monthly-tile')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getBoundingClientRect()),
+        );
+      expect(rects).toHaveLength(3);
+
+      const tops = new Set(rects.map((rect) => Math.round(rect.top)));
+      expect(tops.size).toBe(1);
+      const lefts = rects.map((rect) => Math.round(rect.left));
+      expect(new Set(lefts).size).toBe(lefts.length);
+
+      const stripOverflow = await page
+        .locator('.today-monthly-strip')
+        .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+      expect(stripOverflow).toBe(true);
+
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+
   test('never shows the same memory as both a `Diesen Monat` thumbnail and a `Zuletzt bei euch` row', async ({
     page,
   }) => {
@@ -1031,10 +1130,11 @@ test.describe('Today #850: the living home of a relationship', () => {
       `/story/memories/${MOMENT.id}`,
     );
 
-    // `Diesen Monat` links into Momente, and each tile into its memory.
+    // `Diesen Monat` links into Momente's Zeitleiste view (#858 follow-up),
+    // and each tile into its memory.
     await expect(
       page.locator('.today-section-monthly .today-section-link'),
-    ).toHaveAttribute('href', '/story');
+    ).toHaveAttribute('href', '/story?tab=timeline');
     await expect(page.locator('.today-monthly-tile').first()).toHaveAttribute(
       'href',
       `/story/memories/${STRIP_PHOTOS[0].id}`,

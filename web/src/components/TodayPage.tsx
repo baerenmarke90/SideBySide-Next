@@ -1063,7 +1063,7 @@ export function TodayPage({
                   animationDelay="160ms"
                   headerAction={
                     <Link
-                      to={appRoutePath('story')}
+                      to={`${appRoutePath('story')}?tab=timeline`}
                       className="today-section-link"
                       aria-label={t('m5s5.today.monthly.allAriaLabel')}
                     >
