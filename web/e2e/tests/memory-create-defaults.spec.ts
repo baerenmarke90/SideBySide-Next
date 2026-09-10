@@ -7,6 +7,7 @@ const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 const MEMORY_ID = '44444444-4444-4444-8444-444444444444';
 const TEST_NOW = '2026-09-01T10:00:00Z';
+const AUTHORED_TITLE = 'Authored memory title';
 
 interface MemoryCreateRequestBody {
   body?: string;
@@ -20,6 +21,14 @@ function localizedFallbackTitle(dateValue: string): string {
     '{{date}}',
     `${day}.${month}.${year}`,
   );
+}
+
+async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const viewport = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth);
 }
 
 async function browserLocalToday(page: Page): Promise<string> {
@@ -177,7 +186,10 @@ async function installApiMocks(page: Page): Promise<void> {
       return;
     }
 
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/timeline`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/timeline`
+    ) {
       await fulfillJson({
         availableYears: [],
         hasMore: false,
@@ -291,12 +303,47 @@ test('an authored title is kept while the selected happenedOn date is submitted'
   page,
 }) => {
   await signInAndOpenMemoryCreate(page);
-  await page.getByLabel(de.memory.titleLabel).fill('Unser Tag am See');
+  await page.getByLabel(de.memory.titleLabel).fill(AUTHORED_TITLE);
   await page.getByText(de.memory.addMoreDetails).click();
   await page.getByLabel(de.memory.dateLabel).fill('2025-12-24');
 
   const requestBody = await submitAndReadCreateRequest(page);
 
-  expect(requestBody.title).toBe('Unser Tag am See');
+  expect(requestBody.title).toBe(AUTHORED_TITLE);
   expect(requestBody.happenedOn).toBe('2025-12-24');
+});
+
+test('Memory Create defaults render without overflow and capture product visual evidence', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signInAndOpenMemoryCreate(page);
+  await page.getByText(de.memory.addMoreDetails).click();
+  await expect(page.getByLabel(de.memory.dateLabel)).toHaveValue(
+    await browserLocalToday(page),
+  );
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath('shell-memory-create-defaults-compact.png'),
+    fullPage: true,
+  });
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath('shell-memory-create-defaults-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expectNoHorizontalOverflow(page);
+  await page.screenshot({
+    path: testInfo.outputPath('shell-memory-create-defaults-expanded.png'),
+    fullPage: true,
+  });
 });
