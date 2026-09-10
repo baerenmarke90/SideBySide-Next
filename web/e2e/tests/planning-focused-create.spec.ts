@@ -272,6 +272,56 @@ async function assertNoHorizontalOverflow(page: Page): Promise<void> {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 
+async function assertPlanCreateClearsTopChrome(page: Page): Promise<void> {
+  const geometry = await page.evaluate(() => {
+    const chrome = document.querySelector('.product-topbar');
+    const context = document.getElementById('plan-title');
+    const titleLabel = document.querySelector('label[for="create-plan-title"]');
+    const titleField = document.getElementById('create-plan-title');
+
+    if (
+      !(chrome instanceof HTMLElement) ||
+      !(context instanceof HTMLElement) ||
+      !(titleLabel instanceof HTMLElement) ||
+      !(titleField instanceof HTMLElement)
+    ) {
+      throw new Error('Plan route-entry geometry targets are unavailable');
+    }
+
+    const chromeRect = chrome.getBoundingClientRect();
+    const contextRect = context.getBoundingClientRect();
+    const titleLabelRect = titleLabel.getBoundingClientRect();
+    const titleFieldRect = titleField.getBoundingClientRect();
+    const minimumGap = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--space-4'),
+    );
+
+    if (!Number.isFinite(minimumGap)) {
+      throw new Error('The shared --space-4 route-entry gap is unavailable');
+    }
+
+    return {
+      chromeBottom: chromeRect.bottom,
+      chromePosition: getComputedStyle(chrome).position,
+      contextBottom: contextRect.bottom,
+      contextTop: contextRect.top,
+      minimumGap,
+      titleFieldTop: titleFieldRect.top,
+      titleLabelTop: titleLabelRect.top,
+    };
+  });
+
+  expect(['fixed', 'sticky']).toContain(geometry.chromePosition);
+  expect(geometry.contextTop).toBeGreaterThanOrEqual(
+    geometry.chromeBottom + geometry.minimumGap - 1,
+  );
+  expect(geometry.titleLabelTop).toBeGreaterThan(geometry.contextBottom);
+  expect(geometry.titleFieldTop).toBeGreaterThan(geometry.titleLabelTop);
+  expect(geometry.titleFieldTop).toBeGreaterThanOrEqual(
+    geometry.chromeBottom + geometry.minimumGap - 1,
+  );
+}
+
 async function assertNoWcagViolations(page: Page): Promise<void> {
   const result = await new AxeBuilder({ page })
     .withTags([
@@ -360,6 +410,7 @@ async function prepareScenario(
     scenario.theme,
   );
   await assertNoHorizontalOverflow(page);
+  if (kind === 'plan') await assertPlanCreateClearsTopChrome(page);
 
   const materiality = await details.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -455,10 +506,45 @@ test('Quick Create preserves Wish/Plan hash handoff, no-focus behavior, and Brow
   expect(await page.evaluate(() => document.activeElement?.id ?? '')).not.toBe(
     'create-plan-title',
   );
+  await assertPlanCreateClearsTopChrome(page);
 
   await page.goBack();
   await expect(page).toHaveURL(/\/today$/);
 });
+
+for (const scenario of visualScenarios.filter(
+  ({ name }) => name !== '390-light',
+)) {
+  test(`Quick Create -> Plan route-entry geometry: ${scenario.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(scenario.viewport);
+    await page.addInitScript((theme) => {
+      window.localStorage.setItem('sidebyside.theme', theme);
+    }, scenario.theme);
+    await installPlanningMocks(page);
+    await signIn(page);
+    await page.goto('/today');
+
+    await page.getByRole('button', { name: navigation.newContent }).click();
+    await page.getByText(navigation.quickCreatePlan, { exact: true }).click();
+
+    await expect(page).toHaveURL(/\/plan#plan-title$/);
+    await expect(page.locator('details:has(#plan-title)')).toHaveJSProperty(
+      'open',
+      true,
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      scenario.theme,
+    );
+    expect(await page.evaluate(() => document.activeElement?.id ?? '')).not.toBe(
+      'create-plan-title',
+    );
+    await assertPlanCreateClearsTopChrome(page);
+    await assertNoHorizontalOverflow(page);
+  });
+}
 
 test('Wish and Plan create semantics still submit through the existing inline forms', async ({
   page,
