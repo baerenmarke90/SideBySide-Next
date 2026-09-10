@@ -209,6 +209,18 @@ async function installPlanningMocks(
 
     if (
       method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+    ) {
+      // Explicit, so this Today-order/provenance test stays independent of
+      // the product default (#854) and keeps exercising both upcoming items.
+      await fulfillJson({
+        items: [{ moduleKey: 'upcoming', itemLimit: 2 }],
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
     ) {
       const upcoming = options.empty

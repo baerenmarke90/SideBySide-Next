@@ -45,7 +45,7 @@ class DashboardModuleState:
 CATALOG: tuple[DashboardModuleDefinition, ...] = (
     DashboardModuleDefinition(
         key=DashboardModuleKey.UPCOMING,
-        default_item_limit=2,
+        default_item_limit=1,
         allowed_item_limits=frozenset({1, 2, 3}),
     ),
 )

@@ -64,7 +64,7 @@ def test_missing_override_returns_effective_default_without_creating_row(
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "private, no-store"
     assert response.json() == {
-        "items": [{"moduleKey": "upcoming", "itemLimit": 2}],
+        "items": [{"moduleKey": "upcoming", "itemLimit": 1}],
     }
     assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
 
@@ -129,7 +129,7 @@ def test_preferences_are_independent_per_partner_and_space(
     client,
     couple,
 ) -> None:  # type: ignore[no-untyped-def]
-    assert _set_limit(client, couple["space"].id, couple["token_a"], 1).status_code == 200
+    assert _set_limit(client, couple["space"].id, couple["token_a"], 2).status_code == 200
     assert (
         _set_limit(
             client,
@@ -148,8 +148,8 @@ def test_preferences_are_independent_per_partner_and_space(
         couple["token_a"],
     )
 
-    assert anna_primary.json()["items"][0]["itemLimit"] == 1
-    assert ben_primary.json()["items"][0]["itemLimit"] == 2
+    assert anna_primary.json()["items"][0]["itemLimit"] == 2
+    assert ben_primary.json()["items"][0]["itemLimit"] == 1
     assert anna_secondary.json()["items"][0]["itemLimit"] == 3
 
 
