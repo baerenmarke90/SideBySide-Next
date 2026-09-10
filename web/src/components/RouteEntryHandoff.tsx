@@ -3,6 +3,42 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 import { applyRouteEntryHandoff } from '../client/routeEntryHandoff';
 
 /**
+ * The Plan composer sits below an async Planning overview state. On a fresh
+ * `/plan#plan-title` entry the shared handoff can run while the loading state
+ * is still present; replacing that state can then shift the already-positioned
+ * target underneath the sticky shell chrome. Re-apply the same handoff once,
+ * after that local loading node disappears. The shared route-entry semantics
+ * remain unchanged, and the target's scoped scroll margin owns the chrome
+ * clearance.
+ */
+function stabilizePlanRouteEntry(hash: string): (() => void) | undefined {
+  if (hash !== '#plan-title') return undefined;
+
+  const target = document.getElementById('plan-title');
+  const content = target?.closest('.future-map-content');
+  if (!target || !content?.querySelector('.ui-state-loading')) return undefined;
+
+  let frame = 0;
+  const observer = new MutationObserver(() => {
+    if (content.querySelector('.ui-state-loading')) return;
+
+    observer.disconnect();
+    frame = window.requestAnimationFrame(() => {
+      if (target.isConnected && window.location.hash === hash) {
+        target.scrollIntoView({ block: 'start' });
+      }
+    });
+  });
+
+  observer.observe(content, { childList: true });
+
+  return () => {
+    observer.disconnect();
+    if (frame) window.cancelAnimationFrame(frame);
+  };
+}
+
+/**
  * Mounted once by `AppShell`. Applies the shared destination handoff (see
  * `routeEntryHandoff.ts`) on every route change, so every Quick Create
  * target - and any other in-app navigation - lands on a visible, correctly
@@ -17,10 +53,12 @@ export function RouteEntryHandoff(): null {
   const navigationType = useNavigationType();
 
   useEffect(() => {
-    if (navigationType === 'POP' && !location.hash) return;
+    if (navigationType === 'POP' && !location.hash) return undefined;
     applyRouteEntryHandoff(location.hash);
+    const cleanup = stabilizePlanRouteEntry(location.hash);
     // `location` (not just `.hash`) is the dependency: a pathname-only
     // change between two hash-less routes must still re-run the handoff.
+    return cleanup;
   }, [location, navigationType]);
 
   return null;
