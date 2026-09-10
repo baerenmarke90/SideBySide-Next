@@ -106,6 +106,7 @@ import { ChaptersOverviewPage } from './components/ChaptersOverviewPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
 import { CollectionsOverviewPage } from './components/CollectionsOverviewPage';
 import { DemoEntry } from './components/DemoEntry';
+import { AddIcon, DestinationIcon } from './components/DestinationIcon';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
@@ -322,28 +323,6 @@ function MemoryCreatePage({
           {t('memory.formAria')}
         </h2>
         <form onSubmit={submit} className="immersive-create-form">
-          <div
-            className="sharing-note immersive-sharing-note"
-            role="note"
-            aria-label={t('memory.visibilityAria')}
-          >
-            <span className="sharing-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-            </span>
-            <div>
-              <strong>{t('memory.sharedTitle')}</strong>
-              <p>{t('memory.sharedBody')}</p>
-            </div>
-          </div>
-
           <div className="immersive-create-hero">
             <label htmlFor="title" className="sr-only">
               {t('memory.titleLabel')}
@@ -367,7 +346,17 @@ function MemoryCreatePage({
           </div>
 
           <details className="immersive-create-details">
-            <summary>{t('memory.addMoreDetails')}</summary>
+            <summary className="immersive-create-details-summary">
+              <span className="summary-left">
+                <AddIcon className="summary-add-icon" />
+                <span className="summary-label">
+                  {t('memory.addMoreDetails')}
+                </span>
+              </span>
+              <span className="summary-chevron" aria-hidden="true">
+                ›
+              </span>
+            </summary>
             <div className="immersive-create-details-content">
               <div className="field-group">
                 <label htmlFor="body">{t('memory.bodyLabel')}</label>
@@ -390,6 +379,21 @@ function MemoryCreatePage({
               </div>
             </div>
           </details>
+
+          <div
+            className="sharing-note immersive-sharing-note"
+            role="note"
+            aria-label={t('memory.visibilityAria')}
+          >
+            <span className="sharing-icon" aria-hidden="true">
+              <DestinationIcon icon="people" />
+            </span>
+            <div>
+              <strong>{t('memory.sharedTitle')}</strong>
+              <p>{t('memory.sharedBody')}</p>
+            </div>
+          </div>
+
           <div className="form-actions">
             <Link
               className="button-link secondary-link"

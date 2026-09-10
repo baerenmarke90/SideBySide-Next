@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import storyProducts from '../../src/i18n/locales/storyProducts';
@@ -244,9 +245,10 @@ async function expectSharingMetadataAligned(page: Page): Promise<void> {
 
   const icon = note.locator('.sharing-icon');
   const svg = icon.locator('svg');
+  const path = svg.locator('path');
   await expect(icon).toBeVisible();
   await expect(svg).toBeVisible();
-  await expect(svg.locator('path')).toBeHidden();
+  await expect(path).toBeVisible();
 
   const [iconBox, svgBox, noteLayout, maskImage] = await Promise.all([
     icon.boundingBox(),
@@ -264,8 +266,7 @@ async function expectSharingMetadataAligned(page: Page): Promise<void> {
 
   expect(noteLayout.display).toBe('flex');
   expect(noteLayout.alignItems).toBe('center');
-  expect(maskImage).not.toBe('');
-  expect(maskImage).not.toBe('none');
+  expect(maskImage === 'none' || maskImage === '').toBe(true);
 
   const iconCenterX = iconBox.x + iconBox.width / 2;
   const svgCenterX = svgBox.x + svgBox.width / 2;
@@ -320,6 +321,46 @@ for (const colorScheme of ['light', 'dark'] as const) {
       ),
       fullPage: true,
     });
+
+    await page.setViewportSize({ width: 320, height: 568 });
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-320-reflow-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '24px';
+    });
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-large-text-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '';
+    });
+
+    const axeResult = await new AxeBuilder({ page })
+      .include('.immersive-sharing-note')
+      .include('.immersive-create-details')
+      .withTags([
+        'wcag2a',
+        'wcag2aa',
+        'wcag21a',
+        'wcag21aa',
+        'wcag22a',
+        'wcag22aa',
+      ])
+      .analyze();
+    expect(axeResult.violations).toEqual([]);
   });
 }
 
@@ -339,35 +380,151 @@ for (const width of [390, 320] as const) {
 
     await expectSharingMetadataAligned(page);
 
-    const note = page.locator('.immersive-sharing-note');
     const title = page.getByLabel(de.memory.titleLabel);
     const media = page.locator('.immersive-create-media');
     const picker = media.locator('.file-picker');
-    const [noteBox, titleBox, mediaBox, pickerBox, mediaBorder, pickerBorder] =
-      await Promise.all([
-        note.boundingBox(),
-        title.boundingBox(),
-        media.boundingBox(),
-        picker.boundingBox(),
-        media.evaluate((element) => getComputedStyle(element).borderTopStyle),
-        picker.evaluate((element) => getComputedStyle(element).borderTopStyle),
-      ]);
-    if (!noteBox || !titleBox || !mediaBox || !pickerBox) {
+    const details = page.locator('.immersive-create-details');
+    const note = page.locator('.immersive-sharing-note');
+    const actions = page.locator('.form-actions');
+    const saveButton = page.getByRole('button', { name: de.memory.save });
+    const quickCreateTrigger = page.locator(
+      '.mobile-quick-create .quick-create-trigger',
+    );
+
+    const domOrder = await page.evaluate(() => {
+      const form = document.querySelector('.immersive-create-form');
+      if (!form) return null;
+      const children = Array.from(form.children);
+      return {
+        titleIndex: children.findIndex((el) =>
+          el.classList.contains('immersive-create-hero'),
+        ),
+        mediaIndex: children.findIndex((el) =>
+          el.classList.contains('immersive-create-media'),
+        ),
+        detailsIndex: children.findIndex((el) =>
+          el.classList.contains('immersive-create-details'),
+        ),
+        noteIndex: children.findIndex((el) =>
+          el.classList.contains('immersive-sharing-note'),
+        ),
+        actionsIndex: children.findIndex((el) =>
+          el.classList.contains('form-actions'),
+        ),
+      };
+    });
+    if (!domOrder) {
+      throw new Error('Memory Create form children not found.');
+    }
+    expect(domOrder.titleIndex).toBeLessThan(domOrder.mediaIndex);
+    expect(domOrder.mediaIndex).toBeLessThan(domOrder.detailsIndex);
+    expect(domOrder.detailsIndex).toBeLessThan(domOrder.noteIndex);
+    expect(domOrder.noteIndex).toBeLessThan(domOrder.actionsIndex);
+
+    const [
+      noteBox,
+      titleBox,
+      mediaBox,
+      pickerBox,
+      detailsBox,
+      actionsBox,
+      saveBox,
+      mediaBorder,
+      pickerBorder,
+    ] = await Promise.all([
+      note.boundingBox(),
+      title.boundingBox(),
+      media.boundingBox(),
+      picker.boundingBox(),
+      details.boundingBox(),
+      actions.boundingBox(),
+      saveButton.boundingBox(),
+      media.evaluate((element) => getComputedStyle(element).borderTopStyle),
+      picker.evaluate((element) => getComputedStyle(element).borderTopStyle),
+    ]);
+    if (
+      !noteBox ||
+      !titleBox ||
+      !mediaBox ||
+      !pickerBox ||
+      !detailsBox ||
+      !actionsBox ||
+      !saveBox
+    ) {
       throw new Error('Memory Create composition did not render.');
     }
 
-    // The former callout could wrap to 150px+ and compete with authored
-    // content. Inline metadata should now remain a single quiet row.
-    expect(noteBox.height).toBeLessThan(40);
-    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(titleBox.y);
+    // 1. Authored content (title, media, optional details) precedes the visibility cue
+    expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(noteBox.y);
+    expect(mediaBox.y + mediaBox.height).toBeLessThanOrEqual(noteBox.y);
+    expect(detailsBox.y + detailsBox.height).toBeLessThanOrEqual(noteBox.y);
 
-    // The former nested dashed drop zones made an empty picker visually and
-    // vertically dominant. Keep one compact, solid-boundary media surface.
+    // 2. Visibility cue precedes the primary form action area and Save button
+    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(actionsBox.y);
+    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(saveBox.y);
+
+    // 3. Spacing above (from details) and below (to actions) is intentional and balanced
+    const spacingAbove = noteBox.y - (detailsBox.y + detailsBox.height);
+    const spacingBelow = actionsBox.y - (noteBox.y + noteBox.height);
+    expect(spacingAbove).toBeGreaterThanOrEqual(10);
+    expect(spacingBelow).toBeGreaterThanOrEqual(10);
+
+    // 4. Inline metadata remains a single quiet, compact row
+    expect(noteBox.height).toBeLessThan(40);
+
+    // 5. Media picker remains compact with solid boundaries
     expect(mediaBorder).toBe('solid');
     expect(pickerBorder).toBe('solid');
     expect(mediaBox.height).toBeLessThan(125);
     expect(pickerBox.height).toBeLessThan(80);
     expect(pickerBox.height).toBeGreaterThanOrEqual(44);
+
+    // 6. Optional details summary is a calm rounded secondary disclosure control
+    const summary = details.locator('summary');
+    const addIcon = summary.locator('.summary-add-icon');
+    const chevron = summary.locator('.summary-chevron');
+    const summaryLabel = summary.locator('.summary-label');
+
+    await expect(summary).toBeVisible();
+    await expect(addIcon).toBeVisible();
+    await expect(chevron).toBeVisible();
+    await expect(summaryLabel).toHaveText(de.memory.addMoreDetails);
+
+    const summaryBox = await summary.boundingBox();
+    if (!summaryBox) throw new Error('Summary did not render.');
+    // Mobile touch target: minimum 44px height
+    expect(summaryBox.height).toBeGreaterThanOrEqual(44);
+    expect(summaryBox.width).toBeGreaterThanOrEqual(width - 80);
+
+    // Verify native details open/close toggle
+    await expect(details).not.toHaveAttribute('open', '');
+    await summary.click();
+    await expect(details).toHaveAttribute('open', '');
+    await expect(
+      details.getByRole('textbox', { name: de.memory.bodyLabel }),
+    ).toBeVisible();
+    if (width === 390) {
+      await page.screenshot({
+        path: testInfo.outputPath('shell-memory-create-details-open-390.png'),
+        fullPage: true,
+      });
+    }
+    await summary.click();
+    await expect(details).not.toHaveAttribute('open', '');
+
+    // 7. Floating global Quick Create FAB does not collide with the visibility note
+    if (await quickCreateTrigger.isVisible()) {
+      const fabBox = await quickCreateTrigger.boundingBox();
+      if (fabBox) {
+        const overlapsHorizontally =
+          noteBox.x < fabBox.x + fabBox.width &&
+          noteBox.x + noteBox.width > fabBox.x;
+        const overlapsVertically =
+          noteBox.y < fabBox.y + fabBox.height &&
+          noteBox.y + noteBox.height > fabBox.y;
+        expect(overlapsHorizontally && overlapsVertically).toBe(false);
+      }
+    }
 
     await expectNoHorizontalOverflow(page);
     await page.screenshot({

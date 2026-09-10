@@ -291,7 +291,7 @@ const de = {
     photoLimitReached_other:
       '{{count}} Fotos wurden nicht hinzugefügt, weil das Limit pro Erinnerung erreicht ist.',
     visibilityAria: 'Sichtbarkeit',
-    sharedTitle: 'Mit Partner geteilt',
+    sharedTitle: 'Für euch beide sichtbar',
     sharedBody:
       'Diese Erinnerung ist für beide Personen in eurem gemeinsamen Space sichtbar.',
     save: 'Erinnerung speichern',

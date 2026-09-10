@@ -22,8 +22,11 @@
 }
 
 /*
- * Shared visibility is context, not a callout. Keep the existing note
- * semantics while reducing the presentation to icon + one short label.
+ * Shared visibility cue refined (#881).
+ *
+ * Placed immediately before the completion actions as calm, quiet inline
+ * metadata. Keeps existing role="note" semantics while presenting as a single
+ * quiet row with DestinationIcon("people").
  */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
@@ -33,7 +36,7 @@
   min-width: 0;
   align-items: center;
   gap: var(--space-2);
-  margin: 0;
+  margin: var(--space-2) 0 0 0;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -58,9 +61,10 @@
 }
 
 /*
- * The existing 16px SVG box remains the stable geometry primitive used by
- * browser regression tests. Its obsolete heart path is not rendered; the box
- * is painted as the familiar three-node share glyph instead.
+ * Shared visibility cue refined (#881).
+ *
+ * Uses the established eimir DestinationIcon ("people") component to represent
+ * shared couple visibility. Renders clean SVG line art without CSS mask hacks.
  */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
@@ -72,24 +76,10 @@
   display: block;
   flex: 0 0 16px;
   fill: none;
-  background-color: currentcolor;
-  -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNSIgcj0iMyIvPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTkiIHI9IjMiLz48cGF0aCBkPSJtOC42IDEwLjcgNi44LTQiLz48cGF0aCBkPSJtOC42IDEzLjMgNi44IDQiLz48L3N2Zz4=");
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjE4IiBjeT0iNSIgcj0iMyIvPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTkiIHI9IjMiLz48cGF0aCBkPSJtOC42IDEwLjcgNi44LTQiLz48cGF0aCBkPSJtOC42IDEzLjMgNi44IDQiLz48L3N2Zz4=");
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-}
-
-.create-page
-  .immersive-create-card[aria-labelledby="memory-form-heading"]
-  .immersive-sharing-note
-  .sharing-icon
-  svg
-  path {
-  display: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .create-page
@@ -207,15 +197,170 @@
   overflow-wrap: anywhere;
 }
 
-/* Optional details are a disclosure boundary, not another equal-weight card. */
+/*
+ * Optional details styled as a calm rounded secondary disclosure control (#881).
+ *
+ * Keeps native <details>/<summary> semantics while providing a full-width,
+ * touch-target-compliant (44px min-height) secondary surface with AddIcon and chevron.
+ */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
   .immersive-create-details {
-  padding: var(--space-3) 0 0;
   border: 0;
-  border-top: 1px solid var(--color-border-subtle);
   border-radius: 0;
+  padding: 0;
   background: transparent;
+  min-width: 0;
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary::-webkit-details-marker,
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary::marker {
+  display: none;
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary:active {
+  background: var(--color-surface-panel-tint);
+  border-color: var(--color-border);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-color: var(--color-focus);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  .summary-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  .summary-add-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  color: var(--color-text-tertiary);
+  transition: color var(--motion-fast);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  > summary:hover
+  .summary-add-icon {
+  color: var(--color-text-secondary);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  .summary-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details
+  .summary-chevron {
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+  display: inline-block;
+  transform: rotate(0deg);
+  transition:
+    transform var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details[open]
+  .summary-chevron {
+  transform: rotate(90deg);
+}
+
+.create-page
+  .immersive-create-card[aria-labelledby="memory-form-heading"]
+  .immersive-create-details[open]
+  > summary {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-page
+    .immersive-create-card[aria-labelledby="memory-form-heading"]
+    .immersive-create-details
+    > summary,
+  .create-page
+    .immersive-create-card[aria-labelledby="memory-form-heading"]
+    .immersive-create-details
+    .summary-add-icon,
+  .create-page
+    .immersive-create-card[aria-labelledby="memory-form-heading"]
+    .immersive-create-details
+    .summary-chevron {
+    transition: none;
+  }
 }
 
 @media (max-width: 620px) {
