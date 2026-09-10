@@ -165,11 +165,19 @@ describe('TodayPage', () => {
       recentShared: [],
       retrospective: null,
     });
+    queryClient.setQueryData(
+      dashboardPreferencesQueryKey('account-1', 'space-1'),
+      { items: [{ moduleKey: 'upcoming', itemLimit: 2 }] },
+    );
 
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <TodayPage apis={{} as M4ProductApis} spaceId="space-1" />
+          <TodayPage
+            apis={{} as M4ProductApis}
+            spaceId="space-1"
+            account={{ id: 'account-1', displayName: 'Alex' }}
+          />
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -185,7 +193,7 @@ describe('TodayPage', () => {
   });
 
   it.each([
-    [undefined, ['Upcoming 1', 'Upcoming 2'], ['Upcoming 3', 'Upcoming 4']],
+    [undefined, ['Upcoming 1'], ['Upcoming 2', 'Upcoming 3', 'Upcoming 4']],
     [1, ['Upcoming 1'], ['Upcoming 2', 'Upcoming 3', 'Upcoming 4']],
     [2, ['Upcoming 1', 'Upcoming 2'], ['Upcoming 3', 'Upcoming 4']],
     [3, ['Upcoming 1', 'Upcoming 2', 'Upcoming 3'], ['Upcoming 4']],
@@ -974,6 +982,10 @@ describe('TodayPage', () => {
       items: [],
       nextCursor: null,
     });
+    queryClient.setQueryData(
+      dashboardPreferencesQueryKey('account-1', 'space-1'),
+      { items: [{ moduleKey: 'upcoming', itemLimit: 2 }] },
+    );
 
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
@@ -988,6 +1000,7 @@ describe('TodayPage', () => {
               } as unknown as M4ProductApis
             }
             spaceId="space-1"
+            account={{ id: 'account-1', displayName: 'Alex' }}
           />
         </MemoryRouter>
       </QueryClientProvider>,

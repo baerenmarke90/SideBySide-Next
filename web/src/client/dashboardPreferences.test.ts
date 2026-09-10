@@ -27,18 +27,18 @@ describe('dashboardPreferences', () => {
   });
 
   it.each([
-    [undefined, 2],
+    [undefined, 1],
     [preferences(1), 1],
     [preferences(2), 2],
     [preferences(3), 3],
-    [preferences(4), 2],
-    [{ items: [] }, 2],
+    [preferences(4), 1],
+    [{ items: [] }, 1],
   ])('resolves only valid effective limits', (value, expected) => {
     expect(effectiveUpcomingItemLimit(value)).toBe(expected);
   });
 
   it.each([
-    [undefined, ['first', 'second']],
+    [undefined, ['first']],
     [preferences(1), ['first']],
     [preferences(2), ['first', 'second']],
     [preferences(3), ['first', 'second', 'third']],
