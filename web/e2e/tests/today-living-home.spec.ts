@@ -148,29 +148,6 @@ async function expectNoWcagViolations(page: Page): Promise<void> {
   expect(result.violations, summary || 'No axe violations').toEqual([]);
 }
 
-/*
- * `body` cross-fades its background and text colour over 400 ms when the
- * theme changes. Running axe during that fade samples interpolated colours
- * and reports contrast failures that never exist on a settled page.
- *
- * Wait for the actual condition rather than for a duration: let the style
- * change commit on the next frame, then await every running CSS transition.
- * Only transitions are awaited, so a deliberately looping decorative
- * animation can never make this hang.
- */
-async function settleTheme(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-    const transitions = document
-      .getAnimations()
-      .filter((animation) => animation instanceof CSSTransition);
-    await Promise.all(
-      transitions.map((animation) => animation.finished.catch(() => undefined)),
-    );
-  });
-}
-
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const hasOverflow = await page.evaluate(
     () =>
@@ -180,29 +157,84 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(hasOverflow, 'Page must not overflow horizontally').toBe(false);
 }
 
-/** Document-order tops of the sections that are present, in DOM order. */
-async function sectionTops(page: Page): Promise<Record<string, number>> {
-  return page.evaluate(
+/*
+ * Wait for every running CSS animation and transition to land.
+ *
+ * The section reveal translates each module 8 px on the Y axis with a
+ * staggered delay, and the theme cross-fade runs for 400 ms. Measuring
+ * geometry or colour while either is in flight reads a value that never
+ * exists on a settled page. Wait for the actual end of those animations
+ * rather than for a duration; infinite decorative animations are filtered
+ * out so this can never hang.
+ */
+async function settleMotion(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    const finite = document.getAnimations().filter((animation) => {
+      const timing = animation.effect?.getTiming();
+      return timing?.iterations !== Number.POSITIVE_INFINITY;
+    });
+    await Promise.all(
+      finite.map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+}
+
+/**
+ * The composition order is a property of the document, not of the pixels.
+ *
+ * Asserting it in the DOM keeps it meaningful on Expanded, where the
+ * `Gerade bei euch` and `Diesen Monat` modules deliberately share a row and
+ * therefore have no meaningful top-to-bottom relationship. `expectSingleColumnVisualOrder`
+ * covers the Compact case, where document order and visual order must agree.
+ */
+async function expectNormativeOrder(page: Page): Promise<void> {
+  const order = await page.evaluate(
     (selectors) => {
-      const tops: Record<string, number> = {};
-      for (const selector of selectors) {
-        const node = document.querySelector(selector);
-        if (node) tops[selector] = Math.round(node.getBoundingClientRect().top);
+      const present: string[] = [];
+      const nodes = [...document.querySelectorAll(selectors.join(','))];
+      for (const node of nodes) {
+        const match = selectors.find((selector) => node.matches(selector));
+        if (match) present.push(match);
       }
-      return tops;
+      return present;
     },
     NORMATIVE_ORDER as unknown as string[],
   );
+
+  const expected = NORMATIVE_ORDER.filter((selector) =>
+    order.includes(selector),
+  );
+  expect(
+    order,
+    `Sections must appear in the #850 document order: ${expected.join(' -> ')}`,
+  ).toEqual(expected);
 }
 
-async function expectNormativeOrder(page: Page): Promise<void> {
-  const tops = await sectionTops(page);
-  const present = NORMATIVE_ORDER.filter((selector) => selector in tops);
-  const values = present.map((selector) => tops[selector]);
+/**
+ * On Compact the page is one column, so the normative order must also be the
+ * order the eye reads. Motion is settled first, because the staggered 8 px
+ * reveal would otherwise make two adjacent sections compare out of order.
+ */
+async function expectSingleColumnVisualOrder(page: Page): Promise<void> {
+  await settleMotion(page);
+  const tops = await page.evaluate(
+    (selectors) => {
+      const values: number[] = [];
+      for (const selector of selectors) {
+        const node = document.querySelector(selector);
+        if (node) values.push(Math.round(node.getBoundingClientRect().top));
+      }
+      return values;
+    },
+    NORMATIVE_ORDER as unknown as string[],
+  );
+
   expect(
-    [...values].sort((a, b) => a - b),
-    `Sections must appear in the #850 order: ${present.join(' -> ')}`,
-  ).toEqual(values);
+    [...tops].sort((a, b) => a - b),
+    'Compact sections must read top to bottom in the #850 order',
+  ).toEqual(tops);
 }
 
 type Scenario = {
@@ -431,6 +463,7 @@ test.describe('Today #850: the living home of a relationship', () => {
       await expect(page.locator(selector)).toBeVisible();
     }
     await expectNormativeOrder(page);
+    await expectSingleColumnVisualOrder(page);
 
     // Exactly one contextual module, never a stack of widgets.
     await expect(page.locator('.today-living')).toHaveCount(1);
@@ -449,7 +482,7 @@ test.describe('Today #850: the living home of a relationship', () => {
     await capture(page, testInfo, '390-light');
 
     await page.emulateMedia({ colorScheme: 'dark' });
-    await settleTheme(page);
+    await settleMotion(page);
     await expectNormativeOrder(page);
     await expectNoHorizontalOverflow(page);
     await expectNoWcagViolations(page);
@@ -463,6 +496,7 @@ test.describe('Today #850: the living home of a relationship', () => {
     await installMocks(page, RICH_SPACE);
     await signInAndOpenToday(page);
 
+    await settleMotion(page);
     const metrics = await page.evaluate(() => {
       const top = (selector: string) => {
         const node = document.querySelector(selector);
@@ -670,6 +704,7 @@ test.describe('Today #850: the living home of a relationship', () => {
     await signInAndOpenToday(page);
 
     await expectNormativeOrder(page);
+    await expectSingleColumnVisualOrder(page);
     await expectNoHorizontalOverflow(page);
 
     // Agenda tiles stay one stacked column at this width.
@@ -701,6 +736,7 @@ test.describe('Today #850: the living home of a relationship', () => {
     await installMocks(page, RICH_SPACE);
     await signInAndOpenToday(page);
 
+    await settleMotion(page);
     const momentTop = await page
       .locator('.today-section-moment')
       .evaluate((node) => Math.round(node.getBoundingClientRect().top));
@@ -725,6 +761,7 @@ test.describe('Today #850: the living home of a relationship', () => {
 
     // Expanded spends its width on placing the two smallest modules beside
     // each other, rather than stretching either across the whole canvas.
+    await settleMotion(page);
     const sideBySide = await page.evaluate(() => {
       const living = document.querySelector('.today-section-living');
       const monthly = document.querySelector('.today-section-monthly');
@@ -741,7 +778,7 @@ test.describe('Today #850: the living home of a relationship', () => {
     await capture(page, testInfo, '1440-light');
 
     await page.emulateMedia({ colorScheme: 'dark' });
-    await settleTheme(page);
+    await settleMotion(page);
     await expectNoWcagViolations(page);
     await capture(page, testInfo, '1440-dark');
   });
