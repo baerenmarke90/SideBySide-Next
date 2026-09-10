@@ -836,15 +836,25 @@ test.describe('Today #850: the living home of a relationship', () => {
     await expectSingleColumnVisualOrder(page);
     await expectNoHorizontalOverflow(page);
 
-    // Agenda tiles stay one stacked column at this width.
-    const lefts = await page
+    // With three items, `Demnächst` is a horizontal swipe carousel (#858):
+    // tiles sit side by side on one row rather than stacking vertically.
+    const rects = await page
       .locator('.today-agenda-row')
       .evaluateAll((nodes) =>
-        nodes.map((node) => Math.round(node.getBoundingClientRect().left)),
+        nodes.map((node) => node.getBoundingClientRect()),
       );
-    expect(new Set(lefts).size).toBe(1);
+    const tops = new Set(rects.map((rect) => Math.round(rect.top)));
+    expect(tops.size).toBe(1);
+    const lefts = rects.map((rect) => Math.round(rect.left));
+    expect(new Set(lefts).size).toBe(lefts.length);
 
-    // Nothing is clipped away to fake a fit.
+    // The carousel's own overflow is what pages horizontally, not the page.
+    const listOverflow = await page
+      .locator('.today-agenda-list')
+      .evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    expect(listOverflow).toBe(true);
+
+    // Nothing else is clipped away to fake a fit.
     const clipped = await page.evaluate(() =>
       [
         ...document.querySelectorAll(

@@ -299,19 +299,51 @@
    empty. Each item is instead a compact tile (icon + stacked title/date,
    like the Momente archive entries' icon + copy convention) that wraps into
    as many columns as the available width allows, instead of stretching one
-   item across the whole row. Below the tablet breakpoint the tiles stay
-   full-width and stacked - narrow phone widths don't have room for more
-   than one anyway, so this keeps mobile's already-approved presentation. */
+   item across the whole row.
+   Compact real-device follow-up (#858): a lone item is still one plain
+   card, but two or three stacked full-width cards under the fold read as a
+   scrolling list, not a short shared horizon glanced at once. Below the
+   tablet breakpoint they become a native horizontal swipe carousel instead
+   - `overflow-x` + `scroll-snap`, no drag library - sized so the next card
+   always peeks in at the edge as an invitation to swipe. A single item has
+   nothing to peek at, so `:has()` keeps it the plain, non-scrolling card. */
 .today-agenda-list {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  flex-direction: row;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.today-agenda-row {
+  scroll-snap-align: start;
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+.today-agenda-list:has(> .today-agenda-row:nth-child(2))
+  > .today-agenda-row {
+  /* Most of the current card, plus a deliberate sliver of the next one. */
+  flex: 0 0 85%;
+  max-width: 85%;
 }
 
 @media (min-width: 640px) {
-  .today-agenda-list {
+  .today-agenda-list,
+  .today-agenda-list:has(> .today-agenda-row:nth-child(2)) {
     flex-flow: row wrap;
     gap: var(--space-3);
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .today-agenda-row,
+  .today-agenda-list:has(> .today-agenda-row:nth-child(2))
+    > .today-agenda-row {
+    flex: 1 1 220px;
+    max-width: 18rem;
   }
 }
 
