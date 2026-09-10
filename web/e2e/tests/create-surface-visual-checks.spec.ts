@@ -56,9 +56,9 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 
 /**
  * A focused mock harness for the create-surface visual regression checks:
- * the shared-visibility heart glyph centering on Memory Create, the local
- * "today" date default on HeartMoment/Milestone Create, and the Memory
- * Detail drop cap.
+ * the inline shared-visibility metadata on Memory Create, the local "today"
+ * date default on HeartMoment/Milestone Create, and the Memory Detail drop
+ * cap.
  */
 async function installApiMocks(page: Page): Promise<void> {
   await page.route('**/api/v1/**', async (route) => {
@@ -231,32 +231,61 @@ async function signIn(page: Page): Promise<void> {
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
 }
 
-async function expectSharingHeartCentered(page: Page): Promise<void> {
-  const circle = page.locator('.immersive-sharing-note .sharing-icon');
-  await expect(circle).toBeVisible();
-  const svg = circle.locator('svg');
-  const circleBox = await circle.boundingBox();
-  const svgBox = await svg.boundingBox();
-  if (!circleBox || !svgBox) throw new Error('Sharing icon did not render.');
+async function expectSharingMetadataAligned(page: Page): Promise<void> {
+  const note = page.locator('.immersive-sharing-note');
+  await expect(note).toBeVisible();
+  await expect(note).toHaveAttribute('role', 'note');
+  await expect(
+    note.getByText(de.memory.sharedTitle, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    note.getByText(de.memory.sharedBody, { exact: true }),
+  ).toBeHidden();
 
-  const circleCenterX = circleBox.x + circleBox.width / 2;
+  const icon = note.locator('.sharing-icon');
+  const svg = icon.locator('svg');
+  await expect(icon).toBeVisible();
+  await expect(svg).toBeVisible();
+  await expect(svg.locator('path')).toBeHidden();
+
+  const [iconBox, svgBox, noteLayout, maskImage] = await Promise.all([
+    icon.boundingBox(),
+    svg.boundingBox(),
+    note.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { display: style.display, alignItems: style.alignItems };
+    }),
+    svg.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.maskImage || style.getPropertyValue('-webkit-mask-image');
+    }),
+  ]);
+  if (!iconBox || !svgBox) throw new Error('Sharing icon did not render.');
+
+  expect(noteLayout.display).toBe('flex');
+  expect(noteLayout.alignItems).toBe('center');
+  expect(maskImage).not.toBe('');
+  expect(maskImage).not.toBe('none');
+
+  const iconCenterX = iconBox.x + iconBox.width / 2;
   const svgCenterX = svgBox.x + svgBox.width / 2;
-  const circleCenterY = circleBox.y + circleBox.height / 2;
+  const iconCenterY = iconBox.y + iconBox.height / 2;
   const svgCenterY = svgBox.y + svgBox.height / 2;
 
-  // A generous 1.5px tolerance absorbs sub-pixel layout rounding without
-  // masking a real regression back to left/top-aligned content (which is
-  // off by several pixels in a 32px circle holding a 16px glyph).
-  expect(Math.abs(circleCenterX - svgCenterX)).toBeLessThanOrEqual(1.5);
-  expect(Math.abs(circleCenterY - svgCenterY)).toBeLessThanOrEqual(1.5);
+  // 2.5px is the #855 ceiling for the retained 16px SVG geometry. It absorbs
+  // sub-pixel/runner quantization while still detecting the old several-pixel
+  // left/top displacement that motivated the original heart-centering test.
+  expect(Math.abs(iconCenterX - svgCenterX)).toBeLessThanOrEqual(2.5);
+  expect(Math.abs(iconCenterY - svgCenterY)).toBeLessThanOrEqual(2.5);
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`Memory Create centers the shared-visibility heart glyph in its circle (${colorScheme})`, async ({
+  test(`Memory Create aligns the inline shared-visibility metadata (${colorScheme})`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.emulateMedia({ colorScheme });
     await installApiMocks(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/today');
     await signIn(page);
 
@@ -265,18 +294,39 @@ for (const colorScheme of ['light', 'dark'] as const) {
       page.getByRole('heading', { name: de.memory.heading }),
     ).toBeVisible();
 
-    await expectSharingHeartCentered(page);
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-expanded-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expectSharingHeartCentered(page);
+    await expectSharingMetadataAligned(page);
     await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(`shell-memory-create-390-${colorScheme}.png`),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 390, height: 667 });
+    await expectSharingMetadataAligned(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-small-height-${colorScheme}.png`,
+      ),
+      fullPage: true,
+    });
   });
 }
 
 for (const width of [390, 320] as const) {
-  test(`Memory Create keeps the shared-visibility note compact and secondary to the title at ${width}px (#849)`, async ({
+  test(`Memory Create keeps sharing and the empty photo picker compact at ${width}px (#855)`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await installApiMocks(page);
     await page.goto('/today');
     await signIn(page);
@@ -287,22 +337,43 @@ for (const width of [390, 320] as const) {
       page.getByRole('heading', { name: de.memory.heading }),
     ).toBeVisible();
 
+    await expectSharingMetadataAligned(page);
+
     const note = page.locator('.immersive-sharing-note');
-    await expect(note).toBeVisible();
-    await expect(note).toHaveAttribute('role', 'note');
-
     const title = page.getByLabel(de.memory.titleLabel);
-    const noteBox = await note.boundingBox();
-    const titleBox = await title.boundingBox();
-    if (!noteBox || !titleBox) throw new Error('Note or title did not render.');
+    const media = page.locator('.immersive-create-media');
+    const picker = media.locator('.file-picker');
+    const [noteBox, titleBox, mediaBox, pickerBox, mediaBorder, pickerBorder] =
+      await Promise.all([
+        note.boundingBox(),
+        title.boundingBox(),
+        media.boundingBox(),
+        picker.boundingBox(),
+        media.evaluate((element) => getComputedStyle(element).borderTopStyle),
+        picker.evaluate((element) => getComputedStyle(element).borderTopStyle),
+      ]);
+    if (!noteBox || !titleBox || !mediaBox || !pickerBox) {
+      throw new Error('Memory Create composition did not render.');
+    }
 
-    // Before the reflow fix the note wrapped into an oversized teal/green
-    // block (150px+) that dwarfed the title field it precedes. A compact,
-    // secondary treatment stays well under that regressed height.
-    expect(noteBox.height).toBeLessThan(110);
+    // The former callout could wrap to 150px+ and compete with authored
+    // content. Inline metadata should now remain a single quiet row.
+    expect(noteBox.height).toBeLessThan(40);
     expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(titleBox.y);
 
+    // The former nested dashed drop zones made an empty picker visually and
+    // vertically dominant. Keep one compact, solid-boundary media surface.
+    expect(mediaBorder).toBe('solid');
+    expect(pickerBorder).toBe('solid');
+    expect(mediaBox.height).toBeLessThan(125);
+    expect(pickerBox.height).toBeLessThan(80);
+    expect(pickerBox.height).toBeGreaterThanOrEqual(44);
+
     await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath(`shell-memory-create-${width}-compact.png`),
+      fullPage: true,
+    });
   });
 }
 
