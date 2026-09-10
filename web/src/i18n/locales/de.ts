@@ -264,6 +264,7 @@ const de = {
     formAria: 'Erinnerung erstellen',
     titleLabel: 'Titel',
     titlePlaceholder: 'Zum Beispiel: Unser Tag am See',
+    fallbackTitle: 'Erinnerung vom {{date}}',
     bodyLabel: 'Erinnerung',
     bodyPlaceholder: 'Was möchtet ihr von diesem Moment behalten?',
     addMoreDetails: 'Mehr Details hinzufügen (optional)',
