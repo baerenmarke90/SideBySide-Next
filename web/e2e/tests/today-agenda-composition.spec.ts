@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import profileIdentity from '../../src/i18n/locales/profileIdentity';
 
 const ACCOUNT_ID = '00000000-0000-0000-0000-000000000001';
 const PARTNER_ID = '00000000-0000-0000-0000-000000000002';
@@ -43,7 +44,12 @@ const UPCOMING_ITEMS = [
   },
 ];
 
-async function installMocks(page: Page): Promise<void> {
+async function installMocks(
+  page: Page,
+  initialPreference: 1 | 2 | 3 = 2,
+): Promise<{ currentPreference: () => number }> {
+  let preference = initialPreference;
+
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const method = request.method();
@@ -81,6 +87,19 @@ async function installMocks(page: Page): Promise<void> {
       });
       return;
     }
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({ displayName: 'Anna', id: ACCOUNT_ID });
+      return;
+    }
+    if (method === 'POST' && pathname === '/api/v1/auth/refresh') {
+      await fulfillJson({
+        accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+        accessToken: 'today-agenda-refreshed-token',
+        refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
+        refreshToken: 'today-agenda-refresh-token-2',
+      });
+      return;
+    }
     if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
       await fulfillJson({ serverAdmin: false });
       return;
@@ -99,6 +118,16 @@ async function installMocks(page: Page): Promise<void> {
           { id: ACCOUNT_ID, displayName: 'Anna' },
           { id: PARTNER_ID, displayName: 'Ben' },
         ],
+      });
+      return;
+    }
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        durationDisplayMode: 'YEARS_MONTHS',
+        relationshipStartedOn: '2026-01-01',
+        showRelationshipDuration: true,
+        spaceId: SPACE_ID,
+        version: 1,
       });
       return;
     }
@@ -136,6 +165,35 @@ async function installMocks(page: Page): Promise<void> {
     }
     if (
       method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+    ) {
+      await fulfillJson({
+        items: [{ moduleKey: 'upcoming', itemLimit: preference }],
+      });
+      return;
+    }
+    if (
+      method === 'PATCH' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences/upcoming`
+    ) {
+      const body = request.postDataJSON() as { itemLimit: 1 | 2 | 3 };
+      preference = body.itemLimit;
+      await fulfillJson({ moduleKey: 'upcoming', itemLimit: preference });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname ===
+        `/api/v1/spaces/${SPACE_ID}/rules/relationship_anniversary_reminder/preference`
+    ) {
+      await fulfillJson({
+        enabled: true,
+        parameters: { daysBefore: [30, 7, 1], localTime: '09:00:00' },
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
     ) {
       await fulfillJson({
@@ -152,6 +210,8 @@ async function installMocks(page: Page): Promise<void> {
     }
     await fulfillJson({}, 200);
   });
+
+  return { currentPreference: () => preference };
 }
 
 async function signIn(page: Page): Promise<void> {
@@ -164,7 +224,7 @@ async function signIn(page: Page): Promise<void> {
 test('Today "Demnächst" renders compact, bounded-width planning tiles instead of full-width table rows on desktop', async ({
   page,
 }) => {
-  await installMocks(page);
+  await installMocks(page, 3);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('/today');
   await signIn(page);
@@ -176,7 +236,8 @@ test('Today "Demnächst" renders compact, bounded-width planning tiles instead o
       rows.map((row) => row.getBoundingClientRect().width),
     );
 
-  expect(rowWidths).toHaveLength(UPCOMING_ITEMS.length);
+  expect(rowWidths).toHaveLength(3);
+  await expect(page.getByText(UPCOMING_ITEMS[3].titleOrText)).toHaveCount(0);
   // None of these tiles carries more than a short title, date, and icon -
   // a row spanning most of a 1920px viewport is the "administrative table
   // row" regression this fix removes.
@@ -214,6 +275,8 @@ test('Today "Demnächst" stays a single stacked column with no overflow on mobil
     .locator('.today-agenda-row')
     .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().left));
   expect(new Set(rowLefts).size).toBe(1);
+  expect(rowLefts).toHaveLength(2);
+  await expect(page.getByText(UPCOMING_ITEMS[2].titleOrText)).toHaveCount(0);
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -222,5 +285,89 @@ test('Today "Demnächst" stays a single stacked column with no overflow on mobil
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 
   const result = await new AxeBuilder({ page }).analyze();
+  expect(result.violations).toEqual([]);
+});
+
+test('compact Dashboard settings persist the personal horizon and update Today without a reload', async ({
+  page,
+}, testInfo) => {
+  const preferences = await installMocks(page);
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/today');
+  await signIn(page);
+  await page.goto('/more/settings');
+
+  const group = page.getByRole('group', {
+    name: profileIdentity.dashboardUpcomingTitle,
+  });
+  await expect(group).toBeVisible();
+  await expect(group.getByRole('radio', { name: '2' })).toBeChecked();
+  await group.getByRole('radio', { name: '3' }).check();
+  await expect(group.getByRole('radio', { name: '3' })).toBeChecked();
+  await expect.poll(preferences.currentPreference).toBe(3);
+  await expect(
+    page.getByText(profileIdentity.dashboardUpcomingSaved),
+  ).toBeVisible();
+
+  const settingsDimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(settingsDimensions.scrollWidth).toBeLessThanOrEqual(
+    settingsDimensions.clientWidth,
+  );
+  const settingsAxe = await new AxeBuilder({ page })
+    .include('#settings-dashboard')
+    .analyze();
+  expect(settingsAxe.violations).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-dashboard-preference-compact-dark.png'),
+    fullPage: true,
+  });
+
+  await page.goto('/today');
+  await expect(page.locator('.today-agenda-row')).toHaveCount(3);
+  await expect(page.getByText(UPCOMING_ITEMS[2].titleOrText)).toBeVisible();
+  await expect(page.getByText(UPCOMING_ITEMS[3].titleOrText)).toHaveCount(0);
+});
+
+test('expanded Dashboard settings remain clear in light mode and at 200 percent layout zoom', async ({
+  page,
+}, testInfo) => {
+  await installMocks(page);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/today');
+  await signIn(page);
+  await page.goto('/more/settings');
+
+  const group = page.getByRole('group', {
+    name: profileIdentity.dashboardUpcomingTitle,
+  });
+  await expect(group).toBeVisible();
+  await expect(group.getByRole('radio', { name: '2' })).toBeChecked();
+  await page.screenshot({
+    path: testInfo.outputPath(
+      'planning-dashboard-preference-expanded-light.png',
+    ),
+    fullPage: true,
+  });
+
+  await page.locator('html').evaluate((element) => {
+    element.style.zoom = '2';
+  });
+  const zoomedDimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(zoomedDimensions.scrollWidth).toBeLessThanOrEqual(
+    zoomedDimensions.clientWidth,
+  );
+  await expect(group.getByRole('radio', { name: '1' })).toBeVisible();
+  await expect(group.getByRole('radio', { name: '3' })).toBeVisible();
+  const result = await new AxeBuilder({ page })
+    .include('#settings-dashboard')
+    .analyze();
   expect(result.violations).toEqual([]);
 });

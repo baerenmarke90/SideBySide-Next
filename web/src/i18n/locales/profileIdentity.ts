@@ -33,13 +33,21 @@ const profileIdentity = {
   settingsIntro:
     'Hier verwaltest du deine persönlichen App-Einstellungen, Verbindungen und Daten.',
   settingsPageIntro:
-    'Eure Verbindung zuerst, danach Benachrichtigungen, Darstellung, Daten und sensible Aktionen.',
+    'Eure Verbindung zuerst, danach Benachrichtigungen, Dashboard, Darstellung, Daten und sensible Aktionen.',
   settingsIdentity: 'Profilbild und Anzeigename',
   settingsRelationship: 'Partner und Verbindung',
   settingsNotifications: 'Benachrichtigungen',
   settingsNotificationsIntro:
     'Lege fest, wie eimir. dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
   settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
+  settingsDashboard: 'Dashboard',
+  settingsDashboardIntro:
+    'Passe an, wie viel Raum einzelne Bereiche auf deiner Übersicht einnehmen.',
+  dashboardUpcomingTitle: 'Demnächst',
+  dashboardUpcomingQuestion: 'Wie viele Einträge möchtest du sehen?',
+  dashboardUpcomingLoading: 'Dashboard-Einstellung wird geladen …',
+  dashboardUpcomingSaving: 'Wird gespeichert …',
+  dashboardUpcomingSaved: '✓ Gespeichert',
   anniversaryReminderTitle: 'Jahrestag-Erinnerung',
   anniversaryReminderIntro:
     'Hier kannst du einstellen, ob und wann du an euren nächsten Jahrestag erinnert werden möchtest.',

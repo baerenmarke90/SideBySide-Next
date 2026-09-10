@@ -145,6 +145,15 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
 
     if (
       method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+    ) {
+      await fulfillJson({
+        items: [{ moduleKey: 'upcoming', itemLimit: 2 }],
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
     ) {
       await fulfillJson({

@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { dashboardPreferencesQueryKey } from '../client/dashboardPreferences';
 import accountSettings from '../i18n/locales/accountSettings';
+import profileIdentity from '../i18n/locales/profileIdentity';
 import spaceOffboarding from '../i18n/locales/spaceOffboarding';
 import { SettingsPage } from './SettingsPage';
 
@@ -53,6 +55,9 @@ function renderSettingsPageFixture(): string {
       },
     },
   );
+  queryClient.setQueryData(dashboardPreferencesQueryKey(ACCOUNT_ID, SPACE_ID), {
+    items: [{ moduleKey: 'upcoming', itemLimit: 2 }],
+  });
 
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
@@ -86,6 +91,10 @@ describe('SettingsPage', () => {
     expect(html).toContain('name="anniversaryReminderEnabled"');
     expect(html).toContain('href="/more/notifications"');
 
+    expect(html).toContain('id="settings-dashboard"');
+    expect(html).toContain('name="dashboardUpcomingItemLimit"');
+    expect(html).toContain(profileIdentity.dashboardUpcomingQuestion);
+
     expect(html).toContain('id="settings-appearance"');
     expect(html).toContain('theme-control');
 
@@ -104,13 +113,15 @@ describe('SettingsPage', () => {
 
     const connectionIndex = html.indexOf('id="settings-connection"');
     const notificationsIndex = html.indexOf('id="settings-notifications"');
+    const dashboardIndex = html.indexOf('id="settings-dashboard"');
     const appearanceIndex = html.indexOf('id="settings-appearance"');
     const dataIndex = html.indexOf('id="settings-data"');
     const accountIndex = html.indexOf('id="settings-account"');
 
     expect(connectionIndex).toBeGreaterThanOrEqual(0);
     expect(notificationsIndex).toBeGreaterThan(connectionIndex);
-    expect(appearanceIndex).toBeGreaterThan(notificationsIndex);
+    expect(dashboardIndex).toBeGreaterThan(notificationsIndex);
+    expect(appearanceIndex).toBeGreaterThan(dashboardIndex);
     expect(dataIndex).toBeGreaterThan(appearanceIndex);
     expect(accountIndex).toBeGreaterThan(dataIndex);
   });

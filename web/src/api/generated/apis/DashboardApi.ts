@@ -14,6 +14,21 @@
 
 import * as runtime from '../runtime';
 import {
+    type DashboardModulePreferenceList,
+    DashboardModulePreferenceListFromJSON,
+    DashboardModulePreferenceListToJSON,
+} from '../models/DashboardModulePreferenceList';
+import {
+    type DashboardModulePreferenceUpdate,
+    DashboardModulePreferenceUpdateFromJSON,
+    DashboardModulePreferenceUpdateToJSON,
+} from '../models/DashboardModulePreferenceUpdate';
+import {
+    type DashboardModulePreferenceView,
+    DashboardModulePreferenceViewFromJSON,
+    DashboardModulePreferenceViewToJSON,
+} from '../models/DashboardModulePreferenceView';
+import {
     type DashboardView,
     DashboardViewFromJSON,
     DashboardViewToJSON,
@@ -26,6 +41,16 @@ import {
 
 export interface GetDashboardRequest {
     spaceId: string;
+}
+
+export interface ListDashboardModulePreferencesRequest {
+    spaceId: string;
+}
+
+export interface UpdateDashboardModulePreferenceRequest {
+    moduleKey: string;
+    spaceId: string;
+    dashboardModulePreferenceUpdate: DashboardModulePreferenceUpdate;
 }
 
 /**
@@ -77,6 +102,118 @@ export class DashboardApi extends runtime.BaseAPI {
      */
     async getDashboard(requestParameters: GetDashboardRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DashboardView> {
         const response = await this.getDashboardRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listDashboardModulePreferences without sending the request
+     */
+    async listDashboardModulePreferencesRequestOpts(requestParameters: ListDashboardModulePreferencesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling listDashboardModulePreferences().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/dashboard/preferences`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return the current account\'s effective Dashboard preferences.
+     * List Dashboard Module Preferences
+     */
+    async listDashboardModulePreferencesRaw(requestParameters: ListDashboardModulePreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DashboardModulePreferenceList>> {
+        const requestOptions = await this.listDashboardModulePreferencesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DashboardModulePreferenceListFromJSON(jsonValue));
+    }
+
+    /**
+     * Return the current account\'s effective Dashboard preferences.
+     * List Dashboard Module Preferences
+     */
+    async listDashboardModulePreferences(requestParameters: ListDashboardModulePreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DashboardModulePreferenceList> {
+        const response = await this.listDashboardModulePreferencesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateDashboardModulePreference without sending the request
+     */
+    async updateDashboardModulePreferenceRequestOpts(requestParameters: UpdateDashboardModulePreferenceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['moduleKey'] == null) {
+            throw new runtime.RequiredError(
+                'moduleKey',
+                'Required parameter "moduleKey" was null or undefined when calling updateDashboardModulePreference().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling updateDashboardModulePreference().'
+            );
+        }
+
+        if (requestParameters['dashboardModulePreferenceUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'dashboardModulePreferenceUpdate',
+                'Required parameter "dashboardModulePreferenceUpdate" was null or undefined when calling updateDashboardModulePreference().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/dashboard/preferences/{moduleKey}`;
+        urlPath = urlPath.replace('{moduleKey}', encodeURIComponent(String(requestParameters['moduleKey'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: DashboardModulePreferenceUpdateToJSON(requestParameters['dashboardModulePreferenceUpdate']),
+        };
+    }
+
+    /**
+     * Set one private per-account Dashboard item-limit override.
+     * Update Dashboard Module Preference
+     */
+    async updateDashboardModulePreferenceRaw(requestParameters: UpdateDashboardModulePreferenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DashboardModulePreferenceView>> {
+        const requestOptions = await this.updateDashboardModulePreferenceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DashboardModulePreferenceViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Set one private per-account Dashboard item-limit override.
+     * Update Dashboard Module Preference
+     */
+    async updateDashboardModulePreference(requestParameters: UpdateDashboardModulePreferenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DashboardModulePreferenceView> {
+        const response = await this.updateDashboardModulePreferenceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
