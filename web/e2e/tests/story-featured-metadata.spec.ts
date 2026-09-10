@@ -29,7 +29,7 @@ async function renderMetadataFixture(
             <span class="person-identity" aria-hidden="true">
               <span class="person-identity-avatar-small">A</span>
             </span>
-            <span>von ${LONG_AUTHOR_NAME}</span>
+            <span>by ${LONG_AUTHOR_NAME}</span>
           </span>
         </div>
       </article>
@@ -40,7 +40,7 @@ async function renderMetadataFixture(
             <span class="person-identity" aria-hidden="true">
               <span class="person-identity-avatar-small">A</span>
             </span>
-            <span>von ${LONG_AUTHOR_NAME}</span>
+            <span>by ${LONG_AUTHOR_NAME}</span>
           </span>
         </div>
       </article>
