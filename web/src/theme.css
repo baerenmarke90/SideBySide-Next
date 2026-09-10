@@ -13,7 +13,18 @@
   --color-brand-text: #be2340;
   --color-brand-glow: #d93d5926;
   --color-on-accent: #ffffff;
+  --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgb(255 255 255 / 90%);
+  /*
+   * Legibility scrim for copy that sits on top of user photography.
+   *
+   * Photographs look the same in Light and Dark, so the scrim is theme-neutral
+   * by design and is defined once here rather than per theme. Both endpoints
+   * are tokens so an image-led surface never hardcodes its own black.
+   */
+  --color-media-scrim-strong: rgb(20 12 18 / 82%);
+  --color-media-scrim-mid: rgb(20 12 18 / 42%);
+  --color-media-scrim-clear: rgb(20 12 18 / 0%);
   --color-entry-panel: #faf7f5;
   --color-entry-hero-start: #23121d;
   --color-entry-hero-middle: #47192a;
