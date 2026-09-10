@@ -119,10 +119,9 @@ async function expectMetadataContract(
   expectFits(geometry.authorLabelScrollWidth, geometry.authorLabelClientWidth);
 }
 
-test('Featured Moment metadata uses the shared layout', async (
-  { page },
-  testInfo,
-) => {
+test('Featured Moment metadata uses the shared layout', async ({
+  page,
+}, testInfo) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     for (const width of [390, 320]) {
       await renderFixture(page, width, colorScheme);
