@@ -71,11 +71,9 @@ const m5s5 = {
       retrospectiveAction: 'Erinnerung ansehen',
     },
     monthly: {
-      kicker: 'Euer Alltag',
       title: 'Diesen Monat',
       allAction: 'Alle anzeigen',
       allAriaLabel: 'Alle gemeinsamen Momente ansehen',
-      photoAlt: 'Foto zu {{title}}',
     },
     relationshipSignal: {
       kicker: 'Bei euch passiert',
