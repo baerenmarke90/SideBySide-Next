@@ -128,7 +128,9 @@ test('Featured Moment metadata uses the shared layout', async ({ page }) => {
       await expect(heroMetadata).toContainText(LONG_AUTHOR_NAME);
       const childTags = await heroMetadata
         .locator(':scope > *')
-        .evaluateAll((nodes) => nodes.map((node) => node.tagName.toLowerCase()));
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.tagName.toLowerCase()),
+        );
       expect(childTags).toEqual(['time', 'span']);
 
       await expectMetadataContract(page, '.momente-hero-meta');
