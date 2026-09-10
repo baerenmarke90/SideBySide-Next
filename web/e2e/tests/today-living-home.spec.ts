@@ -683,7 +683,9 @@ test.describe('Today #850: the living home of a relationship', () => {
 
     const rects = await page
       .locator('.today-monthly-tile')
-      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect()));
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.getBoundingClientRect()),
+      );
     expect(rects).toHaveLength(2);
 
     // One horizontal row, not stacked, with the second tile already
