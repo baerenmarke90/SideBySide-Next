@@ -1380,10 +1380,146 @@ describe('TodayPage', () => {
   });
 });
 
-it('renders `Diesen Monat` as up to three real shared photos, never a count derived from the capped feed', () => {
+/*
+ * The no-duplicate composition contract for a partner signal.
+ *
+ * A partner comment renders as `Gerade bei euch`, but what it is *about* is an
+ * ordinary shared item that `Diesen Monat` and `Zuletzt bei euch` would
+ * otherwise show again. The commented item's id therefore counts as featured
+ * content for both sections.
+ */
+function renderWithPartnerComment(commentTargetId: string): string {
   const now = new Date();
   const thisMonth = (day: number) =>
-    new Date(now.getFullYear(), now.getMonth(), day, 12, 0, 0);
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+    space: {
+      id: 'space-1',
+      partner: { id: 'partner-1', displayName: 'Marie' },
+    },
+    relationshipDuration: null,
+    upcoming: [],
+    keepsake: {
+      id: 'mem-featured',
+      type: 'MEMORY',
+      titleOrText: 'Featured Photo',
+      occurredOn: thisMonth(2),
+      previewAttachmentId: 'att-featured',
+    },
+    recentShared: [
+      {
+        id: 'mem-featured',
+        type: 'MEMORY',
+        titleOrText: 'Featured Photo',
+        occurredOn: thisMonth(2),
+        previewAttachmentId: 'att-featured',
+      },
+      {
+        id: 'mem-commented',
+        type: 'MEMORY',
+        titleOrText: 'Commented Photo',
+        occurredOn: thisMonth(3),
+        previewAttachmentId: 'att-commented',
+      },
+      {
+        id: 'mem-other',
+        type: 'MEMORY',
+        titleOrText: 'Other Photo',
+        occurredOn: thisMonth(4),
+        previewAttachmentId: 'att-other',
+      },
+      {
+        id: 'ms-1',
+        type: 'MILESTONE',
+        titleOrText: 'Shared Milestone',
+        occurredOn: thisMonth(5),
+      },
+    ],
+    retrospective: null,
+  });
+  queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+    items: [
+      {
+        id: 'act-1',
+        kind: 'COMMENT_CREATED',
+        actorId: 'partner-1',
+        targetId: commentTargetId,
+        targetType: 'MEMORY',
+        createdAt: new Date(),
+        occurredAt: new Date(),
+        sourceEventId: 'ev-1',
+      },
+    ],
+    nextCursor: null,
+  });
+
+  return renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <TodayPage
+          apis={
+            {
+              activity: {
+                getActivity: () =>
+                  Promise.resolve({ items: [], nextCursor: null }),
+              },
+            } as unknown as M4ProductApis
+          }
+          spaceId="space-1"
+          loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+it('skips a partner comment about the current `Euer Moment` and selects the next eligible module', () => {
+  const html = renderWithPartnerComment('mem-featured');
+
+  // The signal would have duplicated the photo shown large above, so the
+  // chain continued to the next eligible candidate.
+  expect(html).not.toContain('today-living-partner_signal');
+  expect(html).toContain('today-living-milestone');
+  expect(html).toContain('Shared Milestone');
+  // Exactly one contextual module, as always.
+  expect(html.split('today-section-living').length - 1).toBe(1);
+});
+
+it('never repeats the memory a partner commented on in `Diesen Monat` or the trace', () => {
+  const html = renderWithPartnerComment('mem-commented');
+
+  // The partner signal wins precedence, because its target is not featured.
+  expect(html).toContain('today-living-partner_signal');
+
+  // Its underlying memory is featured content now, so neither later section
+  // shows it again.
+  expect(html).toContain('today-section-monthly');
+  expect(html).not.toContain('Commented Photo');
+
+  // The unrelated entries are still there, so nothing was over-filtered.
+  expect(html).toContain('Other Photo');
+  expect(html).toContain('Shared Milestone');
+});
+
+it('keeps an unrelated partner signal winning precedence over the stable candidates', () => {
+  const html = renderWithPartnerComment('mem-elsewhere');
+
+  expect(html).toContain('today-living-partner_signal');
+  expect(html).not.toContain('today-living-milestone');
+  // Nothing is filtered out of the later sections by an off-page target.
+  expect(html).toContain('Commented Photo');
+  expect(html).toContain('Other Photo');
+});
+
+it('renders `Diesen Monat` as up to three real shared photos, never a count derived from the capped feed', () => {
+  const now = new Date();
+  // `occurredOn` is a date-only API value: the generated client materializes
+  // it at midnight UTC, so the fixture is built the same way.
+  const thisMonth = (day: number) =>
+    new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

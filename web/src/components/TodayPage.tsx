@@ -31,6 +31,7 @@ import {
 import { postSnackbar } from '../client/snackbar';
 import {
   type LivingModule,
+  livingModuleContentId,
   selectLivingModule,
   selectMonthlyStrip,
 } from '../client/todayComposition';
@@ -831,23 +832,32 @@ export function TodayPage({
     excludeItemIds: momentItem ? [momentItem.id] : [],
   });
 
-  // 5. Diesen Monat: this month's real shared photos, minus the one already
-  // shown large above.
+  /*
+   * The shared content the page already features prominently, by id.
+   *
+   * For a partner signal that is the item the partner commented *on*, not the
+   * activity entry - otherwise the same Memory could appear as the signal,
+   * again in `Diesen Monat`, and again in the trace. One id set drives every
+   * later section, so the no-duplicate rule stays a single generic rule
+   * rather than a per-module special case.
+   */
+  const featuredIds = new Set<string>();
+  if (momentItem) featuredIds.add(momentItem.id);
+  const livingContentId = livingModuleContentId(livingModule);
+  if (livingContentId) featuredIds.add(livingContentId);
+  const featuredItemIds = [...featuredIds];
+
+  // 5. Diesen Monat: this month's real shared photos, minus anything already
+  // featured above.
   const monthlyStrip = loadMemoryImage
     ? selectMonthlyStrip({
         recentShared,
         now: new Date(),
-        excludeItemIds: momentItem ? [momentItem.id] : [],
+        excludeItemIds: featuredItemIds,
       })
     : [];
 
-  // 6. Zuletzt bei euch: the quiet trace. Anything the page already features
-  // prominently above is filtered out so the same entry never appears twice.
-  const featuredIds = new Set<string>();
-  if (momentItem) featuredIds.add(momentItem.id);
-  if (livingModule && livingModule.kind !== 'partner_signal') {
-    featuredIds.add(livingModule.item.id);
-  }
+  // 6. Zuletzt bei euch: the quiet trace, minus the same featured content.
   const recentSharedForTrace = recentShared.filter(
     (item) => !featuredIds.has(item.id),
   );

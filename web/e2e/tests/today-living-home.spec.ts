@@ -35,6 +35,16 @@ const PHOTO_FOR_ATTACHMENT: Record<string, string> = {
 };
 
 const NOW = new Date();
+/*
+ * `occurredOn` is an OpenAPI `format: date` field, so the server sends a bare
+ * `YYYY-MM-DD` string. The mock sends the same shape: a full timestamp here
+ * would exercise a payload the API never produces and would hide the
+ * date-only month classification these tests are meant to cover.
+ */
+const thisMonthDate = (day: number) =>
+  `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+const inDaysDate = (days: number) =>
+  new Date(NOW.getTime() + days * 86_400_000).toISOString().slice(0, 10);
 const thisMonth = (day: number) =>
   new Date(NOW.getFullYear(), NOW.getMonth(), day, 12, 0, 0).toISOString();
 const inDays = (days: number) =>
@@ -74,7 +84,7 @@ const UPCOMING = [
     type: 'IMPORTANT_DATE',
     titleOrText: 'Geburtstag von Mira',
     scheduledAt: null,
-    occurredOn: inDays(25),
+    occurredOn: inDaysDate(25),
     createdAt: inDays(-9),
     previewAttachmentId: null,
   },
@@ -84,7 +94,7 @@ const MOMENT = {
   id: 'mem-moment',
   type: 'MEMORY',
   titleOrText: 'Frühstück in Saarbrücken',
-  occurredOn: thisMonth(2),
+  occurredOn: thisMonthDate(2),
   createdAt: thisMonth(2),
   scheduledAt: null,
   previewAttachmentId: 'att-moment',
@@ -94,7 +104,7 @@ const STRIP_PHOTOS = [1, 2, 3].map((n) => ({
   id: `mem-strip-${n}`,
   type: 'MEMORY',
   titleOrText: `Gemeinsamer Moment ${n}`,
-  occurredOn: thisMonth(3 + n),
+  occurredOn: thisMonthDate(3 + n),
   createdAt: thisMonth(3 + n),
   scheduledAt: null,
   previewAttachmentId: `att-strip-${n}`,
@@ -114,7 +124,7 @@ const TRACE_ONLY = {
   id: 'hm-1',
   type: 'HEART_MOMENT',
   titleOrText: 'Kleine Alltagsmomente',
-  occurredOn: thisMonth(3),
+  occurredOn: thisMonthDate(3),
   createdAt: thisMonth(3),
   scheduledAt: null,
   previewAttachmentId: null,
@@ -660,6 +670,78 @@ test.describe('Today #850: the living home of a relationship', () => {
     await expectNoHorizontalOverflow(page);
     await expectNoWcagViolations(page);
     await capture(page, testInfo, 'sparse-390-light');
+  });
+
+  test('never shows the same shared memory as both a partner signal and a later section', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, {
+      ...RICH_SPACE,
+      // The partner commented on the second photo of the month, which
+      // `Diesen Monat` and `Zuletzt bei euch` would otherwise show again.
+      activity: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: PARTNER_ID,
+          targetType: 'MEMORY',
+          targetId: STRIP_PHOTOS[0].id,
+          createdAt: inDays(-1),
+          occurredAt: inDays(-1),
+          sourceEventId: 'ev-1',
+        },
+      ],
+    });
+    await signInAndOpenToday(page);
+
+    // The signal takes the contextual slot, because its target is not the
+    // photo already featured as `Euer Moment`.
+    await expect(page.locator('.today-living-partner_signal')).toHaveCount(1);
+
+    // Its underlying memory is featured content now, so no later section
+    // links to it again anywhere on the page.
+    const links = await page
+      .locator('.today-content a')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('href') ?? ''),
+      );
+    const commentedHref = `/story/memories/${STRIP_PHOTOS[0].id}`;
+    expect(links.filter((href) => href === commentedHref)).toHaveLength(1);
+
+    // The other photos of the month are untouched, so nothing over-filtered.
+    await expect(page.locator('.today-monthly-tile')).toHaveCount(2);
+    await expectNormativeOrder(page);
+  });
+
+  test('skips a partner comment about the current `Euer Moment` and falls through the chain', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, {
+      ...RICH_SPACE,
+      // The partner commented on the very photo shown large above.
+      activity: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: PARTNER_ID,
+          targetType: 'MEMORY',
+          targetId: MOMENT.id,
+          createdAt: inDays(-1),
+          occurredAt: inDays(-1),
+          sourceEventId: 'ev-1',
+        },
+      ],
+    });
+    await signInAndOpenToday(page);
+
+    // Selecting it would have duplicated `Euer Moment`, so the deterministic
+    // chain continued to the next eligible candidate instead.
+    await expect(page.locator('.today-living-partner_signal')).toHaveCount(0);
+    await expect(page.locator('.today-living-wish')).toHaveCount(1);
+    await expect(page.locator('.today-living')).toHaveCount(1);
+    await expectNormativeOrder(page);
   });
 
   test('omits `Gerade bei euch` entirely when nothing qualifies', async ({

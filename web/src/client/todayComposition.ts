@@ -50,7 +50,11 @@ export type LivingModule =
  *    content that keeps the slot meaningful on a quiet day.
  *
  * `excludeItemIds` keeps the slot from repeating something the page already
- * shows prominently above it (the `Euer Moment` photo in particular).
+ * shows prominently above it (the `Euer Moment` photo in particular). It
+ * applies to every candidate, including a partner signal: a comment *about*
+ * the memory already displayed large above is still that same memory, so it
+ * is skipped and the search continues down the chain. Exclusion is matched by
+ * content id alone, with no knowledge of routes or item types.
  *
  * Returns `null` when nothing qualifies; the section is then omitted entirely
  * rather than rendered as an empty placeholder.
@@ -72,13 +76,19 @@ export function selectLivingModule({
 
   // Only a genuine partner comment counts. An item the viewer wrote, or one
   // with no attributable actor, is not a signal *from* the partner.
+  //
+  // A comment whose target is already featured above is skipped rather than
+  // ending the search, so the next genuine partner comment still gets the
+  // slot before the chain falls through to the stable candidates. A comment
+  // with no target cannot duplicate anything, so it stays eligible.
   const partnerSignal =
     partnerId != null
       ? activityItems?.find(
           (item) =>
             item.kind === 'COMMENT_CREATED' &&
             item.actorId != null &&
-            item.actorId === partnerId,
+            item.actorId === partnerId &&
+            (item.targetId == null || !excluded.has(item.targetId)),
         )
       : undefined;
   if (partnerSignal) {
@@ -104,8 +114,56 @@ export function selectLivingModule({
   return null;
 }
 
-function itemMoment(item: DashboardItem): Date | null {
-  return item.occurredOn ?? item.createdAt ?? null;
+/**
+ * The id of the shared content a selected module is *about*.
+ *
+ * For a partner signal that is the commented item, not the activity entry —
+ * which is exactly the id the sections below must not repeat. Returning one
+ * plain id keeps the page's no-duplicate rule a single generic comparison
+ * rather than a per-module special case.
+ *
+ * `null` when the module refers to no shared item (a comment whose target is
+ * unknown), in which case there is nothing to exclude.
+ */
+export function livingModuleContentId(
+  module: LivingModule | null | undefined,
+): string | null {
+  if (!module) return null;
+  return module.kind === 'partner_signal'
+    ? module.activityItem.targetId
+    : module.item.id;
+}
+
+/**
+ * The calendar year and month a Dashboard item belongs to.
+ *
+ * `occurredOn` is an OpenAPI `format: date` value. The generated client
+ * materializes it with `new Date('YYYY-MM-DD')`, which JavaScript reads as
+ * midnight *UTC*, and serializes it back with `toISOString().substring(0, 10)`
+ * — so UTC components are the authoritative calendar date the API encoded.
+ * Because midnight UTC can only shift *backwards* into the previous day under
+ * a negative offset, reading it with local components moves September 1 into
+ * August for every viewer west of Greenwich.
+ *
+ * `createdAt` is a real `format: date-time` instant, so it keeps the
+ * browser-local reading the rest of the client already presents it with.
+ */
+export function itemCalendarMonth(
+  item: DashboardItem,
+): { year: number; month: number } | null {
+  if (item.occurredOn) {
+    return {
+      year: item.occurredOn.getUTCFullYear(),
+      month: item.occurredOn.getUTCMonth(),
+    };
+  }
+  if (item.createdAt) {
+    return {
+      year: item.createdAt.getFullYear(),
+      month: item.createdAt.getMonth(),
+    };
+  }
+  return null;
 }
 
 /**
@@ -120,6 +178,10 @@ function itemMoment(item: DashboardItem): Date | null {
  * month contains. `DashboardView.recentShared` is capped server-side for
  * presentation, so any total counted from it would silently understate a busy
  * month. Showing life truthfully beats showing a number that can be wrong.
+ *
+ * `now` defines the viewer's current browser calendar month; each item is
+ * classified by {@link itemCalendarMonth}, which reads a date-only
+ * `occurredOn` as the calendar date the API actually encoded.
  */
 export function selectMonthlyStrip({
   recentShared,
@@ -139,9 +201,9 @@ export function selectMonthlyStrip({
       if (item.type !== 'MEMORY') return false;
       if (!item.previewAttachmentId) return false;
       if (excluded.has(item.id)) return false;
-      const moment = itemMoment(item);
-      if (!moment) return false;
-      return moment.getFullYear() === year && moment.getMonth() === month;
+      const calendar = itemCalendarMonth(item);
+      if (!calendar) return false;
+      return calendar.year === year && calendar.month === month;
     })
     .slice(0, MONTHLY_STRIP_MAX_ITEMS);
 }

@@ -2,10 +2,25 @@ import { describe, expect, it } from 'vitest';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import {
+  itemCalendarMonth,
+  livingModuleContentId,
   MONTHLY_STRIP_MAX_ITEMS,
   selectLivingModule,
   selectMonthlyStrip,
 } from './todayComposition';
+
+/**
+ * Build an `occurredOn` exactly the way the generated client does.
+ *
+ * The OpenAPI type is `format: date`, so the wire value is a bare
+ * `YYYY-MM-DD` string and `new Date(...)` reads it as midnight UTC. Writing
+ * the fixture this way — rather than with local `new Date(y, m, d)` — is what
+ * makes these assertions encode the date-only contract instead of quietly
+ * depending on the test machine running in UTC.
+ */
+function occurredOn(isoDate: string): Date {
+  return new Date(isoDate);
+}
 
 const PARTNER_ID = 'partner-1';
 const VIEWER_ID = 'viewer-1';
@@ -180,11 +195,181 @@ describe('selectLivingModule', () => {
       }),
     ).toBeNull();
   });
+
+  it('skips a partner comment about content the page already features, and continues down the chain', () => {
+    const featured = 'mem-featured';
+    const result = selectLivingModule({
+      partnerId: PARTNER_ID,
+      activityItems: [comment({ targetId: featured })],
+      retrospective,
+      recentShared: [wish],
+      excludeItemIds: [featured],
+    });
+
+    expect(result?.kind).toBe('retrospective');
+  });
+
+  it('falls all the way through when the only partner comment is about featured content', () => {
+    const featured = 'mem-featured';
+    expect(
+      selectLivingModule({
+        partnerId: PARTNER_ID,
+        activityItems: [comment({ targetId: featured })],
+        retrospective: null,
+        recentShared: [],
+        excludeItemIds: [featured],
+      }),
+    ).toBeNull();
+  });
+
+  it('still prefers the next genuine partner comment over the stable candidates', () => {
+    const featured = 'mem-featured';
+    const result = selectLivingModule({
+      partnerId: PARTNER_ID,
+      activityItems: [
+        comment({ id: 'a1', targetId: featured }),
+        comment({ id: 'a2', targetId: 'mem-other' }),
+      ],
+      retrospective,
+      recentShared: [wish],
+      excludeItemIds: [featured],
+    });
+
+    expect(result).toEqual({
+      kind: 'partner_signal',
+      activityItem: comment({ id: 'a2', targetId: 'mem-other' }),
+    });
+  });
+
+  it('keeps an unrelated partner signal winning precedence', () => {
+    const result = selectLivingModule({
+      partnerId: PARTNER_ID,
+      activityItems: [comment({ targetId: 'mem-other' })],
+      retrospective,
+      recentShared: [wish, plan, milestone],
+      excludeItemIds: ['mem-featured'],
+    });
+
+    expect(result?.kind).toBe('partner_signal');
+  });
+
+  it('keeps a partner comment with no target eligible, since it can duplicate nothing', () => {
+    const result = selectLivingModule({
+      partnerId: PARTNER_ID,
+      activityItems: [comment({ targetId: null })],
+      retrospective,
+      recentShared: [],
+      excludeItemIds: ['mem-featured'],
+    });
+
+    expect(result?.kind).toBe('partner_signal');
+  });
+});
+
+describe('livingModuleContentId', () => {
+  it('reports the commented item for a partner signal, not the activity entry', () => {
+    expect(
+      livingModuleContentId({
+        kind: 'partner_signal',
+        activityItem: comment({ id: 'activity-1', targetId: 'mem-9' }),
+      }),
+    ).toBe('mem-9');
+  });
+
+  it('reports the item id for every stable candidate kind', () => {
+    for (const kind of [
+      'retrospective',
+      'wish',
+      'plan',
+      'milestone',
+    ] as const) {
+      expect(
+        livingModuleContentId({ kind, item: item({ id: `x-${kind}` }) }),
+      ).toBe(`x-${kind}`);
+    }
+  });
+
+  it('reports nothing when there is no module, or no target to exclude', () => {
+    expect(livingModuleContentId(null)).toBeNull();
+    expect(
+      livingModuleContentId({
+        kind: 'partner_signal',
+        activityItem: comment({ targetId: null }),
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('itemCalendarMonth', () => {
+  it('reads a date-only occurredOn as the calendar date the API encoded', () => {
+    // A date-only value materializes at midnight UTC, so reading it with
+    // local components can only ever shift it *backwards*, to the previous
+    // day, for viewers west of Greenwich. The first of the month is therefore
+    // the case that breaks: local components report August.
+    expect(
+      itemCalendarMonth(
+        item({ id: 'a', occurredOn: occurredOn('2026-09-01') }),
+      ),
+    ).toEqual({
+      year: 2026,
+      month: 8,
+    });
+    // The other side of the same boundary, pinned so a future change cannot
+    // over-correct and pull the previous month in.
+    expect(
+      itemCalendarMonth(
+        item({ id: 'b', occurredOn: occurredOn('2026-08-31') }),
+      ),
+    ).toEqual({
+      year: 2026,
+      month: 7,
+    });
+    expect(
+      itemCalendarMonth(
+        item({ id: 'c', occurredOn: occurredOn('2026-12-31') }),
+      ),
+    ).toEqual({
+      year: 2026,
+      month: 11,
+    });
+    expect(
+      itemCalendarMonth(
+        item({ id: 'd', occurredOn: occurredOn('2027-01-01') }),
+      ),
+    ).toEqual({
+      year: 2027,
+      month: 0,
+    });
+  });
+
+  it('reads a createdAt instant with the browser-local semantics used elsewhere', () => {
+    const instant = new Date('2026-09-15T12:00:00Z');
+    expect(itemCalendarMonth(item({ id: 'e', createdAt: instant }))).toEqual({
+      year: instant.getFullYear(),
+      month: instant.getMonth(),
+    });
+  });
+
+  it('prefers occurredOn over createdAt, and reports nothing when neither exists', () => {
+    expect(
+      itemCalendarMonth(
+        item({
+          id: 'f',
+          occurredOn: occurredOn('2026-09-01'),
+          createdAt: new Date('2026-07-04T12:00:00Z'),
+        }),
+      ),
+    ).toEqual({ year: 2026, month: 8 });
+    expect(itemCalendarMonth(item({ id: 'g' }))).toBeNull();
+  });
 });
 
 describe('selectMonthlyStrip', () => {
+  // Mid-month, so `now`'s browser-local month is September at every real UTC
+  // offset and the suite never depends on where it runs.
   const now = new Date('2026-09-10T12:00:00Z');
-  const thisMonth = (day: number) => new Date(2026, 8, day, 12, 0, 0);
+  const thisMonth = (day: number) =>
+    occurredOn(`2026-09-${String(day).padStart(2, '0')}`);
 
   const photo = (id: string, day: number) =>
     item({
@@ -224,13 +409,13 @@ describe('selectMonthlyStrip', () => {
       id: 'old',
       type: 'MEMORY',
       previewAttachmentId: 'att-old',
-      occurredOn: new Date(2026, 7, 20, 12, 0, 0),
+      occurredOn: occurredOn('2026-08-20'),
     });
     const lastYear = item({
       id: 'ancient',
       type: 'MEMORY',
       previewAttachmentId: 'att-ancient',
-      occurredOn: new Date(2025, 8, 20, 12, 0, 0),
+      occurredOn: occurredOn('2025-09-20'),
     });
 
     expect(
@@ -267,11 +452,62 @@ describe('selectMonthlyStrip', () => {
       id: 'm-created',
       type: 'MEMORY',
       previewAttachmentId: 'att-created',
-      createdAt: thisMonth(7),
+      // A real instant, mid-month, so its browser-local month is September
+      // at every real UTC offset.
+      createdAt: new Date('2026-09-07T12:00:00Z'),
     });
     expect(
       selectMonthlyStrip({ recentShared: [created], now }).map((i) => i.id),
     ).toEqual(['m-created']);
+  });
+
+  /*
+   * The date-only boundary contract.
+   *
+   * `occurredOn` arrives as `YYYY-MM-DD` and materializes as midnight UTC, so
+   * browser-local components can only shift it backwards a day — which moved
+   * the first of the month into the previous month for every viewer west of
+   * Greenwich. These cases pin both edges of the boundary and hold wherever
+   * the suite runs, rather than passing only because CI happens to be UTC.
+   */
+  it('keeps the first day of the month in the month the API encoded', () => {
+    const firstOfMonth = item({
+      id: 'm-first',
+      type: 'MEMORY',
+      previewAttachmentId: 'att-first',
+      occurredOn: occurredOn('2026-09-01'),
+    });
+    expect(itemCalendarMonth(firstOfMonth)).toEqual({ year: 2026, month: 8 });
+    expect(
+      selectMonthlyStrip({ recentShared: [firstOfMonth], now }).map(
+        (i) => i.id,
+      ),
+    ).toEqual(['m-first']);
+  });
+
+  it('excludes the last day of the previous month', () => {
+    const lastOfPrevious = item({
+      id: 'm-prev',
+      type: 'MEMORY',
+      previewAttachmentId: 'att-prev',
+      occurredOn: occurredOn('2026-08-31'),
+    });
+    expect(itemCalendarMonth(lastOfPrevious)).toEqual({ year: 2026, month: 7 });
+    expect(selectMonthlyStrip({ recentShared: [lastOfPrevious], now })).toEqual(
+      [],
+    );
+  });
+
+  it('keeps an ordinary middle-of-month date', () => {
+    const middle = item({
+      id: 'm-middle',
+      type: 'MEMORY',
+      previewAttachmentId: 'att-middle',
+      occurredOn: occurredOn('2026-09-15'),
+    });
+    expect(
+      selectMonthlyStrip({ recentShared: [middle], now }).map((i) => i.id),
+    ).toEqual(['m-middle']);
   });
 
   it('never repeats the photo already shown large as Euer Moment', () => {
