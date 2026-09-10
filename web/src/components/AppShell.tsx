@@ -24,6 +24,7 @@ import { DestinationIcon } from './DestinationIcon';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
+import { RouteEntryHandoff } from './RouteEntryHandoff';
 import { Snackbar } from './Snackbar';
 import { ThemeControl } from './ThemeControl';
 
@@ -160,6 +161,7 @@ export function AppShell({
   return (
     <div className="product-shell">
       <ThemeControl />
+      <RouteEntryHandoff />
       <a className="skip-link" href="#main-content">
         {t('navigation.skipToContent')}
       </a>
