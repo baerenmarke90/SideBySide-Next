@@ -323,8 +323,7 @@
   max-width: 100%;
 }
 
-.today-agenda-list:has(> .today-agenda-row:nth-child(2))
-  > .today-agenda-row {
+.today-agenda-list:has(> .today-agenda-row:nth-child(2)) > .today-agenda-row {
   /* Most of the current card, plus a deliberate sliver of the next one. */
   flex: 0 0 85%;
   max-width: 85%;
@@ -340,8 +339,7 @@
   }
 
   .today-agenda-row,
-  .today-agenda-list:has(> .today-agenda-row:nth-child(2))
-    > .today-agenda-row {
+  .today-agenda-list:has(> .today-agenda-row:nth-child(2)) > .today-agenda-row {
     flex: 1 1 220px;
     max-width: 18rem;
   }

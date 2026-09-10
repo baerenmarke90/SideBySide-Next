@@ -399,6 +399,26 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
       })
       .map((element) => {
         const rect = element.getBoundingClientRect();
+        // A control inside its own native horizontal-scroll region (a
+        // carousel using `overflow-x` + `scroll-snap`, no drag library) is
+        // reachable by swiping that region - it is not "clipped" the way a
+        // control genuinely stuck outside the page would be. Page-level
+        // overflow is still caught separately below via `scrollWidth`.
+        let reachableByScroll = false;
+        for (
+          let ancestor = element.parentElement;
+          ancestor && ancestor !== document.body;
+          ancestor = ancestor.parentElement
+        ) {
+          const overflowX = getComputedStyle(ancestor).overflowX;
+          if (
+            (overflowX === 'auto' || overflowX === 'scroll') &&
+            ancestor.scrollWidth > ancestor.clientWidth + 1
+          ) {
+            reachableByScroll = true;
+            break;
+          }
+        }
         return {
           label:
             element.getAttribute('aria-label') ||
@@ -407,6 +427,7 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
             element.tagName,
           left: rect.left,
           right: rect.right,
+          reachableByScroll,
         };
       });
 
@@ -418,9 +439,13 @@ async function expectHorizontalReflow(page: Page): Promise<void> {
         .filter((box) => box.left < -1 || box.right > root.clientWidth + 1)
         .sort((a, b) => b.right - a.right)
         .slice(0, 12),
-      clippedControls: controls.filter(
-        (control) => control.left < -1 || control.right > root.clientWidth + 1,
-      ),
+      clippedControls: controls
+        .filter(
+          (control) =>
+            (control.left < -1 || control.right > root.clientWidth + 1) &&
+            !control.reachableByScroll,
+        )
+        .map(({ label, left, right }) => ({ label, left, right })),
     };
   });
 
