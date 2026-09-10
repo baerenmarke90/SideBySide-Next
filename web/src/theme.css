@@ -446,6 +446,7 @@ button.secondary,
 
 /* Semantic Motion Foundation */
 :root {
+  --opacity-disabled: 0.56;
   --motion-duration-short: 160ms;
   --motion-duration-medium: 220ms;
   --motion-duration-long: 300ms;

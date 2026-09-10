@@ -10,6 +10,10 @@ import type { DashboardRelationshipDuration } from '../api/generated/models/Dash
 import type { DashboardView } from '../api/generated/models/DashboardView';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
 import { dashboardQueryKey } from '../client/dashboardQueries';
+import {
+  dashboardPreferencesQueryKey,
+  limitUpcomingItems,
+} from '../client/dashboardPreferences';
 import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
 import {
   dashboardItemPath,
@@ -600,6 +604,13 @@ export function TodayPage({
     queryFn: () => apiCall(() => apis.dashboard.getDashboard({ spaceId })),
     retry: false,
   });
+  const dashboardPreferencesQuery = useQuery({
+    queryKey: dashboardPreferencesQueryKey(account?.id ?? '', spaceId),
+    queryFn: () =>
+      apiCall(() => apis.dashboard.listDashboardModulePreferences({ spaceId })),
+    enabled: Boolean(account?.id && spaceId),
+    retry: false,
+  });
 
   const activityQuery = useQuery({
     queryKey: ['m4', 'activity', spaceId],
@@ -653,11 +664,15 @@ export function TodayPage({
     partnerProfileQuery.data?.profileAttachmentId,
   );
 
-  // 1. Shared Planning Horizon: every upcoming item, in the same calm agenda
+  // 1. Shared Planning Horizon: the viewer's short personal horizon, in the
+  // same calm agenda
   // language (compact date-block rows). The Design Principles orchestration
   // invariant requires this to stay one coherent module rather than promoting
   // the first item into its own dashboard-style status card.
-  const upcoming = dashboardQuery.data?.upcoming ?? [];
+  const upcoming = limitUpcomingItems(
+    dashboardQuery.data?.upcoming ?? [],
+    dashboardPreferencesQuery.data,
+  );
 
   // 2. Relationship Signal Slot (0 or 1 item):
   // Curated partner interaction (e.g. partner commented on a shared memory).
@@ -853,7 +868,7 @@ export function TodayPage({
 
               {!hasPlanningModules ? keepsakeSection : null}
 
-              {/* ROLE: Shared Planning Horizon (calm agenda rows, every upcoming
+              {/* ROLE: Shared Planning Horizon (calm agenda rows, the viewer's
                   item in the same visual language) + Relationship Signal. Both
                   are optional and share one two-zone area on wide screens so the
                   first upcoming item never becomes its own dashboard-style card. */}

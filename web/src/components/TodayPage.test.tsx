@@ -3,21 +3,37 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
 import type { M4ProductApis } from '../client/m4Product';
+import { dashboardPreferencesQueryKey } from '../client/dashboardPreferences';
 import { i18n } from '../i18n';
 import m5s5 from '../i18n/locales/m5s5';
 import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
-function renderTodayPage(dashboardData: unknown): string {
+function renderTodayPage(
+  dashboardData: unknown,
+  itemLimit?: 1 | 2 | 3,
+): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], dashboardData);
+  if (itemLimit !== undefined) {
+    queryClient.setQueryData(
+      dashboardPreferencesQueryKey('account-1', 'space-1'),
+      {
+        items: [{ moduleKey: 'upcoming', itemLimit }],
+      },
+    );
+  }
 
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <TodayPage apis={{} as M4ProductApis} spaceId="space-1" />
+        <TodayPage
+          apis={{} as M4ProductApis}
+          spaceId="space-1"
+          account={{ id: 'account-1', displayName: 'Alex' }}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -167,6 +183,44 @@ describe('TodayPage', () => {
     // No card-carousel markup for the secondary agenda
     expect(html).not.toContain('today-stream-upcoming');
   });
+
+  it.each([
+    [undefined, ['Upcoming 1', 'Upcoming 2'], ['Upcoming 3', 'Upcoming 4']],
+    [1, ['Upcoming 1'], ['Upcoming 2', 'Upcoming 3', 'Upcoming 4']],
+    [2, ['Upcoming 1', 'Upcoming 2'], ['Upcoming 3', 'Upcoming 4']],
+    [3, ['Upcoming 1', 'Upcoming 2', 'Upcoming 3'], ['Upcoming 4']],
+  ] as const)(
+    'renders the effective personal upcoming limit without changing order',
+    (itemLimit, visible, hidden) => {
+      const html = renderTodayPage(
+        {
+          space: {
+            id: 'space-1',
+            partner: { id: 'partner-1', displayName: 'Marie' },
+          },
+          relationshipDuration: null,
+          upcoming: [1, 2, 3, 4].map((position) => ({
+            id: `plan-${position}`,
+            type: 'PLAN',
+            titleOrText: `Upcoming ${position}`,
+            scheduledAt: new Date(`2026-09-${position + 10}T10:00:00Z`),
+          })),
+          recentShared: [],
+          retrospective: null,
+        },
+        itemLimit,
+      );
+
+      for (const title of visible) expect(html).toContain(title);
+      for (const title of hidden) expect(html).not.toContain(title);
+      for (const [index, title] of visible.entries()) {
+        if (index === 0) continue;
+        expect(html.indexOf(visible[index - 1])).toBeLessThan(
+          html.indexOf(title),
+        );
+      }
+    },
+  );
 
   it('renders the server-provided Keepsake as the Heroic focal point when no retrospective exists, and filters it out of the Shared Trace below', () => {
     const queryClient = new QueryClient({

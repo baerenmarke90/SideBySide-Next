@@ -13,6 +13,9 @@ describe('SettingsIndex', () => {
     expect(html).toContain('href="#settings-notifications"');
     expect(html).toContain(`>${profileIdentity.settingsNotifications}<`);
 
+    expect(html).toContain('href="#settings-dashboard"');
+    expect(html).toContain(`>${profileIdentity.settingsDashboard}<`);
+
     expect(html).toContain('href="#settings-appearance"');
     expect(html).toContain(`>${de.theme.label}<`);
 
@@ -26,6 +29,9 @@ describe('SettingsIndex', () => {
       html.indexOf('href="#settings-notifications"'),
     );
     expect(html.indexOf('href="#settings-notifications"')).toBeLessThan(
+      html.indexOf('href="#settings-dashboard"'),
+    );
+    expect(html.indexOf('href="#settings-dashboard"')).toBeLessThan(
       html.indexOf('href="#settings-appearance"'),
     );
     expect(html.indexOf('href="#settings-data"')).toBeLessThan(
