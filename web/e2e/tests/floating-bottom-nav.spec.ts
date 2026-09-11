@@ -415,20 +415,28 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(floatingShell).toBeVisible();
 
     const saveButton = page.getByRole('button', { name: de.memory.save });
+    const cancelButton = page.getByRole('link', { name: de.common.cancel });
     await expect(saveButton).toBeVisible();
+    await expect(cancelButton).toBeVisible();
 
     // Scroll to bottom
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(100);
 
     const saveBox = await saveButton.boundingBox();
+    const cancelBox = await cancelButton.boundingBox();
     const shellBox = await floatingShell.boundingBox();
     expect(saveBox).not.toBeNull();
+    expect(cancelBox).not.toBeNull();
     expect(shellBox).not.toBeNull();
 
-    if (saveBox && shellBox) {
-      // Save button bottom must be strictly above the floating bar top
+    if (saveBox && cancelBox && shellBox) {
+      // Both the save button and bottom-most cancel link must be strictly above the floating bar top
       expect(saveBox.y + saveBox.height).toBeLessThan(shellBox.y);
+      expect(cancelBox.y + cancelBox.height).toBeLessThan(shellBox.y);
+      expect(
+        shellBox.y - (cancelBox.y + cancelBox.height),
+      ).toBeGreaterThanOrEqual(8);
     }
   });
 
@@ -451,6 +459,97 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       .disableRules(['color-contrast'])
       .analyze();
     expect(memoryAxe.violations).toEqual([]);
+  });
+
+  test('200 percent zoom / large-text: floating navigation remains usable and collision-free', async ({
+    page,
+  }) => {
+    // 780px viewport at 200% zoom represents the 390px mobile reference under 2x layout scale
+    // following the established pattern in people-important-dates-mobile-first.spec.ts
+    await page.setViewportSize({ width: 780, height: 844 });
+    await installApiMocks(page);
+    await page.goto('/login');
+    await signIn(page);
+    await page.waitForURL('**/today');
+
+    // Apply established repository zoom methodology
+    await page.locator('html').evaluate((element) => {
+      element.style.zoom = '2';
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    // 1. No horizontal overflow
+    await expectNoHorizontalOverflow(page);
+
+    // 2. Floating navigation remains visible and usable
+    const floatingShell = page.locator('.mobile-bottom-shell');
+    await expect(floatingShell).toBeVisible();
+
+    // 3. Four destination labels remain understandable and present
+    const links = floatingShell.locator('.mobile-bottom-nav a.shell-nav-link');
+    await expect(links).toHaveCount(4);
+    for (let i = 0; i < 4; i += 1) {
+      await expect(links.nth(i)).toBeVisible();
+    }
+    const labels = await links.allInnerTexts();
+    expect(labels.map((l) => l.trim())).toEqual([
+      navigation.today,
+      navigation.story,
+      navigation.plan,
+      navigation.more,
+    ]);
+
+    // 4. Center Quick Create action remains correctly positioned & visible
+    const trigger = floatingShell.locator(
+      '.mobile-quick-create button.quick-create-trigger',
+    );
+    await expect(trigger).toBeVisible();
+
+    // 5. No collision between destinations and center action
+    const momenteBox = await links.nth(1).boundingBox();
+    const triggerBox = await trigger.boundingBox();
+    const planenBox = await links.nth(2).boundingBox();
+    expect(momenteBox).not.toBeNull();
+    expect(triggerBox).not.toBeNull();
+    expect(planenBox).not.toBeNull();
+    if (momenteBox && triggerBox && planenBox) {
+      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
+        triggerBox.x + 1,
+      );
+      expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
+        planenBox.x + 1,
+      );
+    }
+
+    // 6. Bottom content/actions on Memory Create remain scrollable clear of the shell under 200% zoom
+    await page.goto('/story/memories/new');
+    await page.locator('html').evaluate((element) => {
+      element.style.zoom = '2';
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(100);
+
+    const cancelBtn = page.getByRole('link', { name: de.common.cancel });
+    const zoomShell = page.locator('.mobile-bottom-shell');
+    await expect(cancelBtn).toBeVisible();
+    await expect(zoomShell).toBeVisible();
+
+    const cancelB = await cancelBtn.boundingBox();
+    const shellB = await zoomShell.boundingBox();
+    if (cancelB && shellB) {
+      expect(cancelB.y + cancelB.height).toBeLessThanOrEqual(shellB.y + 1);
+    }
   });
 
   test('captures required visual evidence matrix', async ({ page }) => {
@@ -538,13 +637,13 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '08-small-height-390x640.png'),
     });
 
-    // 9. Keyboard-open state (focused input on Memory Create)
-    await page.setViewportSize({ width: 390, height: 844 });
+    // 9. Constrained-height form focus state (390x500) representing software-keyboard occlusion
+    await page.setViewportSize({ width: 390, height: 500 });
     await page.goto('/story/memories/new');
     const titleInput = page.getByLabel(de.memory.titleLabel);
     await titleInput.focus();
     await page.screenshot({
-      path: path.join(EVIDENCE_DIR, '09-keyboard-open-state.png'),
+      path: path.join(EVIDENCE_DIR, '09-constrained-height-form-focus.png'),
     });
 
     // 10. Expanded desktop regression (1280x800)
@@ -554,6 +653,22 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(page.locator('.shell-nav')).toBeVisible();
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '10-expanded-desktop-1280x800.png'),
+    });
+
+    // 11. Large text / 200 percent layout zoom (780x844 representing 390px reference)
+    await page.setViewportSize({ width: 780, height: 844 });
+    await page.goto('/today');
+    await page.locator('html').evaluate((element) => {
+      element.style.zoom = '2';
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await page.screenshot({
+      path: path.join(EVIDENCE_DIR, '11-zoom-200-percent.png'),
     });
   });
 });
