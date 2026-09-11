@@ -1,7 +1,6 @@
 const privateArea = {
   eyebrow: 'Für mich',
-  intro:
-    'Ein Ort nur für dich – für Geschenkideen, kleine Überraschungen und Gedanken, die du erst einmal für dich behalten möchtest.',
+  intro: 'Nur für dich – dein Partner sieht das nicht.',
   privacyLabel: 'Nur für mich',
   backToMore: '← Zurück zu Mehr',
   refresh: 'Aktualisieren',
@@ -28,8 +27,7 @@ const privateArea = {
     title: 'Für mich',
     body: 'Notizen, Geschenkideen und Listen, die nur für dich bestimmt sind.',
     action: 'Bereich öffnen',
-    privacy:
-      'Hier werden keine privaten Anzahlen oder Inhalte mit deinem Partner geteilt.',
+    privacy: 'Was hier steht, bleibt zwischen dir und der App.',
   },
   notes: {
     title: 'Notizen für mich',
