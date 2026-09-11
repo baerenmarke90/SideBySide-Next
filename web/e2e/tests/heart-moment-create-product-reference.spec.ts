@@ -197,9 +197,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const visibility = page.locator('.heart-moment-create-visibility');
       const actions = page.locator('.heart-moment-create-actions');
       const photoInput = page.locator('#heart-moment-create-photo');
-      const sharedRadio = page.locator('#heart-moment-create-visibility-shared');
-      const privateRadio = page.locator('#heart-moment-create-visibility-private');
-      const privacySummary = page.locator('.heart-moment-create-privacy-summary');
+      const sharedRadio = page.locator(
+        '#heart-moment-create-visibility-shared',
+      );
+      const privateRadio = page.locator(
+        '#heart-moment-create-visibility-private',
+      );
+      const privacySummary = page.locator(
+        '.heart-moment-create-privacy-summary',
+      );
       const saveButton = page.getByRole('button', {
         name: storyProducts.heartMomentProduct.save,
       });
