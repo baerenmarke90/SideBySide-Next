@@ -143,6 +143,50 @@ describe('PlanStoryContinuation', () => {
     });
   });
 
+  it('creates a Milestone from the completed Plan and uses the typed Milestone Chapter relation', async () => {
+    const mocks = makeApis();
+    renderContinuation(mocks.apis);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.planStory.milestoneAction'),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: i18n.t('m5s3.planStory.saveStory') }),
+    );
+
+    await waitFor(() => expect(mocks.createMilestone).toHaveBeenCalledTimes(1));
+    expect(mocks.createMilestone).toHaveBeenCalledWith({
+      spaceId: 'space-1',
+      milestoneCreate: {
+        title: 'Picnic in the park',
+        body: 'Bring the picnic blanket.',
+        happenedOn: new Date('2026-09-14T00:00:00Z'),
+      },
+    });
+    expect(mocks.createMemory).not.toHaveBeenCalled();
+
+    await screen.findByText(i18n.t('m5s3.planStory.milestoneSaved'));
+    const chapterChoice = screen.getByLabelText(
+      i18n.t('m5s3.planStory.chapterChoiceLabel'),
+    ) as HTMLSelectElement;
+    fireEvent.change(chapterChoice, { target: { value: 'chapter-1' } });
+    fireEvent.click(
+      screen.getByRole('button', { name: i18n.t('m5s3.planStory.chapterLink') }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.linkChapterMilestone).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.linkChapterMilestone).toHaveBeenCalledWith({
+      spaceId: 'space-1',
+      chapterId: 'chapter-1',
+      targetId: 'milestone-1',
+    });
+    expect(mocks.linkChapterMemory).not.toHaveBeenCalled();
+  });
+
   it('retries only the typed Chapter link after a new Chapter was created', async () => {
     const mocks = makeApis({ failFirstLink: true });
     renderContinuation(mocks.apis);
