@@ -132,9 +132,7 @@
   min-width: 0;
 }
 
-.heart-moment-create-media
-  .attachment-draft-picker
-  > label:not(.file-picker) {
+.heart-moment-create-media .attachment-draft-picker > label:not(.file-picker) {
   color: var(--color-text);
   font-size: 0.9rem;
   font-weight: 750;
@@ -295,7 +293,9 @@
 .heart-moment-create-visibility-option:has(input:checked) {
   border-color: var(--color-brand);
   background: var(--color-brand-surface);
-  box-shadow: 0 0 0 1px var(--color-brand), var(--shadow-raised);
+  box-shadow:
+    0 0 0 1px var(--color-brand),
+    var(--shadow-raised);
 }
 
 .heart-moment-create-visibility-option:focus-within {
@@ -313,16 +313,12 @@
   min-width: 0;
 }
 
-.heart-moment-create-visibility
-  .heart-moment-create-visibility-option
-  strong {
+.heart-moment-create-visibility .heart-moment-create-visibility-option strong {
   font-size: 0.96rem;
   line-height: 1.3;
 }
 
-.heart-moment-create-visibility
-  .heart-moment-create-visibility-option
-  small {
+.heart-moment-create-visibility .heart-moment-create-visibility-option small {
   color: var(--color-text-secondary);
   font-size: 0.79rem;
   line-height: 1.42;
