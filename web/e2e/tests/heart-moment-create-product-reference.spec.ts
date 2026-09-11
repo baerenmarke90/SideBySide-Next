@@ -338,6 +338,18 @@ test('Heart Moment Create reflows at 320px and large text without horizontal ove
       document.documentElement.style.fontSize = '24px';
     });
     await expectNoHorizontalOverflow(page);
+
+    const [largeTextPrivateBox, largeTextSharedBox] = await Promise.all([
+      privateCard.boundingBox(),
+      sharedCard.boundingBox(),
+    ]);
+    if (!largeTextPrivateBox || !largeTextSharedBox) {
+      throw new Error('Visibility cards did not render with large text.');
+    }
+    expect(largeTextSharedBox.y).toBeGreaterThan(
+      largeTextPrivateBox.y + largeTextPrivateBox.height - 1,
+    );
+
     await page.screenshot({
       path: testInfo.outputPath(
         'shell-heart-moment-create-reference-large-text.png',
