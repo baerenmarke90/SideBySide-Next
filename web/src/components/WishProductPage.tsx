@@ -1,19 +1,22 @@
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
 import type { WishDetail } from '../api/generated/models/WishDetail';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
+import { appRoutePath } from '../client/routes';
 import {
   loadAllPlaces,
   planningIfMatch,
+  planScheduleFromInputs,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
-import { invalidateDashboard } from '../client/dashboardQueries';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
-import { PageHeader } from './PageHeader';
 import { ListEntryIconButton } from './ListEntryActions';
+import { PageHeader } from './PageHeader';
+import { PlanScheduleFields } from './PlanScheduleFields';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -84,18 +87,20 @@ export function WishProductPage({
       title,
       description,
       placeId,
+      schedule,
     }: {
       wish: WishDetail;
       title?: string;
       description?: string;
       placeId?: string;
+      schedule?: PlanSchedule;
     }) =>
       apiCall(() =>
         apis.plans.convertWishToPlan({
           spaceId,
           wishId: wish.id,
           ifMatch: planningIfMatch(wish),
-          wishToPlan: { title, description, placeId },
+          wishToPlan: { title, description, placeId, schedule },
         }),
       ),
     onSuccess: async () => {
@@ -168,11 +173,16 @@ export function WishProductPage({
     const title = String(data.get('title')).trim();
     const description = String(data.get('description')).trim();
     const placeId = String(data.get('placeId')).trim();
+    const schedule = planScheduleFromInputs(
+      String(data.get('plannedDate') ?? ''),
+      String(data.get('plannedTime') ?? ''),
+    );
     convertMutation.mutate({
       wish,
       title: title || undefined,
       description: description || undefined,
       placeId: placeId || undefined,
+      schedule,
     });
   }
 
@@ -342,6 +352,7 @@ export function WishProductPage({
                   </option>
                 ))}
               </select>
+              <PlanScheduleFields idPrefix="wish-plan-schedule" />
               <button type="submit" disabled={convertMutation.isPending}>
                 {convertMutation.isPending
                   ? t('m5s3.wish.converting')
