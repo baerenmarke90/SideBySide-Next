@@ -2730,10 +2730,10 @@ class ReferenceViewModel(
                 WishToPlan(
                     description = description.takeIf { it.isNotBlank() },
                     placeId = placeId,
+                    schedule = planSchedule(startOn, startAt),
                     title = title.ifBlank { wish.title },
                 ),
             )
-            scheduleNewPlan(api, spaceId, token, response.plan, startOn, startAt)
         }
     }
 
@@ -2758,9 +2758,9 @@ class ReferenceViewModel(
                     title = title,
                     description = description.trim().takeIf { it.isNotBlank() },
                     placeId = placeId,
+                    schedule = planSchedule(startOn, startAt),
                 ),
             )
-            scheduleNewPlan(api, spaceId, token, plan, startOn, startAt)
         }
     }
 
@@ -2773,18 +2773,14 @@ class ReferenceViewModel(
      * offer the time picker once a day is chosen, and never treat a lone day
      * as enough to schedule from.
      */
-    private suspend fun scheduleNewPlan(
-        api: ReferenceContract,
-        spaceId: java.util.UUID,
-        token: String,
-        plan: PlanDetail,
-        startOn: String?,
-        startAt: String?,
-    ) {
-        val day = startOn?.let { parseHappenedOn(it) } ?: return
-        val time = startAt?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() } ?: return
-        val start = planScheduleStart(day, time, java.time.ZoneId.systemDefault())
-        api.schedulePlan(spaceId, token, plan.id, plan.version, PlanSchedule(plannedStart = start))
+    /** Build a schedule without inventing a wall-clock value for a lone day. */
+    private fun planSchedule(startOn: String?, startAt: String?): PlanSchedule? {
+        val day = startOn?.let { parseHappenedOn(it) } ?: return null
+        if (startAt.isNullOrBlank()) return PlanSchedule(plannedOn = day)
+        val time = runCatching { java.time.LocalTime.parse(startAt) }.getOrNull() ?: return null
+        return PlanSchedule(
+            plannedStart = planScheduleStart(day, time, java.time.ZoneId.systemDefault()),
+        )
     }
 
     fun updatePlan(planId: java.util.UUID, title: String, description: String, placeId: java.util.UUID?) {
@@ -2810,15 +2806,13 @@ class ReferenceViewModel(
      * the selected date and time are resolved through the device's IANA
      * timezone rules for that local instant, including daylight-saving changes.
      */
-    fun schedulePlan(planId: java.util.UUID, startOn: String, startAt: String) {
-    val day = parseHappenedOn(startOn) ?: return
-    val time = runCatching { java.time.LocalTime.parse(startAt) }.getOrNull() ?: return
-    val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
-    val start = planScheduleStart(day, time, java.time.ZoneId.systemDefault())
-    planningCall { api, spaceId, token ->
-        api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))
+    fun schedulePlan(planId: java.util.UUID, startOn: String, startAt: String?) {
+        val schedule = planSchedule(startOn, startAt) ?: return
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.schedulePlan(spaceId, token, plan.id, plan.version, schedule)
+        }
     }
-}
 
     fun unschedulePlan(planId: java.util.UUID) {
         val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return

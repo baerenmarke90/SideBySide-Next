@@ -39,6 +39,9 @@ import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
 import de.sidebyside.next.shell.WindowWidthClass
 import de.sidebyside.next.shell.windowWidthClassFor
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlanDetail
@@ -102,7 +105,7 @@ fun PlanScreen(
         startAt: String?,
     ) -> Unit,
     onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
-    onSchedule: (id: UUID, startOn: String, startAt: String) -> Unit,
+    onSchedule: (id: UUID, startOn: String, startAt: String?) -> Unit,
     onUnschedule: (UUID) -> Unit,
     onComplete: (id: UUID, experiencedOn: String) -> Unit,
     onReturnToWish: (UUID) -> Unit,
@@ -149,11 +152,37 @@ fun PlanScreen(
     val contentMeasure = if (compact) Dp.Unspecified else ExpandedContentMeasure
     val itemModifier = Modifier.widthIn(max = contentMeasure).fillMaxWidth()
 
-    // The one plan that is actually coming up. It leads the screen and is not
-    // repeated in the stack below.
+    // The one plan that is actually coming up. Date-only schedules compare as
+    // calendar days; timed schedules retain real instant ordering. No synthetic
+    // wall-clock value is created for a date-only Plan.
+    val today = LocalDate.now()
+    val now = Instant.now()
     val focal = plans
-        .filter { it.status == PlanStatus.PLANNED && it.plannedStart != null }
-        .minByOrNull { it.plannedStart!! }
+        .filter { plan ->
+            plan.status == PlanStatus.PLANNED && when {
+                plan.plannedOn != null -> !plan.plannedOn!!.isBefore(today)
+                plan.plannedStart != null -> !plan.plannedStart!!.toInstant().isBefore(now)
+                else -> false
+            }
+        }
+        .minWithOrNull(
+            Comparator { left, right ->
+                val leftDay = left.plannedOn
+                    ?: left.plannedStart!!.atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+                val rightDay = right.plannedOn
+                    ?: right.plannedStart!!.atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+                val dayOrder = leftDay.compareTo(rightDay)
+                if (dayOrder != 0) {
+                    dayOrder
+                } else if ((left.plannedOn != null) != (right.plannedOn != null)) {
+                    if (left.plannedOn != null) -1 else 1
+                } else if (left.plannedStart != null && right.plannedStart != null) {
+                    left.plannedStart!!.toInstant().compareTo(right.plannedStart!!.toInstant())
+                } else {
+                    left.id.toString().compareTo(right.id.toString())
+                }
+            },
+        )
     val remainingPlans = plans.filter { it.id != focal?.id }
 
     LazyColumn(
@@ -327,7 +356,7 @@ private fun FocusedPlanningSurface(
         startAt: String?,
     ) -> Unit,
     onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
-    onSchedule: (id: UUID, startOn: String, startAt: String) -> Unit,
+    onSchedule: (id: UUID, startOn: String, startAt: String?) -> Unit,
     onUnschedule: (UUID) -> Unit,
     onComplete: (id: UUID, experiencedOn: String) -> Unit,
     onCreatePlace: (String) -> Unit,
