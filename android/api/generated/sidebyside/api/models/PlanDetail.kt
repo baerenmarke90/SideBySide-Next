@@ -43,7 +43,6 @@ import kotlinx.serialization.Contextual
  * @param id 
  * @param placeId 
  * @param plannedEnd 
- * @param plannedOn 
  * @param plannedStart 
  * @param sourceWishId 
  * @param spaceId 
@@ -51,6 +50,7 @@ import kotlinx.serialization.Contextual
  * @param title 
  * @param updatedAt 
  * @param version 
+ * @param plannedOn 
  */
 @Serializable
 
@@ -83,9 +83,6 @@ data class PlanDetail (
     @Contextual @SerialName(value = "plannedEnd")
     val plannedEnd: java.time.OffsetDateTime?,
 
-    @Contextual @SerialName(value = "plannedOn")
-    val plannedOn: java.time.LocalDate?,
-
     @Contextual @SerialName(value = "plannedStart")
     val plannedStart: java.time.OffsetDateTime?,
 
@@ -105,7 +102,10 @@ data class PlanDetail (
     val updatedAt: java.time.OffsetDateTime,
 
     @SerialName(value = "version")
-    val version: kotlin.Int
+    val version: kotlin.Int,
+
+    @Contextual @SerialName(value = "plannedOn")
+    val plannedOn: java.time.LocalDate? = null
 
 ) {
 
