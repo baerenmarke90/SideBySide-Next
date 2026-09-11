@@ -1,7 +1,10 @@
 import type { TFunction } from 'i18next';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
-import { formatCompactWeekdayDate } from './formatRecency';
+import {
+  formatCompactCalendarDate,
+  formatCompactWeekdayDate,
+} from './formatRecency';
 
 /**
  * Shared Planen product-reference (#859) status/date pill presentation for
@@ -15,11 +18,11 @@ export function wishPillTone(status: WishDetail['status']): string {
 }
 
 export function planPillTone(
-  plan: Pick<PlanDetail, 'status' | 'plannedStart'>,
+  plan: Pick<PlanDetail, 'status' | 'plannedOn' | 'plannedStart'>,
 ): string {
   if (plan.status === 'IDEA') return 'idea';
   if (plan.status === 'PLANNED')
-    return plan.plannedStart ? 'scheduled' : 'idea';
+    return plan.plannedOn || plan.plannedStart ? 'scheduled' : 'idea';
   return 'completed';
 }
 
@@ -33,21 +36,27 @@ export function planStatusWord(
   return t(`m5s3.plan.status.${plan.status}`);
 }
 
+export function planScheduleLabel(
+  plan: Pick<PlanDetail, 'plannedOn' | 'plannedStart'>,
+): string | null {
+  if (plan.plannedOn) return formatCompactCalendarDate(plan.plannedOn);
+  if (plan.plannedStart) return formatCompactWeekdayDate(plan.plannedStart);
+  return null;
+}
+
 /**
- * Combined "{{status}} → {{date}}" pill label for the Planen overview list,
- * where a scheduled Plan gets a single compact pill (see planStatusWord for
- * the Plan detail page's separate status pill).
+ * Combined "{{status}} → {{date}}" pill label for the Planen overview list.
+ * A true calendar date is formatted in UTC to preserve its encoded day;
+ * timestamp schedules continue to use the browser's local timezone.
  */
 export function planPillLabel(
   t: TFunction,
-  plan: Pick<PlanDetail, 'status' | 'plannedStart'>,
+  plan: Pick<PlanDetail, 'status' | 'plannedOn' | 'plannedStart'>,
 ): string {
   const statusWord = planStatusWord(t, plan);
-  if (plan.status === 'PLANNED' && plan.plannedStart) {
-    return t('m5s3.overview.scheduledMeta', {
-      status: statusWord,
-      date: formatCompactWeekdayDate(plan.plannedStart),
-    });
+  const date = planScheduleLabel(plan);
+  if (plan.status === 'PLANNED' && date) {
+    return t('m5s3.overview.scheduledMeta', { status: statusWord, date });
   }
   return statusWord;
 }
