@@ -109,7 +109,9 @@ describe('design token authority and drift enforcement', () => {
   });
 
   it('keeps browser theme-color sources in sync with the explicit schemes', () => {
-    const lightBg = normalizeHex(tokensJson.color.scheme.light.background.$value);
+    const lightBg = normalizeHex(
+      tokensJson.color.scheme.light.background.$value,
+    );
     const darkBg = normalizeHex(tokensJson.color.scheme.dark.background.$value);
 
     expect(themeTs).toContain(`light: '${lightBg}'`);
@@ -158,7 +160,12 @@ describe('design token authority and drift enforcement', () => {
     }
 
     expect(normalizeHex(cssVariable(explicitLight, 'color-scrim'))).toBe(
-      normalizeHex(tokensJson.color.scheme.light.scrim.$value.replace('{color.semantic.scrim}', tokensJson.color.semantic.scrim.$value)),
+      normalizeHex(
+        tokensJson.color.scheme.light.scrim.$value.replace(
+          '{color.semantic.scrim}',
+          tokensJson.color.semantic.scrim.$value,
+        ),
+      ),
     );
   });
 
@@ -215,9 +222,9 @@ describe('design token authority and drift enforcement', () => {
   });
 
   it('keeps discovery + discoverySurface mapped in every runtime path', () => {
-    expect(normalizeHex(cssVariable(compatibilityLight, 'color-discovery'))).toBe(
-      normalizeHex(tokensJson.color.semantic.discovery.$value),
-    );
+    expect(
+      normalizeHex(cssVariable(compatibilityLight, 'color-discovery')),
+    ).toBe(normalizeHex(tokensJson.color.semantic.discovery.$value));
     expect(
       normalizeHex(cssVariable(compatibilityLight, 'color-discovery-surface')),
     ).toBe(normalizeHex(tokensJson.color.semantic.discoverySurface.$value));
