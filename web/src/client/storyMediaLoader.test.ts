@@ -67,13 +67,11 @@ describe('loadAuthorizedStoryImage', () => {
         url: 'https://media.example.test/signed-image',
       },
     });
-    const fetchApi = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(new Blob(['signed-image'], { type: 'image/jpeg' }), {
-          status: 200,
-        }),
-      ) as unknown as typeof fetch;
+    const fetchApi = vi.fn().mockResolvedValue(
+      new Response(new Blob(['signed-image'], { type: 'image/jpeg' }), {
+        status: 200,
+      }),
+    ) as unknown as typeof fetch;
     const createObjectUrl = vi.fn().mockReturnValue('blob:signed-image');
 
     const result = await loadAuthorizedStoryImage(
