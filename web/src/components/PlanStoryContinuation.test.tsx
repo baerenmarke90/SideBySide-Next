@@ -199,9 +199,7 @@ describe('PlanStoryContinuation', () => {
       screen.getByRole('button', { name: i18n.t('m5s3.planStory.later') }),
     );
 
-    expect(
-      screen.queryByText(i18n.t('m5s3.planStory.intro')),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('m5s3.planStory.intro'))).toBeNull();
     expect(mocks.createMemory).not.toHaveBeenCalled();
     expect(mocks.createMilestone).not.toHaveBeenCalled();
   });
