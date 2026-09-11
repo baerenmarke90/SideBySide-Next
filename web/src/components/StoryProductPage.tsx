@@ -1,8 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
+import { AttachmentReadRequestParentTypeEnum } from '../api/generated/models/AttachmentReadRequest';
 import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
 import type { MemoryAttachmentSummary } from '../api/generated/models/MemoryAttachmentSummary';
 import type { StoryItem } from '../api/generated/models/StoryItem';
@@ -28,6 +29,7 @@ import {
   milestoneDetailPath,
   STORY_CHAPTERS_ROUTE,
 } from '../client/routes';
+import { loadAuthorizedStoryImage } from '../client/storyMediaLoader';
 import {
   aggregateStoryPages,
   parseStoryFilters,
@@ -220,6 +222,17 @@ export function StoryProductPage({
   const cacheResourceId = useMemo(
     () => storyCacheResourceId(filters),
     [filters],
+  );
+  const loadHeartMomentImage = useCallback(
+    (heartMomentId: string, attachmentId: string) =>
+      loadAuthorizedStoryImage(
+        apis,
+        spaceId,
+        AttachmentReadRequestParentTypeEnum.HEART_MOMENT,
+        heartMomentId,
+        attachmentId,
+      ),
+    [apis, spaceId],
   );
 
   const storyQuery = useInfiniteQuery({
@@ -1061,6 +1074,7 @@ export function StoryProductPage({
                   <StoryList
                     items={combinedStory.items}
                     loadMemoryImage={loadMemoryImage}
+                    loadHeartMomentImage={loadHeartMomentImage}
                     profilesApi={profilesApi}
                     spaceId={spaceId}
                   />
