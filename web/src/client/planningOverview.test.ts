@@ -19,6 +19,7 @@ function plan(
     id,
     placeId: null,
     plannedEnd: null,
+    plannedOn: null,
     plannedStart: null,
     sourceWishId: null,
     spaceId: 'space-lea-alex',
@@ -79,5 +80,41 @@ describe('planning overview selectors', () => {
     ]);
     expect(convertedWishPlan.sourceWishId).toBe('wish-autumn-hike');
     expect(plans.map((item) => item.id)).toEqual(inputOrder);
+  });
+
+  it('keeps date-only calendar days upcoming and orders them before timed plans on the same day', () => {
+    const plans = [
+      plan({
+        id: 'timed-same-day',
+        status: PlanStatus.PLANNED,
+        plannedStart: new Date('2026-09-18T18:00:00Z'),
+      }),
+      plan({
+        id: 'date-only-same-day',
+        status: PlanStatus.PLANNED,
+        plannedOn: new Date('2026-09-18T00:00:00Z'),
+      }),
+      plan({
+        id: 'date-only-today',
+        status: PlanStatus.PLANNED,
+        plannedOn: new Date('2026-09-08T00:00:00Z'),
+      }),
+      plan({
+        id: 'timed-earlier-today',
+        status: PlanStatus.PLANNED,
+        plannedStart: new Date('2026-09-08T09:00:00Z'),
+      }),
+      plan({
+        id: 'date-only-past',
+        status: PlanStatus.PLANNED,
+        plannedOn: new Date('2026-09-07T00:00:00Z'),
+      }),
+    ];
+
+    expect(selectUpcomingPlans(plans, NOW).map((item) => item.id)).toEqual([
+      'date-only-today',
+      'date-only-same-day',
+      'timed-same-day',
+    ]);
   });
 });
