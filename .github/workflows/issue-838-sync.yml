@@ -22,8 +22,20 @@ jobs:
           ref: feat/838-date-only-plans
           fetch-depth: 0
 
-      - name: Apply count-checked #838 parity patches
-        run: python tools/issue_838_native_patch_finalize.py
+      - name: Patch Web Today
+        run: python -c "from tools.issue_838_native_patch import patch_web_today; patch_web_today()"
+
+      - name: Patch Android Today
+        run: python -c "from tools.issue_838_native_patch import patch_android_today; patch_android_today()"
+
+      - name: Patch Android Plan screen
+        run: python -c "from tools.issue_838_native_patch import patch_plan_screen; patch_plan_screen()"
+
+      - name: Patch Android planning sheets
+        run: python -c "from tools.issue_838_native_patch import patch_planning_sheets; patch_planning_sheets()"
+
+      - name: Patch Android ViewModel
+        run: python -c "from tools.issue_838_native_patch_finalize import patch_reference_view_model; patch_reference_view_model()"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
