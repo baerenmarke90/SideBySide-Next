@@ -57,5 +57,6 @@ jobs:
           path: |
             web/e2e/test-results/**/planning-*.png
             web/e2e/test-results/**/shell-*.png
+            web/e2e/test-results/**/today-*.png
           if-no-files-found: error
           retention-days: 14
