@@ -6,6 +6,9 @@ import { normalizeClientError } from '../client/problemDetails';
 import { appRoutePath } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import { formatCompactWeekdayDate } from '../client/formatRecency';
+import { planPillTone, planStatusWord } from '../client/planningPresentation';
+import { DestinationIcon } from './DestinationIcon';
 import {
   dateFromInput,
   dateOnlyInput,
@@ -21,6 +24,7 @@ import { ListEntryIconButton } from './ListEntryActions';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
+import './PlanningReference.css';
 
 async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   try {
@@ -260,8 +264,16 @@ export function PlanProductPage({
     completeMutation.error ||
     returnMutation.error;
 
+  const placeName = plan.placeId
+    ? (placesQuery.data?.find((place) => place.id === plan.placeId)?.name ??
+      null)
+    : null;
+  const hasSubfacts = Boolean(plan.plannedEnd || plan.experiencedOn);
+  const showsLifecycle =
+    plan.capabilities.canEdit && plan.status !== 'COMPLETED';
+
   return (
-    <div className="page planning-page">
+    <div className="page planning-page planen-detail">
       {isEditing ? (
         <form
           id="plan-edit-form"
@@ -277,7 +289,6 @@ export function PlanProductPage({
             {t('m5s3.common.back')}
           </Link>
         }
-        eyebrow={t('m5s3.plan.detailEyebrow')}
         title={plan.title}
         titleEditor={
           isEditing ? (
@@ -291,7 +302,6 @@ export function PlanProductPage({
             />
           ) : undefined
         }
-        description={t(`m5s3.plan.status.${plan.status}`)}
         titleAction={
           plan.capabilities.canEdit && !isEditing ? (
             <ListEntryIconButton
@@ -305,26 +315,40 @@ export function PlanProductPage({
       />
 
       <section
-        className="planning-facts"
+        className="planning-facts planen-detail-summary"
         aria-label={t('m5s3.plan.scheduleFacts')}
       >
-        {plan.plannedStart ? (
-          <p>
-            <strong>{t('m5s3.plan.plannedStart')}:</strong>{' '}
-            {formatDateTime(plan.plannedStart)}
-          </p>
-        ) : null}
-        {plan.plannedEnd ? (
-          <p>
-            <strong>{t('m5s3.plan.plannedEnd')}:</strong>{' '}
-            {formatDateTime(plan.plannedEnd)}
-          </p>
-        ) : null}
-        {plan.experiencedOn ? (
-          <p>
-            <strong>{t('m5s3.plan.experiencedOn')}:</strong>{' '}
-            {dateOnlyInput(plan.experiencedOn)}
-          </p>
+        <div className="planen-detail-pills">
+          {plan.plannedStart ? (
+            <span className="planen-pill planen-pill-date">
+              {formatCompactWeekdayDate(plan.plannedStart)}
+            </span>
+          ) : null}
+          <span className={`planen-pill planen-pill-${planPillTone(plan)}`}>
+            {planStatusWord(t, plan)}
+          </span>
+        </div>
+        <p className="planen-detail-meta">
+          {placeName
+            ? `${t('m5s3.plan.placeLabel', { name: placeName })} · `
+            : ''}
+          {t('m5s3.overview.createdBy', { name: plan.creator.displayName })}
+        </p>
+        {hasSubfacts ? (
+          <div className="planen-detail-subfacts">
+            {plan.plannedEnd ? (
+              <p>
+                <strong>{t('m5s3.plan.plannedEnd')}:</strong>{' '}
+                {formatDateTime(plan.plannedEnd)}
+              </p>
+            ) : null}
+            {plan.experiencedOn ? (
+              <p>
+                <strong>{t('m5s3.plan.experiencedOn')}:</strong>{' '}
+                {dateOnlyInput(plan.experiencedOn)}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </section>
 
@@ -466,7 +490,30 @@ export function PlanProductPage({
           </section>
         ) : null}
 
-        {plan.capabilities.canEdit && plan.status !== 'COMPLETED' ? (
+        {!isEditing && plan.description ? (
+          <section className="planen-section">
+            <h2>{t('m5s3.plan.notesHeading')}</h2>
+            <p>{plan.description}</p>
+          </section>
+        ) : null}
+
+        {!isEditing ? (
+          <div
+            className="planen-shared-note"
+            role="note"
+            aria-label={t('m5s3.plan.sharedTitle')}
+          >
+            <span className="planen-shared-note-icon" aria-hidden="true">
+              <DestinationIcon icon="people" />
+            </span>
+            <div>
+              <strong>{t('m5s3.plan.sharedTitle')}</strong>
+              <p>{t('m5s3.plan.sharedBody')}</p>
+            </div>
+          </div>
+        ) : null}
+
+        {showsLifecycle ? (
           <section className="planning-subsection">
             <h2>{t('m5s3.plan.lifecycleHeading')}</h2>
             <form className="form-grid" onSubmit={submitSchedule}>
@@ -508,25 +555,6 @@ export function PlanProductPage({
               </div>
             </form>
 
-            <form
-              className="form-grid planning-action-form"
-              onSubmit={submitComplete}
-            >
-              <label htmlFor="plan-complete-date">
-                {t('m5s3.plan.experiencedOn')}
-              </label>
-              <input
-                id="plan-complete-date"
-                name="experiencedOn"
-                type="date"
-                required
-                defaultValue={dateOnlyInput(new Date())}
-              />
-              <button type="submit" disabled={completeMutation.isPending}>
-                {t('m5s3.plan.complete')}
-              </button>
-            </form>
-
             {plan.sourceWishId ? (
               <button
                 type="button"
@@ -544,6 +572,32 @@ export function PlanProductPage({
               />
             ) : null}
           </section>
+        ) : null}
+
+        {showsLifecycle ? (
+          <form
+            className="planen-complete-form"
+            onSubmit={submitComplete}
+            aria-label={t('m5s3.plan.complete')}
+          >
+            <label htmlFor="plan-complete-date">
+              {t('m5s3.plan.experiencedOn')}
+            </label>
+            <input
+              id="plan-complete-date"
+              name="experiencedOn"
+              type="date"
+              required
+              defaultValue={dateOnlyInput(new Date())}
+            />
+            <button
+              type="submit"
+              className="planen-complete-cta"
+              disabled={completeMutation.isPending}
+            >
+              {t('m5s3.plan.complete')}
+            </button>
+          </form>
         ) : null}
       </div>
     </div>

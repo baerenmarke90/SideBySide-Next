@@ -1,6 +1,7 @@
 import {
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useId,
   useLayoutEffect,
@@ -14,17 +15,20 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import { invalidateDashboard } from '../client/dashboardQueries';
-import { formatUpcomingRelative } from '../client/formatRecency';
 import {
   loadPlanningOverviewPlans,
-  selectIdeaPlans,
   selectUpcomingPlans,
 } from '../client/planningOverview';
+import {
+  planPillLabel,
+  planPillTone,
+  wishPillTone,
+} from '../client/planningPresentation';
 import { normalizeClientError } from '../client/problemDetails';
 import { planDetailPath, wishDetailPath } from '../client/routes';
 import {
@@ -37,8 +41,11 @@ import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
+import './PlanningReference.css';
 
 const PAGE_SIZE = 20;
+
+type PlanenSegment = 'wishes' | 'plans';
 
 type PageShape<T> = { items: T[]; nextCursor: string | null };
 
@@ -54,43 +61,129 @@ function nextCursor<T>(page: PageShape<T>): string | undefined {
   return page.nextCursor ?? undefined;
 }
 
-function statusLabel(
-  t: ReturnType<typeof useTranslation>['t'],
-  domain: 'wish' | 'plan',
-  status: string,
-): string {
-  return t(`m5s3.${domain}.status.${status}`);
+function segmentForHash(hash: string): PlanenSegment | null {
+  if (hash === '#plan-title') return 'plans';
+  if (hash === '#wish-title') return 'wishes';
+  return null;
 }
 
-function upcomingPlanMeta(
-  t: ReturnType<typeof useTranslation>['t'],
-  plan: PlanDetail,
-): string | null {
-  if (!plan.plannedStart) return null;
-  const date = formatUpcomingRelative(plan.plannedStart, t);
-  return plan.sourceWishId
-    ? `${date} · ${t('m5s3.wish.status.PLANNED')}`
-    : date;
-}
-
-function PlanningCard({
+function PlanenCard({
   title,
-  meta,
+  attribution,
+  pillLabel,
+  pillTone,
   to,
 }: {
   title: string;
-  meta?: string | null;
+  attribution: string;
+  pillLabel: string;
+  pillTone: string;
   to: string;
 }) {
   return (
-    <li className="planning-card-item">
-      <Link className="planning-card planning-card-link" to={to}>
-        <div className="planning-card-copy">
-          <h3>{title}</h3>
-          {meta ? <p className="planning-meta">{meta}</p> : null}
-        </div>
+    <li className="planen-card-item">
+      <Link className="planen-card" to={to}>
+        <h2 className="planen-card-title">{title}</h2>
+        <span className="planen-card-attribution">{attribution}</span>
+        <span className="planen-card-pills">
+          <span className={`planen-pill planen-pill-${pillTone}`}>
+            {pillLabel}
+          </span>
+        </span>
       </Link>
     </li>
+  );
+}
+
+function PlanenSegmentedControl({
+  active,
+  onChange,
+  wishesTabId,
+  plansTabId,
+  wishesPanelId,
+  plansPanelId,
+}: {
+  active: PlanenSegment;
+  onChange: (segment: PlanenSegment) => void;
+  wishesTabId: string;
+  plansTabId: string;
+  wishesPanelId: string;
+  plansPanelId: string;
+}) {
+  const { t } = useTranslation();
+  const wishesRef = useRef<HTMLButtonElement>(null);
+  const plansRef = useRef<HTMLButtonElement>(null);
+
+  function switchTo(segment: PlanenSegment, focus: boolean): void {
+    onChange(segment);
+    if (!focus) return;
+    (segment === 'wishes' ? wishesRef : plansRef).current?.focus();
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    switchTo(active === 'wishes' ? 'plans' : 'wishes', true);
+  }
+
+  return (
+    <div
+      className="planen-segmented"
+      role="tablist"
+      aria-label={t('m5s3.overview.segmentedLabel')}
+      onKeyDown={handleKeyDown}
+    >
+      <button
+        ref={wishesRef}
+        type="button"
+        role="tab"
+        id={wishesTabId}
+        aria-selected={active === 'wishes'}
+        aria-controls={wishesPanelId}
+        tabIndex={active === 'wishes' ? 0 : -1}
+        className={`planen-segment ${active === 'wishes' ? 'is-active' : ''}`}
+        onClick={() => switchTo('wishes', false)}
+      >
+        {t('m5s3.overview.segmentWishes')}
+      </button>
+      <button
+        ref={plansRef}
+        type="button"
+        role="tab"
+        id={plansTabId}
+        aria-selected={active === 'plans'}
+        aria-controls={plansPanelId}
+        tabIndex={active === 'plans' ? 0 : -1}
+        className={`planen-segment ${active === 'plans' ? 'is-active' : ''}`}
+        onClick={() => switchTo('plans', false)}
+      >
+        {t('m5s3.overview.segmentPlans')}
+      </button>
+    </div>
+  );
+}
+
+function PlanenPanel({
+  id,
+  labelledBy,
+  hidden,
+  children,
+}: {
+  id: string;
+  labelledBy: string;
+  hidden: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      id={id}
+      role="tabpanel"
+      aria-labelledby={labelledBy}
+      hidden={hidden}
+      className="planen-panel sbs-motion-reveal"
+    >
+      {children}
+    </div>
   );
 }
 
@@ -141,15 +234,14 @@ function computePlacePickerCoords(rect: DOMRect): PlacePickerCoords {
 }
 
 /**
- * The Plan Create section lives inside a `.sbs-motion-reveal` reveal
- * animation, which (like its `Wünsche & Ideen` sibling below it) creates its
- * own stacking context for as long as the animation targets `transform`.
- * A `position: absolute` menu confined to that stacking context can never
- * paint above a *later* sibling section's stacking context, regardless of
- * its own z-index — the sibling simply paints on top by document order. The
- * menu is therefore rendered in a portal at the document body, positioned
- * from the trigger's viewport rect, so it is not confined to any ancestor's
- * stacking context, overflow, or animation.
+ * The Plan Create section lives inside a `.planen-panel.sbs-motion-reveal`
+ * reveal animation, which creates its own stacking context for as long as
+ * the animation targets `transform`. A `position: absolute` menu confined to
+ * that stacking context can never paint above a *later* sibling's stacking
+ * context, regardless of its own z-index — the sibling simply paints on top
+ * by document order. The menu is therefore rendered in a portal at the
+ * document body, positioned from the trigger's viewport rect, so it is not
+ * confined to any ancestor's stacking context, overflow, or animation.
  */
 function PlacePicker({
   id,
@@ -330,6 +422,25 @@ export function SharedPlanningOverviewPage({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const wishesTabId = useId();
+  const plansTabId = useId();
+  const wishesPanelId = useId();
+  const plansPanelId = useId();
+
+  const [activeSegment, setActiveSegment] = useState<PlanenSegment>(
+    () => segmentForHash(location.hash) ?? 'wishes',
+  );
+
+  // Keep the visible segment in sync with the Quick Create / deep-link hash
+  // contract (#810/#856): a `useLayoutEffect` here commits the correct panel
+  // visibility before `RouteEntryHandoff`'s passive effect (mounted earlier
+  // in `AppShell`, so it would otherwise run first) calls `scrollIntoView`
+  // on a target that must not still be hidden behind the other segment.
+  useLayoutEffect(() => {
+    const segment = segmentForHash(location.hash);
+    if (segment) setActiveSegment(segment);
+  }, [location.hash]);
 
   const wishes = useInfiniteQuery({
     queryKey: ['m5-s3', 'wishes', spaceId],
@@ -419,8 +530,20 @@ export function SharedPlanningOverviewPage({
 
   const wishItems = wishes.data?.pages.flatMap((page) => page.items) ?? [];
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
+  // Dated, soonest-first PLANNED Plans lead the Pläne segment (mirroring the
+  // Dashboard/Today ordering), followed by everything else in fetch order -
+  // IDEA Plans and any PLANNED Plan without a plannedStart yet. COMPLETED
+  // Plans stay out of the overview entirely (see loadPlanningOverviewPlans),
+  // defensively re-filtered here too in case a status-filtered page ever
+  // returns one.
   const upcomingPlans = selectUpcomingPlans(planItems);
-  const ideaPlans = selectIdeaPlans(planItems);
+  const upcomingPlanIds = new Set(upcomingPlans.map((plan) => plan.id));
+  const orderedPlanItems = [
+    ...upcomingPlans,
+    ...planItems.filter(
+      (plan) => !upcomingPlanIds.has(plan.id) && plan.status !== 'COMPLETED',
+    ),
+  ];
 
   function submitWish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -452,266 +575,231 @@ export function SharedPlanningOverviewPage({
     );
   }
 
+  const wishesLoading = wishes.isLoading;
+  const plansLoading = plans.isLoading;
+
   return (
-    <div className="page planning-page planning-sanctuary">
-      <PageHeader
-        eyebrow={t('m5s3.overview.eyebrow')}
-        title={t('m5s3.overview.title')}
-        description={t('m5s3.overview.intro')}
+    <div className="page planning-page planning-sanctuary planen-overview">
+      <PageHeader title={t('m5s3.overview.title')} />
+
+      <PlanenSegmentedControl
+        active={activeSegment}
+        onChange={setActiveSegment}
+        wishesTabId={wishesTabId}
+        plansTabId={plansTabId}
+        wishesPanelId={wishesPanelId}
+        plansPanelId={plansPanelId}
       />
 
-      <div className="future-map">
-        <div className="future-map-path" aria-hidden="true" />
-
-        <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
-          <div
-            className="future-map-marker"
-            style={{
-              background: 'var(--color-brand)',
-              boxShadow:
-                '0 0 0 2px var(--color-surface), 0 5px 12px var(--color-brand-glow)',
-            }}
+      <PlanenPanel
+        id={wishesPanelId}
+        labelledBy={wishesTabId}
+        hidden={activeSegment !== 'wishes'}
+      >
+        {wishesLoading ? (
+          <UiState kind="loading" title={t('states.loading.title')} />
+        ) : null}
+        {wishes.error ? (
+          <ProblemState
+            error={wishes.error}
+            onRetry={() => void wishes.refetch()}
+          />
+        ) : null}
+        {!wishesLoading && !wishes.error && wishItems.length === 0 ? (
+          <p className="planen-empty">{t('m5s3.overview.wishesEmpty')}</p>
+        ) : null}
+        {wishItems.length > 0 ? (
+          <ul className="planen-card-list">
+            {wishItems.map((wish) => (
+              <PlanenCard
+                key={wish.id}
+                title={wish.title}
+                attribution={t('m5s3.overview.createdBy', {
+                  name: wish.creator.displayName,
+                })}
+                pillLabel={t(`m5s3.wish.status.${wish.status}`)}
+                pillTone={wishPillTone(wish.status)}
+                to={wishDetailPath(wish.id)}
+              />
+            ))}
+          </ul>
+        ) : null}
+        {wishes.hasNextPage ? (
+          <button
+            type="button"
+            className="tertiary compact-action"
+            onClick={() => void wishes.fetchNextPage()}
+            disabled={wishes.isFetchingNextPage}
           >
-            <span className="marker-dot" />
-          </div>
-          <div className="future-map-content">
-            <h2 className="future-map-heading">{t('m5s3.overview.soon')}</h2>
-            <p className="future-map-intro">{t('m5s3.overview.soonIntro')}</p>
+            {wishes.isFetchingNextPage
+              ? t('m5s3.common.loadingMore')
+              : t('m5s3.common.loadMore')}
+          </button>
+        ) : null}
+        <details className="planning-create">
+          <summary id="wish-title">{t('m5s3.wish.create')}</summary>
+          <form
+            onSubmit={submitWish}
+            className="form-grid planning-create-form"
+          >
+            <label htmlFor="create-wish-title">{t('m5s3.common.title')}</label>
+            <input
+              id="create-wish-title"
+              name="title"
+              required
+              maxLength={200}
+            />
+            <button type="submit" disabled={createWish.isPending}>
+              {createWish.isPending
+                ? t('m5s3.common.saving')
+                : t('m5s3.common.save')}
+            </button>
+            {createWish.error ? (
+              <ProblemState error={createWish.error} />
+            ) : null}
+          </form>
+        </details>
+      </PlanenPanel>
 
-            {plans.isLoading ? (
-              <UiState kind="loading" title={t('states.loading.title')} />
-            ) : null}
-            {plans.error ? (
-              <ProblemState
-                error={plans.error}
-                onRetry={() => void plans.refetch()}
+      <PlanenPanel
+        id={plansPanelId}
+        labelledBy={plansTabId}
+        hidden={activeSegment !== 'plans'}
+      >
+        {plansLoading ? (
+          <UiState kind="loading" title={t('states.loading.title')} />
+        ) : null}
+        {plans.error ? (
+          <ProblemState
+            error={plans.error}
+            onRetry={() => void plans.refetch()}
+          />
+        ) : null}
+        {!plansLoading && !plans.error && orderedPlanItems.length === 0 ? (
+          <p className="planen-empty">{t('m5s3.overview.plansEmpty')}</p>
+        ) : null}
+        {orderedPlanItems.length > 0 ? (
+          <ul className="planen-card-list">
+            {orderedPlanItems.map((plan) => (
+              <PlanenCard
+                key={plan.id}
+                title={plan.title}
+                attribution={t('m5s3.overview.createdBy', {
+                  name: plan.creator.displayName,
+                })}
+                pillLabel={planPillLabel(t, plan)}
+                pillTone={planPillTone(plan)}
+                to={planDetailPath(plan.id)}
               />
-            ) : null}
-            {!plans.isLoading && !plans.error && upcomingPlans.length === 0 ? (
-              <p className="planning-empty">{t('m5s3.overview.soonEmpty')}</p>
-            ) : null}
-            {upcomingPlans.length > 0 ? (
-              <ul className="planning-list">
-                {upcomingPlans.map((plan) => (
-                  <PlanningCard
-                    key={plan.id}
-                    title={plan.title}
-                    meta={upcomingPlanMeta(t, plan)}
-                    to={planDetailPath(plan.id)}
+            ))}
+          </ul>
+        ) : null}
+        <details className="planning-create">
+          <summary id="plan-title">{t('m5s3.plan.create')}</summary>
+          <form
+            onSubmit={submitPlan}
+            className="form-grid planning-create-form"
+          >
+            <label htmlFor="create-plan-title">{t('m5s3.common.title')}</label>
+            <input
+              id="create-plan-title"
+              name="title"
+              required
+              maxLength={200}
+            />
+            <label htmlFor="create-plan-description">
+              {t('m5s3.common.description')}
+            </label>
+            <textarea
+              id="create-plan-description"
+              name="description"
+              rows={3}
+            />
+            <label htmlFor="create-plan-place">{t('m5s3.common.place')}</label>
+            <PlacePicker
+              id="create-plan-place"
+              label={t('m5s3.common.place')}
+              places={placesQuery.data ?? []}
+              selectedPlaceId={selectedPlanPlaceId}
+              onSelect={setSelectedPlanPlaceId}
+              onAddNewPlace={() => setIsCreatingPlanPlace(true)}
+              noPlaceLabel={t('m5s3.common.noPlace')}
+              addNewPlaceLabel={t('m5s3.plan.addNewPlace')}
+            />
+            {isCreatingPlanPlace ? (
+              <div className="inline-place-create">
+                <div className="field-group">
+                  <label htmlFor="new-plan-place-name">
+                    {t('m5s3.place.name')}
+                  </label>
+                  <input
+                    id="new-plan-place-name"
+                    ref={newPlanPlaceNameRef}
+                    value={newPlanPlaceName}
+                    onChange={(event) =>
+                      setNewPlanPlaceName(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.preventDefault();
+                    }}
+                    maxLength={200}
                   />
-                ))}
-              </ul>
-            ) : null}
-            <details className="planning-create">
-              <summary id="plan-title">{t('m5s3.plan.create')}</summary>
-              <form
-                onSubmit={submitPlan}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="create-plan-title">
-                  {t('m5s3.common.title')}
-                </label>
-                <input
-                  id="create-plan-title"
-                  name="title"
-                  required
-                  maxLength={200}
-                />
-                <label htmlFor="create-plan-description">
-                  {t('m5s3.common.description')}
-                </label>
-                <textarea
-                  id="create-plan-description"
-                  name="description"
-                  rows={3}
-                />
-                <label htmlFor="create-plan-place">
-                  {t('m5s3.common.place')}
-                </label>
-                <PlacePicker
-                  id="create-plan-place"
-                  label={t('m5s3.common.place')}
-                  places={placesQuery.data ?? []}
-                  selectedPlaceId={selectedPlanPlaceId}
-                  onSelect={setSelectedPlanPlaceId}
-                  onAddNewPlace={() => setIsCreatingPlanPlace(true)}
-                  noPlaceLabel={t('m5s3.common.noPlace')}
-                  addNewPlaceLabel={t('m5s3.plan.addNewPlace')}
-                />
-                {isCreatingPlanPlace ? (
-                  <div className="inline-place-create">
-                    <div className="field-group">
-                      <label htmlFor="new-plan-place-name">
-                        {t('m5s3.place.name')}
-                      </label>
-                      <input
-                        id="new-plan-place-name"
-                        ref={newPlanPlaceNameRef}
-                        value={newPlanPlaceName}
-                        onChange={(event) =>
-                          setNewPlanPlaceName(event.target.value)
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') event.preventDefault();
-                        }}
-                        maxLength={200}
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label htmlFor="new-plan-place-address">
-                        {t('m5s3.place.address')}
-                      </label>
-                      <input
-                        id="new-plan-place-address"
-                        value={newPlanPlaceAddress}
-                        onChange={(event) =>
-                          setNewPlanPlaceAddress(event.target.value)
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') event.preventDefault();
-                        }}
-                      />
-                    </div>
-                    <div className="inline-place-create-actions">
-                      <button
-                        type="button"
-                        className="button-link secondary-link"
-                        onClick={() => {
-                          setIsCreatingPlanPlace(false);
-                          setNewPlanPlaceName('');
-                          setNewPlanPlaceAddress('');
-                        }}
-                      >
-                        {t('m5s3.plan.newPlaceCancel')}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={
-                          createPlanPlace.isPending || !newPlanPlaceName.trim()
-                        }
-                        onClick={submitNewPlanPlace}
-                      >
-                        {createPlanPlace.isPending
-                          ? t('m5s3.plan.newPlaceSaving')
-                          : t('m5s3.plan.newPlaceSave')}
-                      </button>
-                    </div>
-                    {createPlanPlace.error ? (
-                      <ProblemState error={createPlanPlace.error} />
-                    ) : null}
-                  </div>
-                ) : null}
-                <button type="submit" disabled={createPlan.isPending}>
-                  {createPlan.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createPlan.error ? (
-                  <ProblemState error={createPlan.error} />
-                ) : null}
-              </form>
-            </details>
-          </div>
-        </section>
-
-        <section
-          className="future-map-stop future-map-stop-someday sbs-motion-reveal"
-          style={{ animationDelay: '100ms' }}
-        >
-          <div className="future-map-marker">
-            <span className="marker-dot" />
-          </div>
-          <div className="future-map-content">
-            <h2 className="future-map-heading">{t('m5s3.overview.someday')}</h2>
-            <p className="future-map-intro">
-              {t('m5s3.overview.somedayIntro')}
-            </p>
-
-            {wishes.isLoading || plans.isLoading ? (
-              <UiState kind="loading" title={t('states.loading.title')} />
-            ) : null}
-            {wishes.error ? (
-              <ProblemState
-                error={wishes.error}
-                onRetry={() => void wishes.refetch()}
-              />
-            ) : null}
-            {plans.error ? (
-              <ProblemState
-                error={plans.error}
-                onRetry={() => void plans.refetch()}
-              />
-            ) : null}
-            {!wishes.isLoading &&
-            !plans.isLoading &&
-            !wishes.error &&
-            !plans.error &&
-            wishItems.length === 0 &&
-            ideaPlans.length === 0 ? (
-              <p className="planning-empty">
-                {t('m5s3.overview.somedayEmpty')}
-              </p>
-            ) : null}
-            {wishItems.length > 0 || ideaPlans.length > 0 ? (
-              <ul className="planning-list">
-                {wishItems.map((wish) => (
-                  <PlanningCard
-                    key={`wish-${wish.id}`}
-                    title={wish.title}
-                    meta={statusLabel(t, 'wish', wish.status)}
-                    to={wishDetailPath(wish.id)}
+                </div>
+                <div className="field-group">
+                  <label htmlFor="new-plan-place-address">
+                    {t('m5s3.place.address')}
+                  </label>
+                  <input
+                    id="new-plan-place-address"
+                    value={newPlanPlaceAddress}
+                    onChange={(event) =>
+                      setNewPlanPlaceAddress(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.preventDefault();
+                    }}
                   />
-                ))}
-                {ideaPlans.map((plan) => (
-                  <PlanningCard
-                    key={`plan-${plan.id}`}
-                    title={plan.title}
-                    meta={statusLabel(t, 'plan', plan.status)}
-                    to={planDetailPath(plan.id)}
-                  />
-                ))}
-              </ul>
-            ) : null}
-            {wishes.hasNextPage ? (
-              <button
-                type="button"
-                className="tertiary compact-action"
-                onClick={() => void wishes.fetchNextPage()}
-                disabled={wishes.isFetchingNextPage}
-              >
-                {wishes.isFetchingNextPage
-                  ? t('m5s3.common.loadingMore')
-                  : t('m5s3.common.loadMore')}
-              </button>
-            ) : null}
-            <details className="planning-create">
-              <summary id="wish-title">{t('m5s3.wish.create')}</summary>
-              <form
-                onSubmit={submitWish}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="create-wish-title">
-                  {t('m5s3.common.title')}
-                </label>
-                <input
-                  id="create-wish-title"
-                  name="title"
-                  required
-                  maxLength={200}
-                />
-                <button type="submit" disabled={createWish.isPending}>
-                  {createWish.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createWish.error ? (
-                  <ProblemState error={createWish.error} />
+                </div>
+                <div className="inline-place-create-actions">
+                  <button
+                    type="button"
+                    className="button-link secondary-link"
+                    onClick={() => {
+                      setIsCreatingPlanPlace(false);
+                      setNewPlanPlaceName('');
+                      setNewPlanPlaceAddress('');
+                    }}
+                  >
+                    {t('m5s3.plan.newPlaceCancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      createPlanPlace.isPending || !newPlanPlaceName.trim()
+                    }
+                    onClick={submitNewPlanPlace}
+                  >
+                    {createPlanPlace.isPending
+                      ? t('m5s3.plan.newPlaceSaving')
+                      : t('m5s3.plan.newPlaceSave')}
+                  </button>
+                </div>
+                {createPlanPlace.error ? (
+                  <ProblemState error={createPlanPlace.error} />
                 ) : null}
-              </form>
-            </details>
-          </div>
-        </section>
-      </div>
+              </div>
+            ) : null}
+            <button type="submit" disabled={createPlan.isPending}>
+              {createPlan.isPending
+                ? t('m5s3.common.saving')
+                : t('m5s3.common.save')}
+            </button>
+            {createPlan.error ? (
+              <ProblemState error={createPlan.error} />
+            ) : null}
+          </form>
+        </details>
+      </PlanenPanel>
     </div>
   );
 }

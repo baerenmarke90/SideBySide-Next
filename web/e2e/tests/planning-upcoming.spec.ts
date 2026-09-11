@@ -321,7 +321,7 @@ async function signIn(page: Page): Promise<void> {
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
 }
 
-test('Bald & Geplant contains only dated upcoming Plans in Today order and shows Wish provenance', async ({
+test('Pläne segment contains only dated upcoming Plans in Today order, then the IDEA Plan, and Wünsche stays a separate domain', async ({
   page,
 }) => {
   await installPlanningMocks(page);
@@ -329,39 +329,45 @@ test('Bald & Geplant contains only dated upcoming Plans in Today order and shows
   await signIn(page);
   await page.goto('/plan');
 
-  const soon = page.locator('.future-map-stop-soon');
-  const soonTitles = soon.locator('.planning-card h3');
-  await expect(soonTitles).toHaveText([EARLY_TITLE, LATE_TITLE]);
-  await expect(soon.getByText(IDEA_TITLE)).toHaveCount(0);
-  await expect(soon.getByText(COMPLETED_TITLE)).toHaveCount(0);
+  // Wünsche is the default segment and must not mix in Plan IDEA items -
+  // those belong to the Pläne domain even though the old future-map grouped
+  // them together. The Pläne panel is rendered-but-hidden (not unmounted, so
+  // the #810/#856 hash handoff can still find it), so scope to the visible
+  // Wünsche panel rather than the page as a whole.
+  await expect(
+    page.getByRole('tab', { name: m5s3.overview.segmentWishes }),
+  ).toHaveAttribute('aria-selected', 'true');
+  const wishesPanel = page.getByRole('tabpanel', {
+    name: m5s3.overview.segmentWishes,
+  });
+  await expect(
+    wishesPanel.getByRole('heading', { name: EARLY_TITLE, level: 2 }),
+  ).toBeVisible();
+  await expect(wishesPanel.getByText(IDEA_TITLE)).toHaveCount(0);
+  await expect(wishesPanel.getByText(COMPLETED_TITLE)).toHaveCount(0);
+
+  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
+  await expect(
+    page.getByRole('tab', { name: m5s3.overview.segmentPlans }),
+  ).toHaveAttribute('aria-selected', 'true');
+
+  const plansPanel = page.getByRole('tabpanel', {
+    name: m5s3.overview.segmentPlans,
+  });
+  const planTitles = plansPanel.locator('.planen-card-title');
+  await expect(planTitles).toHaveText([EARLY_TITLE, LATE_TITLE, IDEA_TITLE]);
+  await expect(plansPanel.getByText(COMPLETED_TITLE)).toHaveCount(0);
 
   const shortDate = (value: string) =>
     new Intl.DateTimeFormat('de-DE', {
+      weekday: 'short',
       day: 'numeric',
       month: 'short',
     }).format(new Date(value));
-  const meta = soon.locator('.planning-meta');
-  await expect(meta).toHaveCount(2);
-  await expect(meta.nth(0)).toContainText(shortDate(EARLY_DATE));
-  await expect(meta.nth(1)).toContainText(shortDate(LATE_DATE));
-  await expect(meta.nth(0)).toContainText(m5s3.wish.status.PLANNED);
-
-  const someday = page.locator('.future-map-stop-someday');
-  await expect(
-    someday.getByRole('heading', { name: IDEA_TITLE, level: 3 }),
-  ).toBeVisible();
-  await expect(
-    someday.getByRole('heading', { name: EARLY_TITLE, level: 3 }),
-  ).toBeVisible();
-  await expect(someday.getByText(m5s3.wish.status.PLANNED)).toBeVisible();
-
-  expect(
-    await soon
-      .locator('.future-map-marker')
-      .evaluate((element) =>
-        (element as HTMLElement).style.getPropertyValue('background'),
-      ),
-  ).toBe('var(--color-brand)');
+  const pills = plansPanel.locator('.planen-card-pills');
+  await expect(pills.nth(0)).toContainText(shortDate(EARLY_DATE));
+  await expect(pills.nth(1)).toContainText(shortDate(LATE_DATE));
+  await expect(pills.nth(2)).toContainText(m5s3.plan.status.IDEA);
 
   await page.goto('/today');
   const todayTitles = page.locator(
@@ -370,7 +376,7 @@ test('Bald & Geplant contains only dated upcoming Plans in Today order and shows
   await expect(todayTitles).toHaveText([EARLY_TITLE, LATE_TITLE]);
 });
 
-test('planning sections keep their relationship-native empty states', async ({
+test('planning segments keep their relationship-native empty states', async ({
   page,
 }) => {
   await installPlanningMocks(page, { empty: true });
@@ -378,12 +384,7 @@ test('planning sections keep their relationship-native empty states', async ({
   await signIn(page);
   await page.goto('/plan');
 
-  await expect(
-    page.locator('.future-map-stop-soon').getByText(m5s3.overview.soonEmpty),
-  ).toBeVisible();
-  await expect(
-    page
-      .locator('.future-map-stop-someday')
-      .getByText(m5s3.overview.somedayEmpty),
-  ).toBeVisible();
+  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
+  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
+  await expect(page.getByText(m5s3.overview.plansEmpty)).toBeVisible();
 });

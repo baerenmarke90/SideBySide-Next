@@ -1,0 +1,335 @@
+/*
+ * Planen product-reference surface (#859).
+ *
+ * Scoped `.planen-*` classes only. SharedPlanningPages.css / .planning-create
+ * remain shared with Places and Collections and are intentionally left
+ * untouched here — see #859 discussion on why a narrow, additive stylesheet
+ * was chosen over broadening those shared selectors.
+ */
+
+.planen-overview .page-heading {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.planen-overview .page-heading h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 6vw, 2.4rem);
+  letter-spacing: -0.015em;
+}
+
+/* Segmented control (Wünsche | Pläne) */
+.planen-segmented {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  max-width: 22rem;
+  margin: var(--space-5) 0 var(--space-6);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  background: var(--color-surface-subtle);
+}
+
+.planen-segment {
+  flex: 1 1 0;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.planen-segment:hover {
+  color: var(--color-text);
+  transform: none;
+  filter: none;
+}
+
+.planen-segment.is-active {
+  background: var(--color-brand-strong);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-soft);
+}
+
+.planen-segment:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Panels */
+/*
+ * `display: grid` here has the same specificity as the UA stylesheet's
+ * `[hidden] { display: none }` and would otherwise win by cascade order,
+ * silently keeping the inactive Wünsche/Pläne segment visible. Restate the
+ * `[hidden]` override explicitly so the segmented control's `hidden`
+ * attribute (see PlanenPanel in SharedPlanningOverviewPage.tsx) actually
+ * hides the inactive panel.
+ */
+.planen-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.planen-panel[hidden] {
+  display: none;
+}
+
+.planen-empty {
+  max-width: 34rem;
+  margin: var(--space-2) 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+/* Card list */
+.planen-card-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planen-card-item {
+  list-style: none;
+}
+
+.planen-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .planen-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-brand-glow);
+    box-shadow: var(--shadow-card);
+  }
+}
+
+.planen-card:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.planen-card-title {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  font-weight: 750;
+  line-height: 1.3;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.planen-card-attribution {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.planen-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Pills, shared between overview cards and the detail hierarchy */
+.planen-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.planen-pill-scheduled {
+  border-color: var(--color-shared-border);
+  background: var(--color-shared-surface);
+  color: var(--color-shared);
+}
+
+.planen-pill-idea {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.planen-pill-open {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.planen-pill-completed {
+  border-color: var(--color-shared-border);
+  background: var(--color-shared-surface);
+  color: var(--color-shared);
+}
+
+.planen-pill-date {
+  border-color: var(--color-brand-glow);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+}
+
+/* Detail: pills + meta summary row (kept as a `.planning-facts` child so the
+ * existing SharedPlanningSanctuary single-column detail-grid rule and the
+ * completed-celebration treatment keep applying; only the inner look is
+ * replaced here). */
+.planen-detail-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.planen-detail-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.planen-detail-meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.planen-detail-subfacts {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.planen-detail-subfacts p {
+  margin: 0;
+}
+
+/* Detail: content sections (Notizen etc.) */
+.planen-section {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: clamp(var(--space-4), 3vw, var(--space-5));
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.planen-section h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.planen-section p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Detail: shared-visibility note. A scoped equivalent of the app's
+ * .immersive-sharing-note pattern (Memory Create, #881) rather than reusing
+ * that class directly: its `--color-shared` text on `--color-shared-surface`
+ * falls short of 4.5:1 body-text contrast. Keeps the same teal "shared"
+ * identity via the icon and border while the readable copy uses tokens that
+ * already pass contrast throughout the product.
+ */
+.planen-shared-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-shared-border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-shared-surface);
+}
+
+.planen-shared-note-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-shared);
+}
+
+.planen-shared-note strong {
+  margin-right: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.planen-shared-note p {
+  display: inline;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Detail: prominent bottom completion CTA */
+.planen-complete-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.planen-complete-cta {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.02rem;
+}
+
+@media (max-width: 599px) {
+  .planen-segmented {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planen-card {
+    transition: none;
+  }
+
+  .planen-card:hover {
+    transform: none;
+  }
+}

@@ -1,4 +1,4 @@
-/* Keep Future Map copy fully opaque while preserving the gentle reveal motion. */
+/* Keep Planen panel copy fully opaque while preserving the gentle reveal motion. */
 @keyframes eimir-planning-reveal {
   from {
     transform: translateY(8px);
@@ -9,12 +9,12 @@
   }
 }
 
-.planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal {
+.planen-panel.sbs-motion-reveal {
   animation-name: eimir-planning-reveal;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planning-page.planning-sanctuary .future-map-stop.sbs-motion-reveal {
+  .planen-panel.sbs-motion-reveal {
     animation: none;
     opacity: 1;
     transform: none;

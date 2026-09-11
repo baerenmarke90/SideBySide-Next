@@ -134,6 +134,7 @@ describe('web layout tokens', () => {
       readSource('./components/QuickCreateMenu.css'),
       readSource('./components/RelatedPeopleAccessibility.css'),
       readSource('./components/RelatedPeoplePage.css'),
+      readSource('./components/PlanningReference.css'),
       readSource('./components/SharedPlanningMotion.css'),
       readSource('./components/SharedPlanningPages.css'),
       readSource('./components/SharedPlanningSanctuary.css'),

@@ -29,21 +29,16 @@ const m5s3 = {
     confirmDelete: 'Endgültig löschen',
   },
   overview: {
-    soon: 'Bald & Geplant',
-    soonIntro:
-      'Was schon Form angenommen hat und als Nächstes auf euch wartet.',
-    soonEmpty:
-      'Noch nichts fest geplant. Sobald aus einer Idee ein konkretes Vorhaben wird, findet ihr es hier.',
-    someday: 'Wünsche & Ideen',
-    somedayIntro:
-      'Ideen für später, die ihr gemeinsam festhalten und irgendwann weiterplanen könnt.',
-    somedayEmpty:
+    title: 'Planen',
+    segmentedLabel: 'Wünsche oder Pläne anzeigen',
+    segmentWishes: 'Wünsche',
+    segmentPlans: 'Pläne',
+    wishesEmpty:
       'Noch keine Wünsche festgehalten. Sammelt hier, was ihr irgendwann gemeinsam erleben möchtet.',
-    others: 'Weitere gemeinsame Dinge',
-    eyebrow: 'Gemeinsam planen',
-    title: 'Eure Wünsche und Pläne',
-    intro:
-      'Was ihr gemeinsam vorhabt – von leisen Ideen bis zu Plänen mit einem festen Zeitpunkt.',
+    plansEmpty:
+      'Noch keine Pläne. Sobald aus einer Idee ein konkretes Vorhaben wird, findet ihr es hier.',
+    createdBy: 'Idee von {{name}}',
+    scheduledMeta: '{{status}} → {{date}}',
   },
   wish: {
     heading: 'Wünsche',
@@ -72,7 +67,6 @@ const m5s3 = {
       'Vom ersten Gedanken über einen Zeitpunkt bis zum gemeinsam Erlebten.',
     create: 'Plan hinzufügen',
     loading: 'Plan wird geladen …',
-    detailEyebrow: 'Gemeinsamer Plan',
     lifecycleHeading: 'Wo steht ihr gerade?',
     scheduleFacts: 'Zeitpunkt und Erlebnisdatum',
     plannedStart: "Wann geht's los?",
@@ -82,7 +76,7 @@ const m5s3 = {
     reschedule: 'Zeitpunkt ändern',
     unschedule: 'Noch ohne festen Zeitpunkt',
     editAction: 'Plan bearbeiten',
-    complete: 'Als erlebt abschließen',
+    complete: 'Plan abschließen',
     returnToWish: 'Zurück zum Wunsch',
     completedTitle: 'Gemeinsam geschafft',
     completedBody: 'Aus einem Plan wurde etwas, das ihr erlebt habt.',
@@ -94,6 +88,11 @@ const m5s3 = {
     newPlaceSave: 'Ort erstellen',
     newPlaceSaving: 'Ort wird erstellt …',
     newPlaceCancel: 'Ortsauswahl behalten',
+    notesHeading: 'Notizen',
+    placeLabel: 'Ort: {{name}}',
+    sharedTitle: 'Für euch beide sichtbar',
+    sharedBody: 'Dieser Plan ist automatisch für euch beide sichtbar.',
+    statusPillPlanned: 'geplant',
     status: {
       IDEA: 'Idee',
       PLANNED: 'Das haben wir vor',

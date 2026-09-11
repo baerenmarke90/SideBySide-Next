@@ -200,8 +200,11 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
         plannedEnd: null,
         placeId: null,
         experiencedOn: null,
+        sourceWishId: null,
         version: isRescheduled ? 2 : 1,
         createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: { id: ACCOUNT_ID, displayName: 'Anna' },
         updatedAt: TEST_NOW,
         capabilities: {
           canEdit: true,
@@ -212,7 +215,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
     }
 
     if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/places`) {
-      await fulfillJson([]);
+      await fulfillJson({ items: [], nextCursor: null });
       return;
     }
 
@@ -231,8 +234,11 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
         plannedEnd: null,
         placeId: null,
         experiencedOn: null,
+        sourceWishId: null,
         version: 2,
         createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: { id: ACCOUNT_ID, displayName: 'Anna' },
         updatedAt: TEST_NOW,
         capabilities: {
           canEdit: true,
