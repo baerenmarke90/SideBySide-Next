@@ -33,6 +33,7 @@ import { CommentsPanel } from './CommentsPanel';
 import { MediaGallery } from './MediaGallery';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
+import { VisibilityBadge } from './VisibilityBadge';
 import { UiState } from './UiState';
 
 export type HeartMomentProductMode = 'create' | 'detail' | 'edit';
@@ -674,6 +675,12 @@ export function HeartMomentProductPage({
         }
         eyebrow={heartMomentEyebrow}
         title={heartMoment.text}
+        titleAction={
+          <VisibilityBadge
+            visibility={shared ? 'SPACE_SHARED' : 'OWNER_ONLY'}
+            size="small"
+          />
+        }
         description={t(`heartEmotion.${heartMoment.emotion}`)}
         action={
           heartMoment.capabilities.canEdit && !offline ? (
