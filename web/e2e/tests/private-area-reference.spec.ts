@@ -139,7 +139,10 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
+    ) {
       await fulfillJson({
         recentShared: [],
         relationshipDuration: null,
@@ -175,7 +178,10 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/activity`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/activity`
+    ) {
       await fulfillJson({ hasMore: false, items: [], nextCursor: null });
       return;
     }
@@ -236,8 +242,14 @@ async function expectPrivateReferenceStructure(page: Page): Promise<void> {
   const cards = page.locator('.private-area-destination-card');
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toHaveAttribute('href', '/more/private/notes');
-  await expect(cards.nth(1)).toHaveAttribute('href', '/more/private/gift-ideas');
-  await expect(cards.nth(2)).toHaveAttribute('href', '/more/private/collections');
+  await expect(cards.nth(1)).toHaveAttribute(
+    'href',
+    '/more/private/gift-ideas',
+  );
+  await expect(cards.nth(2)).toHaveAttribute(
+    'href',
+    '/more/private/collections',
+  );
   await expect(cards.nth(0)).toContainText(privateArea.notes.title);
   await expect(cards.nth(1)).toContainText(privateArea.gifts.title);
   await expect(cards.nth(2)).toContainText(privateArea.collections.title);
@@ -257,7 +269,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width: 390, height: 844 });
 
     const unexpectedRequests = await signInAndOpenPrivateArea(page);
-    await expect(page.locator('html')).toHaveAttribute('data-theme', colorScheme);
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      colorScheme,
+    );
     await expectPrivateReferenceStructure(page);
 
     await page.screenshot({
@@ -316,7 +331,9 @@ test('private area keeps the accepted hierarchy in expanded Web', async ({
   expect(unexpectedRequests).toEqual([]);
 });
 
-test('private area remains usable at 200 percent layout zoom', async ({ page }) => {
+test('private area remains usable at 200 percent layout zoom', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.setViewportSize({ width: 780, height: 900 });
 
