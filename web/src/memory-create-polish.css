@@ -198,10 +198,12 @@
 }
 
 /*
- * Optional details styled as a calm rounded secondary disclosure control (#881).
+ * Optional details styled as a calm rounded secondary disclosure control (#881, #888).
  *
  * Keeps native <details>/<summary> semantics while providing a full-width,
  * touch-target-compliant (44px min-height) secondary surface with AddIcon and chevron.
+ * Resting surface material remains stable when opened (#888); state is communicated
+ * by chevron rotation and revealed content rather than a surface/color jump.
  */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
@@ -335,15 +337,6 @@
   .immersive-create-details[open]
   .summary-chevron {
   transform: rotate(90deg);
-}
-
-.create-page
-  .immersive-create-card[aria-labelledby="memory-form-heading"]
-  .immersive-create-details[open]
-  > summary {
-  border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
