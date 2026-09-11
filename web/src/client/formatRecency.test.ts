@@ -52,8 +52,6 @@ describe('formatRecency', () => {
       }).format(calendarDate),
     ).toBe('Fri, Sep 4');
 
-    expect(formatCompactCalendarDate(calendarDate, 'en-US')).toBe(
-      'Sat, Sep 5',
-    );
+    expect(formatCompactCalendarDate(calendarDate, 'en-US')).toBe('Sat, Sep 5');
   });
 });
