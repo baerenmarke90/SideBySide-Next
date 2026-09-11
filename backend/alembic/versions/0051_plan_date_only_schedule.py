@@ -24,8 +24,11 @@ depends_on = None
 def upgrade() -> None:
     op.add_column("plans", sa.Column("planned_on", sa.Date(), nullable=True))
 
-    op.drop_constraint("ck_plans_idea_has_no_schedule", "plans", type_="check")
-    op.drop_constraint("ck_plans_planned_needs_start", "plans", type_="check")
+    # Pass logical constraint names here. The repository-wide SQLAlchemy
+    # naming convention expands them to ck_plans_<name>; passing an already
+    # expanded database name would incorrectly double-prefix it.
+    op.drop_constraint("idea_has_no_schedule", "plans", type_="check")
+    op.drop_constraint("planned_needs_start", "plans", type_="check")
 
     op.create_check_constraint(
         "schedule_has_single_start",
@@ -66,9 +69,9 @@ def downgrade() -> None:
         )
 
     op.drop_index("ix_plans_space_id_planned_on", table_name="plans")
-    op.drop_constraint("ck_plans_planned_needs_start", "plans", type_="check")
-    op.drop_constraint("ck_plans_idea_has_no_schedule", "plans", type_="check")
-    op.drop_constraint("ck_plans_schedule_has_single_start", "plans", type_="check")
+    op.drop_constraint("planned_needs_start", "plans", type_="check")
+    op.drop_constraint("idea_has_no_schedule", "plans", type_="check")
+    op.drop_constraint("schedule_has_single_start", "plans", type_="check")
 
     op.create_check_constraint(
         "idea_has_no_schedule",
