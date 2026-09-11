@@ -58,6 +58,12 @@ export interface DashboardItem {
      */
     scheduledAt: Date | null;
     /**
+     * Calendar date for date-only upcoming content.
+     * @type {Date}
+     * @memberof DashboardItem
+     */
+    scheduledOn: Date | null;
+    /**
      * 
      * @type {string}
      * @memberof DashboardItem
@@ -71,8 +77,6 @@ export interface DashboardItem {
     type: DashboardItemType;
 }
 
-
-
 /**
  * Check if a given object implements the DashboardItem interface.
  */
@@ -81,6 +85,7 @@ export function instanceOfDashboardItem(value: object): value is DashboardItem {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('occurredOn' in value) || value['occurredOn'] === undefined) return false;
     if (!('scheduledAt' in value) || value['scheduledAt'] === undefined) return false;
+    if (!('scheduledOn' in value) || value['scheduledOn'] === undefined) return false;
     if (!('titleOrText' in value) || value['titleOrText'] === undefined) return false;
     if (!('type' in value) || value['type'] === undefined) return false;
     return true;
@@ -101,6 +106,7 @@ export function DashboardItemFromJSONTyped(json: any, ignoreDiscriminator: boole
         'occurredOn': (json['occurredOn'] == null ? null : new Date(json['occurredOn'])),
         'previewAttachmentId': json['previewAttachmentId'] === undefined ? undefined : json['previewAttachmentId'] === null ? null : json['previewAttachmentId'],
         'scheduledAt': (json['scheduledAt'] == null ? null : new Date(json['scheduledAt'])),
+        'scheduledOn': (json['scheduledOn'] == null ? null : new Date(json['scheduledOn'])),
         'titleOrText': json['titleOrText'],
         'type': DashboardItemTypeFromJSON(json['type']),
     };
@@ -122,8 +128,8 @@ export function DashboardItemToJSONTyped(value?: DashboardItem | null, ignoreDis
         'occurredOn': value['occurredOn'] == null ? value['occurredOn'] : value['occurredOn'].toISOString().substring(0,10),
         'previewAttachmentId': value['previewAttachmentId'],
         'scheduledAt': value['scheduledAt'] == null ? value['scheduledAt'] : value['scheduledAt'].toISOString(),
+        'scheduledOn': value['scheduledOn'] == null ? value['scheduledOn'] : value['scheduledOn'].toISOString().substring(0,10),
         'titleOrText': value['titleOrText'],
         'type': DashboardItemTypeToJSON(value['type']),
     };
 }
-
