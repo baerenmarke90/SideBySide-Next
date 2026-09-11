@@ -29,23 +29,26 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * One explicit Plan schedule representation.
  *
- * @param plannedStart 
  * @param plannedEnd 
+ * @param plannedOn 
+ * @param plannedStart 
  */
 @Serializable
 
 data class PlanSchedule (
 
-    @Contextual @SerialName(value = "plannedStart")
-    val plannedStart: java.time.OffsetDateTime,
-
     @Contextual @SerialName(value = "plannedEnd")
-    val plannedEnd: java.time.OffsetDateTime? = null
+    val plannedEnd: java.time.OffsetDateTime? = null,
+
+    @Contextual @SerialName(value = "plannedOn")
+    val plannedOn: java.time.LocalDate? = null,
+
+    @Contextual @SerialName(value = "plannedStart")
+    val plannedStart: java.time.OffsetDateTime? = null
 
 ) {
 
 
 }
-
