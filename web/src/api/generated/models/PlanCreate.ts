@@ -20,12 +20,13 @@ import {
     PlanScheduleToJSON,
     PlanScheduleToJSONTyped,
 } from './PlanSchedule';
+
 /**
  * Direct Plan creation with an optional atomic schedule.
- *
- * Lifecycle state remains server-owned. Omitting `schedule` creates an `IDEA`;
- * supplying a valid date-only or timed schedule creates a `PLANNED` Plan in
- * the same transaction.
+ * 
+ * Lifecycle state remains server-owned. Omitting ``schedule`` creates an
+ * ``IDEA``; supplying a valid date-only or timed schedule creates a
+ * ``PLANNED`` Plan in the same transaction.
  * @export
  * @interface PlanCreate
  */
@@ -98,3 +99,4 @@ export function PlanCreateToJSONTyped(value?: PlanCreate | null, ignoreDiscrimin
         'title': value['title'],
     };
 }
+

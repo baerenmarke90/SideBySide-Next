@@ -59,6 +59,12 @@ export interface DashboardItem {
     scheduledAt: Date | null;
     /**
      * 
+     * @type {Date}
+     * @memberof DashboardItem
+     */
+    scheduledOn?: Date | null;
+    /**
+     * 
      * @type {string}
      * @memberof DashboardItem
      */
@@ -69,13 +75,9 @@ export interface DashboardItem {
      * @memberof DashboardItem
      */
     type: DashboardItemType;
-    /**
-     * Calendar date for date-only upcoming content.
-     * @type {Date}
-     * @memberof DashboardItem
-     */
-    scheduledOn?: Date | null;
 }
+
+
 
 /**
  * Check if a given object implements the DashboardItem interface.
@@ -105,9 +107,9 @@ export function DashboardItemFromJSONTyped(json: any, ignoreDiscriminator: boole
         'occurredOn': (json['occurredOn'] == null ? null : new Date(json['occurredOn'])),
         'previewAttachmentId': json['previewAttachmentId'] === undefined ? undefined : json['previewAttachmentId'] === null ? null : json['previewAttachmentId'],
         'scheduledAt': (json['scheduledAt'] == null ? null : new Date(json['scheduledAt'])),
+        'scheduledOn': json['scheduledOn'] === undefined ? undefined : json['scheduledOn'] === null ? null : (new Date(json['scheduledOn'])),
         'titleOrText': json['titleOrText'],
         'type': DashboardItemTypeFromJSON(json['type']),
-        'scheduledOn': json['scheduledOn'] === undefined ? undefined : (json['scheduledOn'] === null ? null : new Date(json['scheduledOn'])),
     };
 }
 
@@ -127,8 +129,9 @@ export function DashboardItemToJSONTyped(value?: DashboardItem | null, ignoreDis
         'occurredOn': value['occurredOn'] == null ? value['occurredOn'] : value['occurredOn'].toISOString().substring(0,10),
         'previewAttachmentId': value['previewAttachmentId'],
         'scheduledAt': value['scheduledAt'] == null ? value['scheduledAt'] : value['scheduledAt'].toISOString(),
+        'scheduledOn': value['scheduledOn'] == null ? value['scheduledOn'] : value['scheduledOn'].toISOString().substring(0,10),
         'titleOrText': value['titleOrText'],
         'type': DashboardItemTypeToJSON(value['type']),
-        'scheduledOn': value['scheduledOn'] === undefined ? undefined : (value['scheduledOn'] === null ? null : value['scheduledOn'].toISOString().substring(0,10)),
     };
 }
+

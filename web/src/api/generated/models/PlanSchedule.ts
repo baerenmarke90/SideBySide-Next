@@ -15,9 +15,10 @@
 import { mapValues } from '../runtime';
 /**
  * One explicit Plan schedule representation.
- *
- * `plannedOn` is a calendar day. `plannedStart` is a timezone-aware instant.
- * Exactly one of those semantic starts must be supplied.
+ * 
+ * ``plannedOn`` is a calendar day. ``plannedStart`` is a timezone-aware
+ * instant. Exactly one of those semantic starts must be supplied; clients may
+ * never synthesize a wall-clock time merely to encode ``plannedOn``.
  * @export
  * @interface PlanSchedule
  */
@@ -81,3 +82,4 @@ export function PlanScheduleToJSONTyped(value?: PlanSchedule | null, ignoreDiscr
         'plannedStart': value['plannedStart'] == null ? value['plannedStart'] : value['plannedStart'].toISOString(),
     };
 }
+

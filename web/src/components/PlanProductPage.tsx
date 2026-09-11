@@ -119,7 +119,13 @@ export function PlanProductPage({
   });
 
   const scheduleMutation = useMutation({
-    mutationFn: ({ plan, schedule }: { plan: PlanDetail; schedule: PlanSchedule }) =>
+    mutationFn: ({
+      plan,
+      schedule,
+    }: {
+      plan: PlanDetail;
+      schedule: PlanSchedule;
+    }) =>
       apiCall(() =>
         apis.plans.schedulePlan({
           spaceId,
@@ -170,8 +176,12 @@ export function PlanProductPage({
       ),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['m5-s3', 'plans', spaceId] }),
-        queryClient.invalidateQueries({ queryKey: ['m5-s3', 'wishes', spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'plans', spaceId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'wishes', spaceId],
+        }),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('plan'), { replace: true });
@@ -189,7 +199,9 @@ export function PlanProductPage({
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: key });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['m5-s3', 'plans', spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'plans', spaceId],
+        }),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('plan'), { replace: true });
@@ -261,11 +273,13 @@ export function PlanProductPage({
     returnMutation.error;
 
   const placeName = plan.placeId
-    ? (placesQuery.data?.find((place) => place.id === plan.placeId)?.name ?? null)
+    ? (placesQuery.data?.find((place) => place.id === plan.placeId)?.name ??
+      null)
     : null;
   const scheduleLabel = planScheduleLabel(plan);
   const hasSubfacts = Boolean(plan.plannedEnd || plan.experiencedOn);
-  const showsLifecycle = plan.capabilities.canEdit && plan.status !== 'COMPLETED';
+  const showsLifecycle =
+    plan.capabilities.canEdit && plan.status !== 'COMPLETED';
 
   return (
     <div className="page planning-page planen-detail">
@@ -315,14 +329,18 @@ export function PlanProductPage({
       >
         <div className="planen-detail-pills">
           {scheduleLabel ? (
-            <span className="planen-pill planen-pill-date">{scheduleLabel}</span>
+            <span className="planen-pill planen-pill-date">
+              {scheduleLabel}
+            </span>
           ) : null}
           <span className={`planen-pill planen-pill-${planPillTone(plan)}`}>
             {planStatusWord(t, plan)}
           </span>
         </div>
         <p className="planen-detail-meta">
-          {placeName ? `${t('m5s3.plan.placeLabel', { name: placeName })} · ` : ''}
+          {placeName
+            ? `${t('m5s3.plan.placeLabel', { name: placeName })} · `
+            : ''}
           {t('m5s3.overview.createdBy', { name: plan.creator.displayName })}
         </p>
         {hasSubfacts ? (
@@ -469,7 +487,9 @@ export function PlanProductPage({
         {plan.status === 'COMPLETED' ? (
           <section className="plan-completed-celebration sbs-motion-reveal">
             <h2>{t('m5s3.plan.completedTitle')}</h2>
-            <p className="plan-completed-intro">{t('m5s3.plan.completedBody')}</p>
+            <p className="plan-completed-intro">
+              {t('m5s3.plan.completedBody')}
+            </p>
             <Link
               className="button-link primary"
               to={`/story/memories/new?title=${encodeURIComponent(plan.title)}`}

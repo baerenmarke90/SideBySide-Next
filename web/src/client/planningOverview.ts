@@ -87,14 +87,16 @@ export function selectUpcomingPlans(
     .sort((left, right) => {
       const leftDay = scheduleDayKey(left);
       const rightDay = scheduleDayKey(right);
-      if (leftDay !== rightDay) return (leftDay ?? '').localeCompare(rightDay ?? '');
+      if (leftDay !== rightDay)
+        return (leftDay ?? '').localeCompare(rightDay ?? '');
 
       const leftRank = left.plannedOn ? 0 : 1;
       const rightRank = right.plannedOn ? 0 : 1;
       if (leftRank !== rightRank) return leftRank - rightRank;
 
       if (left.plannedStart && right.plannedStart) {
-        const instantOrder = left.plannedStart.getTime() - right.plannedStart.getTime();
+        const instantOrder =
+          left.plannedStart.getTime() - right.plannedStart.getTime();
         if (instantOrder !== 0) return instantOrder;
       }
 

@@ -20,12 +20,13 @@ import {
     PlanScheduleToJSON,
     PlanScheduleToJSONTyped,
 } from './PlanSchedule';
+
 /**
  * Wish-to-Plan conversion request with an optional atomic schedule.
- *
+ * 
  * Without an explicit title the Plan inherits the Wish title. Supplying
- * `schedule` makes the new Plan date-only or timed without a second lifecycle
- * request; omitting it preserves the existing unscheduled flow.
+ * ``schedule`` makes the new Plan date-only or timed without a second
+ * lifecycle request; omitting it preserves the existing unscheduled flow.
  * @export
  * @interface WishToPlan
  */
@@ -97,3 +98,4 @@ export function WishToPlanToJSONTyped(value?: WishToPlan | null, ignoreDiscrimin
         'title': value['title'],
     };
 }
+

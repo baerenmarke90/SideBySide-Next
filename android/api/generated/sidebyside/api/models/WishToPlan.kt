@@ -30,7 +30,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Wish-to-Plan conversion request with an optional atomic schedule.
+ * Wish-to-Plan conversion request with an optional atomic schedule.  Without an explicit title the Plan inherits the Wish title. Supplying ``schedule`` makes the new Plan date-only or timed without a second lifecycle request; omitting it preserves the existing unscheduled flow.
  *
  * @param description 
  * @param placeId 
@@ -57,3 +57,4 @@ data class WishToPlan (
 
 
 }
+

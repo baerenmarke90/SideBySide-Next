@@ -30,7 +30,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct Plan creation with an optional atomic schedule.
+ * Direct Plan creation with an optional atomic schedule.  Lifecycle state remains server-owned. Omitting ``schedule`` creates an ``IDEA``; supplying a valid date-only or timed schedule creates a ``PLANNED`` Plan in the same transaction.
  *
  * @param title 
  * @param description 
@@ -57,3 +57,4 @@ data class PlanCreate (
 
 
 }
+

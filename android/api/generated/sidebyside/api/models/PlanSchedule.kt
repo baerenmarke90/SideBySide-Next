@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * One explicit Plan schedule representation.
+ * One explicit Plan schedule representation.  ``plannedOn`` is a calendar day. ``plannedStart`` is a timezone-aware instant. Exactly one of those semantic starts must be supplied; clients may never synthesize a wall-clock time merely to encode ``plannedOn``.
  *
  * @param plannedEnd 
  * @param plannedOn 
@@ -52,3 +52,4 @@ data class PlanSchedule (
 
 
 }
+
