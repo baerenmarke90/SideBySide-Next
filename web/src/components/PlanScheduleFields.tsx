@@ -78,7 +78,7 @@ export function PlanScheduleFields({
           if (!nextTime) setEnd('');
         }}
       />
-      <small id={hintId} className="field-help">
+      <small id={hintId} className="field-help planning-schedule-help">
         {t('m5s3.plan.plannedTimeHint')}
       </small>
 
