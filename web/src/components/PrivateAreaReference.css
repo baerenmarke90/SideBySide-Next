@@ -3,6 +3,21 @@
   gap: clamp(var(--space-5), 5vw, var(--space-7));
 }
 
+.private-area-page:has(> .private-area-reference-overview)
+  > .private-area-context,
+body.theme-vault
+  .private-area-page:has(> .private-area-reference-overview)
+  > .private-area-context,
+:root[data-theme="dark"]
+  body.theme-vault
+  .private-area-page:has(> .private-area-reference-overview)
+  > .private-area-context {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .private-area-title-row {
   margin: 0;
   font-family: var(--font-display);
@@ -147,10 +162,6 @@
 }
 
 @media (max-width: 480px) {
-  .private-area-context {
-    padding: var(--space-4);
-  }
-
   .private-area-reference-overview {
     gap: var(--space-5);
   }
