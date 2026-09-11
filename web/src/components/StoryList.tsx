@@ -45,11 +45,16 @@ function storyItemAuthor(item: StoryItem): AuthorSummary {
 export function StoryList({
   items,
   loadMemoryImage,
+  loadHeartMomentImage,
   profilesApi,
   spaceId,
 }: {
   items: StoryItem[];
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
+  loadHeartMomentImage: (
+    heartMomentId: string,
+    attachmentId: string,
+  ) => Promise<string>;
   profilesApi?: ProfilesApi;
   spaceId?: string;
 }) {
@@ -86,6 +91,10 @@ export function StoryList({
               : item.kind === 'HEART_MOMENT'
                 ? item.heartMoment.id
                 : '';
+          const imageLoader =
+            item.kind === 'HEART_MOMENT'
+              ? loadHeartMomentImage
+              : loadMemoryImage;
           const productPath = storyProductPath(item);
 
           const cardClasses = [
@@ -121,7 +130,7 @@ export function StoryList({
                     <MemoryPreview
                       memoryId={imageEntityId}
                       attachmentId={imageAttachment.id}
-                      loadImage={loadMemoryImage}
+                      loadImage={imageLoader}
                     />
                   ) : null}
 
