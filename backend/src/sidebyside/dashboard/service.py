@@ -39,12 +39,6 @@ from sidebyside.wishes.models import Wish
 
 SECTION_LIMIT = 8
 MAX_RECOGNITION_TEXT = 160
-
-# The Keepsake slot searches a wider recency window than SECTION_LIMIT because
-# it must find a real photo even when the most recent SECTION_LIMIT shared
-# items happen to be non-memory or memories without a READY attachment. It
-# stays bounded rather than unbounded so a very active Space cannot turn this
-# into a full-table scan.
 KEEPSAKE_SCAN_LIMIT = 50
 
 
@@ -81,6 +75,7 @@ class DashboardItem:
     id: UUID
     title_or_text: str | None = None
     occurred_on: date | None = None
+    scheduled_on: date | None = None
     scheduled_at: datetime | None = None
     created_at: datetime | None = None
     preview_attachment_id: UUID | None = None
@@ -121,7 +116,14 @@ def read_dashboard(
         relationship_duration=_relationship_duration(profile, today),
         retrospective=_retrospective(session, authorization, today),
         keepsake=_keepsake(session, authorization),
-        upcoming=_upcoming(session, authorization, profile, today, instant),
+        upcoming=_upcoming(
+            session,
+            authorization,
+            profile,
+            today,
+            instant,
+            account.timezone,
+        ),
         recent_shared=_recent_shared(session, authorization),
         thinking_of_you_available_at=thinking.available_at(session, authorization),
     )
@@ -234,6 +236,7 @@ def _retrospective(
                 id=chosen.id,
                 title_or_text=chosen.title_or_text,
                 occurred_on=chosen.occurred_on,
+                scheduled_on=chosen.scheduled_on,
                 scheduled_at=chosen.scheduled_at,
                 created_at=chosen.created_at,
                 preview_attachment_id=preview_id,
@@ -249,15 +252,7 @@ def _keepsake(
     session: Session,
     authorization: AuthorizationContext,
 ) -> DashboardItem | None:
-    """Find the Today Keepsake: the most recent readable Memory with a READY photo.
-
-    This is a dedicated product role, not a byproduct of ``recent_shared``.
-    ``recent_shared`` mixes many item types and is capped at ``SECTION_LIMIT``,
-    so a handful of recent non-memory activity can crowd out the most recent
-    real shared photo entirely. The Keepsake searches memories only, across a
-    wider recency window, so the page's emotional focal point never depends on
-    what else happened to be shared recently.
-    """
+    """Find the Today Keepsake: the most recent readable Memory with a READY photo."""
     memories = list(
         session.execute(
             readable(Memory, authorization)
@@ -293,10 +288,11 @@ def _upcoming(
     profile: SpaceProfile | None,
     today: date,
     instant: datetime,
+    timezone_name: str,
 ) -> list[DashboardItem]:
     candidates: list[DashboardItem] = []
 
-    plans = session.execute(
+    timed_plans = session.execute(
         readable(Plan, authorization)
         .where(
             Plan.status == PlanStatus.PLANNED.value,
@@ -306,7 +302,7 @@ def _upcoming(
         .order_by(Plan.planned_start, Plan.id)
         .limit(SECTION_LIMIT)
     ).scalars()
-    for plan in plans:
+    for plan in timed_plans:
         if plan.planned_start is None:
             continue
         candidates.append(
@@ -315,6 +311,28 @@ def _upcoming(
                 id=plan.id,
                 title_or_text=_bounded(plan.payload.title),
                 scheduled_at=clock.ensure_utc(plan.planned_start),
+            )
+        )
+
+    date_only_plans = session.execute(
+        readable(Plan, authorization)
+        .where(
+            Plan.status == PlanStatus.PLANNED.value,
+            Plan.planned_on.is_not(None),
+            Plan.planned_on >= today,
+        )
+        .order_by(Plan.planned_on, Plan.id)
+        .limit(SECTION_LIMIT)
+    ).scalars()
+    for plan in date_only_plans:
+        if plan.planned_on is None:
+            continue
+        candidates.append(
+            DashboardItem(
+                type=DashboardItemType.PLAN,
+                id=plan.id,
+                title_or_text=_bounded(plan.payload.title),
+                scheduled_on=plan.planned_on,
             )
         )
 
@@ -365,7 +383,7 @@ def _upcoming(
             )
         )
 
-    candidates.sort(key=_upcoming_sort_key)
+    candidates.sort(key=lambda item: _upcoming_sort_key(item, timezone_name))
     return candidates[:SECTION_LIMIT]
 
 
@@ -376,31 +394,38 @@ def _next_important_date(value: ImportantDate, today: date) -> date | None:
 
 
 def _next_annual(source: date, today: date) -> date:
-    """Return the next occurrence of an annually-recurring month/day.
-
-    Uses the same canonical annual-recurrence rule as Reminder/Rule
-    scheduling (``clock.annual_occurrence``): February 29 resolves to
-    February 28 in a non-leap year rather than being skipped until the next
-    leap year.
-    """
     this_year = clock.annual_occurrence(today.year, source.month, source.day)
     if this_year >= today:
         return this_year
     return clock.annual_occurrence(today.year + 1, source.month, source.day)
 
 
-def _upcoming_sort_key(item: DashboardItem) -> tuple[datetime, str, str]:
-    if item.scheduled_at is not None:
-        moment = clock.ensure_utc(item.scheduled_at)
+def _upcoming_sort_key(
+    item: DashboardItem,
+    timezone_name: str,
+) -> tuple[date, int, int, str, str]:
+    """Sort calendar items without converting a date-only value into an instant."""
+    if item.scheduled_on is not None:
+        day = item.scheduled_on
+        timing_rank = 0
+        wall_clock = 0
     elif item.occurred_on is not None:
-        moment = datetime.combine(
-            item.occurred_on,
-            datetime.min.time(),
-            tzinfo=clock.resolve_zone("UTC"),
+        day = item.occurred_on
+        timing_rank = 0
+        wall_clock = 0
+    elif item.scheduled_at is not None:
+        local = clock.ensure_utc(item.scheduled_at).astimezone(clock.resolve_zone(timezone_name))
+        day = local.date()
+        timing_rank = 1
+        wall_clock = (
+            local.hour * 3_600_000_000
+            + local.minute * 60_000_000
+            + local.second * 1_000_000
+            + local.microsecond
         )
     else:
         raise RuntimeError("Upcoming Dashboard item has no occurrence.")
-    return moment, item.type.value, str(item.id)
+    return day, timing_rank, wall_clock, item.type.value, str(item.id)
 
 
 def _recent_shared(
