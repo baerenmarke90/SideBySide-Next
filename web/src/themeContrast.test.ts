@@ -76,40 +76,51 @@ function darkThemeBlock(css: string): string {
   return match[1];
 }
 
-function cssVariable(block: string, name: string): string {
+function optionalCssVariable(block: string, name: string): string | null {
   const match = block.match(
     new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{3,4}|#[0-9a-fA-F]{6,8});`),
   );
-  if (!match)
+  return match?.[1] ?? null;
+}
+
+function cssVariable(block: string, name: string): string {
+  const value = optionalCssVariable(block, name);
+  if (!value)
     throw new Error(`CSS variable is missing or is not a hex color: --${name}`);
-  return match[1];
+  return value;
 }
 
 const themeCss = readSource('./theme.css');
-const light = cssBlock(readSource('./styles.css'), ':root');
-const entryLight = cssBlock(themeCss, ':root');
+const compatibilityLight = cssBlock(readSource('./styles.css'), ':root');
+const explicitLight = cssBlock(themeCss, ':root');
 const dark = darkThemeBlock(themeCss);
 const white = '#ffffff';
 
+function lightVariable(name: string): string {
+  return (
+    optionalCssVariable(explicitLight, name) ?? cssVariable(compatibilityLight, name)
+  );
+}
+
 describe('theme token contrast', () => {
-  it('keeps primary and secondary text at WCAG AA in both schemes', () => {
+  it('keeps primary and secondary text at WCAG AA across calibrated Light surfaces', () => {
+    for (const surface of [
+      'color-background',
+      'color-surface',
+      'color-surface-subtle',
+      'color-surface-raised',
+      'color-surface-panel',
+      'color-surface-panel-tint',
+      'color-surface-overlay',
+    ]) {
+      expect(contrast(lightVariable('color-text'), lightVariable(surface))).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrast(lightVariable('color-text-secondary'), lightVariable(surface)),
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+
     expect(
-      contrast(
-        cssVariable(light, 'color-text'),
-        cssVariable(light, 'color-background'),
-      ),
-    ).toBeGreaterThanOrEqual(4.5);
-    expect(
-      contrast(
-        cssVariable(light, 'color-text-secondary'),
-        cssVariable(light, 'color-surface'),
-      ),
-    ).toBeGreaterThanOrEqual(4.5);
-    expect(
-      contrast(
-        cssVariable(dark, 'color-text'),
-        cssVariable(dark, 'color-background'),
-      ),
+      contrast(cssVariable(dark, 'color-text'), cssVariable(dark, 'color-background')),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
@@ -119,60 +130,58 @@ describe('theme token contrast', () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('establishes a deliberate Light ground, base, recessed, and raised ladder', () => {
+    const background = lightVariable('color-background');
+    const surface = lightVariable('color-surface');
+    const subtle = lightVariable('color-surface-subtle');
+    const raised = lightVariable('color-surface-raised');
+    const border = lightVariable('color-border');
+
+    expect(contrast(background, surface)).toBeGreaterThanOrEqual(1.07);
+    expect(contrast(background, subtle)).toBeGreaterThanOrEqual(1.07);
+    expect(contrast(background, raised)).toBeGreaterThanOrEqual(1.13);
+    expect(contrast(surface, raised)).toBeGreaterThanOrEqual(1.05);
+    expect(contrast(background, border)).toBeGreaterThanOrEqual(1.3);
+  });
+
   it('keeps primary actions readable in both schemes', () => {
-    expect(
-      contrast(white, cssVariable(light, 'color-brand-strong')),
-    ).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(white, lightVariable('color-brand-strong'))).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(white, cssVariable(dark, 'color-brand-strong')),
     ).toBeGreaterThanOrEqual(4.5);
   });
 
   it('keeps entry copy readable across every hero gradient stop', () => {
-    for (const theme of [entryLight, dark]) {
+    for (const theme of [explicitLight, dark]) {
       const foreground = cssVariable(theme, 'color-on-accent');
       for (const stop of [
         'color-entry-hero-start',
         'color-entry-hero-middle',
         'color-entry-hero-end',
       ]) {
-        expect(
-          contrast(foreground, cssVariable(theme, stop)),
-        ).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(foreground, cssVariable(theme, stop))).toBeGreaterThanOrEqual(4.5);
       }
     }
   });
 
   it('keeps status text readable on its semantic surface', () => {
     expect(
-      contrast(
-        cssVariable(light, 'color-shared'),
-        cssVariable(light, 'color-shared-surface'),
-      ),
+      contrast(lightVariable('color-shared'), lightVariable('color-shared-surface')),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(lightVariable('color-error'), lightVariable('color-error-surface')),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
-        cssVariable(light, 'color-error'),
-        cssVariable(light, 'color-error-surface'),
+        lightVariable('color-private'),
+        cssVariable(explicitLight, 'color-private-surface-soft'),
       ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(
-        cssVariable(light, 'color-private'),
-        cssVariable(entryLight, 'color-private-surface-soft'),
-      ),
+      contrast(cssVariable(dark, 'color-shared'), cssVariable(dark, 'color-shared-surface')),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(
-        cssVariable(dark, 'color-shared'),
-        cssVariable(dark, 'color-shared-surface'),
-      ),
-    ).toBeGreaterThanOrEqual(4.5);
-    expect(
-      contrast(
-        cssVariable(dark, 'color-error'),
-        cssVariable(dark, 'color-error-surface'),
-      ),
+      contrast(cssVariable(dark, 'color-error'), cssVariable(dark, 'color-error-surface')),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
@@ -183,11 +192,6 @@ describe('theme token contrast', () => {
   });
 
   it('never uses the decorative shared accent as normal text on the shared surface', () => {
-    // Regression guard for #841: --color-shared-accent is calibrated for
-    // decorative uses (borders, gradient stops, marker fills) and fails
-    // WCAG AA (~3.76:1) as normal text on --color-shared-surface in Light.
-    // Normal shared-kind text must use --color-shared, which already meets
-    // AA (see 'keeps status text readable on its semantic surface' above).
     const textColorPattern = /^\s*color:\s*var\(--color-shared-accent\)/m;
     for (const relativePath of [
       './components/TodayPage.css',
@@ -197,18 +201,21 @@ describe('theme token contrast', () => {
     }
   });
 
-  it('keeps the focus indicator above the 3:1 UI contrast threshold', () => {
+  it('keeps the focus indicator above 3:1 across calibrated Light surfaces', () => {
+    for (const surface of [
+      'color-background',
+      'color-surface',
+      'color-surface-subtle',
+      'color-surface-raised',
+      'color-surface-panel-tint',
+    ]) {
+      expect(
+        contrast(lightVariable('color-focus'), lightVariable(surface)),
+      ).toBeGreaterThanOrEqual(3);
+    }
+
     expect(
-      contrast(
-        cssVariable(light, 'color-focus'),
-        cssVariable(light, 'color-background'),
-      ),
-    ).toBeGreaterThanOrEqual(3);
-    expect(
-      contrast(
-        cssVariable(dark, 'color-focus'),
-        cssVariable(dark, 'color-background'),
-      ),
+      contrast(cssVariable(dark, 'color-focus'), cssVariable(dark, 'color-background')),
     ).toBeGreaterThanOrEqual(3);
   });
 });
