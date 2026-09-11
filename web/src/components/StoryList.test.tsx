@@ -5,6 +5,7 @@ import { StoryItemFromJSON } from '../api/generated/models/StoryItem';
 import { StoryList } from './StoryList';
 
 const loadMemoryImage = async () => 'blob:test-image';
+const loadHeartMomentImage = async () => 'blob:test-heart-image';
 
 describe('StoryList', () => {
   it('renders a generated MEMORY discriminator with semantic list markup', () => {
@@ -27,7 +28,11 @@ describe('StoryList', () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+        <StoryList
+          items={[item]}
+          loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
+        />
       </MemoryRouter>,
     );
     expect(html).toContain('<ol');
@@ -71,6 +76,7 @@ describe('StoryList', () => {
         <StoryList
           items={[heartMoment, milestone]}
           loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
         />
       </MemoryRouter>,
     );
@@ -103,7 +109,11 @@ describe('StoryList', () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+        <StoryList
+          items={[item]}
+          loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
+        />
       </MemoryRouter>,
     );
 
@@ -133,7 +143,11 @@ describe('StoryList', () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+        <StoryList
+          items={[item]}
+          loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
+        />
       </MemoryRouter>,
     );
 
@@ -197,6 +211,7 @@ describe('StoryList', () => {
         <StoryList
           items={[memoryWithImage, memoryWithoutImage]}
           loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
         />
       </MemoryRouter>,
     );
@@ -210,9 +225,56 @@ describe('StoryList', () => {
     expect(html).not.toContain('story-card-reference');
   });
 
+  it('keeps a Heart Moment with a real attachment image-led', () => {
+    const heartMoment = StoryItemFromJSON({
+      kind: 'HEART_MOMENT',
+      effectiveDate: '2026-08-24',
+      heartMoment: {
+        id: '00000000-0000-0000-0000-000000000010',
+        text: 'A small note with a photo',
+        emotion: 'LOVED',
+        happenedOn: '2026-08-24',
+        createdAt: '2026-08-24T08:00:00Z',
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'A',
+        },
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        attachment: {
+          id: 'att-heart-1',
+          status: 'READY',
+          mediaType: 'IMAGE',
+          mimeType: 'image/jpeg',
+          hasThumbnail: true,
+          width: 800,
+          height: 800,
+          size: 1024,
+        },
+      },
+    });
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <StoryList
+          items={[heartMoment]}
+          loadMemoryImage={loadMemoryImage}
+          loadHeartMomentImage={loadHeartMomentImage}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('story-card-heart-moment has-image');
+    expect(html).toContain('story-media-skeleton');
+    expect(html).toContain('A small note with a photo');
+  });
+
   it('announces an empty story as a status', () => {
     const html = renderToStaticMarkup(
-      <StoryList items={[]} loadMemoryImage={loadMemoryImage} />,
+      <StoryList
+        items={[]}
+        loadMemoryImage={loadMemoryImage}
+        loadHeartMomentImage={loadHeartMomentImage}
+      />,
     );
     expect(html).toContain('role="status"');
     expect(html).toContain('Eure Story beginnt hier.');
