@@ -293,10 +293,13 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
     }),
   ).toBeVisible();
 
-  // Reschedule to an earlier date
-  const startInput = page.locator('#plan-schedule-start');
-  await expect(startInput).toBeVisible();
-  await startInput.fill('2026-09-05T10:00');
+  // Reschedule to an earlier timed date using the #838 date + optional-time contract.
+  const dateInput = page.locator('#plan-schedule-date');
+  const timeInput = page.locator('#plan-schedule-time');
+  await expect(dateInput).toBeVisible();
+  await expect(timeInput).toBeVisible();
+  await dateInput.fill('2026-09-05');
+  await timeInput.fill('10:00');
 
   // Submit the reschedule form and wait for the response
   const rescheduleButton = page.getByRole('button', {
