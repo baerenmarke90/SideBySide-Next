@@ -209,4 +209,20 @@ describe('Memory Create disclosure material stability (#888)', () => {
       /\.immersive-create-details\[open\]\s+\.summary-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s,
     );
   });
+
+  it('scopes hover feedback to fine-pointer and hover-capable devices to prevent sticky hover on touch', () => {
+    // Unscoped summary:hover must not exist outside media query
+    const withoutHoverMedia = memoryPolishCss.replace(
+      /@media\s*\(\s*hover:\s*hover\s*\)\s*and\s*\(\s*pointer:\s*fine\s*\)\s*\{[\s\S]*?\n\}/g,
+      '',
+    );
+    expect(withoutHoverMedia).not.toMatch(
+      /\.immersive-create-details\s*>\s*summary:hover/s,
+    );
+
+    // Scoped hover rule must exist inside (hover: hover) and (pointer: fine)
+    expect(memoryPolishCss).toMatch(
+      /@media\s*\(\s*hover:\s*hover\s*\)\s*and\s*\(\s*pointer:\s*fine\s*\)\s*\{[\s\S]*?\.immersive-create-details\s*>\s*summary:hover\s*\{[\s\S]*?background:\s*var\(--color-surface\);[\s\S]*?\.summary-add-icon/s,
+    );
+  });
 });

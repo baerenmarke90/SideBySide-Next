@@ -204,6 +204,8 @@
  * touch-target-compliant (44px min-height) secondary surface with AddIcon and chevron.
  * Resting surface material remains stable when opened (#888); state is communicated
  * by chevron rotation and revealed content rather than a surface/color jump.
+ * Hover feedback is strictly scoped to fine-pointer / hover-capable devices so
+ * touch interactions never produce sticky hover material on hardware.
  */
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
@@ -257,15 +259,6 @@
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
   .immersive-create-details
-  > summary:hover {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  color: var(--color-text);
-}
-
-.create-page
-  .immersive-create-card[aria-labelledby="memory-form-heading"]
-  .immersive-create-details
   > summary:active {
   background: var(--color-surface-panel-tint);
   border-color: var(--color-border);
@@ -304,14 +297,6 @@
 .create-page
   .immersive-create-card[aria-labelledby="memory-form-heading"]
   .immersive-create-details
-  > summary:hover
-  .summary-add-icon {
-  color: var(--color-text-secondary);
-}
-
-.create-page
-  .immersive-create-card[aria-labelledby="memory-form-heading"]
-  .immersive-create-details
   .summary-label {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -337,6 +322,25 @@
   .immersive-create-details[open]
   .summary-chevron {
   transform: rotate(90deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .create-page
+    .immersive-create-card[aria-labelledby="memory-form-heading"]
+    .immersive-create-details
+    > summary:hover {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+
+  .create-page
+    .immersive-create-card[aria-labelledby="memory-form-heading"]
+    .immersive-create-details
+    > summary:hover
+    .summary-add-icon {
+    color: var(--color-text-secondary);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

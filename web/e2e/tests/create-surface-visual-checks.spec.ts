@@ -366,191 +366,365 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 for (const width of [390, 320] as const) {
   test(`Memory Create keeps sharing and the empty photo picker compact at ${width}px (#855)`, async ({
-    page,
+    browser,
   }, testInfo) => {
-    await installApiMocks(page);
-    await page.goto('/today');
-    await signIn(page);
-
-    await page.goto('/story/memories/new');
-    await page.setViewportSize({ width, height: 844 });
-    await expect(
-      page.getByRole('heading', { name: de.memory.heading }),
-    ).toBeVisible();
-
-    await expectSharingMetadataAligned(page);
-
-    const title = page.getByLabel(de.memory.titleLabel);
-    const media = page.locator('.immersive-create-media');
-    const picker = media.locator('.file-picker');
-    const details = page.locator('.immersive-create-details');
-    const note = page.locator('.immersive-sharing-note');
-    const actions = page.locator('.form-actions');
-    const saveButton = page.getByRole('button', { name: de.memory.save });
-    const quickCreateTrigger = page.locator(
-      '.mobile-quick-create .quick-create-trigger',
-    );
-
-    const domOrder = await page.evaluate(() => {
-      const form = document.querySelector('.immersive-create-form');
-      if (!form) return null;
-      const children = Array.from(form.children);
-      return {
-        titleIndex: children.findIndex((el) =>
-          el.classList.contains('immersive-create-hero'),
-        ),
-        mediaIndex: children.findIndex((el) =>
-          el.classList.contains('immersive-create-media'),
-        ),
-        detailsIndex: children.findIndex((el) =>
-          el.classList.contains('immersive-create-details'),
-        ),
-        noteIndex: children.findIndex((el) =>
-          el.classList.contains('immersive-sharing-note'),
-        ),
-        actionsIndex: children.findIndex((el) =>
-          el.classList.contains('form-actions'),
-        ),
-      };
+    const context = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { width, height: 844 },
     });
-    if (!domOrder) {
-      throw new Error('Memory Create form children not found.');
-    }
-    expect(domOrder.titleIndex).toBeLessThan(domOrder.mediaIndex);
-    expect(domOrder.mediaIndex).toBeLessThan(domOrder.detailsIndex);
-    expect(domOrder.detailsIndex).toBeLessThan(domOrder.noteIndex);
-    expect(domOrder.noteIndex).toBeLessThan(domOrder.actionsIndex);
+    const page = await context.newPage();
+    try {
+      await installApiMocks(page);
+      await page.goto('/today');
+      await signIn(page);
 
-    const [
-      noteBox,
-      titleBox,
-      mediaBox,
-      pickerBox,
-      detailsBox,
-      actionsBox,
-      saveBox,
-      mediaBorder,
-      pickerBorder,
-    ] = await Promise.all([
-      note.boundingBox(),
-      title.boundingBox(),
-      media.boundingBox(),
-      picker.boundingBox(),
-      details.boundingBox(),
-      actions.boundingBox(),
-      saveButton.boundingBox(),
-      media.evaluate((element) => getComputedStyle(element).borderTopStyle),
-      picker.evaluate((element) => getComputedStyle(element).borderTopStyle),
-    ]);
-    if (
-      !noteBox ||
-      !titleBox ||
-      !mediaBox ||
-      !pickerBox ||
-      !detailsBox ||
-      !actionsBox ||
-      !saveBox
-    ) {
-      throw new Error('Memory Create composition did not render.');
-    }
+      await page.goto('/story/memories/new');
+      await expect(
+        page.getByRole('heading', { name: de.memory.heading }),
+      ).toBeVisible();
 
-    // 1. Authored content (title, media, optional details) precedes the visibility cue
-    expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(noteBox.y);
-    expect(mediaBox.y + mediaBox.height).toBeLessThanOrEqual(noteBox.y);
-    expect(detailsBox.y + detailsBox.height).toBeLessThanOrEqual(noteBox.y);
+      await expectSharingMetadataAligned(page);
 
-    // 2. Visibility cue precedes the primary form action area and Save button
-    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(actionsBox.y);
-    expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(saveBox.y);
+      const title = page.getByLabel(de.memory.titleLabel);
+      const media = page.locator('.immersive-create-media');
+      const picker = media.locator('.file-picker');
+      const details = page.locator('.immersive-create-details');
+      const note = page.locator('.immersive-sharing-note');
+      const actions = page.locator('.form-actions');
+      const saveButton = page.getByRole('button', { name: de.memory.save });
+      const quickCreateTrigger = page.locator(
+        '.mobile-quick-create .quick-create-trigger',
+      );
 
-    // 3. Spacing above (from details) and below (to actions) is intentional and balanced
-    const spacingAbove = noteBox.y - (detailsBox.y + detailsBox.height);
-    const spacingBelow = actionsBox.y - (noteBox.y + noteBox.height);
-    expect(spacingAbove).toBeGreaterThanOrEqual(10);
-    expect(spacingBelow).toBeGreaterThanOrEqual(10);
+      const domOrder = await page.evaluate(() => {
+        const form = document.querySelector('.immersive-create-form');
+        if (!form) return null;
+        const children = Array.from(form.children);
+        return {
+          titleIndex: children.findIndex((el) =>
+            el.classList.contains('immersive-create-hero'),
+          ),
+          mediaIndex: children.findIndex((el) =>
+            el.classList.contains('immersive-create-media'),
+          ),
+          detailsIndex: children.findIndex((el) =>
+            el.classList.contains('immersive-create-details'),
+          ),
+          noteIndex: children.findIndex((el) =>
+            el.classList.contains('immersive-sharing-note'),
+          ),
+          actionsIndex: children.findIndex((el) =>
+            el.classList.contains('form-actions'),
+          ),
+        };
+      });
+      if (!domOrder) {
+        throw new Error('Memory Create form children not found.');
+      }
+      expect(domOrder.titleIndex).toBeLessThan(domOrder.mediaIndex);
+      expect(domOrder.mediaIndex).toBeLessThan(domOrder.detailsIndex);
+      expect(domOrder.detailsIndex).toBeLessThan(domOrder.noteIndex);
+      expect(domOrder.noteIndex).toBeLessThan(domOrder.actionsIndex);
 
-    // 4. Inline metadata remains a single quiet, compact row
-    expect(noteBox.height).toBeLessThan(40);
+      const [
+        noteBox,
+        titleBox,
+        mediaBox,
+        pickerBox,
+        detailsBox,
+        actionsBox,
+        saveBox,
+        mediaBorder,
+        pickerBorder,
+      ] = await Promise.all([
+        note.boundingBox(),
+        title.boundingBox(),
+        media.boundingBox(),
+        picker.boundingBox(),
+        details.boundingBox(),
+        actions.boundingBox(),
+        saveButton.boundingBox(),
+        media.evaluate((element) => getComputedStyle(element).borderTopStyle),
+        picker.evaluate((element) => getComputedStyle(element).borderTopStyle),
+      ]);
+      if (
+        !noteBox ||
+        !titleBox ||
+        !mediaBox ||
+        !pickerBox ||
+        !detailsBox ||
+        !actionsBox ||
+        !saveBox
+      ) {
+        throw new Error('Memory Create composition did not render.');
+      }
 
-    // 5. Media picker remains compact with solid boundaries
-    expect(mediaBorder).toBe('solid');
-    expect(pickerBorder).toBe('solid');
-    expect(mediaBox.height).toBeLessThan(125);
-    expect(pickerBox.height).toBeLessThan(80);
-    expect(pickerBox.height).toBeGreaterThanOrEqual(44);
+      // 1. Authored content (title, media, optional details) precedes the visibility cue
+      expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(noteBox.y);
+      expect(mediaBox.y + mediaBox.height).toBeLessThanOrEqual(noteBox.y);
+      expect(detailsBox.y + detailsBox.height).toBeLessThanOrEqual(noteBox.y);
 
-    // 6. Optional details summary is a calm rounded secondary disclosure control
-    const summary = details.locator('summary');
-    const addIcon = summary.locator('.summary-add-icon');
-    const chevron = summary.locator('.summary-chevron');
-    const summaryLabel = summary.locator('.summary-label');
+      // 2. Visibility cue precedes the primary form action area and Save button
+      expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(actionsBox.y);
+      expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(saveBox.y);
 
-    await expect(summary).toBeVisible();
-    await expect(addIcon).toBeVisible();
-    await expect(chevron).toBeVisible();
-    await expect(summaryLabel).toHaveText(de.memory.addMoreDetails);
+      // 3. Spacing above (from details) and below (to actions) is intentional and balanced
+      const spacingAbove = noteBox.y - (detailsBox.y + detailsBox.height);
+      const spacingBelow = actionsBox.y - (noteBox.y + noteBox.height);
+      expect(spacingAbove).toBeGreaterThanOrEqual(10);
+      expect(spacingBelow).toBeGreaterThanOrEqual(10);
 
-    const summaryBox = await summary.boundingBox();
-    if (!summaryBox) throw new Error('Summary did not render.');
-    // Mobile touch target: minimum 44px height
-    expect(summaryBox.height).toBeGreaterThanOrEqual(44);
-    expect(summaryBox.width).toBeGreaterThanOrEqual(width - 80);
+      // 4. Inline metadata remains a single quiet, compact row
+      expect(noteBox.height).toBeLessThan(40);
 
-    // Verify native details open/close toggle and stable resting material (#888)
-    const closedBg = await summary.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
-    await expect(details).not.toHaveAttribute('open', '');
-    await summary.click();
-    await expect(details).toHaveAttribute('open', '');
-    await page.mouse.move(0, 0);
-    await summary.blur();
-    await page.waitForTimeout(300);
-    const openBg = await summary.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor,
-    );
-    expect(openBg).toBe(closedBg);
-    await expect(
-      details.getByRole('textbox', { name: de.memory.bodyLabel }),
-    ).toBeVisible();
-    if (width === 390) {
+      // 5. Media picker remains compact with solid boundaries
+      expect(mediaBorder).toBe('solid');
+      expect(pickerBorder).toBe('solid');
+      expect(mediaBox.height).toBeLessThan(125);
+      expect(pickerBox.height).toBeLessThan(80);
+      expect(pickerBox.height).toBeGreaterThanOrEqual(44);
+
+      // 6. Optional details summary is a calm rounded secondary disclosure control
+      const summary = details.locator('summary');
+      const addIcon = summary.locator('.summary-add-icon');
+      const chevron = summary.locator('.summary-chevron');
+      const summaryLabel = summary.locator('.summary-label');
+
+      await expect(summary).toBeVisible();
+      await expect(addIcon).toBeVisible();
+      await expect(chevron).toBeVisible();
+      await expect(summaryLabel).toHaveText(de.memory.addMoreDetails);
+
+      const summaryBox = await summary.boundingBox();
+      if (!summaryBox) throw new Error('Summary did not render.');
+      // Mobile touch target: minimum 44px height
+      expect(summaryBox.height).toBeGreaterThanOrEqual(44);
+      expect(summaryBox.width).toBeGreaterThanOrEqual(width - 80);
+
+      // Verify native details open/close toggle and stable resting material (#888)
+      const closedBg = await summary.evaluate(
+        (el) => window.getComputedStyle(el).backgroundColor,
+      );
+      await expect(details).not.toHaveAttribute('open', '');
+      await summary.tap();
+      await expect(details).toHaveAttribute('open', '');
+      await expect
+        .poll(async () =>
+          summary.evaluate((el) => window.getComputedStyle(el).backgroundColor),
+        )
+        .toBe(closedBg);
+      await expect(
+        details.getByRole('textbox', { name: de.memory.bodyLabel }),
+      ).toBeVisible();
+      if (width === 390) {
+        await page.screenshot({
+          path: testInfo.outputPath('shell-memory-create-details-open-390.png'),
+        });
+      }
+      await summary.tap();
+      await expect(details).not.toHaveAttribute('open', '');
+
+      // 7. Floating global Quick Create FAB does not collide with the visibility note
+      if (await quickCreateTrigger.isVisible()) {
+        const fabBox = await quickCreateTrigger.boundingBox();
+        if (fabBox) {
+          const overlapsHorizontally =
+            noteBox.x < fabBox.x + fabBox.width &&
+            noteBox.x + noteBox.width > fabBox.x;
+          const overlapsVertically =
+            noteBox.y < fabBox.y + fabBox.height &&
+            noteBox.y + noteBox.height > fabBox.y;
+          expect(overlapsHorizontally && overlapsVertically).toBe(false);
+        }
+      }
+
+      await expectNoHorizontalOverflow(page);
       await page.screenshot({
-        path: testInfo.outputPath('shell-memory-create-details-open-390.png'),
+        path: testInfo.outputPath(`shell-memory-create-${width}-compact.png`),
         fullPage: true,
       });
+    } finally {
+      await context.close();
     }
-    await summary.click();
-    await expect(details).not.toHaveAttribute('open', '');
-
-    // 7. Floating global Quick Create FAB does not collide with the visibility note
-    if (await quickCreateTrigger.isVisible()) {
-      const fabBox = await quickCreateTrigger.boundingBox();
-      if (fabBox) {
-        const overlapsHorizontally =
-          noteBox.x < fabBox.x + fabBox.width &&
-          noteBox.x + noteBox.width > fabBox.x;
-        const overlapsVertically =
-          noteBox.y < fabBox.y + fabBox.height &&
-          noteBox.y + noteBox.height > fabBox.y;
-        expect(overlapsHorizontally && overlapsVertically).toBe(false);
-      }
-    }
-
-    await expectNoHorizontalOverflow(page);
-    await page.screenshot({
-      path: testInfo.outputPath(`shell-memory-create-${width}-compact.png`),
-      fullPage: true,
-    });
   });
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`Memory Create keeps optional-details resting material stable when opened (${colorScheme}) (#888)`, async ({
-    page,
+    browser,
   }, testInfo) => {
-    await page.emulateMedia({ colorScheme });
+    const context = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { width: 390, height: 844 },
+      colorScheme,
+    });
+    const page = await context.newPage();
+    try {
+      await installApiMocks(page);
+      await page.goto('/today');
+      await signIn(page);
+
+      await page.goto('/story/memories/new');
+      await expect(
+        page.getByRole('heading', { name: de.memory.heading }),
+      ).toBeVisible();
+
+      const details = page.locator('.immersive-create-details');
+      const summary = details.locator('summary');
+      const chevron = summary.locator('.summary-chevron');
+      const content = details.locator('.immersive-create-details-content');
+      const bodyInput = details.getByRole('textbox', {
+        name: de.memory.bodyLabel,
+      });
+      const dateInput = details.getByLabel(de.memory.dateLabel);
+
+      await expect(details).not.toHaveAttribute('open', '');
+      await expect(summary).toBeVisible();
+      await expect(content).toBeHidden();
+
+      // Verify touch target >= 44 CSS px
+      const summaryBox = await summary.boundingBox();
+      if (!summaryBox) throw new Error('Summary did not render.');
+      expect(summaryBox.height).toBeGreaterThanOrEqual(44);
+
+      await expectNoHorizontalOverflow(page);
+
+      // 1. Capture computed resting visual properties while CLOSED
+      const closedStyles = await summary.evaluate((el) => {
+        const cs = window.getComputedStyle(el);
+        return {
+          backgroundColor: cs.backgroundColor,
+          color: cs.color,
+          borderTopColor: cs.borderTopColor,
+          borderTopWidth: cs.borderTopWidth,
+          borderTopStyle: cs.borderTopStyle,
+        };
+      });
+
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `shell-memory-create-details-390-${colorScheme}-closed.png`,
+        ),
+      });
+
+      // 2. Open "Mehr Details hinzufügen (optional)" via tap on touch device
+      // No artificial mouse.move(0, 0) or summary.blur()!
+      await summary.tap();
+      await expect(details).toHaveAttribute('open', '');
+      await expect(content).toBeVisible();
+      await expect(bodyInput).toBeVisible();
+      await expect(dateInput).toBeVisible();
+
+      // 3. Directly verify computed resting visual properties while OPEN
+      // Waits for transient :active transition (180ms) to settle without manual hover-clearing
+      await expect
+        .poll(async () =>
+          summary.evaluate((el) => {
+            const cs = window.getComputedStyle(el);
+            return {
+              backgroundColor: cs.backgroundColor,
+              color: cs.color,
+              borderTopColor: cs.borderTopColor,
+              borderTopWidth: cs.borderTopWidth,
+              borderTopStyle: cs.borderTopStyle,
+            };
+          }),
+        )
+        .toEqual({
+          backgroundColor: closedStyles.backgroundColor,
+          color: closedStyles.color,
+          borderTopColor: closedStyles.borderTopColor,
+          borderTopWidth: closedStyles.borderTopWidth,
+          borderTopStyle: closedStyles.borderTopStyle,
+        });
+
+      // Verify chevron rotation communicates open state
+      const chevronTransform = await chevron.evaluate(
+        (el) => window.getComputedStyle(el).transform,
+      );
+      expect(chevronTransform).toContain('matrix');
+      expect(chevronTransform).not.toBe('none');
+
+      await expectNoHorizontalOverflow(page);
+
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `shell-memory-create-details-390-${colorScheme}-open.png`,
+        ),
+      });
+
+      // 4. Tap to close again: material remains identical (no sticky hover)
+      await summary.tap();
+      await expect(details).not.toHaveAttribute('open', '');
+      await expect(content).toBeHidden();
+
+      await expect
+        .poll(async () =>
+          summary.evaluate((el) => {
+            const cs = window.getComputedStyle(el);
+            return {
+              backgroundColor: cs.backgroundColor,
+              color: cs.color,
+              borderTopColor: cs.borderTopColor,
+            };
+          }),
+        )
+        .toEqual({
+          backgroundColor: closedStyles.backgroundColor,
+          color: closedStyles.color,
+          borderTopColor: closedStyles.borderTopColor,
+        });
+
+      // 5. Tap to open again: material remains identical
+      await summary.tap();
+      await expect(details).toHaveAttribute('open', '');
+      await expect(content).toBeVisible();
+
+      await expect
+        .poll(async () =>
+          summary.evaluate((el) => {
+            const cs = window.getComputedStyle(el);
+            return {
+              backgroundColor: cs.backgroundColor,
+              color: cs.color,
+              borderTopColor: cs.borderTopColor,
+            };
+          }),
+        )
+        .toEqual({
+          backgroundColor: closedStyles.backgroundColor,
+          color: closedStyles.color,
+          borderTopColor: closedStyles.borderTopColor,
+        });
+
+      // 6. Keyboard operation: toggle close and open via Space/Enter
+      await summary.focus();
+      await page.keyboard.press('Space');
+      await expect(details).not.toHaveAttribute('open', '');
+      await expect(content).toBeHidden();
+
+      await page.keyboard.press('Enter');
+      await expect(details).toHaveAttribute('open', '');
+      await expect(content).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('Memory Create optional-details disclosure stays stable under 320px reflow, reduced motion, and forced colors (#888)', async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 320, height: 568 },
+  });
+  const page = await context.newPage();
+  try {
     await installApiMocks(page);
-    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/today');
     await signIn(page);
 
@@ -561,106 +735,118 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     const details = page.locator('.immersive-create-details');
     const summary = details.locator('summary');
-    const chevron = summary.locator('.summary-chevron');
-    const content = details.locator('.immersive-create-details-content');
-    const bodyInput = details.getByRole('textbox', {
-      name: de.memory.bodyLabel,
-    });
-    const dateInput = details.getByLabel(de.memory.dateLabel);
 
-    await expect(details).not.toHaveAttribute('open', '');
-    await expect(summary).toBeVisible();
-    await expect(content).toBeHidden();
-
-    // Verify touch target >= 44 CSS px
-    const summaryBox = await summary.boundingBox();
-    if (!summaryBox) throw new Error('Summary did not render.');
-    expect(summaryBox.height).toBeGreaterThanOrEqual(44);
-
+    // --- 320px Reflow with Touch ---
     await expectNoHorizontalOverflow(page);
 
-    // 1. Capture computed resting visual properties while CLOSED
-    const closedStyles = await summary.evaluate((el) => {
+    const closedStyles320 = await summary.evaluate((el) => {
       const cs = window.getComputedStyle(el);
       return {
         backgroundColor: cs.backgroundColor,
         color: cs.color,
         borderTopColor: cs.borderTopColor,
-        borderTopWidth: cs.borderTopWidth,
-        borderTopStyle: cs.borderTopStyle,
       };
     });
 
     await page.screenshot({
       path: testInfo.outputPath(
-        `shell-memory-create-details-390-${colorScheme}-closed.png`,
+        'shell-memory-create-details-320-reflow-closed.png',
       ),
-      fullPage: true,
     });
 
-    // 2. Open "Mehr Details hinzufügen (optional)"
-    await summary.click();
+    // Tap to open without artificial mouse/blur cleanup
+    await summary.tap();
     await expect(details).toHaveAttribute('open', '');
-    await expect(content).toBeVisible();
-    await expect(bodyInput).toBeVisible();
-    await expect(dateInput).toBeVisible();
 
-    // 3. Wait for transient interaction state to settle (move mouse away and blur)
-    await page.mouse.move(0, 0);
-    await summary.blur();
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () =>
+        summary.evaluate((el) => {
+          const cs = window.getComputedStyle(el);
+          return {
+            backgroundColor: cs.backgroundColor,
+            color: cs.color,
+            borderTopColor: cs.borderTopColor,
+          };
+        }),
+      )
+      .toEqual({
+        backgroundColor: closedStyles320.backgroundColor,
+        color: closedStyles320.color,
+        borderTopColor: closedStyles320.borderTopColor,
+      });
 
-    // 4. Capture computed resting visual properties while OPEN
-    const openStyles = await summary.evaluate((el) => {
-      const cs = window.getComputedStyle(el);
-      return {
-        backgroundColor: cs.backgroundColor,
-        color: cs.color,
-        borderTopColor: cs.borderTopColor,
-        borderTopWidth: cs.borderTopWidth,
-        borderTopStyle: cs.borderTopStyle,
-      };
+    const summaryBox320 = await summary.boundingBox();
+    if (!summaryBox320) throw new Error('Summary did not render at 320px.');
+    expect(summaryBox320.height).toBeGreaterThanOrEqual(44);
+
+    await expectNoHorizontalOverflow(page);
+
+    await page.screenshot({
+      path: testInfo.outputPath(
+        'shell-memory-create-details-320-reflow-open.png',
+      ),
     });
 
-    // 5. Assert that persistent surface/material treatment is identical
-    expect(openStyles.backgroundColor).toBe(closedStyles.backgroundColor);
-    expect(openStyles.color).toBe(closedStyles.color);
-    expect(openStyles.borderTopColor).toBe(closedStyles.borderTopColor);
-    expect(openStyles.borderTopWidth).toBe(closedStyles.borderTopWidth);
-    expect(openStyles.borderTopStyle).toBe(closedStyles.borderTopStyle);
+    // Tap to close again: material remains identical
+    await summary.tap();
+    await expect(details).not.toHaveAttribute('open', '');
+    await expect
+      .poll(async () =>
+        summary.evaluate((el) => {
+          const cs = window.getComputedStyle(el);
+          return {
+            backgroundColor: cs.backgroundColor,
+            color: cs.color,
+            borderTopColor: cs.borderTopColor,
+          };
+        }),
+      )
+      .toEqual({
+        backgroundColor: closedStyles320.backgroundColor,
+        color: closedStyles320.color,
+        borderTopColor: closedStyles320.borderTopColor,
+      });
 
-    // Verify chevron rotation communicates open state
-    const chevronTransform = await chevron.evaluate(
-      (el) => window.getComputedStyle(el).transform,
+    // --- Reduced Motion ---
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+
+    const summaryTransition = await summary.evaluate(
+      (el) => window.getComputedStyle(el).transitionDuration,
     );
-    expect(chevronTransform).toContain('matrix');
-    expect(chevronTransform).not.toBe('none');
-
-    await expectNoHorizontalOverflow(page);
+    expect(summaryTransition === '0s' || summaryTransition === '').toBe(true);
 
     await page.screenshot({
       path: testInfo.outputPath(
-        `shell-memory-create-details-390-${colorScheme}-open.png`,
+        'shell-memory-create-details-reduced-motion.png',
       ),
       fullPage: true,
     });
 
-    // 6. Keyboard operation: toggle close and open via Space/Enter
-    await summary.focus();
-    await page.keyboard.press('Space');
-    await expect(details).not.toHaveAttribute('open', '');
-    await expect(content).toBeHidden();
+    // --- Forced Colors / High Contrast ---
+    await page.emulateMedia({
+      forcedColors: 'active',
+      reducedMotion: 'no-preference',
+    });
+    await expect(summary).toBeVisible();
+    await expectNoHorizontalOverflow(page);
 
-    await page.keyboard.press('Enter');
-    await expect(details).toHaveAttribute('open', '');
-    await expect(content).toBeVisible();
-  });
-}
+    await page.screenshot({
+      path: testInfo.outputPath(
+        'shell-memory-create-details-forced-colors.png',
+      ),
+      fullPage: true,
+    });
+  } finally {
+    await context.close();
+  }
+});
 
-test('Memory Create optional-details disclosure stays stable under 320px reflow, reduced motion, and forced colors (#888)', async ({
+test('Memory Create optional-details disclosure provides hover feedback on desktop fine pointer (#888)', async ({
   page,
-}, testInfo) => {
+}) => {
   await installApiMocks(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/today');
   await signIn(page);
 
@@ -672,84 +858,40 @@ test('Memory Create optional-details disclosure stays stable under 320px reflow,
   const details = page.locator('.immersive-create-details');
   const summary = details.locator('summary');
 
-  // --- 320px Reflow ---
-  await page.setViewportSize({ width: 320, height: 568 });
-  await expectNoHorizontalOverflow(page);
-
-  const closedStyles320 = await summary.evaluate((el) => {
-    const cs = window.getComputedStyle(el);
-    return {
-      backgroundColor: cs.backgroundColor,
-      color: cs.color,
-      borderTopColor: cs.borderTopColor,
-    };
-  });
-
-  await page.screenshot({
-    path: testInfo.outputPath(
-      'shell-memory-create-details-320-reflow-closed.png',
-    ),
-    fullPage: true,
-  });
-
-  await summary.click();
-  await expect(details).toHaveAttribute('open', '');
-  await page.mouse.move(0, 0);
-  await summary.blur();
-  await page.waitForTimeout(300);
-
-  const openStyles320 = await summary.evaluate((el) => {
-    const cs = window.getComputedStyle(el);
-    return {
-      backgroundColor: cs.backgroundColor,
-      color: cs.color,
-      borderTopColor: cs.borderTopColor,
-    };
-  });
-
-  expect(openStyles320.backgroundColor).toBe(closedStyles320.backgroundColor);
-  expect(openStyles320.color).toBe(closedStyles320.color);
-  expect(openStyles320.borderTopColor).toBe(closedStyles320.borderTopColor);
-
-  const summaryBox320 = await summary.boundingBox();
-  if (!summaryBox320) throw new Error('Summary did not render at 320px.');
-  expect(summaryBox320.height).toBeGreaterThanOrEqual(44);
-
-  await expectNoHorizontalOverflow(page);
-
-  await page.screenshot({
-    path: testInfo.outputPath(
-      'shell-memory-create-details-320-reflow-open.png',
-    ),
-    fullPage: true,
-  });
-
-  // --- Reduced Motion ---
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-
-  const summaryTransition = await summary.evaluate(
-    (el) => window.getComputedStyle(el).transitionDuration,
-  );
-  expect(summaryTransition === '0s' || summaryTransition === '').toBe(true);
-
-  await page.screenshot({
-    path: testInfo.outputPath('shell-memory-create-details-reduced-motion.png'),
-    fullPage: true,
-  });
-
-  // --- Forced Colors / High Contrast ---
-  await page.emulateMedia({
-    forcedColors: 'active',
-    reducedMotion: 'no-preference',
-  });
   await expect(summary).toBeVisible();
-  await expectNoHorizontalOverflow(page);
 
-  await page.screenshot({
-    path: testInfo.outputPath('shell-memory-create-details-forced-colors.png'),
-    fullPage: true,
-  });
+  // 1. Resting state (no hover)
+  await page.mouse.move(0, 0);
+  const restingBg = await summary.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+
+  // 2. Hover with mouse
+  await summary.hover();
+  await expect
+    .poll(async () =>
+      summary.evaluate((el) => window.getComputedStyle(el).backgroundColor),
+    )
+    .not.toBe(restingBg);
+  const hoveredBg = await summary.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+
+  // On desktop fine pointer, hover changes the surface background
+  expect(hoveredBg).not.toBe(restingBg);
+
+  // 3. Move mouse away -> returns to resting
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(async () =>
+      summary.evaluate((el) => window.getComputedStyle(el).backgroundColor),
+    )
+    .toBe(restingBg);
+  const unhoveredBg = await summary.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+  expect(unhoveredBg).toBe(restingBg);
+  expect(unhoveredBg).not.toBe(hoveredBg);
 });
 
 test('HeartMoment Create defaults the date to local today and stays typeable', async ({
