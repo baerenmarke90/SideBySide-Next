@@ -42,7 +42,7 @@ function runBootstrap(
 ) {
   const dataset: Record<string, string> = {};
   const style: Record<string, string> = {};
-  const themeColor = { content: '#faf7f5' };
+  const themeColor = { content: '#f6efea' };
   const windowMock: ThemeWindow = {
     localStorage: {
       getItem: () => {
@@ -84,7 +84,7 @@ describe('theme bootstrap', () => {
       themePreference: 'light',
     });
     expect(result.style.colorScheme).toBe('light');
-    expect(result.themeColor.content).toBe('#faf7f5');
+    expect(result.themeColor.content).toBe('#f6efea');
   });
 
   it('follows the operating-system preference in system mode', () => {

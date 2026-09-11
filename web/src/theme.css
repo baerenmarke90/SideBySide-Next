@@ -3,13 +3,25 @@
   color: var(--color-text);
   background: var(--color-background);
 
+  /* Explicit Light runtime palette. styles.css remains the compatibility fallback. */
+  --color-background: #f6efea;
+  --color-surface: #fcf8f5;
+  --color-surface-subtle: #f0e6df;
+  --color-border: #dccec5;
+  --color-border-subtle: #e7dad2;
+  --color-text-tertiary: var(--color-text-muted);
+
   /* Brand Tokens (M5 Rehaul) */
   --color-brand-ocean: #231e28;
   --color-brand-ocean-light: #3d3446;
   --color-surface-raised: #ffffff;
-  --color-surface-overlay: #ffffffea;
-  --color-header-surface: #faf7f5;
-  --color-header-border: #ede6dfcc;
+  --color-surface-overlay: #fffcfaf2;
+  --color-surface-panel: #fcf8f5;
+  --color-surface-panel-tint: #f8f2ee;
+  --color-header-surface: #f6efeaf2;
+  --color-header-border: #ded1c8cc;
+  --color-page-tint-brand: #d93d5916;
+  --color-page-tint-shared: #20726612;
   --color-brand-text: #be2340;
   --color-brand-glow: #d93d5926;
   --color-on-accent: #ffffff;
@@ -35,13 +47,15 @@
   --color-entry-trust-accent: #aee7d9;
   --color-entry-aura-brand: #d93d5918;
   --color-entry-aura-shared: #20726614;
-  --color-shadow-card: #231e2810;
-  --color-shadow-soft: #231e2808;
-  --color-shadow-brand: #d93d5920;
+  --color-scrim: #231e28cc;
+  --color-shadow-card: #231e281a;
+  --color-shadow-soft: #231e2810;
+  --color-shadow-brand: #d93d5926;
+  --color-shadow-overlay: #211a2b24;
   --color-shared-border: #20726633;
   --color-error-border: #d9385040;
-  --color-shimmer-base: #f5efe9;
-  --color-shimmer-highlight: #faf7f5;
+  --color-shimmer-base: #f0e6df;
+  --color-shimmer-highlight: #f6efea;
   --color-private-surface-soft: #fff0f4;
   --color-discovery-surface-soft: #fff6eb;
   --color-technical: #1769aa;
@@ -93,9 +107,11 @@
   --color-error-surface: #451a24;
   --color-focus: #7eb4ff;
   --color-on-accent: #ffffff;
+  --color-scrim: #000000b3;
   --color-shadow-card: #00000060;
   --color-shadow-soft: #00000040;
   --color-shadow-brand: #00000052;
+  --color-shadow-overlay: #00000059;
   --color-shared-border: #72d8c466;
   --color-error-border: #ff859866;
   --color-shimmer-base: #2c2333;
@@ -154,9 +170,11 @@
     --color-error-surface: #451a24;
     --color-focus: #7eb4ff;
     --color-on-accent: #ffffff;
+    --color-scrim: #000000b3;
     --color-shadow-card: #00000060;
     --color-shadow-soft: #00000040;
     --color-shadow-brand: #00000052;
+    --color-shadow-overlay: #00000059;
     --color-shared-border: #72d8c466;
     --color-error-border: #ff859866;
     --color-shimmer-base: #2c2333;

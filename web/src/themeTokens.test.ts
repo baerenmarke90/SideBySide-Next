@@ -67,10 +67,43 @@ const themeCss = readSource('./theme.css');
 const stylesCss = readSource('./styles.css');
 const themeTs = readSource('./theme.ts');
 const themeBootstrapJs = readSource('../public/theme-bootstrap.js');
+const indexHtml = readSource('../index.html');
 
-const lightStyles = cssBlock(stylesCss, ':root');
-const lightTheme = cssBlock(themeCss, ':root');
-const darkTheme = darkThemeBlock(themeCss);
+const compatibilityLight = cssBlock(stylesCss, ':root');
+const explicitLight = cssBlock(themeCss, ':root');
+const explicitDark = darkThemeBlock(themeCss);
+const systemDark = darkPreferenceFallbackBlock(themeCss);
+
+const SHARED_RUNTIME_MATERIAL_ROLES = [
+  ['color-background', 'background'],
+  ['color-surface', 'surface'],
+  ['color-surface-subtle', 'surfaceSubtle'],
+  ['color-surface-raised', 'surfaceRaised'],
+  ['color-surface-overlay', 'surfaceOverlay'],
+  ['color-surface-panel', 'surfacePanel'],
+  ['color-surface-panel-tint', 'surfacePanelTint'],
+  ['color-header-surface', 'headerSurface'],
+  ['color-header-border', 'headerBorder'],
+  ['color-page-tint-brand', 'pageTintBrand'],
+  ['color-page-tint-shared', 'pageTintShared'],
+  ['color-border', 'border'],
+  ['color-border-subtle', 'borderSubtle'],
+  ['color-shadow-card', 'shadowCard'],
+  ['color-shadow-soft', 'shadowSoft'],
+  ['color-shadow-brand', 'shadowBrand'],
+  ['color-shadow-overlay', 'shadowOverlay'],
+] as const;
+
+const LIGHT_RUNTIME_ROLES = [
+  ...SHARED_RUNTIME_MATERIAL_ROLES,
+  ['color-shimmer-base', 'skeletonBase'],
+  ['color-shimmer-highlight', 'skeletonHighlight'],
+] as const;
+
+const DARK_RUNTIME_ROLES = [
+  ...SHARED_RUNTIME_MATERIAL_ROLES,
+  ['color-scrim', 'scrim'],
+] as const;
 
 describe('design token authority and drift enforcement', () => {
   it('enforces canonical metadata in design/tokens.json', () => {
@@ -79,204 +112,133 @@ describe('design token authority and drift enforcement', () => {
     expect(tokensJson.meta.status).toBe('foundation');
   });
 
-  it('keeps theme.ts THEME_COLOR in sync with tokens.json backgrounds', () => {
-    const lightBg = normalizeHex(tokensJson.color.semantic.background.$value);
+  it('keeps browser theme-color sources in sync with the explicit schemes', () => {
+    const lightBg = normalizeHex(
+      tokensJson.color.scheme.light.background.$value,
+    );
     const darkBg = normalizeHex(tokensJson.color.scheme.dark.background.$value);
 
     expect(themeTs).toContain(`light: '${lightBg}'`);
     expect(themeTs).toContain(`dark: '${darkBg}'`);
-  });
-
-  it('keeps theme-bootstrap.js themeColors in sync with tokens.json backgrounds', () => {
-    const lightBg = normalizeHex(tokensJson.color.semantic.background.$value);
-    const darkBg = normalizeHex(tokensJson.color.scheme.dark.background.$value);
-
     expect(themeBootstrapJs).toContain(`light: '${lightBg}'`);
     expect(themeBootstrapJs).toContain(`dark: '${darkBg}'`);
+    expect(indexHtml).toContain(`name="theme-color" content="${lightBg}"`);
   });
 
-  it('enforces zero drift between styles.css :root and tokens.json semantic tokens', () => {
-    expect(normalizeHex(cssVariable(lightStyles, 'color-background'))).toBe(
-      normalizeHex(tokensJson.color.semantic.background.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-surface'))).toBe(
-      normalizeHex(tokensJson.color.semantic.surface.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-surface-subtle'))).toBe(
-      normalizeHex(tokensJson.color.semantic.surfaceSubtle.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-text'))).toBe(
-      normalizeHex(tokensJson.color.semantic.textPrimary.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-text-secondary'))).toBe(
-      normalizeHex(tokensJson.color.semantic.textSecondary.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-text-muted'))).toBe(
-      normalizeHex(tokensJson.color.semantic.textMuted.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-border'))).toBe(
-      normalizeHex(tokensJson.color.semantic.border.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-border-subtle'))).toBe(
-      normalizeHex(tokensJson.color.semantic.borderSubtle.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-brand'))).toBe(
-      normalizeHex(tokensJson.color.semantic.brand.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-brand-strong'))).toBe(
-      normalizeHex(tokensJson.color.semantic.brandStrong.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-brand-surface'))).toBe(
-      normalizeHex(tokensJson.color.semantic.brandSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-shared'))).toBe(
-      normalizeHex(tokensJson.color.semantic.shared.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-shared-accent'))).toBe(
-      normalizeHex(tokensJson.color.semantic.sharedAccent.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-shared-surface'))).toBe(
-      normalizeHex(tokensJson.color.semantic.sharedSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-private'))).toBe(
-      normalizeHex(tokensJson.color.semantic.private.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-error'))).toBe(
-      normalizeHex(tokensJson.color.semantic.error.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-error-surface'))).toBe(
-      normalizeHex(tokensJson.color.semantic.errorSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(lightStyles, 'color-focus'))).toBe(
-      normalizeHex(tokensJson.color.semantic.focus.$value),
-    );
-    expect(cssVariable(lightStyles, 'content-max')).toBe(
+  it('keeps styles.css compatibility fallbacks aligned with semantic defaults', () => {
+    for (const [cssName, tokenName] of [
+      ['color-background', 'background'],
+      ['color-surface', 'surface'],
+      ['color-surface-subtle', 'surfaceSubtle'],
+      ['color-border', 'border'],
+      ['color-border-subtle', 'borderSubtle'],
+      ['color-brand', 'brand'],
+      ['color-brand-strong', 'brandStrong'],
+      ['color-brand-surface', 'brandSurface'],
+      ['color-shared', 'shared'],
+      ['color-shared-accent', 'sharedAccent'],
+      ['color-shared-surface', 'sharedSurface'],
+      ['color-private', 'private'],
+      ['color-error', 'error'],
+      ['color-error-surface', 'errorSurface'],
+      ['color-focus', 'focus'],
+    ] as const) {
+      expect(normalizeHex(cssVariable(compatibilityLight, cssName))).toBe(
+        normalizeHex(tokensJson.color.semantic[tokenName].$value),
+      );
+    }
+
+    expect(cssVariable(compatibilityLight, 'content-max')).toBe(
       tokensJson.layout.contentMax.$value,
     );
-    expect(cssVariable(lightStyles, 'reading-max')).toBe(
+    expect(cssVariable(compatibilityLight, 'reading-max')).toBe(
       tokensJson.layout.readingMax.$value,
     );
   });
 
-  it('enforces zero drift between theme.css light and dark tokens and tokens.json', () => {
-    // Light theme additions
-    expect(normalizeHex(cssVariable(lightTheme, 'color-brand-ocean'))).toBe(
-      normalizeHex(tokensJson.color.base.ink.$value),
+  it('maps the explicit Light runtime material roles to color.scheme.light', () => {
+    for (const [cssName, tokenName] of LIGHT_RUNTIME_ROLES) {
+      expect(normalizeHex(cssVariable(explicitLight, cssName))).toBe(
+        normalizeHex(tokensJson.color.scheme.light[tokenName].$value),
+      );
+    }
+
+    expect(normalizeHex(cssVariable(explicitLight, 'color-scrim'))).toBe(
+      normalizeHex(
+        tokensJson.color.scheme.light.scrim.$value.replace(
+          '{color.semantic.scrim}',
+          tokensJson.color.semantic.scrim.$value,
+        ),
+      ),
     );
-    expect(normalizeHex(cssVariable(lightTheme, 'color-surface-raised'))).toBe(
-      normalizeHex(tokensJson.color.semantic.surfaceRaised.$value),
-    );
-    expect(normalizeHex(cssVariable(lightTheme, 'color-surface-overlay'))).toBe(
-      normalizeHex(tokensJson.color.semantic.surfaceOverlay.$value),
-    );
-    expect(normalizeHex(cssVariable(lightTheme, 'color-brand-text'))).toBe(
+  });
+
+  it('maps shared Dark material roles without changing the accepted Dark runtime palette', () => {
+    for (const [cssName, tokenName] of DARK_RUNTIME_ROLES) {
+      expect(normalizeHex(cssVariable(explicitDark, cssName))).toBe(
+        normalizeHex(tokensJson.color.scheme.dark[tokenName].$value),
+      );
+    }
+  });
+
+  it('keeps the system-dark fallback identical to the explicit Dark material roles', () => {
+    for (const [cssName] of DARK_RUNTIME_ROLES) {
+      expect(normalizeHex(cssVariable(systemDark, cssName))).toBe(
+        normalizeHex(cssVariable(explicitDark, cssName)),
+      );
+    }
+  });
+
+  it('keeps core Light and Dark semantic colors aligned beyond material roles', () => {
+    expect(normalizeHex(cssVariable(explicitLight, 'color-brand-text'))).toBe(
       normalizeHex(tokensJson.color.semantic.brandStrong.$value),
     );
-    expect(normalizeHex(cssVariable(lightTheme, 'color-brand-glow'))).toBe(
+    expect(normalizeHex(cssVariable(explicitLight, 'color-brand-glow'))).toBe(
       normalizeHex(tokensJson.color.semantic.brandGlow.$value),
     );
-    expect(normalizeHex(cssVariable(lightTheme, 'color-on-accent'))).toBe(
+    expect(normalizeHex(cssVariable(explicitLight, 'color-on-accent'))).toBe(
       normalizeHex(tokensJson.color.semantic.onAccent.$value),
     );
 
-    // Dark theme values
-    expect(normalizeHex(cssVariable(darkTheme, 'color-background'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.background.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-surface'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.surface.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-surface-subtle'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.surfaceSubtle.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-surface-raised'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.surfaceRaised.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-surface-overlay'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.surfaceOverlay.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-text'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.textPrimary.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-text-secondary'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.textSecondary.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-text-muted'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.textMuted.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-border'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.border.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-border-subtle'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.borderSubtle.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-brand'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.brand.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-brand-strong'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.brandStrong.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-brand-surface'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.brandSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-brand-glow'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.brandGlow.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-shared'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.shared.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-shared-accent'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.sharedAccent.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-shared-surface'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.sharedSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-private'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.private.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-error'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.error.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-error-surface'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.errorSurface.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-focus'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.focus.$value),
-    );
-    expect(normalizeHex(cssVariable(darkTheme, 'color-on-accent'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.onAccent.$value),
-    );
+    for (const [cssName, tokenName] of [
+      ['color-text', 'textPrimary'],
+      ['color-text-secondary', 'textSecondary'],
+      ['color-text-muted', 'textMuted'],
+      ['color-brand', 'brand'],
+      ['color-brand-strong', 'brandStrong'],
+      ['color-brand-surface', 'brandSurface'],
+      ['color-brand-glow', 'brandGlow'],
+      ['color-shared', 'shared'],
+      ['color-shared-accent', 'sharedAccent'],
+      ['color-shared-surface', 'sharedSurface'],
+      ['color-private', 'private'],
+      ['color-error', 'error'],
+      ['color-error-surface', 'errorSurface'],
+      ['color-focus', 'focus'],
+      ['color-on-accent', 'onAccent'],
+      ['color-discovery', 'discovery'],
+      ['color-discovery-surface', 'discoverySurface'],
+    ] as const) {
+      expect(normalizeHex(cssVariable(explicitDark, cssName))).toBe(
+        normalizeHex(tokensJson.color.scheme.dark[tokenName].$value),
+      );
+    }
   });
 
-  it('enforces zero drift for discovery + discoverySurface in light styles.css and dark theme.css (issue #771/#790)', () => {
-    // Both roles must be mapped together in every runtime path; a fix that
-    // only maps one of the two silently reintroduces the drift (e.g. a
-    // dark-mode "discovery" text color rendered on a still-light-mode
-    // "discoverySurface" background, as in VisibilityBadge/PartnerAvatarPair).
-    expect(normalizeHex(cssVariable(lightStyles, 'color-discovery'))).toBe(
-      normalizeHex(tokensJson.color.semantic.discovery.$value),
-    );
+  it('keeps discovery + discoverySurface mapped in every runtime path', () => {
     expect(
-      normalizeHex(cssVariable(lightStyles, 'color-discovery-surface')),
+      normalizeHex(cssVariable(compatibilityLight, 'color-discovery')),
+    ).toBe(normalizeHex(tokensJson.color.semantic.discovery.$value));
+    expect(
+      normalizeHex(cssVariable(compatibilityLight, 'color-discovery-surface')),
     ).toBe(normalizeHex(tokensJson.color.semantic.discoverySurface.$value));
 
-    expect(normalizeHex(cssVariable(darkTheme, 'color-discovery'))).toBe(
-      normalizeHex(tokensJson.color.scheme.dark.discovery.$value),
+    expect(normalizeHex(cssVariable(systemDark, 'color-discovery'))).toBe(
+      normalizeHex(cssVariable(explicitDark, 'color-discovery')),
     );
     expect(
-      normalizeHex(cssVariable(darkTheme, 'color-discovery-surface')),
-    ).toBe(normalizeHex(tokensJson.color.scheme.dark.discoverySurface.$value));
-  });
-
-  it('keeps the prefers-color-scheme dark fallback in sync with the explicit dark theme for discovery + discoverySurface', () => {
-    const darkFallback = darkPreferenceFallbackBlock(themeCss);
-
-    expect(normalizeHex(cssVariable(darkFallback, 'color-discovery'))).toBe(
-      normalizeHex(cssVariable(darkTheme, 'color-discovery')),
-    );
-    expect(
-      normalizeHex(cssVariable(darkFallback, 'color-discovery-surface')),
-    ).toBe(normalizeHex(cssVariable(darkTheme, 'color-discovery-surface')));
+      normalizeHex(cssVariable(systemDark, 'color-discovery-surface')),
+    ).toBe(normalizeHex(cssVariable(explicitDark, 'color-discovery-surface')));
   });
 
   it('exports canonical brand name eimir.', () => {
