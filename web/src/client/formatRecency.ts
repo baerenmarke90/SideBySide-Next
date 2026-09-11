@@ -132,3 +132,19 @@ export function formatUpcomingRelative(
     month: 'long',
   }).format(date);
 }
+
+/**
+ * Compact weekday + day + month date for the Planen product-reference
+ * status/date pills (#859), e.g. "Sa, 14. Sep." Deliberately date-only:
+ * true date-only Plan scheduling is tracked separately under #838.
+ */
+export function formatCompactWeekdayDate(
+  date: Date,
+  locale = resolvedLocale(),
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+}

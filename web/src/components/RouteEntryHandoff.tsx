@@ -15,7 +15,7 @@ function stabilizePlanRouteEntry(hash: string): (() => void) | undefined {
   if (hash !== '#plan-title') return undefined;
 
   const target = document.getElementById('plan-title');
-  const content = target?.closest('.future-map-content');
+  const content = target?.closest('.planen-panel');
   if (!target || !content?.querySelector('.ui-state-loading')) return undefined;
 
   let frame = 0;

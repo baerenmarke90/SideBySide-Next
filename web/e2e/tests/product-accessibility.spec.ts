@@ -452,8 +452,10 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
   await expect(
     page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText(m5s3.overview.soonEmpty)).toBeVisible();
-  await expect(page.getByText(m5s3.overview.somedayEmpty)).toBeVisible();
+  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
+
+  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
+  await expect(page.getByText(m5s3.overview.plansEmpty)).toBeVisible();
 
   const createPlan = page.locator('summary', { hasText: m5s3.plan.create });
   await createPlan.focus();
@@ -461,10 +463,10 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
   const createPlanBox = await createPlan.boundingBox();
   expect(createPlanBox?.height ?? 0).toBeGreaterThanOrEqual(44);
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel(m5s3.common.title).first()).toBeVisible();
+  await expect(page.locator('#create-plan-title')).toBeVisible();
 
   const revealAnimation = await page
-    .locator('.future-map-stop')
+    .locator('.planen-panel')
     .first()
     .evaluate((element) => getComputedStyle(element).animationName);
   expect(revealAnimation).toBe('none');

@@ -39,7 +39,7 @@ async function loadPlansForStatus(
 /**
  * Loads the two Plan lifecycle states that belong on the planning overview.
  * Completed Plans keep their existing detail/history semantics and are not
- * fetched into the future-map overview.
+ * fetched into the Planen overview.
  */
 export async function loadPlanningOverviewPlans(
   apis: Pick<SharedPlanningApis, 'plans'>,
@@ -80,8 +80,4 @@ export function selectUpcomingPlans(
       if (left.id > right.id) return 1;
       return 0;
     });
-}
-
-export function selectIdeaPlans(plans: readonly PlanDetail[]): PlanDetail[] {
-  return plans.filter((plan) => plan.status === PlanStatus.IDEA);
 }

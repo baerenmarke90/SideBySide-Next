@@ -1,6 +1,6 @@
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { PlanStatus } from '../api/generated/models/PlanStatus';
-import { selectIdeaPlans, selectUpcomingPlans } from './planningOverview';
+import { selectUpcomingPlans } from './planningOverview';
 
 const NOW = new Date('2026-09-08T12:00:00Z');
 
@@ -31,7 +31,7 @@ function plan(
 }
 
 describe('planning overview selectors', () => {
-  it('keeps only future PLANNED items in Dashboard order and leaves dateless ideas separate', () => {
+  it('keeps only future PLANNED items in Dashboard order', () => {
     const convertedWishPlan = plan({
       id: 'plan-b',
       status: PlanStatus.PLANNED,
@@ -76,9 +76,6 @@ describe('planning overview selectors', () => {
       'plan-a',
       'plan-b',
       'plan-later',
-    ]);
-    expect(selectIdeaPlans(plans).map((item) => item.id)).toEqual([
-      'plan-idea',
     ]);
     expect(convertedWishPlan.sourceWishId).toBe('wish-autumn-hike');
     expect(plans.map((item) => item.id)).toEqual(inputOrder);

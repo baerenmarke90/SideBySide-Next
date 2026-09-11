@@ -144,7 +144,6 @@
     }
   }
 
-  & .future-map-stop-soon .planning-create > summary,
   & #collection-create-details > summary,
   & #place-create-details > summary {
     border-color: var(--color-brand-strong);
@@ -166,54 +165,6 @@
     padding: clamp(var(--space-4), 3vw, var(--space-5));
     background: var(--color-surface-panel-tint);
   }
-}
-
-/* Keep the future-map metaphor, but make both stops explicitly shared. */
-:where(.planning-page.planning-sanctuary .future-map) {
-  --future-map-stop-gap: var(--space-12);
-  width: 100%;
-  max-width: var(--reading-max);
-  margin: 0 auto;
-}
-
-:where(
-  .planning-page.planning-sanctuary .future-map-stop:not(:last-child)
-)::before {
-  width: 2px;
-  background: linear-gradient(
-    to bottom,
-    var(--color-shared-accent),
-    var(--color-border-subtle)
-  );
-}
-
-:where(.planning-page.planning-sanctuary .future-map) .future-map-marker {
-  background: var(--color-shared-accent);
-}
-
-:where(.planning-page.planning-sanctuary .future-map-stop-someday)
-  .future-map-marker {
-  border-color: var(--color-shared-accent);
-  background: var(--color-shared-surface);
-}
-
-:where(.planning-page.planning-sanctuary .future-map) .future-map-content {
-  padding-left: var(--space-3);
-}
-
-:where(.planning-page.planning-sanctuary .future-map) .future-map-heading {
-  margin-bottom: var(--space-2);
-  font-family: var(--font-display);
-  font-size: var(--type-heading2-size);
-  font-weight: var(--type-heading2-weight);
-  letter-spacing: var(--type-heading2-tracking);
-  line-height: var(--type-heading2-leading);
-}
-
-:where(.planning-page.planning-sanctuary .future-map) .future-map-intro {
-  max-width: 34rem;
-  margin-bottom: var(--space-5);
-  line-height: 1.6;
 }
 
 /* Detail pages read as calm editing sheets instead of dashboard grids. */
@@ -286,11 +237,6 @@
 }
 
 @media (max-width: 599px) {
-  :where(.planning-page.planning-sanctuary .future-map) {
-    --future-map-padding: 2.5rem;
-    --future-map-spine-x: 1rem;
-  }
-
   :where(.planning-page.planning-sanctuary) .planning-card {
     padding-inline: 0;
   }

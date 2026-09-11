@@ -14,6 +14,52 @@ function emptyInfinitePage() {
   };
 }
 
+function infinitePage<T>(items: T[]) {
+  return {
+    pages: [{ items, hasMore: false, nextCursor: null }],
+    pageParams: [null],
+  };
+}
+
+const CREATOR = { id: 'account-lea', displayName: 'Lea' };
+
+function wish(overrides: { id: string; title: string; status: string }) {
+  return {
+    capabilities: { canComment: true, canDelete: true, canEdit: true },
+    createdAt: new Date('2026-08-01T10:00:00Z'),
+    createdBy: CREATOR.id,
+    creator: CREATOR,
+    spaceId: 'space-1',
+    updatedAt: new Date('2026-08-01T10:00:00Z'),
+    version: 1,
+    ...overrides,
+  };
+}
+
+function plan(overrides: {
+  id: string;
+  title: string;
+  status: string;
+  plannedStart?: Date | null;
+}) {
+  return {
+    capabilities: { canComment: true, canDelete: true, canEdit: true },
+    createdAt: new Date('2026-08-01T10:00:00Z'),
+    createdBy: CREATOR.id,
+    creator: CREATOR,
+    description: null,
+    experiencedOn: null,
+    placeId: null,
+    plannedEnd: null,
+    plannedStart: null,
+    sourceWishId: null,
+    spaceId: 'space-1',
+    updatedAt: new Date('2026-08-01T10:00:00Z'),
+    version: 1,
+    ...overrides,
+  };
+}
+
 describe('SharedPlanningOverviewPage', () => {
   it('renders only the shared M3 planning product areas', () => {
     const queryClient = new QueryClient({
@@ -86,7 +132,7 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html).not.toContain('collection-icon');
   });
 
-  it('renders both timeline stops with markers and semantic sections', () => {
+  it('renders an accessible Wünsche/Pläne segmented control defaulting to Wünsche', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -101,14 +147,17 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    const stopMatches = html.match(
-      /<section\b[^>]*class="[^"]*future-map-stop/g,
-    );
-    expect(stopMatches).toHaveLength(2);
+    expect(html.match(/role="tab"/g)).toHaveLength(2);
+    expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
 
-    const markerMatches = html.match(/class="future-map-marker"/g);
-    expect(markerMatches).toHaveLength(2);
-    expect(html).toContain('planning-sanctuary');
+    // Wünsche is the default/left segment: selected and its panel visible.
+    expect(html.match(/aria-selected="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-selected="false"/g)).toHaveLength(1);
+    expect(html.match(/ hidden=""/g)).toHaveLength(1);
+    expect(html.indexOf('Wünsche')).toBeLessThan(html.indexOf('Pläne'));
+    expect(html.indexOf('aria-selected="true"')).toBeLessThan(
+      html.indexOf('aria-selected="false"'),
+    );
   });
 
   it('uses relationship-native empty states for planning, collections, and places', () => {
@@ -136,8 +185,8 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(planningHtml).toContain(i18n.t('m5s3.overview.soonEmpty'));
-    expect(planningHtml).toContain(i18n.t('m5s3.overview.somedayEmpty'));
+    expect(planningHtml).toContain(i18n.t('m5s3.overview.wishesEmpty'));
+    expect(planningHtml).toContain(i18n.t('m5s3.overview.plansEmpty'));
 
     const collectionsClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -176,5 +225,75 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
     expect(placesHtml).toContain(i18n.t('m5s3.place.emptyOverview'));
+  });
+
+  it('keeps Wishes and Plans in separate segments, orders dated Plans first, and excludes COMPLETED Plans', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(
+      ['m5-s3', 'wishes', 'space-1'],
+      infinitePage([
+        wish({ id: 'wish-1', title: 'See the aurora', status: 'OPEN' }),
+      ]),
+    );
+    queryClient.setQueryData(
+      ['m5-s3', 'plans', 'space-1'],
+      infinitePage([
+        plan({ id: 'plan-idea', title: 'Try a new recipe', status: 'IDEA' }),
+        // A defensively-tested rogue COMPLETED row must never reach the UI.
+        plan({
+          id: 'plan-completed',
+          title: 'Already experienced',
+          status: 'COMPLETED',
+        }),
+        plan({
+          id: 'plan-later',
+          title: 'Concert in October',
+          status: 'PLANNED',
+          plannedStart: new Date('2026-10-20T18:00:00Z'),
+        }),
+        plan({
+          id: 'plan-soon',
+          title: 'Autumn hike',
+          status: 'PLANNED',
+          plannedStart: new Date('2026-10-05T09:00:00Z'),
+        }),
+      ]),
+    );
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <SharedPlanningOverviewPage
+            apis={{} as SharedPlanningApis}
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Wünsche never mixes in Plan IDEA items - scope to the Wünsche panel,
+    // since the Pläne panel is rendered-but-hidden (not unmounted) beside it.
+    const secondPanelStart = html.indexOf(
+      'role="tabpanel"',
+      html.indexOf('role="tabpanel"') + 1,
+    );
+    const wishesPanelHtml = html.slice(0, secondPanelStart);
+    expect(wishesPanelHtml).toContain('See the aurora');
+    expect(wishesPanelHtml).not.toContain('Try a new recipe');
+
+    // Pläne: dated PLANNED items lead, soonest first, then the IDEA item;
+    // the COMPLETED row is excluded entirely.
+    expect(html).not.toContain('Already experienced');
+    const soonIndex = html.indexOf('Autumn hike');
+    const laterIndex = html.indexOf('Concert in October');
+    const ideaIndex = html.indexOf('Try a new recipe');
+    expect(soonIndex).toBeGreaterThan(-1);
+    expect(soonIndex).toBeLessThan(laterIndex);
+    expect(laterIndex).toBeLessThan(ideaIndex);
+
+    // Creator attribution is real domain data, not a hardcoded name.
+    expect(html).toContain(i18n.t('m5s3.overview.createdBy', { name: 'Lea' }));
   });
 });
