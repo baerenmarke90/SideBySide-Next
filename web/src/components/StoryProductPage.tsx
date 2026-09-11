@@ -391,11 +391,19 @@ export function StoryProductPage({
         </div>
       ) : null}
 
-      <PageHeader
-        eyebrow={t('story.eyebrow')}
-        title={t('story.title')}
-        description={t('story.intro')}
-      />
+      {activeView === 'timeline' ? (
+        <PageHeader
+          title={t('story.timelineTitle')}
+          description={t('story.timelineIntro')}
+          className="momente-timeline-header"
+        />
+      ) : (
+        <PageHeader
+          eyebrow={t('story.eyebrow')}
+          title={t('story.title')}
+          description={t('story.intro')}
+        />
+      )}
 
       <div className="momente-tabs-container sbs-motion-reveal">
         <div
@@ -833,6 +841,50 @@ export function StoryProductPage({
         </div>
       ) : combinedStory && (activeView === 'timeline' || hasActiveFilters) ? (
         <div className="layout-single-column sbs-motion-reveal">
+          <nav
+            className="momente-filter-chips"
+            aria-label={t('storyFilters.aria')}
+          >
+            <button
+              type="button"
+              className={`momente-filter-chip ${filters.kind === null ? 'is-active' : ''}`}
+              aria-pressed={filters.kind === null}
+              onClick={() => updateFilter('kind', null)}
+            >
+              {t('story.filterAll')}
+            </button>
+            <button
+              type="button"
+              className={`momente-filter-chip ${filters.kind === StoryKind.MEMORY ? 'is-active' : ''}`}
+              aria-pressed={filters.kind === StoryKind.MEMORY}
+              onClick={() => updateFilter('kind', StoryKind.MEMORY)}
+            >
+              {t('story.filterMemories')}
+            </button>
+            <button
+              type="button"
+              className={`momente-filter-chip ${filters.kind === StoryKind.HEART_MOMENT ? 'is-active' : ''}`}
+              aria-pressed={filters.kind === StoryKind.HEART_MOMENT}
+              onClick={() => updateFilter('kind', StoryKind.HEART_MOMENT)}
+            >
+              {t('story.filterHeartMoments')}
+            </button>
+            <button
+              type="button"
+              className={`momente-filter-chip ${filters.kind === StoryKind.MILESTONE ? 'is-active' : ''}`}
+              aria-pressed={filters.kind === StoryKind.MILESTONE}
+              onClick={() => updateFilter('kind', StoryKind.MILESTONE)}
+            >
+              {t('story.filterMilestones')}
+            </button>
+            <Link
+              to={STORY_CHAPTERS_ROUTE}
+              className="momente-filter-chip momente-filter-chip-link"
+            >
+              {t('story.filterChapters')}
+            </Link>
+          </nav>
+
           <div className="story-filter-container">
             <button
               type="button"
@@ -1011,21 +1063,22 @@ export function StoryProductPage({
               className="story-surface"
               aria-labelledby="timeline-heading"
             >
-              <div className="section-head">
-                <div>
-                  <p className="section-kicker">{t('story.timelineKicker')}</p>
-                  <h2 id="timeline-heading">{t('story.timelineHeading')}</h2>
+              <div className="section-head section-head-timeline">
+                <h2 id="timeline-heading" className="sr-only">
+                  {t('story.timelineHeading')}
+                </h2>
+                <div className="section-head-actions">
+                  <button
+                    type="button"
+                    className="secondary compact-action"
+                    onClick={() => void storyQuery.refetch()}
+                    disabled={storyQuery.isFetching}
+                  >
+                    {storyQuery.isFetching && !storyQuery.isFetchingNextPage
+                      ? t('common.refreshing')
+                      : t('common.refresh')}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="secondary compact-action"
-                  onClick={() => void storyQuery.refetch()}
-                  disabled={storyQuery.isFetching}
-                >
-                  {storyQuery.isFetching && !storyQuery.isFetchingNextPage
-                    ? t('common.refreshing')
-                    : t('common.refresh')}
-                </button>
               </div>
 
               {items.length === 0 ? (

@@ -392,7 +392,7 @@ test('Timeline footer metadata stays coherent across attachment shapes (#795)', 
   const bases = new Set(footers.map((footer) => JSON.stringify(footer.base)));
   expect(bases.size).toBe(1);
   for (const footer of footers) {
-    expect(footer.borderTop).toBe('1px');
+    expect(footer.borderTop).toBe('0px');
     // Date and attachment count read as one muted metadata pair.
     if (footer.mediaLabel) expect(footer.mediaLabel).toEqual(footer.time);
   }

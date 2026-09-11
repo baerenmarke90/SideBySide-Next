@@ -234,6 +234,17 @@ export function formatStoryDate(date: Date, locale: string): string {
   }).format(date);
 }
 
+export function formatTimelineDate(date: Date, locale: string): string {
+  const currentYear = new Date().getUTCFullYear();
+  const itemYear = date.getUTCFullYear();
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    ...(itemYear !== currentYear ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).format(date);
+}
+
 export function groupStoryItems(
   items: StoryItem[],
   locale: string,
