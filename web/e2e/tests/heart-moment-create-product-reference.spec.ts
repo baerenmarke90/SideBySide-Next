@@ -289,7 +289,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       await page.screenshot({
         path: testInfo.outputPath(
-          `heart-moment-create-reference-390-${colorScheme}.png`,
+          `shell-heart-moment-create-reference-390-${colorScheme}.png`,
         ),
         fullPage: true,
       });
@@ -329,7 +329,7 @@ test('Heart Moment Create reflows at 320px and large text without horizontal ove
     expect(sharedBox.y).toBeGreaterThan(privateBox.y + privateBox.height - 1);
 
     await page.screenshot({
-      path: testInfo.outputPath('heart-moment-create-reference-320.png'),
+      path: testInfo.outputPath('shell-heart-moment-create-reference-320.png'),
       fullPage: true,
     });
 
@@ -339,7 +339,9 @@ test('Heart Moment Create reflows at 320px and large text without horizontal ove
     });
     await expectNoHorizontalOverflow(page);
     await page.screenshot({
-      path: testInfo.outputPath('heart-moment-create-reference-large-text.png'),
+      path: testInfo.outputPath(
+        'shell-heart-moment-create-reference-large-text.png',
+      ),
       fullPage: true,
     });
   } finally {
@@ -367,7 +369,7 @@ test('Heart Moment Create preserves the reference rhythm on a small-height phone
     ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(
-        'heart-moment-create-reference-small-height.png',
+        'shell-heart-moment-create-reference-small-height.png',
       ),
       fullPage: true,
     });
@@ -396,7 +398,9 @@ test('Heart Moment Create adapts the Compact reference to Expanded Web (#862)', 
   await expectNoHorizontalOverflow(page);
 
   await page.screenshot({
-    path: testInfo.outputPath('heart-moment-create-reference-expanded.png'),
+    path: testInfo.outputPath(
+      'shell-heart-moment-create-reference-expanded.png',
+    ),
     fullPage: true,
   });
 });
