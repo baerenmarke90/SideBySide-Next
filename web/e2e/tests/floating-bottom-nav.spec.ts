@@ -305,7 +305,7 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test('Quick Create mobile sheet opens from center action with proper layer stacking', async ({
+  test('Quick Create mobile floating panel opens with fully rounded corners, clear nav separation and accessibility', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -331,6 +331,34 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       .locator('.mobile-bottom-shell')
       .evaluate((el) => Number.parseInt(getComputedStyle(el).zIndex, 10));
     expect(sheetZ).toBeGreaterThan(navZ);
+
+    // Fully rounded floating panel geometry: both top and bottom corners are rounded
+    const radii = await dialog.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        topLeft: Number.parseFloat(cs.borderTopLeftRadius),
+        topRight: Number.parseFloat(cs.borderTopRightRadius),
+        bottomLeft: Number.parseFloat(cs.borderBottomLeftRadius),
+        bottomRight: Number.parseFloat(cs.borderBottomRightRadius),
+      };
+    });
+    expect(radii.topLeft).toBeGreaterThanOrEqual(16);
+    expect(radii.topRight).toBeGreaterThanOrEqual(16);
+    expect(radii.bottomLeft).toBeGreaterThanOrEqual(16);
+    expect(radii.bottomRight).toBeGreaterThanOrEqual(16);
+
+    // Horizontal insets: panel does not stretch to viewport edges
+    const sheetBox = await dialog.boundingBox();
+    const navBox = await page.locator('.mobile-bottom-shell').boundingBox();
+    expect(sheetBox).not.toBeNull();
+    expect(navBox).not.toBeNull();
+    if (!sheetBox || !navBox) throw new Error('Missing bounding boxes');
+
+    expect(sheetBox.x).toBeGreaterThan(0);
+    expect(sheetBox.x + sheetBox.width).toBeLessThan(390);
+
+    // Clear visual separation from floating bottom navigation (no clipping, no collision)
+    expect(navBox.y - (sheetBox.y + sheetBox.height)).toBeGreaterThanOrEqual(8);
 
     // All 7 authoritative actions present inside dialog
     await expect(
@@ -358,13 +386,107 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       dialog.getByText(navigation.quickCreateGiftIdea, { exact: true }),
     ).toBeVisible();
 
-    // Capture sheet open evidence
+    // Accessibility: axe clean on open floating Quick Create panel in Light mode
+    const axeResultsLight = await new AxeBuilder({ page })
+      .include('.quick-create-mobile-sheet')
+      .analyze();
+    expect(axeResultsLight.violations).toEqual([]);
+
+    // Capture sheet open evidence (Light mode)
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '00-quick-create-sheet-open-390.png'),
     });
 
+    // Dark mode verification and evidence
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.style.colorScheme = 'dark';
+    });
+    // Allow CSS theme color transitions to settle before running axe
+    await page.waitForTimeout(250);
+    const axeResultsDark = await new AxeBuilder({ page })
+      .include('.quick-create-mobile-sheet')
+      .analyze();
+    expect(axeResultsDark.violations).toEqual([]);
+
+    await page.screenshot({
+      path: path.join(EVIDENCE_DIR, '00-quick-create-sheet-open-390-dark.png'),
+    });
+
+    // Restore Light mode for subsequent assertions
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+    });
+
     // Dismiss via Escape
     await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('Quick Create floating panel in constrained height and 320px reflow maintains reachability and separation', async ({
+    page,
+  }) => {
+    await installApiMocks(page);
+
+    // 1. Constrained height (390x500)
+    await page.setViewportSize({ width: 390, height: 500 });
+    await page.goto('/login');
+    await signIn(page);
+    await page.waitForURL('**/today');
+
+    const trigger = page.locator('.mobile-bottom-shell .quick-create-trigger');
+    await trigger.click();
+
+    const dialog = page.getByRole('dialog', {
+      name: navigation.quickCreateTitle,
+    });
+    await expect(dialog).toBeVisible();
+
+    // Verify dialog does not overflow top or bottom of viewport
+    const smallSheetBox = await dialog.boundingBox();
+    const smallNavBox = await page
+      .locator('.mobile-bottom-shell')
+      .boundingBox();
+    expect(smallSheetBox).not.toBeNull();
+    expect(smallNavBox).not.toBeNull();
+    if (!smallSheetBox || !smallNavBox)
+      throw new Error('Missing bounding boxes');
+
+    expect(smallSheetBox.y).toBeGreaterThanOrEqual(0);
+    expect(
+      smallNavBox.y - (smallSheetBox.y + smallSheetBox.height),
+    ).toBeGreaterThanOrEqual(8);
+
+    // Verify reachability: scroll to the lowest item (Gift Idea) and verify it is visible and clickable
+    const giftIdeaItem = dialog.getByText(navigation.quickCreateGiftIdea, {
+      exact: true,
+    });
+    await giftIdeaItem.scrollIntoViewIfNeeded();
+    await expect(giftIdeaItem).toBeVisible();
+
+    // Close via close button
+    const closeButton = dialog.getByRole('button', {
+      name: navigation.closeMenu,
+    });
+    await closeButton.click();
+    await expect(dialog).toHaveCount(0);
+
+    // 2. 320px reflow
+    await page.setViewportSize({ width: 320, height: 600 });
+    await trigger.click();
+    await expect(dialog).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+    const reflowSheetBox = await dialog.boundingBox();
+    expect(reflowSheetBox).not.toBeNull();
+    if (!reflowSheetBox) throw new Error('Missing bounding boxes');
+    expect(reflowSheetBox.x).toBeGreaterThan(0);
+    expect(reflowSheetBox.x + reflowSheetBox.width).toBeLessThanOrEqual(320);
+
+    // Dismiss via backdrop click
+    const backdrop = page.locator('.quick-create-mobile-backdrop');
+    await backdrop.click({ position: { x: 10, y: 10 } });
     await expect(dialog).toHaveCount(0);
   });
 

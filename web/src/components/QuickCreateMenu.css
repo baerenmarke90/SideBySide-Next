@@ -270,34 +270,45 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 32rem;
   margin-inline: auto;
-  max-height: 85dvh;
+  bottom: calc(
+    var(--shell-floating-nav-offset) +
+    var(--shell-floating-nav-height) +
+    var(--space-3) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  width: calc(100% - var(--space-6));
+  max-width: 28rem;
+  max-height: calc(
+    100dvh -
+    var(--shell-floating-nav-offset) -
+    var(--shell-floating-nav-height) -
+    var(--space-3) -
+    var(--space-4) -
+    env(safe-area-inset-bottom, 0px) -
+    env(safe-area-inset-top, 0px)
+  );
   background: var(--color-surface-raised);
-  border-top: 1px solid var(--color-brand-glow);
-  border-left: 1px solid var(--color-border-subtle);
-  border-right: 1px solid var(--color-border-subtle);
-  border-top-left-radius: var(--radius-card);
-  border-top-right-radius: var(--radius-card);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   z-index: 100;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: slideUp var(--motion-duration-short) cubic-bezier(0.16, 1, 0.3, 1);
+  animation: floatPanelIn var(--motion-duration-short)
+    cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideUp {
+@keyframes floatPanelIn {
   from {
-    transform: translateY(100%);
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -308,6 +319,9 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-surface);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  flex-shrink: 0;
 }
 
 .quick-create-sheet-title {
@@ -341,12 +355,12 @@
 }
 
 .quick-create-sheet-scrollable {
-  padding: var(--space-3) var(--space-4)
-    calc(var(--space-6) + env(safe-area-inset-bottom));
+  padding: var(--space-3) var(--space-4) var(--space-4);
   overflow-y: auto;
   overscroll-behavior: contain;
   display: grid;
   gap: var(--space-3);
+  -webkit-overflow-scrolling: touch;
 }
 
 .quick-create-mobile-list {
@@ -450,6 +464,18 @@
     height: 44px;
     min-width: 44px;
     min-height: 44px;
+  }
+
+  .quick-create-mobile-sheet {
+    width: calc(100% - var(--space-3));
+  }
+}
+
+@media (forced-colors: active) {
+  .quick-create-mobile-sheet {
+    background-color: Canvas;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
   }
 }
 
