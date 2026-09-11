@@ -90,6 +90,12 @@ export interface PlanDetail {
      */
     placeId: string | null;
     /**
+     * Calendar-day schedule. Mutually exclusive with plannedStart.
+     * @type {Date}
+     * @memberof PlanDetail
+     */
+    plannedOn: Date | null;
+    /**
      * 
      * @type {Date}
      * @memberof PlanDetail
@@ -139,8 +145,6 @@ export interface PlanDetail {
     version: number;
 }
 
-
-
 /**
  * Check if a given object implements the PlanDetail interface.
  */
@@ -153,6 +157,7 @@ export function instanceOfPlanDetail(value: object): value is PlanDetail {
     if (!('experiencedOn' in value) || value['experiencedOn'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('placeId' in value) || value['placeId'] === undefined) return false;
+    if (!('plannedOn' in value) || value['plannedOn'] === undefined) return false;
     if (!('plannedEnd' in value) || value['plannedEnd'] === undefined) return false;
     if (!('plannedStart' in value) || value['plannedStart'] === undefined) return false;
     if (!('sourceWishId' in value) || value['sourceWishId'] === undefined) return false;
@@ -182,6 +187,7 @@ export function PlanDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'experiencedOn': (json['experiencedOn'] == null ? null : new Date(json['experiencedOn'])),
         'id': json['id'],
         'placeId': json['placeId'],
+        'plannedOn': (json['plannedOn'] == null ? null : new Date(json['plannedOn'])),
         'plannedEnd': (json['plannedEnd'] == null ? null : new Date(json['plannedEnd'])),
         'plannedStart': (json['plannedStart'] == null ? null : new Date(json['plannedStart'])),
         'sourceWishId': json['sourceWishId'],
@@ -212,6 +218,7 @@ export function PlanDetailToJSONTyped(value?: PlanDetail | null, ignoreDiscrimin
         'experiencedOn': value['experiencedOn'] == null ? value['experiencedOn'] : value['experiencedOn'].toISOString().substring(0,10),
         'id': value['id'],
         'placeId': value['placeId'],
+        'plannedOn': value['plannedOn'] == null ? value['plannedOn'] : value['plannedOn'].toISOString().substring(0,10),
         'plannedEnd': value['plannedEnd'] == null ? value['plannedEnd'] : value['plannedEnd'].toISOString(),
         'plannedStart': value['plannedStart'] == null ? value['plannedStart'] : value['plannedStart'].toISOString(),
         'sourceWishId': value['sourceWishId'],
@@ -222,4 +229,3 @@ export function PlanDetailToJSONTyped(value?: PlanDetail | null, ignoreDiscrimin
         'version': value['version'],
     };
 }
-
