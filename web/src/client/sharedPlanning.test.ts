@@ -8,6 +8,9 @@ import {
   loadAllPlaces,
   moveItemIds,
   planningIfMatch,
+  planScheduleDateInput,
+  planScheduleFromInputs,
+  planScheduleTimeInput,
   storyRelationTarget,
 } from './sharedPlanning';
 
@@ -26,6 +29,45 @@ describe('shared planning client helpers', () => {
     const value = dateTimeFromInput('2026-12-20T18:30');
     expect(value).toBeDefined();
     expect(localDateTimeInput(value)).toBe('2026-12-20T18:30');
+  });
+
+  it('keeps a Plan unscheduled when no date was chosen', () => {
+    expect(planScheduleFromInputs('', '')).toBeUndefined();
+    expect(planScheduleFromInputs('', '10:00')).toBeUndefined();
+  });
+
+  it('builds a genuine date-only Plan schedule without a fabricated time', () => {
+    const schedule = planScheduleFromInputs('2026-09-05', '');
+
+    expect(schedule?.plannedOn?.toISOString()).toBe(
+      '2026-09-05T00:00:00.000Z',
+    );
+    expect(schedule?.plannedStart).toBeUndefined();
+    expect(schedule?.plannedEnd).toBeUndefined();
+    expect(
+      planScheduleDateInput({
+        plannedOn: schedule?.plannedOn ?? null,
+        plannedStart: null,
+      }),
+    ).toBe('2026-09-05');
+    expect(planScheduleTimeInput({ plannedStart: null })).toBe('');
+  });
+
+  it('builds a real timed schedule only when a time was explicitly chosen', () => {
+    const schedule = planScheduleFromInputs('2026-09-05', '10:00');
+
+    expect(schedule?.plannedOn).toBeUndefined();
+    expect(schedule?.plannedStart).toBeDefined();
+    expect(schedule?.plannedEnd).toBeUndefined();
+    expect(
+      planScheduleDateInput({
+        plannedOn: null,
+        plannedStart: schedule?.plannedStart ?? null,
+      }),
+    ).toBe('2026-09-05');
+    expect(
+      planScheduleTimeInput({ plannedStart: schedule?.plannedStart ?? null }),
+    ).toBe('10:00');
   });
 
   it('loads every page of selectable places', async () => {
