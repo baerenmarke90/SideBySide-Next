@@ -133,11 +133,7 @@ export function formatUpcomingRelative(
   }).format(date);
 }
 
-/**
- * Compact weekday + day + month date for the Planen product-reference
- * status/date pills (#859), e.g. "Sa, 14. Sep." Deliberately date-only:
- * true date-only Plan scheduling is tracked separately under #838.
- */
+/** Compact weekday + date for a true instant in the user's local timezone. */
 export function formatCompactWeekdayDate(
   date: Date,
   locale = resolvedLocale(),
@@ -146,5 +142,25 @@ export function formatCompactWeekdayDate(
     weekday: 'short',
     day: 'numeric',
     month: 'short',
+  }).format(date);
+}
+
+/**
+ * Compact weekday + date for an OpenAPI `date` carrier.
+ *
+ * Generated TypeScript models represent a date as a Date at UTC midnight.
+ * Formatting that value in the browser timezone could shift it to the previous
+ * day. `timeZone: UTC` reads only the encoded calendar components and therefore
+ * preserves the authoritative day on every device.
+ */
+export function formatCompactCalendarDate(
+  date: Date,
+  locale = resolvedLocale(),
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
   }).format(date);
 }
