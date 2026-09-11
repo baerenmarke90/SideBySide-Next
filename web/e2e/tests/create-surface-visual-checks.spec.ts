@@ -496,10 +496,20 @@ for (const width of [390, 320] as const) {
     expect(summaryBox.height).toBeGreaterThanOrEqual(44);
     expect(summaryBox.width).toBeGreaterThanOrEqual(width - 80);
 
-    // Verify native details open/close toggle
+    // Verify native details open/close toggle and stable resting material (#888)
+    const closedBg = await summary.evaluate(
+      (el) => window.getComputedStyle(el).backgroundColor,
+    );
     await expect(details).not.toHaveAttribute('open', '');
     await summary.click();
     await expect(details).toHaveAttribute('open', '');
+    await page.mouse.move(0, 0);
+    await summary.blur();
+    await page.waitForTimeout(300);
+    const openBg = await summary.evaluate(
+      (el) => window.getComputedStyle(el).backgroundColor,
+    );
+    expect(openBg).toBe(closedBg);
     await expect(
       details.getByRole('textbox', { name: de.memory.bodyLabel }),
     ).toBeVisible();
@@ -533,6 +543,214 @@ for (const width of [390, 320] as const) {
     });
   });
 }
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`Memory Create keeps optional-details resting material stable when opened (${colorScheme}) (#888)`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme });
+    await installApiMocks(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/today');
+    await signIn(page);
+
+    await page.goto('/story/memories/new');
+    await expect(
+      page.getByRole('heading', { name: de.memory.heading }),
+    ).toBeVisible();
+
+    const details = page.locator('.immersive-create-details');
+    const summary = details.locator('summary');
+    const chevron = summary.locator('.summary-chevron');
+    const content = details.locator('.immersive-create-details-content');
+    const bodyInput = details.getByRole('textbox', {
+      name: de.memory.bodyLabel,
+    });
+    const dateInput = details.getByLabel(de.memory.dateLabel);
+
+    await expect(details).not.toHaveAttribute('open', '');
+    await expect(summary).toBeVisible();
+    await expect(content).toBeHidden();
+
+    // Verify touch target >= 44 CSS px
+    const summaryBox = await summary.boundingBox();
+    if (!summaryBox) throw new Error('Summary did not render.');
+    expect(summaryBox.height).toBeGreaterThanOrEqual(44);
+
+    await expectNoHorizontalOverflow(page);
+
+    // 1. Capture computed resting visual properties while CLOSED
+    const closedStyles = await summary.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return {
+        backgroundColor: cs.backgroundColor,
+        color: cs.color,
+        borderTopColor: cs.borderTopColor,
+        borderTopWidth: cs.borderTopWidth,
+        borderTopStyle: cs.borderTopStyle,
+      };
+    });
+
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-details-390-${colorScheme}-closed.png`,
+      ),
+      fullPage: true,
+    });
+
+    // 2. Open "Mehr Details hinzufügen (optional)"
+    await summary.click();
+    await expect(details).toHaveAttribute('open', '');
+    await expect(content).toBeVisible();
+    await expect(bodyInput).toBeVisible();
+    await expect(dateInput).toBeVisible();
+
+    // 3. Wait for transient interaction state to settle (move mouse away and blur)
+    await page.mouse.move(0, 0);
+    await summary.blur();
+    await page.waitForTimeout(300);
+
+    // 4. Capture computed resting visual properties while OPEN
+    const openStyles = await summary.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return {
+        backgroundColor: cs.backgroundColor,
+        color: cs.color,
+        borderTopColor: cs.borderTopColor,
+        borderTopWidth: cs.borderTopWidth,
+        borderTopStyle: cs.borderTopStyle,
+      };
+    });
+
+    // 5. Assert that persistent surface/material treatment is identical
+    expect(openStyles.backgroundColor).toBe(closedStyles.backgroundColor);
+    expect(openStyles.color).toBe(closedStyles.color);
+    expect(openStyles.borderTopColor).toBe(closedStyles.borderTopColor);
+    expect(openStyles.borderTopWidth).toBe(closedStyles.borderTopWidth);
+    expect(openStyles.borderTopStyle).toBe(closedStyles.borderTopStyle);
+
+    // Verify chevron rotation communicates open state
+    const chevronTransform = await chevron.evaluate(
+      (el) => window.getComputedStyle(el).transform,
+    );
+    expect(chevronTransform).toContain('matrix');
+    expect(chevronTransform).not.toBe('none');
+
+    await expectNoHorizontalOverflow(page);
+
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `shell-memory-create-details-390-${colorScheme}-open.png`,
+      ),
+      fullPage: true,
+    });
+
+    // 6. Keyboard operation: toggle close and open via Space/Enter
+    await summary.focus();
+    await page.keyboard.press('Space');
+    await expect(details).not.toHaveAttribute('open', '');
+    await expect(content).toBeHidden();
+
+    await page.keyboard.press('Enter');
+    await expect(details).toHaveAttribute('open', '');
+    await expect(content).toBeVisible();
+  });
+}
+
+test('Memory Create optional-details disclosure stays stable under 320px reflow, reduced motion, and forced colors (#888)', async ({
+  page,
+}, testInfo) => {
+  await installApiMocks(page);
+  await page.goto('/today');
+  await signIn(page);
+
+  await page.goto('/story/memories/new');
+  await expect(
+    page.getByRole('heading', { name: de.memory.heading }),
+  ).toBeVisible();
+
+  const details = page.locator('.immersive-create-details');
+  const summary = details.locator('summary');
+
+  // --- 320px Reflow ---
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expectNoHorizontalOverflow(page);
+
+  const closedStyles320 = await summary.evaluate((el) => {
+    const cs = window.getComputedStyle(el);
+    return {
+      backgroundColor: cs.backgroundColor,
+      color: cs.color,
+      borderTopColor: cs.borderTopColor,
+    };
+  });
+
+  await page.screenshot({
+    path: testInfo.outputPath(
+      'shell-memory-create-details-320-reflow-closed.png',
+    ),
+    fullPage: true,
+  });
+
+  await summary.click();
+  await expect(details).toHaveAttribute('open', '');
+  await page.mouse.move(0, 0);
+  await summary.blur();
+  await page.waitForTimeout(300);
+
+  const openStyles320 = await summary.evaluate((el) => {
+    const cs = window.getComputedStyle(el);
+    return {
+      backgroundColor: cs.backgroundColor,
+      color: cs.color,
+      borderTopColor: cs.borderTopColor,
+    };
+  });
+
+  expect(openStyles320.backgroundColor).toBe(closedStyles320.backgroundColor);
+  expect(openStyles320.color).toBe(closedStyles320.color);
+  expect(openStyles320.borderTopColor).toBe(closedStyles320.borderTopColor);
+
+  const summaryBox320 = await summary.boundingBox();
+  if (!summaryBox320) throw new Error('Summary did not render at 320px.');
+  expect(summaryBox320.height).toBeGreaterThanOrEqual(44);
+
+  await expectNoHorizontalOverflow(page);
+
+  await page.screenshot({
+    path: testInfo.outputPath(
+      'shell-memory-create-details-320-reflow-open.png',
+    ),
+    fullPage: true,
+  });
+
+  // --- Reduced Motion ---
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+
+  const summaryTransition = await summary.evaluate(
+    (el) => window.getComputedStyle(el).transitionDuration,
+  );
+  expect(summaryTransition === '0s' || summaryTransition === '').toBe(true);
+
+  await page.screenshot({
+    path: testInfo.outputPath('shell-memory-create-details-reduced-motion.png'),
+    fullPage: true,
+  });
+
+  // --- Forced Colors / High Contrast ---
+  await page.emulateMedia({
+    forcedColors: 'active',
+    reducedMotion: 'no-preference',
+  });
+  await expect(summary).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.screenshot({
+    path: testInfo.outputPath('shell-memory-create-details-forced-colors.png'),
+    fullPage: true,
+  });
+});
 
 test('HeartMoment Create defaults the date to local today and stays typeable', async ({
   page,

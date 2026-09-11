@@ -31,6 +31,7 @@ function ruleBlock(css: string, selector: string): string {
 const layoutCss = readSource('./layout.css');
 const shellCss = readSource('./shell.css');
 const stylesCss = readSource('./styles.css');
+const memoryPolishCss = readSource('./memory-create-polish.css');
 
 describe('web layout primitives', () => {
   it('lets a page fill the bounded main region instead of a reading column', () => {
@@ -195,6 +196,17 @@ describe('shared form controls', () => {
   it('does not turn a choice row into a field label', () => {
     expect(stylesCss).toContain(
       '.form-grid > label:not(.choice-row),\n.field-group > label:first-child:not(.choice-row)',
+    );
+  });
+});
+
+describe('Memory Create disclosure material stability (#888)', () => {
+  it('keeps optional-details resting material identical between closed and open states', () => {
+    expect(memoryPolishCss).not.toMatch(
+      /\.immersive-create-details\[open\]\s*>\s*summary\s*\{[^}]*(?:background|color|border)/s,
+    );
+    expect(memoryPolishCss).toMatch(
+      /\.immersive-create-details\[open\]\s+\.summary-chevron\s*\{[^}]*transform:\s*rotate\(90deg\);/s,
     );
   });
 });
