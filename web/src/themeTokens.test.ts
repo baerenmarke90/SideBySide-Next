@@ -74,7 +74,7 @@ const explicitLight = cssBlock(themeCss, ':root');
 const explicitDark = darkThemeBlock(themeCss);
 const systemDark = darkPreferenceFallbackBlock(themeCss);
 
-const LIGHT_RUNTIME_ROLES = [
+const SHARED_RUNTIME_MATERIAL_ROLES = [
   ['color-background', 'background'],
   ['color-surface', 'surface'],
   ['color-surface-subtle', 'surfaceSubtle'],
@@ -92,12 +92,16 @@ const LIGHT_RUNTIME_ROLES = [
   ['color-shadow-soft', 'shadowSoft'],
   ['color-shadow-brand', 'shadowBrand'],
   ['color-shadow-overlay', 'shadowOverlay'],
+] as const;
+
+const LIGHT_RUNTIME_ROLES = [
+  ...SHARED_RUNTIME_MATERIAL_ROLES,
   ['color-shimmer-base', 'skeletonBase'],
   ['color-shimmer-highlight', 'skeletonHighlight'],
 ] as const;
 
 const DARK_RUNTIME_ROLES = [
-  ...LIGHT_RUNTIME_ROLES,
+  ...SHARED_RUNTIME_MATERIAL_ROLES,
   ['color-scrim', 'scrim'],
 ] as const;
 
@@ -169,7 +173,7 @@ describe('design token authority and drift enforcement', () => {
     );
   });
 
-  it('maps Dark material roles without changing the accepted Dark runtime palette', () => {
+  it('maps shared Dark material roles without changing the accepted Dark runtime palette', () => {
     for (const [cssName, tokenName] of DARK_RUNTIME_ROLES) {
       expect(normalizeHex(cssVariable(explicitDark, cssName))).toBe(
         normalizeHex(tokensJson.color.scheme.dark[tokenName].$value),
