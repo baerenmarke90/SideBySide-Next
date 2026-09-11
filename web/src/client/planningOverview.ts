@@ -4,6 +4,7 @@ import {
   type PlanStatus as PlanStatusValue,
 } from '../api/generated/models/PlanStatus';
 import type { SharedPlanningApis } from './sharedPlanning';
+import { dateOnlyInput, localCalendarDateInput } from './sharedPlanning';
 
 const OVERVIEW_PAGE_SIZE = 50;
 
@@ -52,30 +53,51 @@ export async function loadPlanningOverviewPlans(
   return [...planned, ...ideas];
 }
 
+function localDayKey(value: Date): string {
+  return localCalendarDateInput(value);
+}
+
+function scheduleDayKey(plan: PlanDetail): string | null {
+  if (plan.plannedOn) return dateOnlyInput(plan.plannedOn);
+  if (plan.plannedStart) return localDayKey(plan.plannedStart);
+  return null;
+}
+
 /**
- * Mirrors the Dashboard Plan predicate and ordering used by /today:
- * PLANNED + plannedStart >= current instant, ordered by plannedStart then id.
- * Keep this aligned with backend dashboard.service._upcoming.
+ * Mixed upcoming semantics for the Mobile-Web Planning reference.
+ *
+ * Date-only schedules are compared as YYYY-MM-DD calendar values and therefore
+ * never converted into an instant. Timed schedules retain instant eligibility.
+ * On the same calendar day, date-only Plans lead, then timed Plans by their real
+ * local wall-clock order, then ID provides a stable product-neutral tie-break.
  */
 export function selectUpcomingPlans(
   plans: readonly PlanDetail[],
   now: Date = new Date(),
 ): PlanDetail[] {
+  const today = localDayKey(now);
   const nowMs = now.getTime();
 
   return plans
-    .filter(
-      (plan) =>
-        plan.status === PlanStatus.PLANNED &&
-        plan.plannedStart !== null &&
-        plan.plannedStart.getTime() >= nowMs,
-    )
+    .filter((plan) => {
+      if (plan.status !== PlanStatus.PLANNED) return false;
+      if (plan.plannedOn) return dateOnlyInput(plan.plannedOn) >= today;
+      return plan.plannedStart !== null && plan.plannedStart.getTime() >= nowMs;
+    })
     .sort((left, right) => {
-      const leftStart =
-        left.plannedStart?.getTime() ?? Number.POSITIVE_INFINITY;
-      const rightStart =
-        right.plannedStart?.getTime() ?? Number.POSITIVE_INFINITY;
-      if (leftStart !== rightStart) return leftStart - rightStart;
+      const leftDay = scheduleDayKey(left);
+      const rightDay = scheduleDayKey(right);
+      if (leftDay !== rightDay) return (leftDay ?? '').localeCompare(rightDay ?? '');
+
+      const leftRank = left.plannedOn ? 0 : 1;
+      const rightRank = right.plannedOn ? 0 : 1;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+
+      if (left.plannedStart && right.plannedStart) {
+        const instantOrder = left.plannedStart.getTime() - right.plannedStart.getTime();
+        if (instantOrder !== 0) return instantOrder;
+      }
+
       if (left.id < right.id) return -1;
       if (left.id > right.id) return 1;
       return 0;
