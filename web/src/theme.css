@@ -9,6 +9,7 @@
   --color-surface-subtle: #f0e6df;
   --color-border: #dccec5;
   --color-border-subtle: #e7dad2;
+  --color-text-tertiary: var(--color-text-muted);
 
   /* Brand Tokens (M5 Rehaul) */
   --color-brand-ocean: #231e28;
