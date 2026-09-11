@@ -361,7 +361,10 @@ export function HeartMomentProductPage({
             <h1 id="heart-moment-create-heading">
               {t('heartMomentProduct.createHeading')}
             </h1>
-            <p className="heart-moment-create-privacy-summary" aria-live="polite">
+            <p
+              className="heart-moment-create-privacy-summary"
+              aria-live="polite"
+            >
               {createVisibility === ContentVisibility.PRIVATE
                 ? t('heartMomentProduct.privateHelp')
                 : t('heartMomentProduct.sharedHelp')}
