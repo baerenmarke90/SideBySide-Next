@@ -34,8 +34,23 @@ jobs:
       - name: Patch Android planning sheets
         run: python -c "from tools.issue_838_native_patch import patch_planning_sheets; patch_planning_sheets()"
 
-      - name: Patch Android ViewModel
-        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_reference_view_model; patch_reference_view_model()"
+      - name: Patch ViewModel Wish schedule field
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_wish_schedule_field; patch_vm_wish_schedule_field()"
+
+      - name: Patch ViewModel Wish follow-up
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_remove_wish_followup; patch_vm_remove_wish_followup()"
+
+      - name: Patch ViewModel Plan schedule field
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_plan_schedule_field; patch_vm_plan_schedule_field()"
+
+      - name: Patch ViewModel Plan follow-up
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_remove_plan_followup; patch_vm_remove_plan_followup()"
+
+      - name: Patch ViewModel schedule helper
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_schedule_helper; patch_vm_schedule_helper()"
+
+      - name: Patch ViewModel public schedule
+        run: PYTHONPATH=tools python -c "from issue_838_native_patch_finalize import patch_vm_public_schedule; patch_vm_public_schedule()"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
