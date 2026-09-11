@@ -841,221 +841,197 @@ export function StoryProductPage({
         </div>
       ) : combinedStory && (activeView === 'timeline' || hasActiveFilters) ? (
         <div className="layout-single-column sbs-motion-reveal">
-          <nav
-            className="momente-filter-chips"
-            aria-label={t('storyFilters.aria')}
-          >
-            <button
-              type="button"
-              className={`momente-filter-chip ${filters.kind === null ? 'is-active' : ''}`}
-              aria-pressed={filters.kind === null}
-              onClick={() => updateFilter('kind', null)}
-            >
-              {t('story.filterAll')}
-            </button>
-            <button
-              type="button"
-              className={`momente-filter-chip ${filters.kind === StoryKind.MEMORY ? 'is-active' : ''}`}
-              aria-pressed={filters.kind === StoryKind.MEMORY}
-              onClick={() => updateFilter('kind', StoryKind.MEMORY)}
-            >
-              {t('story.filterMemories')}
-            </button>
-            <button
-              type="button"
-              className={`momente-filter-chip ${filters.kind === StoryKind.HEART_MOMENT ? 'is-active' : ''}`}
-              aria-pressed={filters.kind === StoryKind.HEART_MOMENT}
-              onClick={() => updateFilter('kind', StoryKind.HEART_MOMENT)}
-            >
-              {t('story.filterHeartMoments')}
-            </button>
-            <button
-              type="button"
-              className={`momente-filter-chip ${filters.kind === StoryKind.MILESTONE ? 'is-active' : ''}`}
-              aria-pressed={filters.kind === StoryKind.MILESTONE}
-              onClick={() => updateFilter('kind', StoryKind.MILESTONE)}
-            >
-              {t('story.filterMilestones')}
-            </button>
-            <Link
-              to={STORY_CHAPTERS_ROUTE}
-              className="momente-filter-chip momente-filter-chip-link"
-            >
-              {t('story.filterChapters')}
-            </Link>
-          </nav>
-
           <div className="story-filter-container">
-            <button
-              type="button"
-              className="story-filter-toggle"
-              aria-expanded={mobileFiltersOpen}
-              aria-controls="story-filter-panel"
-              aria-label={
-                hasActiveFilters
-                  ? t('storyFilters.toggleButtonActive')
-                  : t('storyFilters.toggleButton')
-              }
-              onClick={() => setMobileFiltersOpen((open) => !open)}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+            <div className="story-timeline-toolbar">
+              <button
+                type="button"
+                className="story-filter-toggle"
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="story-filter-panel"
+                aria-label={
+                  hasActiveFilters
+                    ? t('storyFilters.toggleButtonActive')
+                    : t('storyFilters.toggleButton')
+                }
+                onClick={() => setMobileFiltersOpen((open) => !open)}
               >
-                <path d="M4 5h16l-6 7v6l-4 2v-8z" />
-              </svg>
-              <span>{t('storyFilters.toggleButton')}</span>
-              {hasActiveFilters ? (
-                <span className="story-filter-toggle-dot" aria-hidden="true" />
-              ) : null}
-            </button>
-            <section
-              id="story-filter-panel"
-              className={`story-filter-bar ${mobileFiltersOpen ? 'story-filter-bar-open' : ''}`}
-              aria-label={t('storyFilters.aria')}
-            >
-              <div className="story-filter-group">
-                <label htmlFor="story-filter-type">
-                  {t('storyFilters.type')}
-                </label>
-                <select
-                  id="story-filter-type"
-                  name="type"
-                  value={filters.kind ?? ''}
-                  onChange={(e) =>
-                    updateFilter(
-                      'kind',
-                      isStoryKind(e.target.value) ? e.target.value : null,
-                    )
-                  }
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  <option value="">{t('storyFilters.allTypes')}</option>
-                  <option value={StoryKind.MEMORY}>
-                    {t('story.kind.memory')}
-                  </option>
-                  <option value={StoryKind.HEART_MOMENT}>
-                    {t('story.kind.heartMoment')}
-                  </option>
-                  <option value={StoryKind.MILESTONE}>
-                    {t('story.kind.milestone')}
-                  </option>
-                </select>
-              </div>
-              <div className="story-filter-group">
-                <label htmlFor="story-filter-year">
-                  {t('storyFilters.year')}
-                </label>
-                <select
-                  id="story-filter-year"
-                  name="year"
-                  value={
-                    filters.year && availableYears.includes(filters.year)
-                      ? filters.year
-                      : ''
-                  }
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    updateFilter('year', val ? Number(val) : null);
-                  }}
-                >
-                  <option value="">{t('storyFilters.anyYear')}</option>
-                  {dropdownYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="story-filter-group">
-                <label htmlFor="story-filter-order">
-                  {t('storyFilters.order')}
-                </label>
-                <select
-                  id="story-filter-order"
-                  name="order"
-                  value={filters.order}
-                  onChange={(e) =>
-                    updateFilter(
-                      'order',
-                      e.target.value === StoryOrder.ASC
-                        ? StoryOrder.ASC
-                        : StoryOrder.DESC,
-                    )
-                  }
-                >
-                  <option value={StoryOrder.DESC}>
-                    {t('storyFilters.newest')}
-                  </option>
-                  <option value={StoryOrder.ASC}>
-                    {t('storyFilters.oldest')}
-                  </option>
-                </select>
-              </div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  className="story-filter-reset-header-action"
-                  onClick={resetAllFilters}
-                >
-                  {t('storyFilters.reset')}
-                </button>
-              )}
-            </section>
+                  <path d="M4 5h16l-6 7v6l-4 2v-8z" />
+                </svg>
+                <span>{t('storyFilters.toggleButton')}</span>
+                {hasActiveFilters ? (
+                  <span
+                    className="story-filter-toggle-dot"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </button>
 
-            {hasActiveFilters && (
-              <div
-                className="story-active-chips"
-                role="status"
-                aria-live="polite"
+              <button
+                type="button"
+                className="secondary compact-action story-timeline-refresh"
+                onClick={() => void storyQuery.refetch()}
+                disabled={storyQuery.isFetching}
               >
-                {filters.kind && (
+                {storyQuery.isFetching && !storyQuery.isFetchingNextPage
+                  ? t('common.refreshing')
+                  : t('common.refresh')}
+              </button>
+            </div>
+            <div
+              id="story-filter-panel"
+              className={`story-filter-panel-wrapper ${mobileFiltersOpen ? 'story-filter-panel-open' : ''}`}
+            >
+              <section
+                className="story-filter-bar"
+                aria-label={t('storyFilters.aria')}
+              >
+                <div className="story-filter-group">
+                  <label htmlFor="story-filter-type">
+                    {t('storyFilters.type')}
+                  </label>
+                  <select
+                    id="story-filter-type"
+                    name="type"
+                    value={filters.kind ?? ''}
+                    onChange={(e) =>
+                      updateFilter(
+                        'kind',
+                        isStoryKind(e.target.value) ? e.target.value : null,
+                      )
+                    }
+                  >
+                    <option value="">{t('storyFilters.allTypes')}</option>
+                    <option value={StoryKind.MEMORY}>
+                      {t('story.kind.memory')}
+                    </option>
+                    <option value={StoryKind.HEART_MOMENT}>
+                      {t('story.kind.heartMoment')}
+                    </option>
+                    <option value={StoryKind.MILESTONE}>
+                      {t('story.kind.milestone')}
+                    </option>
+                  </select>
+                </div>
+                <div className="story-filter-group">
+                  <label htmlFor="story-filter-year">
+                    {t('storyFilters.year')}
+                  </label>
+                  <select
+                    id="story-filter-year"
+                    name="year"
+                    value={
+                      filters.year && availableYears.includes(filters.year)
+                        ? filters.year
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateFilter('year', val ? Number(val) : null);
+                    }}
+                  >
+                    <option value="">{t('storyFilters.anyYear')}</option>
+                    {dropdownYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="story-filter-group">
+                  <label htmlFor="story-filter-order">
+                    {t('storyFilters.order')}
+                  </label>
+                  <select
+                    id="story-filter-order"
+                    name="order"
+                    value={filters.order}
+                    onChange={(e) =>
+                      updateFilter(
+                        'order',
+                        e.target.value === StoryOrder.ASC
+                          ? StoryOrder.ASC
+                          : StoryOrder.DESC,
+                      )
+                    }
+                  >
+                    <option value={StoryOrder.DESC}>
+                      {t('storyFilters.newest')}
+                    </option>
+                    <option value={StoryOrder.ASC}>
+                      {t('storyFilters.oldest')}
+                    </option>
+                  </select>
+                </div>
+                {hasActiveFilters && (
                   <button
                     type="button"
-                    className="active-chip"
-                    onClick={() => updateFilter('kind', null)}
-                    aria-label={`${t('storyFilters.removeFilter')}: ${resolveStoryKindLabel(filters.kind, t)}`}
+                    className="story-filter-reset-header-action"
+                    onClick={resetAllFilters}
                   >
-                    <span>{resolveStoryKindLabel(filters.kind, t)}</span>
-                    <span className="chip-remove" aria-hidden="true">
-                      ✕
-                    </span>
+                    {t('storyFilters.reset')}
                   </button>
                 )}
-                {filters.year && availableYears.includes(filters.year) && (
-                  <button
-                    type="button"
-                    className="active-chip"
-                    onClick={() => updateFilter('year', null)}
-                    aria-label={`${t('storyFilters.removeFilter')}: ${filters.year}`}
-                  >
-                    <span>{filters.year}</span>
-                    <span className="chip-remove" aria-hidden="true">
-                      ✕
-                    </span>
-                  </button>
-                )}
-                {filters.order === StoryOrder.ASC && (
-                  <button
-                    type="button"
-                    className="active-chip"
-                    onClick={() => updateFilter('order', StoryOrder.DESC)}
-                    aria-label={`${t('storyFilters.removeFilter')}: ${t('storyFilters.oldest')}`}
-                  >
-                    <span>{t('storyFilters.oldest')}</span>
-                    <span className="chip-remove" aria-hidden="true">
-                      ✕
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
+              </section>
+
+              {hasActiveFilters && (
+                <div
+                  className="story-active-chips"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {filters.kind && (
+                    <button
+                      type="button"
+                      className="active-chip"
+                      onClick={() => updateFilter('kind', null)}
+                      aria-label={`${t('storyFilters.removeFilter')}: ${resolveStoryKindLabel(filters.kind, t)}`}
+                    >
+                      <span>{resolveStoryKindLabel(filters.kind, t)}</span>
+                      <span className="chip-remove" aria-hidden="true">
+                        ✕
+                      </span>
+                    </button>
+                  )}
+                  {filters.year && availableYears.includes(filters.year) && (
+                    <button
+                      type="button"
+                      className="active-chip"
+                      onClick={() => updateFilter('year', null)}
+                      aria-label={`${t('storyFilters.removeFilter')}: ${filters.year}`}
+                    >
+                      <span>{filters.year}</span>
+                      <span className="chip-remove" aria-hidden="true">
+                        ✕
+                      </span>
+                    </button>
+                  )}
+                  {filters.order === StoryOrder.ASC && (
+                    <button
+                      type="button"
+                      className="active-chip"
+                      onClick={() => updateFilter('order', StoryOrder.DESC)}
+                      aria-label={`${t('storyFilters.removeFilter')}: ${t('storyFilters.oldest')}`}
+                    >
+                      <span>{t('storyFilters.oldest')}</span>
+                      <span className="chip-remove" aria-hidden="true">
+                        ✕
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="layout-main">
@@ -1063,23 +1039,9 @@ export function StoryProductPage({
               className="story-surface"
               aria-labelledby="timeline-heading"
             >
-              <div className="section-head section-head-timeline">
-                <h2 id="timeline-heading" className="sr-only">
-                  {t('story.timelineHeading')}
-                </h2>
-                <div className="section-head-actions">
-                  <button
-                    type="button"
-                    className="secondary compact-action"
-                    onClick={() => void storyQuery.refetch()}
-                    disabled={storyQuery.isFetching}
-                  >
-                    {storyQuery.isFetching && !storyQuery.isFetchingNextPage
-                      ? t('common.refreshing')
-                      : t('common.refresh')}
-                  </button>
-                </div>
-              </div>
+              <h2 id="timeline-heading" className="sr-only">
+                {t('story.timelineHeading')}
+              </h2>
 
               {items.length === 0 ? (
                 <div className="story-filter-empty-state sbs-motion-reveal">

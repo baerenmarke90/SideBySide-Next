@@ -145,6 +145,71 @@ describe('StoryList', () => {
     expect(html).not.toContain('von Alex Winter');
   });
 
+  it('renders large image-led card when attachment exists and text-first card when absent (#860)', () => {
+    const memoryWithImage = StoryItemFromJSON({
+      kind: 'MEMORY',
+      effectiveDate: '2026-08-26',
+      memory: {
+        attachments: [
+          {
+            id: 'att-1',
+            position: 0,
+            status: 'READY',
+            mediaType: 'IMAGE',
+            mimeType: 'image/jpeg',
+            hasThumbnail: true,
+            width: 800,
+            height: 800,
+            size: 1024,
+          },
+        ],
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'A',
+        },
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: '2026-08-26T08:00:00Z',
+        happenedOn: '2026-08-26',
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'With Image',
+      },
+    });
+
+    const memoryWithoutImage = StoryItemFromJSON({
+      kind: 'MEMORY',
+      effectiveDate: '2026-08-25',
+      memory: {
+        attachments: [],
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'A',
+        },
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: '2026-08-25T08:00:00Z',
+        happenedOn: '2026-08-25',
+        id: '00000000-0000-0000-0000-000000000003',
+        title: 'Without Image',
+      },
+    });
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <StoryList
+          items={[memoryWithImage, memoryWithoutImage]}
+          loadMemoryImage={loadMemoryImage}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('story-card-memory has-image');
+    expect(html).toContain('story-card-memory no-image');
+    expect(html).toContain('story-timeline-marker');
+    expect(html).not.toContain('marker-berry');
+    expect(html).not.toContain('marker-teal');
+    expect(html).not.toContain('story-card-thumb');
+    expect(html).not.toContain('story-card-reference');
+  });
+
   it('announces an empty story as a status', () => {
     const html = renderToStaticMarkup(
       <StoryList items={[]} loadMemoryImage={loadMemoryImage} />,
