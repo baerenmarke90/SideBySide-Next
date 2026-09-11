@@ -19,6 +19,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { WishDetail } from '../api/generated/models/WishDetail';
+import { WishStatus } from '../api/generated/models/WishStatus';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import {
   loadPlanningOverviewPlans,
@@ -123,7 +124,7 @@ function PlanenSegmentedControl({
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    switchTo(active === 'wishes' ? 'plans' : 'wishes', true);
+    switchTo(active === 'plans' ? 'wishes' : 'plans', true);
   }
 
   return (
@@ -133,19 +134,6 @@ function PlanenSegmentedControl({
       aria-label={t('m5s3.overview.segmentedLabel')}
       onKeyDown={handleKeyDown}
     >
-      <button
-        ref={wishesRef}
-        type="button"
-        role="tab"
-        id={wishesTabId}
-        aria-selected={active === 'wishes'}
-        aria-controls={wishesPanelId}
-        tabIndex={active === 'wishes' ? 0 : -1}
-        className={`planen-segment ${active === 'wishes' ? 'is-active' : ''}`}
-        onClick={() => switchTo('wishes', false)}
-      >
-        {t('m5s3.overview.segmentWishes')}
-      </button>
       <button
         ref={plansRef}
         type="button"
@@ -158,6 +146,19 @@ function PlanenSegmentedControl({
         onClick={() => switchTo('plans', false)}
       >
         {t('m5s3.overview.segmentPlans')}
+      </button>
+      <button
+        ref={wishesRef}
+        type="button"
+        role="tab"
+        id={wishesTabId}
+        aria-selected={active === 'wishes'}
+        aria-controls={wishesPanelId}
+        tabIndex={active === 'wishes' ? 0 : -1}
+        className={`planen-segment ${active === 'wishes' ? 'is-active' : ''}`}
+        onClick={() => switchTo('wishes', false)}
+      >
+        {t('m5s3.overview.segmentWishes')}
       </button>
     </div>
   );
@@ -429,7 +430,7 @@ export function SharedPlanningOverviewPage({
   const plansPanelId = useId();
 
   const [activeSegment, setActiveSegment] = useState<PlanenSegment>(
-    () => segmentForHash(location.hash) ?? 'wishes',
+    () => segmentForHash(location.hash) ?? 'plans',
   );
 
   // Keep the visible segment in sync with the Quick Create / deep-link hash
@@ -450,6 +451,7 @@ export function SharedPlanningOverviewPage({
           spaceId,
           cursor: pageParam,
           limit: PAGE_SIZE,
+          status: WishStatus.OPEN,
         }),
       ),
     initialPageParam: null as string | null,
@@ -528,7 +530,13 @@ export function SharedPlanningOverviewPage({
     createPlanPlace.mutate({ name, address: address || undefined });
   }
 
-  const wishItems = wishes.data?.pages.flatMap((page) => page.items) ?? [];
+  // Wünsche is the active idea backlog (#892): OPEN is requested server-side
+  // already, and re-filtered here too in case a status-filtered page ever
+  // returns a historical (PLANNED/COMPLETED) Wish, mirroring the same
+  // defensive re-filter Plans apply below.
+  const wishItems = (
+    wishes.data?.pages.flatMap((page) => page.items) ?? []
+  ).filter((wish) => wish.status === WishStatus.OPEN);
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
   // Dated, soonest-first PLANNED Plans lead the Pläne segment (mirroring the
   // Dashboard/Today ordering), followed by everything else in fetch order -
@@ -590,76 +598,6 @@ export function SharedPlanningOverviewPage({
         wishesPanelId={wishesPanelId}
         plansPanelId={plansPanelId}
       />
-
-      <PlanenPanel
-        id={wishesPanelId}
-        labelledBy={wishesTabId}
-        hidden={activeSegment !== 'wishes'}
-      >
-        {wishesLoading ? (
-          <UiState kind="loading" title={t('states.loading.title')} />
-        ) : null}
-        {wishes.error ? (
-          <ProblemState
-            error={wishes.error}
-            onRetry={() => void wishes.refetch()}
-          />
-        ) : null}
-        {!wishesLoading && !wishes.error && wishItems.length === 0 ? (
-          <p className="planen-empty">{t('m5s3.overview.wishesEmpty')}</p>
-        ) : null}
-        {wishItems.length > 0 ? (
-          <ul className="planen-card-list">
-            {wishItems.map((wish) => (
-              <PlanenCard
-                key={wish.id}
-                title={wish.title}
-                attribution={t('m5s3.overview.createdBy', {
-                  name: wish.creator.displayName,
-                })}
-                pillLabel={t(`m5s3.wish.status.${wish.status}`)}
-                pillTone={wishPillTone(wish.status)}
-                to={wishDetailPath(wish.id)}
-              />
-            ))}
-          </ul>
-        ) : null}
-        {wishes.hasNextPage ? (
-          <button
-            type="button"
-            className="tertiary compact-action"
-            onClick={() => void wishes.fetchNextPage()}
-            disabled={wishes.isFetchingNextPage}
-          >
-            {wishes.isFetchingNextPage
-              ? t('m5s3.common.loadingMore')
-              : t('m5s3.common.loadMore')}
-          </button>
-        ) : null}
-        <details className="planning-create">
-          <summary id="wish-title">{t('m5s3.wish.create')}</summary>
-          <form
-            onSubmit={submitWish}
-            className="form-grid planning-create-form"
-          >
-            <label htmlFor="create-wish-title">{t('m5s3.common.title')}</label>
-            <input
-              id="create-wish-title"
-              name="title"
-              required
-              maxLength={200}
-            />
-            <button type="submit" disabled={createWish.isPending}>
-              {createWish.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.common.save')}
-            </button>
-            {createWish.error ? (
-              <ProblemState error={createWish.error} />
-            ) : null}
-          </form>
-        </details>
-      </PlanenPanel>
 
       <PlanenPanel
         id={plansPanelId}
@@ -796,6 +734,76 @@ export function SharedPlanningOverviewPage({
             </button>
             {createPlan.error ? (
               <ProblemState error={createPlan.error} />
+            ) : null}
+          </form>
+        </details>
+      </PlanenPanel>
+
+      <PlanenPanel
+        id={wishesPanelId}
+        labelledBy={wishesTabId}
+        hidden={activeSegment !== 'wishes'}
+      >
+        {wishesLoading ? (
+          <UiState kind="loading" title={t('states.loading.title')} />
+        ) : null}
+        {wishes.error ? (
+          <ProblemState
+            error={wishes.error}
+            onRetry={() => void wishes.refetch()}
+          />
+        ) : null}
+        {!wishesLoading && !wishes.error && wishItems.length === 0 ? (
+          <p className="planen-empty">{t('m5s3.overview.wishesEmpty')}</p>
+        ) : null}
+        {wishItems.length > 0 ? (
+          <ul className="planen-card-list">
+            {wishItems.map((wish) => (
+              <PlanenCard
+                key={wish.id}
+                title={wish.title}
+                attribution={t('m5s3.overview.createdBy', {
+                  name: wish.creator.displayName,
+                })}
+                pillLabel={t(`m5s3.wish.status.${wish.status}`)}
+                pillTone={wishPillTone(wish.status)}
+                to={wishDetailPath(wish.id)}
+              />
+            ))}
+          </ul>
+        ) : null}
+        {wishes.hasNextPage ? (
+          <button
+            type="button"
+            className="tertiary compact-action"
+            onClick={() => void wishes.fetchNextPage()}
+            disabled={wishes.isFetchingNextPage}
+          >
+            {wishes.isFetchingNextPage
+              ? t('m5s3.common.loadingMore')
+              : t('m5s3.common.loadMore')}
+          </button>
+        ) : null}
+        <details className="planning-create">
+          <summary id="wish-title">{t('m5s3.wish.create')}</summary>
+          <form
+            onSubmit={submitWish}
+            className="form-grid planning-create-form"
+          >
+            <label htmlFor="create-wish-title">{t('m5s3.common.title')}</label>
+            <input
+              id="create-wish-title"
+              name="title"
+              required
+              maxLength={200}
+            />
+            <button type="submit" disabled={createWish.isPending}>
+              {createWish.isPending
+                ? t('m5s3.common.saving')
+                : t('m5s3.common.save')}
+            </button>
+            {createWish.error ? (
+              <ProblemState error={createWish.error} />
             ) : null}
           </form>
         </details>

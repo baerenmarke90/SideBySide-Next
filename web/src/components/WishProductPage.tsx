@@ -221,6 +221,12 @@ export function WishProductPage({
       />
 
       <div className="planning-detail-grid">
+        {wish.status === 'COMPLETED' ? (
+          <section className="planning-subsection">
+            <p>{t('m5s3.wish.completedBody')}</p>
+          </section>
+        ) : null}
+
         {isEditing ? (
           <section className="planning-subsection">
             <h2>{t('m5s3.common.edit')}</h2>

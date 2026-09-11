@@ -132,7 +132,7 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html).not.toContain('collection-icon');
   });
 
-  it('renders an accessible Wünsche/Pläne segmented control defaulting to Wünsche', () => {
+  it('renders an accessible Pläne/Wünsche segmented control defaulting to Pläne (#892)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -150,11 +150,11 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html.match(/role="tab"/g)).toHaveLength(2);
     expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
 
-    // Wünsche is the default/left segment: selected and its panel visible.
+    // Pläne is the default/left segment (#892): selected and its panel visible.
     expect(html.match(/aria-selected="true"/g)).toHaveLength(1);
     expect(html.match(/aria-selected="false"/g)).toHaveLength(1);
     expect(html.match(/ hidden=""/g)).toHaveLength(1);
-    expect(html.indexOf('Wünsche')).toBeLessThan(html.indexOf('Pläne'));
+    expect(html.indexOf('Pläne')).toBeLessThan(html.indexOf('Wünsche'));
     expect(html.indexOf('aria-selected="true"')).toBeLessThan(
       html.indexOf('aria-selected="false"'),
     );
@@ -235,6 +235,19 @@ describe('SharedPlanningOverviewPage', () => {
       ['m5-s3', 'wishes', 'space-1'],
       infinitePage([
         wish({ id: 'wish-1', title: 'See the aurora', status: 'OPEN' }),
+        // A defensively-tested rogue historical row must never reach the UI
+        // (#892): the Wünsche panel is the active idea backlog, not a
+        // lifecycle archive.
+        wish({
+          id: 'wish-planned',
+          title: 'Already turned into a plan',
+          status: 'PLANNED',
+        }),
+        wish({
+          id: 'wish-completed',
+          title: 'Already come true',
+          status: 'COMPLETED',
+        }),
       ]),
     );
     queryClient.setQueryData(
@@ -273,15 +286,23 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    // Wünsche never mixes in Plan IDEA items - scope to the Wünsche panel,
-    // since the Pläne panel is rendered-but-hidden (not unmounted) beside it.
+    // Pläne is now the first, visible-by-default panel (#892); Wünsche never
+    // mixes in Plan IDEA items - scope to the Wünsche panel, since it is
+    // rendered-but-hidden (not unmounted) beside Pläne.
     const secondPanelStart = html.indexOf(
       'role="tabpanel"',
       html.indexOf('role="tabpanel"') + 1,
     );
-    const wishesPanelHtml = html.slice(0, secondPanelStart);
+    const plansPanelHtml = html.slice(0, secondPanelStart);
+    const wishesPanelHtml = html.slice(secondPanelStart);
+    expect(plansPanelHtml).not.toContain('See the aurora');
     expect(wishesPanelHtml).toContain('See the aurora');
     expect(wishesPanelHtml).not.toContain('Try a new recipe');
+
+    // Historical Wishes (#892) are excluded from the active Wünsche panel:
+    // it is the active idea backlog, not a lifecycle archive.
+    expect(wishesPanelHtml).not.toContain('Already turned into a plan');
+    expect(wishesPanelHtml).not.toContain('Already come true');
 
     // Pläne: dated PLANNED items lead, soonest first, then the IDEA item;
     // the COMPLETED row is excluded entirely.

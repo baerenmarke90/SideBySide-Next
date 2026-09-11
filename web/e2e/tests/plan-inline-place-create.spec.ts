@@ -282,10 +282,9 @@ function planCreateForm(page: Page) {
 }
 
 async function openPlanCreateForm(page: Page) {
+  // The Pläne segment is the default /plan segment (#892), so the Plan
+  // composer is already visible without switching segments.
   await page.goto('/plan');
-  // The Plan composer lives in the Pläne segment, hidden by default behind
-  // the Wünsche segment (#859) - switch segments before interacting with it.
-  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
   const form = planCreateForm(page);
   await form.getByText(m5s3.plan.create).click();
   await form

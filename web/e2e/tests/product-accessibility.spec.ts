@@ -452,10 +452,11 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
   await expect(
     page.getByRole('heading', { name: m5s3.overview.title, level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
-
-  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
   await expect(page.getByText(m5s3.overview.plansEmpty)).toBeVisible();
+
+  await page.getByRole('tab', { name: m5s3.overview.segmentWishes }).click();
+  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
+  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
 
   const createPlan = page.locator('summary', { hasText: m5s3.plan.create });
   await createPlan.focus();
