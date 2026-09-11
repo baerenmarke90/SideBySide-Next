@@ -388,7 +388,8 @@ test('Heart Moment Create adapts the Compact reference to Expanded Web (#862)', 
     pageSurface.boundingBox(),
     form.boundingBox(),
   ]);
-  if (!pageBox || !formBox) throw new Error('Expanded create form did not render.');
+  if (!pageBox || !formBox)
+    throw new Error('Expanded create form did not render.');
 
   expect(pageBox.width).toBeLessThanOrEqual(680);
   expect(formBox.width).toBeLessThanOrEqual(680);
