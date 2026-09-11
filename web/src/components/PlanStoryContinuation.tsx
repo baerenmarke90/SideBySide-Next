@@ -171,7 +171,10 @@ function ChapterContinuation({
   }
 
   return (
-    <div className="plan-story-chapter-step" aria-labelledby="plan-story-chapter-heading">
+    <section
+      className="plan-story-chapter-step"
+      aria-labelledby="plan-story-chapter-heading"
+    >
       <h3 id="plan-story-chapter-heading">
         {preferred
           ? t('m5s3.planStory.chapterPreferredHeading')
@@ -247,9 +250,7 @@ function ChapterContinuation({
       {createChapterMutation.error ? (
         <ProblemState error={createChapterMutation.error} />
       ) : null}
-      {linkMutation.error ? (
-        <ProblemState error={linkMutation.error} />
-      ) : null}
+      {linkMutation.error ? <ProblemState error={linkMutation.error} /> : null}
 
       <button
         type="button"
@@ -258,7 +259,7 @@ function ChapterContinuation({
       >
         {t('m5s3.planStory.chapterSkip')}
       </button>
-    </div>
+    </section>
   );
 }
 
