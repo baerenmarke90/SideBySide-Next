@@ -9,7 +9,13 @@ import { appRoutePath } from '../client/routes';
 import { useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 
-export function PrivateAreaFrame({ children }: { children: ReactNode }) {
+export function PrivateAreaFrame({
+  children,
+  showNavigation = true,
+}: {
+  children: ReactNode;
+  showNavigation?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <div className="page private-area-page">
@@ -18,24 +24,36 @@ export function PrivateAreaFrame({ children }: { children: ReactNode }) {
         aria-label={t('privateArea.privacyLabel')}
       >
         <div className="private-area-header-info">
-          <h1 className="private-area-title-row">{t('privateArea.eyebrow')}</h1>
+          <h1 className="private-area-title-row">
+            <svg
+              className="private-area-lock-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Zm7 12H7v-8h10v8Z" />
+            </svg>
+            {t('privateArea.eyebrow')}
+          </h1>
           <p className="private-area-intro-text">{t('privateArea.intro')}</p>
         </div>
       </section>
-      <nav
-        className="private-area-nav"
-        aria-label={t('privateArea.navigation.aria')}
-      >
-        <NavLink to={PRIVATE_NOTES_PATH}>
-          {t('privateArea.navigation.notes')}
-        </NavLink>
-        <NavLink to={PRIVATE_GIFT_IDEAS_PATH}>
-          {t('privateArea.navigation.gifts')}
-        </NavLink>
-        <NavLink to={PRIVATE_COLLECTIONS_PATH}>
-          {t('privateArea.navigation.collections')}
-        </NavLink>
-      </nav>
+      {showNavigation ? (
+        <nav
+          className="private-area-nav"
+          aria-label={t('privateArea.navigation.aria')}
+        >
+          <NavLink to={PRIVATE_NOTES_PATH}>
+            {t('privateArea.navigation.notes')}
+          </NavLink>
+          <NavLink to={PRIVATE_GIFT_IDEAS_PATH}>
+            {t('privateArea.navigation.gifts')}
+          </NavLink>
+          <NavLink to={PRIVATE_COLLECTIONS_PATH}>
+            {t('privateArea.navigation.collections')}
+          </NavLink>
+        </nav>
+      ) : null}
       {children}
     </div>
   );
