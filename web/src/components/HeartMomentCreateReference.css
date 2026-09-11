@@ -313,12 +313,16 @@
   min-width: 0;
 }
 
-.heart-moment-create-visibility-option strong {
+.heart-moment-create-visibility
+  .heart-moment-create-visibility-option
+  strong {
   font-size: 0.96rem;
   line-height: 1.3;
 }
 
-.heart-moment-create-visibility-option small {
+.heart-moment-create-visibility
+  .heart-moment-create-visibility-option
+  small {
   color: var(--color-text-secondary);
   font-size: 0.79rem;
   line-height: 1.42;
