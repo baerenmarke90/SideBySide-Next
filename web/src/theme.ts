@@ -6,7 +6,7 @@ export const THEME_PREFERENCE_EVENT = 'sidebyside:theme-preference';
 export const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
 
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#faf7f5',
+  light: '#f6efea',
   dark: '#18131d',
 };
 
