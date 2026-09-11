@@ -49,7 +49,11 @@ const destinations = [
   },
 ] as const;
 
-function DestinationIcon({ kind }: { kind: (typeof destinations)[number]['key'] }) {
+function DestinationIcon({
+  kind,
+}: {
+  kind: (typeof destinations)[number]['key'];
+}) {
   if (kind === 'gifts') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -77,7 +81,11 @@ function PrivateAreaOverview() {
     <div className="private-area-reference-overview">
       <section className="private-area-privacy-banner" role="note">
         <span className="private-area-privacy-banner-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" focusable="false">
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
             <path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Z" />
           </svg>
         </span>
@@ -86,11 +94,17 @@ function PrivateAreaOverview() {
           <p>{t('privateArea.entry.privacy')}</p>
         </div>
       </section>
-      <nav className="private-area-destination-nav" aria-label={t('privateArea.navigation.aria')}>
+      <nav
+        className="private-area-destination-nav"
+        aria-label={t('privateArea.navigation.aria')}
+      >
         <ul>
           {destinations.map((destination) => (
             <li key={destination.key}>
-              <Link className="private-area-destination-card" to={destination.href}>
+              <Link
+                className="private-area-destination-card"
+                to={destination.href}
+              >
                 <span className="private-area-destination-icon">
                   <DestinationIcon kind={destination.key} />
                 </span>
@@ -98,7 +112,10 @@ function PrivateAreaOverview() {
                   <strong>{t(destination.title)}</strong>
                   <span>{t(destination.intro)}</span>
                 </span>
-                <span className="private-area-destination-chevron" aria-hidden="true">
+                <span
+                  className="private-area-destination-chevron"
+                  aria-hidden="true"
+                >
                   ›
                 </span>
               </Link>
@@ -121,24 +138,55 @@ export function PrivateAreaProductPage({
 }) {
   const props = { api, accountId, spaceId };
   const { pathname } = useLocation();
-  const isOverview = pathname === '/more/private' || pathname === '/more/private/';
+  const isOverview =
+    pathname === '/more/private' || pathname === '/more/private/';
 
   return (
     <PrivateAreaFrame showNavigation={!isOverview}>
       <Routes>
         <Route index element={<PrivateAreaOverview />} />
         <Route path="notes" element={<PrivateNotesListPage {...props} />} />
-        <Route path="notes/new" element={<PrivateNoteCreatePage {...props} />} />
-        <Route path="notes/:noteId/edit" element={<PrivateNoteEditPage {...props} />} />
-        <Route path="notes/:noteId" element={<PrivateNoteDetailPage {...props} />} />
+        <Route
+          path="notes/new"
+          element={<PrivateNoteCreatePage {...props} />}
+        />
+        <Route
+          path="notes/:noteId/edit"
+          element={<PrivateNoteEditPage {...props} />}
+        />
+        <Route
+          path="notes/:noteId"
+          element={<PrivateNoteDetailPage {...props} />}
+        />
         <Route path="gift-ideas" element={<GiftIdeasListPage {...props} />} />
-        <Route path="gift-ideas/new" element={<GiftIdeaCreatePage {...props} />} />
-        <Route path="gift-ideas/:giftIdeaId/edit" element={<GiftIdeaEditPage {...props} />} />
-        <Route path="gift-ideas/:giftIdeaId" element={<GiftIdeaDetailPage {...props} />} />
-        <Route path="collections" element={<PrivateCollectionsListPage {...props} />} />
-        <Route path="collections/new" element={<PrivateCollectionCreatePage {...props} />} />
-        <Route path="collections/:collectionId/edit" element={<PrivateCollectionEditPage {...props} />} />
-        <Route path="collections/:collectionId" element={<PrivateCollectionDetailPage {...props} />} />
+        <Route
+          path="gift-ideas/new"
+          element={<GiftIdeaCreatePage {...props} />}
+        />
+        <Route
+          path="gift-ideas/:giftIdeaId/edit"
+          element={<GiftIdeaEditPage {...props} />}
+        />
+        <Route
+          path="gift-ideas/:giftIdeaId"
+          element={<GiftIdeaDetailPage {...props} />}
+        />
+        <Route
+          path="collections"
+          element={<PrivateCollectionsListPage {...props} />}
+        />
+        <Route
+          path="collections/new"
+          element={<PrivateCollectionCreatePage {...props} />}
+        />
+        <Route
+          path="collections/:collectionId/edit"
+          element={<PrivateCollectionEditPage {...props} />}
+        />
+        <Route
+          path="collections/:collectionId"
+          element={<PrivateCollectionDetailPage {...props} />}
+        />
         <Route path="*" element={<Navigate replace to="notes" />} />
       </Routes>
     </PrivateAreaFrame>
