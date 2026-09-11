@@ -13,13 +13,19 @@
  */
 
 import { mapValues } from '../runtime';
+import type { PlanSchedule } from './PlanSchedule';
+import {
+    PlanScheduleFromJSON,
+    PlanScheduleFromJSONTyped,
+    PlanScheduleToJSON,
+    PlanScheduleToJSONTyped,
+} from './PlanSchedule';
 /**
- * Wish-to-Plan conversion request.
- * 
- * Every field is optional: without an explicit title the plan inherits the
- * wish title. ``sourceWishId``, ``status``, and schedule fields are not
- * supplied by the client; the wish is identified by the path and everything
- * else is established server-side.
+ * Wish-to-Plan conversion request with an optional atomic schedule.
+ *
+ * Without an explicit title the Plan inherits the Wish title. Supplying
+ * `schedule` makes the new Plan date-only or timed without a second lifecycle
+ * request; omitting it preserves the existing unscheduled flow.
  * @export
  * @interface WishToPlan
  */
@@ -36,6 +42,12 @@ export interface WishToPlan {
      * @memberof WishToPlan
      */
     placeId?: string;
+    /**
+     * 
+     * @type {PlanSchedule}
+     * @memberof WishToPlan
+     */
+    schedule?: PlanSchedule;
     /**
      * 
      * @type {string}
@@ -63,6 +75,7 @@ export function WishToPlanFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         
         'description': json['description'] == null ? undefined : json['description'],
         'placeId': json['placeId'] == null ? undefined : json['placeId'],
+        'schedule': json['schedule'] == null ? undefined : PlanScheduleFromJSON(json['schedule']),
         'title': json['title'] == null ? undefined : json['title'],
     };
 }
@@ -80,7 +93,7 @@ export function WishToPlanToJSONTyped(value?: WishToPlan | null, ignoreDiscrimin
         
         'description': value['description'],
         'placeId': value['placeId'],
+        'schedule': PlanScheduleToJSON(value['schedule']),
         'title': value['title'],
     };
 }
-
