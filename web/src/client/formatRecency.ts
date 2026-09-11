@@ -91,11 +91,7 @@ export function formatRelativeTime(
 }
 
 /**
- * Formats relative date for upcoming events/plans:
- * - "Heute · 16. Feb." for today
- * - "Morgen · 17. Feb." for tomorrow
- * - "in X Tagen · 25. Feb." for 2 to 30 days in advance
- * - localized long date for dates beyond 30 days
+ * Formats relative date for upcoming real instants in the browser timezone.
  */
 export function formatUpcomingRelative(
   date: Date,
@@ -130,6 +126,50 @@ export function formatUpcomingRelative(
   return new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'long',
+  }).format(date);
+}
+
+/**
+ * Relative presentation for an OpenAPI `date` carrier.
+ *
+ * The target date is read in UTC because the generated client encodes a pure
+ * calendar day at UTC midnight. The comparison date is browser-local today;
+ * only YYYY-MM-DD values are compared, so the scheduled day itself can never
+ * slide across a timezone boundary.
+ */
+export function formatUpcomingCalendarDate(
+  date: Date,
+  t: TFunction,
+  now: Date = new Date(),
+  locale = resolvedLocale(),
+): string {
+  const targetKey = date.toISOString().slice(0, 10);
+  const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate(),
+  ).padStart(2, '0')}`;
+  const targetDay = Date.parse(`${targetKey}T00:00:00Z`);
+  const today = Date.parse(`${nowKey}T00:00:00Z`);
+  const diffDays = Math.round((targetDay - today) / (24 * 60 * 60 * 1000));
+
+  const formattedShort = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(date);
+
+  if (diffDays <= 0) {
+    return `${t('m5s5.common.today')} · ${formattedShort}`;
+  }
+  if (diffDays === 1) {
+    return `${t('m5s5.common.tomorrow')} · ${formattedShort}`;
+  }
+  if (diffDays >= 2 && diffDays <= 30) {
+    return `${t('m5s5.common.inDays', { count: diffDays })} · ${formattedShort}`;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
   }).format(date);
 }
 
