@@ -346,3 +346,56 @@ test('Heart Moment Create reflows at 320px and large text without horizontal ove
     await context.close();
   }
 });
+
+test('Heart Moment Create preserves the reference rhythm on a small-height phone (#862)', async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 667 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await openHeartMomentCreate(page);
+    await expectNoHorizontalOverflow(page);
+    await expect(
+      page.getByRole('button', {
+        name: storyProducts.heartMomentProduct.save,
+      }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(
+        'heart-moment-create-reference-small-height.png',
+      ),
+      fullPage: true,
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test('Heart Moment Create adapts the Compact reference to Expanded Web (#862)', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openHeartMomentCreate(page);
+
+  const pageSurface = page.locator('.heart-moment-create-page');
+  const form = page.locator('.heart-moment-create-form');
+  const [pageBox, formBox] = await Promise.all([
+    pageSurface.boundingBox(),
+    form.boundingBox(),
+  ]);
+  if (!pageBox || !formBox) throw new Error('Expanded create form did not render.');
+
+  expect(pageBox.width).toBeLessThanOrEqual(680);
+  expect(formBox.width).toBeLessThanOrEqual(680);
+  await expectNoHorizontalOverflow(page);
+
+  await page.screenshot({
+    path: testInfo.outputPath('heart-moment-create-reference-expanded.png'),
+    fullPage: true,
+  });
+});
