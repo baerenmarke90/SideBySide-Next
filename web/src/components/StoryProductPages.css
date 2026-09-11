@@ -171,9 +171,11 @@
     box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
 }
 
-.story-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+@media (hover: hover) and (pointer: fine) {
+  .story-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 .story-card-meta {
@@ -351,6 +353,19 @@
   box-shadow: var(--shadow-soft);
 }
 
+.story-timeline-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.story-filter-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .story-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -486,12 +501,28 @@
 }
 
 @media (max-width: 600px) {
+  .story-filter-container {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: var(--space-4);
+  }
+
+  .story-timeline-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: var(--space-2);
+  }
+
   .story-filter-toggle {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-    align-self: flex-start;
+    align-self: auto;
     height: 2.5rem;
     padding: 0 var(--space-4);
     border: 1px solid var(--color-border);
@@ -501,6 +532,13 @@
     font-size: 0.9rem;
     font-weight: 650;
     cursor: pointer;
+  }
+
+  .story-timeline-refresh {
+    height: 2.5rem;
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-pill);
+    font-size: 0.88rem;
   }
 
   .story-filter-toggle:hover {
@@ -519,17 +557,30 @@
     background: var(--color-brand);
   }
 
-  /* Default mobile state: the filter panel is collapsed behind the toggle
-     above and only appears once the React-driven "story-filter-bar-open"
+  /* Default mobile state: the filter panel wrapper is collapsed behind the toggle
+     above and only appears once the React-driven "story-filter-panel-open"
      class is applied. */
-  .story-filter-bar {
+  .story-filter-panel-wrapper {
     display: none;
     flex-direction: column;
     align-items: stretch;
+    gap: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+    padding: var(--space-4);
+    margin-top: var(--space-3);
   }
 
-  .story-filter-bar.story-filter-bar-open {
+  .story-filter-panel-wrapper.story-filter-panel-open {
     display: flex;
+  }
+
+  .story-filter-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .story-filter-group {
@@ -1099,4 +1150,55 @@
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
   transform: translateY(-1px);
+}
+
+/* =====================================================================
+ * Momente > Zeitleiste: Header & Filter Chips (#860)
+ * ===================================================================== */
+.momente-timeline-header {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.momente-timeline-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 2.5rem);
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-2);
+}
+
+.momente-timeline-header p {
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin: 0 0 var(--space-4);
+  max-width: 44ch;
+}
+
+/* =====================================================================
+ * Story Detail Alignment: HeartMoment & Milestone (#860)
+ * ===================================================================== */
+.heart-moment-detail-container,
+.milestone-detail-container {
+  max-width: var(--reading-max);
+  margin-inline: auto;
+  width: 100%;
+}
+
+.heart-moment-provenance-footer,
+.milestone-provenance-footer {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-subtle);
+  text-align: center;
+}
+
+.heart-moment-provenance-footer p,
+.milestone-provenance-footer p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 550;
+  letter-spacing: 0.01em;
 }

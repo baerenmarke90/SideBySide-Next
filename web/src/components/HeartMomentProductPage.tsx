@@ -33,8 +33,8 @@ import { CommentsPanel } from './CommentsPanel';
 import { MediaGallery } from './MediaGallery';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
-import { UiState } from './UiState';
 import { VisibilityBadge } from './VisibilityBadge';
+import { UiState } from './UiState';
 
 export type HeartMomentProductMode = 'create' | 'detail' | 'edit';
 
@@ -656,6 +656,10 @@ export function HeartMomentProductPage({
   const shared = heartMoment.visibility === ContentVisibility.SHARED;
   const changingVisibility = visibilityMutation.isPending;
 
+  const heartMomentEyebrow = heartMoment.happenedOn
+    ? `${t('heartMomentProduct.detailEyebrow').toUpperCase()} · ${formatDateOnly(heartMoment.happenedOn)}`
+    : t('heartMomentProduct.detailEyebrow').toUpperCase();
+
   return (
     <div className="page product-detail-page">
       {offline ? (
@@ -669,8 +673,14 @@ export function HeartMomentProductPage({
             {t('heartMomentProduct.backToStory')}
           </Link>
         }
-        eyebrow={t('heartMomentProduct.detailEyebrow')}
+        eyebrow={heartMomentEyebrow}
         title={heartMoment.text}
+        titleAction={
+          <VisibilityBadge
+            visibility={shared ? 'SPACE_SHARED' : 'OWNER_ONLY'}
+            size="small"
+          />
+        }
         description={t(`heartEmotion.${heartMoment.emotion}`)}
         action={
           heartMoment.capabilities.canEdit && !offline ? (
@@ -684,111 +694,85 @@ export function HeartMomentProductPage({
         }
       />
 
-      <div className="layout-split layout-split-lead-rail">
-        <aside
-          className="layout-rail layout-rail-sticky"
-          aria-label={t('heartMomentProduct.detailMetaAria')}
-        >
-          <div className="layout-panel">
-            <dl className="detail-meta-list">
-              <div>
-                <dt>{t('heartMomentProduct.authorLabel')}</dt>
-                <dd>{heartMoment.author.displayName}</dd>
-              </div>
-              <div>
-                <dt>{t('heartMomentProduct.happenedOnLabel')}</dt>
-                <dd>{formatDateOnly(heartMoment.happenedOn)}</dd>
-              </div>
-              <div>
-                <dt>{t('heartMomentProduct.createdAtLabel')}</dt>
-                <dd>{formatCreatedAt(heartMoment.createdAt)}</dd>
-              </div>
-              <div>
-                <dt>{t('heartMomentProduct.visibilityLabel')}</dt>
-                <dd>
-                  <VisibilityBadge
-                    visibility={shared ? 'SPACE_SHARED' : 'OWNER_ONLY'}
-                    size="small"
-                  />
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </aside>
-
-        <div className="layout-main">
-          <article className="story-surface product-detail-card coffee-table-layout">
-            {heartMoment.attachment ? (
-              <section aria-label={t('heartMomentProduct.photoLabel')}>
-                <MediaGallery
-                  items={[
-                    {
-                      id: heartMoment.attachment.id,
-                      mediaType: heartMoment.attachment.mediaType,
-                    },
-                  ]}
-                  loadMedia={(attachmentId) =>
-                    loadAttachment(heartMoment.id, attachmentId)
-                  }
-                />
-              </section>
-            ) : (
-              <p className="muted">{t('heartMomentProduct.noPhoto')}</p>
-            )}
-
-            {heartMoment.capabilities.canEdit && !offline ? (
-              <section
-                className="visibility-panel"
-                aria-labelledby="visibility-change-heading"
-              >
-                <h2 id="visibility-change-heading">
-                  {t('heartMomentProduct.visibilityChangeHeading')}
-                </h2>
-                <p>{t('heartMomentProduct.visibilityChangeWarning')}</p>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() =>
-                    visibilityMutation.mutate({
-                      current: heartMoment,
-                      visibility: shared
-                        ? ContentVisibility.PRIVATE
-                        : ContentVisibility.SHARED,
-                    })
-                  }
-                  disabled={changingVisibility}
-                >
-                  {changingVisibility
-                    ? t('heartMomentProduct.visibilityChanging')
-                    : shared
-                      ? t('heartMomentProduct.makePrivate')
-                      : t('heartMomentProduct.makeShared')}
-                </button>
-                {visibilityMutation.error ? (
-                  <ProblemState error={visibilityMutation.error} />
-                ) : null}
-              </section>
-            ) : null}
-
-            {changingVisibility ? (
-              <p className="muted" role="status">
-                {t('heartMomentProduct.visibilityChanging')}
-              </p>
-            ) : shared ? (
-              <CommentsPanel
-                commentsApi={apis.comments}
-                spaceId={spaceId}
-                parentKind="heartMoment"
-                parentId={heartMoment.id}
-                currentAccountId={currentAccountId}
-                canComment={heartMoment.capabilities.canComment}
-                offline={offline}
+      <div className="heart-moment-detail-container">
+        <article className="story-surface product-detail-card coffee-table-layout">
+          {heartMoment.attachment ? (
+            <section aria-label={t('heartMomentProduct.photoLabel')}>
+              <MediaGallery
+                items={[
+                  {
+                    id: heartMoment.attachment.id,
+                    mediaType: heartMoment.attachment.mediaType,
+                  },
+                ]}
+                loadMedia={(attachmentId) =>
+                  loadAttachment(heartMoment.id, attachmentId)
+                }
               />
-            ) : (
-              <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
-            )}
-          </article>
-        </div>
+            </section>
+          ) : null}
+
+          {heartMoment.capabilities.canEdit && !offline ? (
+            <section
+              className="visibility-panel"
+              aria-labelledby="visibility-change-heading"
+            >
+              <h2 id="visibility-change-heading">
+                {t('heartMomentProduct.visibilityChangeHeading')}
+              </h2>
+              <p>{t('heartMomentProduct.visibilityChangeWarning')}</p>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() =>
+                  visibilityMutation.mutate({
+                    current: heartMoment,
+                    visibility: shared
+                      ? ContentVisibility.PRIVATE
+                      : ContentVisibility.SHARED,
+                  })
+                }
+                disabled={changingVisibility}
+              >
+                {changingVisibility
+                  ? t('heartMomentProduct.visibilityChanging')
+                  : shared
+                    ? t('heartMomentProduct.makePrivate')
+                    : t('heartMomentProduct.makeShared')}
+              </button>
+              {visibilityMutation.error ? (
+                <ProblemState error={visibilityMutation.error} />
+              ) : null}
+            </section>
+          ) : null}
+
+          {changingVisibility ? (
+            <p className="muted" role="status">
+              {t('heartMomentProduct.visibilityChanging')}
+            </p>
+          ) : shared ? (
+            <CommentsPanel
+              commentsApi={apis.comments}
+              spaceId={spaceId}
+              parentKind="heartMoment"
+              parentId={heartMoment.id}
+              currentAccountId={currentAccountId}
+              canComment={heartMoment.capabilities.canComment}
+              offline={offline}
+            />
+          ) : (
+            <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
+          )}
+
+          <footer className="heart-moment-provenance-footer">
+            <p>
+              {t('heartMomentProduct.provenance', {
+                author: heartMoment.author.displayName,
+                createdAt: formatCreatedAt(heartMoment.createdAt),
+              })}
+            </p>
+          </footer>
+        </article>
       </div>
     </div>
   );

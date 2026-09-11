@@ -1,0 +1,780 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import {
+  expect,
+  type Locator,
+  type Page,
+  type TestInfo,
+  test,
+} from '@playwright/test';
+import de from '../../src/i18n/locales/de';
+
+const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
+const PARTNER_ID = '99999999-9999-4999-8999-999999999999';
+const SPACE_ID = '22222222-2222-4222-8222-222222222222';
+const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
+
+const ME = { id: ACCOUNT_ID, displayName: 'Lea Sommer' };
+const PARTNER = { id: PARTNER_ID, displayName: 'Alex' };
+const CAPABILITIES = { canEdit: true, canDelete: true, canComment: true };
+
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+async function captureScreenshot(
+  target: Page | Locator,
+  testInfo: TestInfo,
+  fileName: string,
+  options?: { fullPage?: boolean },
+): Promise<void> {
+  const outputPath = testInfo.outputPath(fileName);
+  await target.screenshot({ path: outputPath, ...options });
+  const exportDir = process.env.SCREENSHOT_EXPORT_DIR;
+  if (exportDir) {
+    fs.mkdirSync(exportDir, { recursive: true });
+    fs.copyFileSync(outputPath, path.join(exportDir, fileName));
+  }
+}
+
+function getTimelineItems() {
+  return [
+    // 1. Image-bearing memory (16:10 photographic presentation)
+    {
+      kind: 'MEMORY',
+      effectiveDate: '2026-05-12T08:30:00Z',
+      memory: {
+        id: 'mem-canal',
+        title: 'Breakfast by the canal',
+        happenedOn: '2026-05-12',
+        createdAt: '2026-05-12T08:30:00Z',
+        author: ME,
+        capabilities: CAPABILITIES,
+        visibility: 'SHARED',
+        attachments: [
+          {
+            id: 'att-canal-1',
+            position: 0,
+            status: 'READY',
+            mediaType: 'IMAGE',
+            mimeType: 'image/jpeg',
+            hasThumbnail: true,
+            width: 800,
+            height: 800,
+            size: 1024,
+          },
+        ],
+      },
+    },
+
+    // 2. Second image-bearing memory
+    {
+      kind: 'MEMORY',
+      effectiveDate: '2026-04-03T10:00:00Z',
+      memory: {
+        id: 'mem-coffee',
+        title: 'First coffee in new home',
+        happenedOn: '2026-04-03',
+        createdAt: '2026-04-03T10:00:00Z',
+        author: ME,
+        capabilities: CAPABILITIES,
+        visibility: 'SHARED',
+        attachments: [
+          {
+            id: 'att-coffee-1',
+            position: 0,
+            status: 'READY',
+            mediaType: 'IMAGE',
+            mimeType: 'image/jpeg',
+            hasThumbnail: true,
+            width: 800,
+            height: 800,
+            size: 1024,
+          },
+        ],
+      },
+    },
+
+    // 3. No-image memory (spacious text-first card)
+    {
+      kind: 'MEMORY',
+      effectiveDate: '2026-03-28T14:00:00Z',
+      memory: {
+        id: 'mem-hike',
+        title: 'Mountain hike',
+        happenedOn: '2026-03-28',
+        createdAt: '2026-03-28T14:00:00Z',
+        author: ME,
+        capabilities: CAPABILITIES,
+        visibility: 'SHARED',
+        attachments: [],
+      },
+    },
+
+    // 4. Milestone
+    {
+      kind: 'MILESTONE',
+      effectiveDate: '2026-02-14T00:00:00Z',
+      milestone: {
+        id: 'ms-2years',
+        title: 'Two years together',
+        happenedOn: '2026-02-14',
+        createdAt: '2026-02-14T00:00:00Z',
+        author: ME,
+        capabilities: CAPABILITIES,
+      },
+    },
+
+    // 5. Heart Moment (text-first emotional card)
+    {
+      kind: 'HEART_MOMENT',
+      effectiveDate: '2026-01-20T19:00:00Z',
+      heartMoment: {
+        id: 'hm-love',
+        text: 'Thinking of you',
+        emotion: 'LOVED',
+        happenedOn: '2026-01-20',
+        createdAt: '2026-01-20T19:00:00Z',
+        author: ME,
+        capabilities: CAPABILITIES,
+        attachment: null,
+      },
+    },
+  ];
+}
+
+type MockOptions = {
+  asPartner?: boolean;
+};
+
+async function installMocks(
+  page: Page,
+  options: MockOptions = {},
+): Promise<void> {
+  const currentUserId = options.asPartner ? PARTNER_ID : ACCOUNT_ID;
+  const currentUserName = options.asPartner ? 'Alex' : 'Lea Sommer';
+
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const pathname = new URL(request.url()).pathname;
+
+    const fulfillJson = async (body: unknown, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+
+    if (method === 'GET' && pathname === '/api/v1/instance/status') {
+      await fulfillJson({
+        maintenanceMode: false,
+        registrationAvailable: true,
+        registrationUnavailableReason: null,
+        auth: {
+          localPassword: true,
+          passkey: true,
+          magicLink: true,
+          oidc: false,
+        },
+      });
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/v1/auth/sign-in') {
+      await fulfillJson({
+        account: { displayName: currentUserName, id: currentUserId },
+        tokens: {
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          accessToken: 'timeline-ref-access-token',
+          refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+          refreshToken: 'timeline-ref-refresh-token',
+        },
+      });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({ displayName: currentUserName, id: currentUserId });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
+      await fulfillJson({ serverAdmin: false });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
+      await fulfillJson([
+        { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
+      ]);
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({
+        id: SPACE_ID,
+        createdAt: '2023-06-17T00:00:00Z',
+        partners: [ME, PARTNER],
+      });
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        version: 1,
+        relationshipStartedOn: '2023-06-17',
+        showRelationshipDuration: true,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profile-preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${currentUserId}`
+    ) {
+      await fulfillJson({
+        accountId: currentUserId,
+        createdAt: '2023-06-17T00:00:00Z',
+        displayName: currentUserName,
+        id: PROFILE_ID,
+        preferences: [],
+        profileAttachmentId: null,
+        updatedAt: '2023-06-17T00:00:00Z',
+        version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+    ) {
+      await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+
+    // Attachment read access & file streaming
+    if (
+      method === 'POST' &&
+      pathname.includes('/attachments/') &&
+      pathname.endsWith('/read-access')
+    ) {
+      const match = pathname.match(/\/attachments\/([^/]+)\/read-access/);
+      const attId = match ? match[1] : 'att';
+      await fulfillJson({
+        method: 'DIRECT',
+        url: `/api/v1/spaces/${SPACE_ID}/attachments/${attId}/file`,
+        expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname.includes('/attachments/') &&
+      (pathname.endsWith('/file') || pathname.endsWith('/thumbnail'))
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: TINY_PNG,
+      });
+      return;
+    }
+
+    // Timeline endpoint
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/timeline`
+    ) {
+      const url = new URL(request.url());
+      const typeParam =
+        url.searchParams.get('type') || url.searchParams.get('kind');
+      let items = getTimelineItems();
+      if (typeParam) {
+        items = items.filter((item) => item.kind === typeParam);
+      }
+      await fulfillJson({
+        items,
+        hasMore: false,
+        nextCursor: null,
+      });
+      return;
+    }
+
+    // Memory detail
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/memories/mem-canal`
+    ) {
+      await fulfillJson({
+        id: 'mem-canal',
+        spaceId: SPACE_ID,
+        title: 'Breakfast by the canal',
+        body: 'A wonderful morning by the water.',
+        happenedOn: '2026-05-12',
+        author: ME,
+        authorId: ACCOUNT_ID,
+        attachments: [],
+        capabilities: CAPABILITIES,
+        createdAt: '2026-05-12T08:30:00Z',
+        updatedAt: '2026-05-12T08:30:00Z',
+        version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/memories/mem-canal/comments`
+    ) {
+      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      return;
+    }
+
+    // Heart Moment detail
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/heart-moments/hm-love`
+    ) {
+      await fulfillJson({
+        id: 'hm-love',
+        spaceId: SPACE_ID,
+        text: 'Thinking of you',
+        emotion: 'LOVED',
+        happenedOn: '2026-01-20',
+        author: ME,
+        authorId: ACCOUNT_ID,
+        capabilities: CAPABILITIES,
+        createdAt: '2026-01-20T19:00:00Z',
+        updatedAt: '2026-01-20T19:00:00Z',
+        version: 1,
+        visibility: 'SHARED',
+        attachment: null,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/heart-moments/hm-love/comments`
+    ) {
+      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      return;
+    }
+
+    // Milestone detail
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/milestones/ms-2years`
+    ) {
+      await fulfillJson({
+        id: 'ms-2years',
+        spaceId: SPACE_ID,
+        title: 'Two years together',
+        description: 'Celebrating our anniversary.',
+        happenedOn: '2026-02-14',
+        author: ME,
+        authorId: ACCOUNT_ID,
+        capabilities: CAPABILITIES,
+        createdAt: '2026-02-14T00:00:00Z',
+        updatedAt: '2026-02-14T00:00:00Z',
+        version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/milestones/ms-2years/comments`
+    ) {
+      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      return;
+    }
+
+    // Chapters list endpoint
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/chapters`
+    ) {
+      await fulfillJson({
+        items: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+      return;
+    }
+
+    await fulfillJson({}, 200);
+  });
+}
+
+async function signIn(page: Page, email = 'lea@example.org'): Promise<void> {
+  await page.goto('/story?tab=timeline');
+  await page.getByLabel(de.login.email).fill(email);
+  await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
+  await page.getByRole('button', { name: de.login.submit }).click();
+  await expect(page.getByLabel(de.login.email)).toHaveCount(0);
+}
+
+test.describe('Momente > Zeitleiste Product Reference (#860)', () => {
+  test('renders 390x844 reference layout, spine, markers, cards, and captures screenshots', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    // 1. Editorial Header
+    await expect(
+      page.getByRole('heading', { name: 'Momente', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText(de.story.timelineIntro)).toBeVisible();
+
+    // 2. Continuous spine & stable structural markers
+    const markers = page.locator('.story-timeline-marker');
+    await expect(markers).toHaveCount(5);
+
+    // Assert every marker uses single stable styling without alternating colors
+    await expect(
+      page.locator('.story-timeline-marker.marker-berry'),
+    ).toHaveCount(0);
+    await expect(
+      page.locator('.story-timeline-marker.marker-teal'),
+    ).toHaveCount(0);
+
+    // 3. Card hierarchy
+    // Image-bearing memory card (16:10 preview)
+    const imageMemoryCard = page
+      .locator('.story-card-memory.has-image')
+      .first();
+    await expect(imageMemoryCard).toBeVisible();
+    await expect(
+      imageMemoryCard.getByText('Breakfast by the canal'),
+    ).toBeVisible();
+    await expect(
+      imageMemoryCard.locator('img.story-media-preview'),
+    ).toBeVisible();
+
+    // No-image memory card (spacious text-first)
+    const noImageMemoryCard = page
+      .locator('.story-card-memory.no-image')
+      .first();
+    await expect(noImageMemoryCard).toBeVisible();
+    await expect(noImageMemoryCard.getByText('Mountain hike')).toBeVisible();
+    await expect(noImageMemoryCard.locator('.story-media-preview')).toHaveCount(
+      0,
+    );
+
+    // Milestone card
+    const milestoneCard = page.locator('.story-card-milestone').first();
+    await expect(milestoneCard).toBeVisible();
+    await expect(milestoneCard.getByText('Two years together')).toBeVisible();
+
+    // Heart moment card (text-first emotional)
+    const heartMomentCard = page
+      .locator('.story-card-heart-moment.no-image')
+      .first();
+    await expect(heartMomentCard).toBeVisible();
+    await expect(heartMomentCard.getByText('Thinking of you')).toBeVisible();
+    await expect(heartMomentCard.locator('.story-media-preview')).toHaveCount(
+      0,
+    );
+
+    // 4. Capture 01-momente-timeline-390-light.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '01-momente-timeline-390-light.png',
+      {
+        fullPage: true,
+      },
+    );
+
+    // 5. Capture 05-momente-timeline-image-memory.png
+    await captureScreenshot(
+      imageMemoryCard,
+      testInfo,
+      '05-momente-timeline-image-memory.png',
+    );
+
+    // 6. Capture 06-momente-timeline-no-image-memory.png
+    await captureScreenshot(
+      noImageMemoryCard,
+      testInfo,
+      '06-momente-timeline-no-image-memory.png',
+    );
+
+    // 7. Capture 07-momente-timeline-heart-moment.png
+    await captureScreenshot(
+      heartMomentCard,
+      testInfo,
+      '07-momente-timeline-heart-moment.png',
+    );
+  });
+
+  test('dark mode at 390x844 captures 02-momente-timeline-390-dark.png', async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.addInitScript(() =>
+      window.localStorage.setItem('sidebyside.theme', 'system'),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await captureScreenshot(
+      page,
+      testInfo,
+      '02-momente-timeline-390-dark.png',
+      {
+        fullPage: true,
+      },
+    );
+  });
+
+  test('320px reflow produces no horizontal overflow and captures 03-momente-timeline-320-reflow.png', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    const hasHorizontalOverflow = await page.evaluate(() => {
+      return (
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+      );
+    });
+    expect(hasHorizontalOverflow).toBe(false);
+
+    await captureScreenshot(
+      page,
+      testInfo,
+      '03-momente-timeline-320-reflow.png',
+      { fullPage: true },
+    );
+  });
+
+  test('1440 Expanded desktop view captures 04-momente-timeline-1440-expanded.png', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    await captureScreenshot(
+      page,
+      testInfo,
+      '04-momente-timeline-1440-expanded.png',
+      { fullPage: true },
+    );
+  });
+
+  test('Filter disclosure QA on mobile: collapsed vs expanded and captures 08 and 09 screenshots', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    const filterToggle = page.locator('.story-filter-toggle');
+    const filterPanel = page.locator('#story-filter-panel');
+    const typeSelect = page.locator('#story-filter-type');
+
+    // Default collapsed state
+    await expect(filterToggle).toBeVisible();
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(typeSelect).not.toBeVisible();
+
+    // Verify type select cannot receive focus when collapsed
+    await typeSelect.focus().catch(() => {});
+    const isFocusedWhileCollapsed = await typeSelect
+      .evaluate((el) => document.activeElement === el)
+      .catch(() => false);
+    expect(isFocusedWhileCollapsed).toBe(false);
+
+    // Capture 08-momente-timeline-filter-collapsed.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '08-momente-timeline-filter-collapsed.png',
+      { fullPage: true },
+    );
+
+    // Expand filter toolbar
+    await filterToggle.click();
+    await expect(filterToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(filterPanel).toHaveClass(/story-filter-panel-open/);
+    await expect(typeSelect).toBeVisible();
+
+    // Keyboard interactive when expanded
+    await typeSelect.focus();
+    const isFocusedWhenExpanded = await typeSelect.evaluate(
+      (el) => document.activeElement === el,
+    );
+    expect(isFocusedWhenExpanded).toBe(true);
+
+    // Capture 09-momente-timeline-filter-expanded.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '09-momente-timeline-filter-expanded.png',
+      { fullPage: true },
+    );
+
+    // Filter by MEMORY
+    await typeSelect.selectOption('MEMORY');
+    await expect(page.locator('.story-card-memory')).toHaveCount(3);
+    await expect(page.locator('.story-card-milestone')).toHaveCount(0);
+    await expect(page.locator('.story-card-heart-moment')).toHaveCount(0);
+  });
+
+  test('Detail navigation for Heart Moment and captures 10-momente-timeline-heart-moment-detail.png', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    // Click on Heart Moment card
+    await page.locator('.story-card-heart-moment').first().click();
+    await expect(page).toHaveURL(/\/story\/heart-moments\/hm-love$/);
+
+    // Verify detail alignment to Memory Detail
+    // 1. Layout rail removed in detail mode
+    await expect(page.locator('.layout-split-lead-rail')).toHaveCount(0);
+
+    // 2. Reading hierarchy: Eyebrow, Text/Emotion, Provenance footer
+    await expect(page.getByText('Thinking of you')).toBeVisible();
+    const provenance = page.locator('.heart-moment-provenance-footer');
+    await expect(provenance).toBeVisible();
+    await expect(provenance).toContainText('Lea Sommer');
+
+    // Capture 10-momente-timeline-heart-moment-detail.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '10-momente-timeline-heart-moment-detail.png',
+      { fullPage: true },
+    );
+  });
+
+  test('Detail navigation for Milestone and captures 11-momente-timeline-milestone-detail.png', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=timeline');
+    await page.waitForSelector('.story-timeline');
+
+    // Click on Milestone card
+    await page.locator('.story-card-milestone').first().click();
+    await expect(page).toHaveURL(/\/story\/milestones\/ms-2years$/);
+
+    // Verify detail alignment to Memory Detail
+    // 1. Layout rail removed in detail mode
+    await expect(page.locator('.layout-split-lead-rail')).toHaveCount(0);
+
+    // 2. Reading hierarchy: Title, Provenance footer
+    await expect(
+      page.getByRole('heading', { name: 'Two years together', level: 1 }),
+    ).toBeVisible();
+    const provenance = page.locator('.milestone-provenance-footer');
+    await expect(provenance).toBeVisible();
+    await expect(provenance).toContainText('Lea Sommer');
+
+    // Capture 11-momente-timeline-milestone-detail.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '11-momente-timeline-milestone-detail.png',
+      { fullPage: true },
+    );
+  });
+
+  test('Momente > Entdecken remains visually and structurally unchanged and captures 12-momente-timeline-discover-reference.png', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page);
+    await signIn(page);
+    await page.goto('/story?tab=discover');
+    await page.waitForSelector('.momente-discover-page');
+
+    // Discover view has the standard heading and intro (not the timeline editorial text)
+    await expect(page.getByText(de.story.title)).toBeVisible();
+    await expect(page.getByText(de.story.intro)).toBeVisible();
+
+    // Timeline-specific toolbar is not present on discover
+    await expect(page.locator('.story-timeline-toolbar')).toHaveCount(0);
+
+    // Capture 12-momente-timeline-discover-reference.png
+    await captureScreenshot(
+      page,
+      testInfo,
+      '12-momente-timeline-discover-reference.png',
+      { fullPage: true },
+    );
+  });
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`Timeline is axe-clean at 390x844 in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.addInitScript(() =>
+        window.localStorage.setItem('sidebyside.theme', 'system'),
+      );
+      await page.setViewportSize({ width: 390, height: 844 });
+      await installMocks(page);
+      await signIn(page);
+      await page.goto('/story?tab=timeline');
+      await page.waitForSelector('.story-timeline');
+
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-theme',
+        colorScheme,
+      );
+
+      const result = await new AxeBuilder({ page })
+        .withTags([
+          'wcag2a',
+          'wcag2aa',
+          'wcag21a',
+          'wcag21aa',
+          'wcag22a',
+          'wcag22aa',
+        ])
+        .analyze();
+      expect(result.violations).toEqual([]);
+    });
+  }
+});

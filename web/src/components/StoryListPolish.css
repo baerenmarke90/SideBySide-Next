@@ -34,10 +34,12 @@
   cursor: pointer;
 }
 
-.story-card-link:hover .story-card {
-  transform: translateY(-2px);
-  border-color: var(--color-brand-glow);
-  box-shadow: var(--shadow-card);
+@media (hover: hover) and (pointer: fine) {
+  .story-card-link:hover .story-card {
+    transform: translateY(-2px);
+    border-color: var(--color-brand-glow);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 .story-card-link .story-card-heart-moment {
@@ -113,9 +115,9 @@
   margin-bottom: var(--space-2);
 }
 
-.story-card-link .story-card-memory.has-image .story-media-preview,
-.story-card-link .story-card-memory.has-image .story-media-skeleton,
-.story-card-link .story-card-memory.has-image .story-media-placeholder {
+.story-card-link .story-card.has-image .story-media-preview,
+.story-card-link .story-card.has-image .story-media-skeleton,
+.story-card-link .story-card.has-image .story-media-placeholder {
   display: block;
   width: 100%;
   max-height: 480px;
@@ -127,23 +129,25 @@
   box-shadow: 0 8px 24px var(--color-shadow-soft);
 }
 
-.story-card-link .story-card-memory.has-image .story-media-preview {
+.story-card-link .story-card.has-image .story-media-preview {
   height: auto;
   object-fit: cover;
   object-position: center 30%;
   transition: transform var(--motion-fast);
 }
 
-.story-card-link:hover .story-card-memory.has-image .story-media-preview {
-  transform: scale(1.015);
+@media (hover: hover) and (pointer: fine) {
+  .story-card-link:hover .story-card.has-image .story-media-preview {
+    transform: scale(1.015);
+  }
 }
 
-.story-card-link .story-card-memory.has-image .story-media-skeleton,
-.story-card-link .story-card-memory.has-image .story-media-placeholder {
+.story-card-link .story-card.has-image .story-media-skeleton,
+.story-card-link .story-card.has-image .story-media-placeholder {
   min-height: 0;
 }
 
-.story-card-link .story-card-memory.has-image .story-media-placeholder {
+.story-card-link .story-card.has-image .story-media-placeholder {
   display: grid;
   place-items: center;
   padding: var(--space-4);
@@ -205,5 +209,68 @@
 
   .story-card-link:hover .story-card {
     transform: none;
+  }
+}
+
+/* =====================================================================
+ * Momente > Zeitleiste: Product Reference (#860)
+ * ===================================================================== */
+
+/* Continuous timeline spine and items */
+.story-timeline .story-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.story-timeline .story-list::before {
+  content: "";
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  left: 9px;
+  width: 2px;
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.story-timeline-item {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Dedicated timeline entry markers */
+.story-timeline-marker {
+  position: absolute;
+  left: -29px;
+  top: 24px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-background);
+  z-index: 1;
+}
+
+/* Narrow viewport reflow (320px) */
+@media (max-width: 360px) {
+  .story-timeline .story-list {
+    padding-left: 24px;
+  }
+
+  .story-timeline .story-list::before {
+    left: 6px;
+  }
+
+  .story-timeline-marker {
+    left: -23px;
+    width: 10px;
+    height: 10px;
   }
 }

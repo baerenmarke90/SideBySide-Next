@@ -458,6 +458,10 @@ export function MilestoneProductPage({
     );
   }
 
+  const milestoneEyebrow = milestone.happenedOn
+    ? `${t('milestoneProduct.detailEyebrow').toUpperCase()} · ${formatDateOnly(milestone.happenedOn)}`
+    : t('milestoneProduct.detailEyebrow').toUpperCase();
+
   return (
     <div className="page product-detail-page">
       {offline ? (
@@ -471,9 +475,8 @@ export function MilestoneProductPage({
             {t('milestoneProduct.backToStory')}
           </Link>
         }
-        eyebrow={t('milestoneProduct.detailEyebrow')}
+        eyebrow={milestoneEyebrow}
         title={milestone.title}
-        description={formatDateOnly(milestone.happenedOn)}
         action={
           milestone.capabilities.canEdit && !offline ? (
             <Link
@@ -486,46 +489,31 @@ export function MilestoneProductPage({
         }
       />
 
-      <div className="layout-split layout-split-lead-rail">
-        <aside
-          className="layout-rail layout-rail-sticky"
-          aria-label={t('milestoneProduct.detailMetaAria')}
-        >
-          <div className="layout-panel">
-            <dl className="detail-meta-list">
-              <div>
-                <dt>{t('milestoneProduct.authorLabel')}</dt>
-                <dd>{milestone.author.displayName}</dd>
-              </div>
-              <div>
-                <dt>{t('milestoneProduct.happenedOnLabel')}</dt>
-                <dd>{formatDateOnly(milestone.happenedOn)}</dd>
-              </div>
-              <div>
-                <dt>{t('milestoneProduct.createdAtLabel')}</dt>
-                <dd>{formatCreatedAt(milestone.createdAt)}</dd>
-              </div>
-            </dl>
-          </div>
-        </aside>
+      <div className="milestone-detail-container">
+        <article className="story-surface product-detail-card">
+          <p className="memory-detail-body">
+            {milestone.body || t('milestoneProduct.noBody')}
+          </p>
 
-        <div className="layout-main">
-          <article className="story-surface product-detail-card">
-            <p className="memory-detail-body">
-              {milestone.body || t('milestoneProduct.noBody')}
+          <CommentsPanel
+            commentsApi={apis.comments}
+            spaceId={spaceId}
+            parentKind="milestone"
+            parentId={milestone.id}
+            currentAccountId={currentAccountId}
+            canComment={milestone.capabilities.canComment}
+            offline={offline}
+          />
+
+          <footer className="milestone-provenance-footer">
+            <p>
+              {t('milestoneProduct.provenance', {
+                author: milestone.author.displayName,
+                createdAt: formatCreatedAt(milestone.createdAt),
+              })}
             </p>
-
-            <CommentsPanel
-              commentsApi={apis.comments}
-              spaceId={spaceId}
-              parentKind="milestone"
-              parentId={milestone.id}
-              currentAccountId={currentAccountId}
-              canComment={milestone.capabilities.canComment}
-              offline={offline}
-            />
-          </article>
-        </div>
+          </footer>
+        </article>
       </div>
     </div>
   );

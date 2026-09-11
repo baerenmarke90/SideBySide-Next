@@ -11,8 +11,7 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
 import { AuthorAvatar } from './PersonIdentity';
 import {
-  formatStoryDate,
-  groupStoryItems,
+  formatTimelineDate,
   storyAuthorLabel,
   storyItemKey,
   storyItemPresentation,
@@ -46,11 +45,16 @@ function storyItemAuthor(item: StoryItem): AuthorSummary {
 export function StoryList({
   items,
   loadMemoryImage,
+  loadHeartMomentImage,
   profilesApi,
   spaceId,
 }: {
   items: StoryItem[];
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
+  loadHeartMomentImage: (
+    heartMomentId: string,
+    attachmentId: string,
+  ) => Promise<string>;
   profilesApi?: ProfilesApi;
   spaceId?: string;
 }) {
@@ -67,132 +71,129 @@ export function StoryList({
   }
 
   const locale = resolvedLocale();
-  const groups = groupStoryItems(items, locale);
 
   return (
     <section className="story-timeline" aria-label={t('story.aria')}>
-      {groups.map((group) => (
-        <section
-          className="story-month"
-          key={group.key}
-          aria-labelledby={`month-${group.key}`}
-        >
-          <div className="month-heading">
-            <span className="month-dot" aria-hidden="true" />
-            <h3 id={`month-${group.key}`}>{group.label}</h3>
-          </div>
-          <ol className="story-list">
-            {group.items.map((item) => {
-              const presentation = storyItemPresentation(item, t);
-              const author = storyItemAuthor(item);
-              const firstMemoryAttachment =
-                item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
-              const productPath = storyProductPath(item);
-              const cardClasses = [
-                'story-card',
-                `story-card-${item.kind.toLowerCase().replace('_', '-')}`,
-                firstMemoryAttachment ? 'has-image' : '',
-              ]
-                .filter(Boolean)
-                .join(' ');
+      <ol className="story-list">
+        {items.map((item) => {
+          const presentation = storyItemPresentation(item, t);
+          const author = storyItemAuthor(item);
+          const firstMemoryAttachment =
+            item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
+          const heartAttachment =
+            item.kind === 'HEART_MOMENT'
+              ? (item.heartMoment.attachment ?? undefined)
+              : undefined;
+          const imageAttachment = firstMemoryAttachment ?? heartAttachment;
+          const imageEntityId =
+            item.kind === 'MEMORY'
+              ? item.memory.id
+              : item.kind === 'HEART_MOMENT'
+                ? item.heartMoment.id
+                : '';
+          const imageLoader =
+            item.kind === 'HEART_MOMENT'
+              ? loadHeartMomentImage
+              : loadMemoryImage;
+          const productPath = storyProductPath(item);
 
-              return (
-                <li key={storyItemKey(item)}>
-                  <Link
-                    className="story-card-link"
-                    to={productPath}
-                    aria-label={`${presentation.kindLabel}: ${presentation.title}`}
-                  >
-                    <article className={cardClasses}>
-                      <div className="story-card-meta">
-                        <span className="kind-badge">
-                          {presentation.kindLabel}
-                        </span>
-                        {presentation.sharedLabel ? (
-                          <VisibilityBadge
-                            visibility="SPACE_SHARED"
-                            size="small"
-                            customLabel={presentation.sharedLabel}
-                            className="shared-badge"
+          const cardClasses = [
+            'story-card',
+            `story-card-${item.kind.toLowerCase().replace('_', '-')}`,
+            imageAttachment ? 'has-image' : 'no-image',
+          ]
+            .filter(Boolean)
+            .join(' ');
+
+          return (
+            <li key={storyItemKey(item)} className="story-timeline-item">
+              <span className="story-timeline-marker" aria-hidden="true" />
+              <Link
+                className="story-card-link"
+                to={productPath}
+                aria-label={`${presentation.kindLabel}: ${presentation.title}`}
+              >
+                <article className={cardClasses}>
+                  <div className="story-card-meta">
+                    <span className="kind-badge">{presentation.kindLabel}</span>
+                    {presentation.sharedLabel ? (
+                      <VisibilityBadge
+                        visibility="SPACE_SHARED"
+                        size="small"
+                        customLabel={presentation.sharedLabel}
+                        className="shared-badge"
+                      />
+                    ) : null}
+                  </div>
+
+                  {imageAttachment && imageEntityId ? (
+                    <MemoryPreview
+                      memoryId={imageEntityId}
+                      attachmentId={imageAttachment.id}
+                      loadImage={imageLoader}
+                    />
+                  ) : null}
+
+                  <h4>{presentation.title}</h4>
+                  {presentation.preview ? (
+                    <p className="story-preview">{presentation.preview}</p>
+                  ) : null}
+
+                  <div className="story-card-footer">
+                    <time
+                      dateTime={item.effectiveDate.toISOString().slice(0, 10)}
+                    >
+                      {formatTimelineDate(item.effectiveDate, locale)}
+                    </time>
+                    <div className="story-card-footer-author">
+                      {author ? (
+                        <span className="momente-author-meta">
+                          <AuthorAvatar
+                            author={author}
+                            profilesApi={profilesApi}
+                            spaceId={spaceId}
                           />
-                        ) : null}
-                      </div>
-                      {item.kind === 'MEMORY' && firstMemoryAttachment ? (
-                        <MemoryPreview
-                          memoryId={item.memory.id}
-                          attachmentId={firstMemoryAttachment.id}
-                          loadImage={loadMemoryImage}
-                        />
+                          <span>
+                            {t('story.byAuthor', {
+                              author: storyAuthorLabel(author.displayName),
+                            })}
+                          </span>
+                        </span>
+                      ) : (
+                        <span>
+                          {t('story.byAuthor', {
+                            author: presentation.author,
+                          })}
+                        </span>
+                      )}
+                      {presentation.mediaLabel ? (
+                        <span className="media-label">
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="12"
+                            height="12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <path d="m21 15-5-5L5 21" />
+                          </svg>
+                          <span>{presentation.mediaLabel}</span>
+                        </span>
                       ) : null}
-                      <h4>{presentation.title}</h4>
-                      {presentation.preview ? (
-                        <p className="story-preview">{presentation.preview}</p>
-                      ) : null}
-                      <div className="story-card-footer">
-                        <time
-                          dateTime={item.effectiveDate
-                            .toISOString()
-                            .slice(0, 10)}
-                        >
-                          {formatStoryDate(item.effectiveDate, locale)}
-                        </time>
-                        <div className="story-card-footer-author">
-                          {author ? (
-                            <span className="momente-author-meta">
-                              <AuthorAvatar
-                                author={author}
-                                profilesApi={profilesApi}
-                                spaceId={spaceId}
-                              />
-                              <span>
-                                {t('story.byAuthor', {
-                                  author: storyAuthorLabel(author.displayName),
-                                })}
-                              </span>
-                            </span>
-                          ) : (
-                            <span>
-                              {t('story.byAuthor', {
-                                author: presentation.author,
-                              })}
-                            </span>
-                          )}
-                          {presentation.mediaLabel ? (
-                            <span className="media-label">
-                              <svg
-                                viewBox="0 0 24 24"
-                                width="12"
-                                height="12"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                              >
-                                <rect
-                                  x="3"
-                                  y="3"
-                                  width="18"
-                                  height="18"
-                                  rx="2"
-                                />
-                                <circle cx="8.5" cy="8.5" r="1.5" />
-                                <path d="m21 15-5-5L5 21" />
-                              </svg>
-                              <span>{presentation.mediaLabel}</span>
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      ))}
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

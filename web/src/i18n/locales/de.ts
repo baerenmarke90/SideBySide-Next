@@ -209,6 +209,8 @@ const de = {
     title: 'Unsere Momente',
     intro:
       'Erinnerungen, Herzensmomente und Meilensteine – euer ruhiges Zuhause für die Dinge, die bleiben.',
+    timelineTitle: 'Momente',
+    timelineIntro: 'Unsere besonderen Augenblicke – für immer festgehalten.',
     addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
