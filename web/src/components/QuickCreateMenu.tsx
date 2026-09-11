@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { PRIVATE_GIFT_IDEAS_PATH } from '../client/privateArea';
 import {
@@ -354,54 +355,57 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
       ) : null}
 
       {/* Mobile Responsive Action Sheet */}
-      {isMobile && open ? (
-        <div className="quick-create-mobile-portal">
-          <div
-            className="quick-create-mobile-backdrop"
-            onClick={closeMenu}
-            aria-hidden="true"
-          />
-          <div
-            ref={sheetRef}
-            id={menuId}
-            className="quick-create-mobile-sheet sbs-motion-reveal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('navigation.quickCreateTitle')}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <div className="quick-create-sheet-header">
-              <h2 className="quick-create-sheet-title">
-                {t('navigation.quickCreateTitle')}
-              </h2>
-              <button
-                ref={firstFocusableRef}
-                type="button"
-                className="quick-create-sheet-close"
+      {isMobile && open && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="quick-create-mobile-portal">
+              <div
+                className="quick-create-mobile-backdrop"
                 onClick={closeMenu}
-                aria-label={t('navigation.closeMenu')}
+                aria-hidden="true"
+              />
+              <div
+                ref={sheetRef}
+                id={menuId}
+                className="quick-create-mobile-sheet sbs-motion-reveal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('navigation.quickCreateTitle')}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
               >
-                ✕
-              </button>
-            </div>
+                <div className="quick-create-sheet-header">
+                  <h2 className="quick-create-sheet-title">
+                    {t('navigation.quickCreateTitle')}
+                  </h2>
+                  <button
+                    ref={firstFocusableRef}
+                    type="button"
+                    className="quick-create-sheet-close"
+                    onClick={closeMenu}
+                    aria-label={t('navigation.closeMenu')}
+                  >
+                    ✕
+                  </button>
+                </div>
 
-            <div className="quick-create-sheet-scrollable">
-              <div className="quick-create-mobile-list">
-                {SHARED_TARGETS.map(renderMobileTarget)}
-              </div>
+                <div className="quick-create-sheet-scrollable">
+                  <div className="quick-create-mobile-list">
+                    {SHARED_TARGETS.map(renderMobileTarget)}
+                  </div>
 
-              <hr className="quick-create-separator" />
-              <div className="quick-create-group-label quick-create-for-me-label">
-                {t('navigation.quickCreateForMe')}
+                  <hr className="quick-create-separator" />
+                  <div className="quick-create-group-label quick-create-for-me-label">
+                    {t('navigation.quickCreateForMe')}
+                  </div>
+                  <div className="quick-create-mobile-list">
+                    {FOR_ME_TARGETS.map(renderMobileTarget)}
+                  </div>
+                </div>
               </div>
-              <div className="quick-create-mobile-list">
-                {FOR_ME_TARGETS.map(renderMobileTarget)}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
