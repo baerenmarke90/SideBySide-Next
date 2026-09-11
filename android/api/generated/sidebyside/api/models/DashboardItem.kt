@@ -36,6 +36,7 @@ import kotlinx.serialization.Contextual
  * @param id 
  * @param occurredOn 
  * @param scheduledAt 
+ * @param scheduledOn 
  * @param titleOrText 
  * @param type 
  * @param previewAttachmentId 
@@ -56,6 +57,9 @@ data class DashboardItem (
     @Contextual @SerialName(value = "scheduledAt")
     val scheduledAt: java.time.OffsetDateTime?,
 
+    @Contextual @SerialName(value = "scheduledOn")
+    val scheduledOn: java.time.LocalDate?,
+
     @SerialName(value = "titleOrText")
     val titleOrText: kotlin.String?,
 
@@ -69,4 +73,3 @@ data class DashboardItem (
 
 
 }
-
