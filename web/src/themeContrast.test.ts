@@ -98,7 +98,8 @@ const white = '#ffffff';
 
 function lightVariable(name: string): string {
   return (
-    optionalCssVariable(explicitLight, name) ?? cssVariable(compatibilityLight, name)
+    optionalCssVariable(explicitLight, name) ??
+    cssVariable(compatibilityLight, name)
   );
 }
 
@@ -113,14 +114,19 @@ describe('theme token contrast', () => {
       'color-surface-panel-tint',
       'color-surface-overlay',
     ]) {
-      expect(contrast(lightVariable('color-text'), lightVariable(surface))).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrast(lightVariable('color-text'), lightVariable(surface)),
+      ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrast(lightVariable('color-text-secondary'), lightVariable(surface)),
       ).toBeGreaterThanOrEqual(4.5);
     }
 
     expect(
-      contrast(cssVariable(dark, 'color-text'), cssVariable(dark, 'color-background')),
+      contrast(
+        cssVariable(dark, 'color-text'),
+        cssVariable(dark, 'color-background'),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
@@ -145,7 +151,9 @@ describe('theme token contrast', () => {
   });
 
   it('keeps primary actions readable in both schemes', () => {
-    expect(contrast(white, lightVariable('color-brand-strong'))).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrast(white, lightVariable('color-brand-strong')),
+    ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(white, cssVariable(dark, 'color-brand-strong')),
     ).toBeGreaterThanOrEqual(4.5);
@@ -159,17 +167,25 @@ describe('theme token contrast', () => {
         'color-entry-hero-middle',
         'color-entry-hero-end',
       ]) {
-        expect(contrast(foreground, cssVariable(theme, stop))).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrast(foreground, cssVariable(theme, stop)),
+        ).toBeGreaterThanOrEqual(4.5);
       }
     }
   });
 
   it('keeps status text readable on its semantic surface', () => {
     expect(
-      contrast(lightVariable('color-shared'), lightVariable('color-shared-surface')),
+      contrast(
+        lightVariable('color-shared'),
+        lightVariable('color-shared-surface'),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(lightVariable('color-error'), lightVariable('color-error-surface')),
+      contrast(
+        lightVariable('color-error'),
+        lightVariable('color-error-surface'),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
@@ -178,10 +194,16 @@ describe('theme token contrast', () => {
       ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(cssVariable(dark, 'color-shared'), cssVariable(dark, 'color-shared-surface')),
+      contrast(
+        cssVariable(dark, 'color-shared'),
+        cssVariable(dark, 'color-shared-surface'),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
-      contrast(cssVariable(dark, 'color-error'), cssVariable(dark, 'color-error-surface')),
+      contrast(
+        cssVariable(dark, 'color-error'),
+        cssVariable(dark, 'color-error-surface'),
+      ),
     ).toBeGreaterThanOrEqual(4.5);
     expect(
       contrast(
@@ -215,7 +237,10 @@ describe('theme token contrast', () => {
     }
 
     expect(
-      contrast(cssVariable(dark, 'color-focus'), cssVariable(dark, 'color-background')),
+      contrast(
+        cssVariable(dark, 'color-focus'),
+        cssVariable(dark, 'color-background'),
+      ),
     ).toBeGreaterThanOrEqual(3);
   });
 });
