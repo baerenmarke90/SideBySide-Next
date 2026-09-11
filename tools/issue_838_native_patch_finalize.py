@@ -99,18 +99,24 @@ def patch_vm_schedule_helper() -> None:
 
 def patch_vm_public_schedule() -> None:
     def transform(content: str) -> str:
-        return sub_once(
+        return replace_once(
             content,
-            r"    fun schedulePlan\(planId: java\.util\.UUID, startOn: String, startAt: String\) \{.*?"
-            r"\n    \}\n\n    fun unschedulePlan",
+            "    fun schedulePlan(planId: java.util.UUID, startOn: String, startAt: String) {\n"
+            "    val day = parseHappenedOn(startOn) ?: return\n"
+            "    val time = runCatching { java.time.LocalTime.parse(startAt) }.getOrNull() ?: return\n"
+            "    val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return\n"
+            "    val start = planScheduleStart(day, time, java.time.ZoneId.systemDefault())\n"
+            "    planningCall { api, spaceId, token ->\n"
+            "        api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))\n"
+            "    }\n"
+            "}\n",
             "    fun schedulePlan(planId: java.util.UUID, startOn: String, startAt: String?) {\n"
             "        val schedule = planSchedule(startOn, startAt) ?: return\n"
             "        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return\n"
             "        planningCall { api, spaceId, token ->\n"
             "            api.schedulePlan(spaceId, token, plan.id, plan.version, schedule)\n"
             "        }\n"
-            "    }\n\n"
-            "    fun unschedulePlan",
+            "    }\n",
             label="ViewModel nullable schedule time",
         )
     _apply(transform)
