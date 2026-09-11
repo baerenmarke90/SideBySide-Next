@@ -163,3 +163,12 @@ def test_list_filters_by_status_and_not_by_free_text() -> None:
     parameters = {p["name"] for p in _paths()[COLLECTION]["get"].get("parameters", [])}
     assert {"status", "cursor", "limit"} <= parameters
     assert "q" not in parameters
+
+
+def test_the_place_is_a_single_canonical_field() -> None:
+    """A Plan has one canonical Place field and no secondary place route."""
+    for name in ("PlanCreate", "PlanUpdate", "WishToPlan", "PlanDetail"):
+        assert "placeId" in _components()[name]["properties"], name
+        assert "placeIds" not in _components()[name]["properties"], name
+
+    assert not any("/plans/{planId}/places" in path for path in _paths())
