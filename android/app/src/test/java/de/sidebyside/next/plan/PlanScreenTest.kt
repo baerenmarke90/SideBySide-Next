@@ -590,9 +590,9 @@ class PlanScreenTest {
             context.getString(R.string.plan_scheduled_for, expected),
         ).assertExists()
         composeRule.onNodeWithText("A weekend away").performClick()
-        composeRule.onNodeWithText(
+        composeRule.onAllNodesWithText(
             context.getString(R.string.plan_scheduled_for, expected),
-        ).assertExists()
+        ).assertCountEquals(2)
     }
 
     @Test
