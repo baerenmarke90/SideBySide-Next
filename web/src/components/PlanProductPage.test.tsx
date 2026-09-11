@@ -103,7 +103,7 @@ describe('PlanProductPage', () => {
     expect(html).toContain(i18n.t('m5s3.plan.complete'));
   });
 
-  it('hides lifecycle/complete controls and shows the celebration for a COMPLETED Plan', () => {
+  it('replaces lifecycle controls with the optional relationship-history continuation for a COMPLETED Plan', () => {
     const html = renderPlan(
       basePlan({
         status: 'COMPLETED',
@@ -112,6 +112,11 @@ describe('PlanProductPage', () => {
     );
 
     expect(html).toContain(i18n.t('m5s3.plan.completedTitle'));
+    expect(html).toContain(i18n.t('m5s3.planStory.memoryAction'));
+    expect(html).toContain(i18n.t('m5s3.planStory.milestoneAction'));
+    expect(html).toContain(i18n.t('m5s3.planStory.chapterAction'));
+    expect(html).toContain(i18n.t('m5s3.planStory.later'));
+    expect(html).not.toContain('/story/memories/new?title=');
     expect(html).not.toContain('planen-complete-cta');
     expect(html).not.toContain(i18n.t('m5s3.plan.lifecycleHeading'));
   });
