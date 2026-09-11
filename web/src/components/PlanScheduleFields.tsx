@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
 
 /**
@@ -22,14 +22,28 @@ export function PlanScheduleFields({
 }) {
   const { t } = useTranslation();
   const hintId = useId();
+  const dateRef = useRef<HTMLInputElement>(null);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultDate ? defaultTime : '');
   const [end, setEnd] = useState(defaultDate && defaultTime ? defaultEnd : '');
+
+  useEffect(() => {
+    const form = dateRef.current?.form;
+    if (!form) return;
+    const reset = () => {
+      setDate(defaultDate);
+      setTime(defaultDate ? defaultTime : '');
+      setEnd(defaultDate && defaultTime ? defaultEnd : '');
+    };
+    form.addEventListener('reset', reset);
+    return () => form.removeEventListener('reset', reset);
+  }, [defaultDate, defaultEnd, defaultTime]);
 
   return (
     <>
       <label htmlFor={`${idPrefix}-date`}>{t('m5s3.plan.plannedDate')}</label>
       <input
+        ref={dateRef}
         id={`${idPrefix}-date`}
         name="plannedDate"
         type="date"
