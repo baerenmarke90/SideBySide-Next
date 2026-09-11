@@ -39,9 +39,7 @@ describe('shared planning client helpers', () => {
   it('builds a genuine date-only Plan schedule without a fabricated time', () => {
     const schedule = planScheduleFromInputs('2026-09-05', '');
 
-    expect(schedule?.plannedOn?.toISOString()).toBe(
-      '2026-09-05T00:00:00.000Z',
-    );
+    expect(schedule?.plannedOn?.toISOString()).toBe('2026-09-05T00:00:00.000Z');
     expect(schedule?.plannedStart).toBeUndefined();
     expect(schedule?.plannedEnd).toBeUndefined();
     expect(
