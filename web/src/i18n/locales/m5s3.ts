@@ -30,9 +30,9 @@ const m5s3 = {
   },
   overview: {
     title: 'Planen',
-    segmentedLabel: 'Wünsche oder Pläne anzeigen',
-    segmentWishes: 'Wünsche',
+    segmentedLabel: 'Pläne oder Wünsche anzeigen',
     segmentPlans: 'Pläne',
+    segmentWishes: 'Wünsche',
     wishesEmpty:
       'Noch keine Wünsche festgehalten. Sammelt hier, was ihr irgendwann gemeinsam erleben möchtet.',
     plansEmpty:
@@ -51,14 +51,15 @@ const m5s3 = {
     convertHeading: 'Daraus einen Plan machen',
     convertIntro:
       'Gebt eurem Wunsch einen konkreten Platz in eurer Planung. Ohne eigenen Plantitel wird der Wunschtitel übernommen.',
-    convert: 'In Plan umwandeln',
+    convert: 'Als Plan weiterführen',
     converting: 'Wird umgewandelt …',
     deleteConsequence:
       'Der Wunsch wird gelöscht. Bereits separat vorhandene Inhalte werden dadurch nicht verändert.',
+    completedBody: 'Aus diesem Wunsch wurde Wirklichkeit.',
     status: {
       OPEN: 'Offen',
       PLANNED: 'Als Plan weitergeführt',
-      COMPLETED: 'Gemeinsam erlebt',
+      COMPLETED: 'Wunsch erfüllt',
     },
   },
   plan: {

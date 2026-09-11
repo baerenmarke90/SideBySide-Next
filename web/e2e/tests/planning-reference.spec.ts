@@ -256,29 +256,30 @@ async function signIn(page: Page): Promise<void> {
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
 }
 
-test('ArrowLeft/ArrowRight moves focus and selection between the Wünsche and Pläne tabs', async ({
+test('ArrowLeft/ArrowRight moves focus and selection between the Pläne and Wünsche tabs', async ({
   page,
 }) => {
   await installMocks(page);
   await signIn(page);
   await page.goto('/plan');
 
+  const plansTab = page.getByRole('tab', { name: m5s3.overview.segmentPlans });
   const wishesTab = page.getByRole('tab', {
     name: m5s3.overview.segmentWishes,
   });
-  const plansTab = page.getByRole('tab', { name: m5s3.overview.segmentPlans });
-  await wishesTab.focus();
-  await expect(wishesTab).toHaveAttribute('aria-selected', 'true');
-
-  await page.keyboard.press('ArrowRight');
+  await plansTab.focus();
   await expect(plansTab).toHaveAttribute('aria-selected', 'true');
-  await expect(plansTab).toBeFocused();
   await expect(page.getByText(PLAN_TITLE)).toBeVisible();
 
-  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowRight');
   await expect(wishesTab).toHaveAttribute('aria-selected', 'true');
   await expect(wishesTab).toBeFocused();
   await expect(page.getByText(WISH_TITLE)).toBeVisible();
+
+  await page.keyboard.press('ArrowLeft');
+  await expect(plansTab).toHaveAttribute('aria-selected', 'true');
+  await expect(plansTab).toBeFocused();
+  await expect(page.getByText(PLAN_TITLE)).toBeVisible();
 });
 
 test('clicking a Plan card navigates from the Planen overview to the Plan detail page', async ({

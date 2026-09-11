@@ -272,7 +272,7 @@ async function installPlanningMocks(
                 creator: { id: ACCOUNT_ID, displayName: 'Anna' },
                 id: WISH_ID,
                 spaceId: SPACE_ID,
-                status: 'PLANNED',
+                status: 'OPEN',
                 title: EARLY_TITLE,
                 updatedAt: TEST_NOW,
                 version: 2,
@@ -329,24 +329,11 @@ test('Pläne segment contains only dated upcoming Plans in Today order, then the
   await signIn(page);
   await page.goto('/plan');
 
-  // Wünsche is the default segment and must not mix in Plan IDEA items -
-  // those belong to the Pläne domain even though the old future-map grouped
-  // them together. The Pläne panel is rendered-but-hidden (not unmounted, so
+  // Pläne is the default segment (#892) and must not mix in Wish items -
+  // those belong to the Wünsche domain even though the old future-map grouped
+  // them together. The Wünsche panel is rendered-but-hidden (not unmounted, so
   // the #810/#856 hash handoff can still find it), so scope to the visible
-  // Wünsche panel rather than the page as a whole.
-  await expect(
-    page.getByRole('tab', { name: m5s3.overview.segmentWishes }),
-  ).toHaveAttribute('aria-selected', 'true');
-  const wishesPanel = page.getByRole('tabpanel', {
-    name: m5s3.overview.segmentWishes,
-  });
-  await expect(
-    wishesPanel.getByRole('heading', { name: EARLY_TITLE, level: 2 }),
-  ).toBeVisible();
-  await expect(wishesPanel.getByText(IDEA_TITLE)).toHaveCount(0);
-  await expect(wishesPanel.getByText(COMPLETED_TITLE)).toHaveCount(0);
-
-  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
+  // Pläne panel rather than the page as a whole.
   await expect(
     page.getByRole('tab', { name: m5s3.overview.segmentPlans }),
   ).toHaveAttribute('aria-selected', 'true');
@@ -369,6 +356,19 @@ test('Pläne segment contains only dated upcoming Plans in Today order, then the
   await expect(pills.nth(1)).toContainText(shortDate(LATE_DATE));
   await expect(pills.nth(2)).toContainText(m5s3.plan.status.IDEA);
 
+  await page.getByRole('tab', { name: m5s3.overview.segmentWishes }).click();
+  await expect(
+    page.getByRole('tab', { name: m5s3.overview.segmentWishes }),
+  ).toHaveAttribute('aria-selected', 'true');
+  const wishesPanel = page.getByRole('tabpanel', {
+    name: m5s3.overview.segmentWishes,
+  });
+  await expect(
+    wishesPanel.getByRole('heading', { name: EARLY_TITLE, level: 2 }),
+  ).toBeVisible();
+  await expect(wishesPanel.getByText(IDEA_TITLE)).toHaveCount(0);
+  await expect(wishesPanel.getByText(COMPLETED_TITLE)).toHaveCount(0);
+
   await page.goto('/today');
   const todayTitles = page.locator(
     '.today-section-upcoming .today-agenda-title',
@@ -384,7 +384,67 @@ test('planning segments keep their relationship-native empty states', async ({
   await signIn(page);
   await page.goto('/plan');
 
-  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
-  await page.getByRole('tab', { name: m5s3.overview.segmentPlans }).click();
   await expect(page.getByText(m5s3.overview.plansEmpty)).toBeVisible();
+  await page.getByRole('tab', { name: m5s3.overview.segmentWishes }).click();
+  await expect(page.getByText(m5s3.overview.wishesEmpty)).toBeVisible();
+});
+
+test('Wünsche panel requests and shows only OPEN Wishes; PLANNED/COMPLETED are excluded (#892)', async ({
+  page,
+}) => {
+  let requestedStatus: string | null = null;
+  await installPlanningMocks(page);
+  await page.route(`**/api/v1/spaces/${SPACE_ID}/wishes**`, async (route) => {
+    requestedStatus = new URL(route.request().url()).searchParams.get('status');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        hasMore: false,
+        nextCursor: null,
+        items: [
+          {
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+            createdAt: TEST_NOW,
+            createdBy: ACCOUNT_ID,
+            creator: { id: ACCOUNT_ID, displayName: 'Anna' },
+            id: WISH_ID,
+            spaceId: SPACE_ID,
+            status: 'OPEN',
+            title: EARLY_TITLE,
+            updatedAt: TEST_NOW,
+            version: 2,
+          },
+          // A defensively-tested rogue historical row: even if a status
+          // filter ever returned one, it must never reach the UI (#892).
+          {
+            capabilities: { canComment: true, canDelete: true, canEdit: true },
+            createdAt: TEST_NOW,
+            createdBy: ACCOUNT_ID,
+            creator: { id: ACCOUNT_ID, displayName: 'Anna' },
+            id: `${WISH_ID}-planned`,
+            spaceId: SPACE_ID,
+            status: 'PLANNED',
+            title: LATE_TITLE,
+            updatedAt: TEST_NOW,
+            version: 2,
+          },
+        ],
+      }),
+    });
+  });
+  await page.goto('/today');
+  await signIn(page);
+  await page.goto('/plan');
+
+  await page.getByRole('tab', { name: m5s3.overview.segmentWishes }).click();
+  const wishesPanel = page.getByRole('tabpanel', {
+    name: m5s3.overview.segmentWishes,
+  });
+  await expect(
+    wishesPanel.getByRole('heading', { name: EARLY_TITLE, level: 2 }),
+  ).toBeVisible();
+  await expect(wishesPanel.getByText(LATE_TITLE)).toHaveCount(0);
+
+  expect(requestedStatus).toBe('OPEN');
 });
