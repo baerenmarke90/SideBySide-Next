@@ -23,7 +23,7 @@ function basePlan(overrides: Record<string, unknown> = {}) {
     sourceWishId: null,
     spaceId: 'space-1',
     status: 'PLANNED',
-    title: 'Picknick im Park',
+    title: 'Picnic in the park',
     updatedAt: new Date('2026-08-01T10:00:00Z'),
     version: 3,
     ...overrides,
@@ -65,7 +65,7 @@ describe('PlanProductPage', () => {
     const html = renderPlan(plan, [{ id: 'place-berlin', name: 'Volkspark' }]);
 
     expect(html).toContain('<h1');
-    expect(html).toContain('Picknick im Park');
+    expect(html).toContain('Picnic in the park');
     expect(html).toContain('planen-pill-date');
     expect(html).toContain('planen-pill-scheduled');
     expect(html).toContain(i18n.t('m5s3.plan.statusPillPlanned'));
@@ -85,10 +85,10 @@ describe('PlanProductPage', () => {
 
   it('shows the Notizen section only when a description exists', () => {
     const withNotes = renderPlan(
-      basePlan({ description: 'Sonnencreme nicht vergessen.' }),
+      basePlan({ description: 'Remember the sunscreen.' }),
     );
     expect(withNotes).toContain(i18n.t('m5s3.plan.notesHeading'));
-    expect(withNotes).toContain('Sonnencreme nicht vergessen.');
+    expect(withNotes).toContain('Remember the sunscreen.');
 
     const withoutNotes = renderPlan(basePlan({ description: null }));
     expect(withoutNotes).not.toContain(i18n.t('m5s3.plan.notesHeading'));

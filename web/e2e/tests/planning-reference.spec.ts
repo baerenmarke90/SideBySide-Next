@@ -10,8 +10,8 @@ const PLAN_ID = '44444444-4444-4444-8444-444444444444';
 const WISH_ID = '55555555-5555-4555-8555-555555555555';
 const TEST_NOW = '2026-09-01T10:00:00Z';
 
-const PLAN_TITLE = 'Picknick im Park';
-const WISH_TITLE = 'Wochenendtrip nach Lissabon';
+const PLAN_TITLE = 'Picnic in the park';
+const WISH_TITLE = 'Weekend trip to Lisbon';
 
 type MockOptions = { plansFail?: boolean; plansDelayMs?: number };
 
@@ -187,8 +187,7 @@ async function installMocks(
                 createdAt: TEST_NOW,
                 createdBy: ACCOUNT_ID,
                 creator: { id: ACCOUNT_ID, displayName: 'Ben' },
-                description:
-                  'Schönes Wetter, bitte Sonnencreme nicht vergessen.',
+                description: 'Nice weather, remember the sunscreen.',
                 experiencedOn: null,
                 id: PLAN_ID,
                 placeId: null,
@@ -221,7 +220,7 @@ async function installMocks(
         createdAt: TEST_NOW,
         createdBy: ACCOUNT_ID,
         creator: { id: ACCOUNT_ID, displayName: 'Ben' },
-        description: 'Schönes Wetter, bitte Sonnencreme nicht vergessen.',
+        description: 'Nice weather, remember the sunscreen.',
         experiencedOn: null,
         id: PLAN_ID,
         placeId: null,
