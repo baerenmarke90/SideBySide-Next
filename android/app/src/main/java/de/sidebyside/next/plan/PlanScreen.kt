@@ -646,9 +646,9 @@ private fun FocalPlanCard(plan: PlanDetail, onOpen: () -> Unit, modifier: Modifi
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
-            plan.plannedStart?.let { start ->
+            planTimingLine(plan)?.let { line ->
                 Text(
-                    text = stringResource(R.string.plan_scheduled_for, formattedDateTime(start)),
+                    text = line,
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                 )

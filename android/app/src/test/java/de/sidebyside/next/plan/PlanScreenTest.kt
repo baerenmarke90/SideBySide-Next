@@ -296,8 +296,13 @@ class PlanScreenTest {
     }
 
     @Test
-    fun wishToPlanCannotSubmitADayWithoutATimeToGoWithIt() {
-        render(wishes = listOf(aWish("A weekend by the sea")))
+    fun wishToPlanCanSubmitADayWithoutATime() {
+        val wish = aWish("A weekend by the sea")
+        var planned: Pair<String?, String?>? = null
+        render(
+            wishes = listOf(wish),
+            onPlanWish = { _, _, _, _, startOn, startAt -> planned = startOn to startAt },
+        )
 
         composeRule.onNodeWithText("A weekend by the sea").performScrollTo().performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan)).performClick()
@@ -308,12 +313,12 @@ class PlanScreenTest {
             .performScrollTo()
             .performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
-
-        // A day was picked but no time yet; submitting now would silently
-        // drop the day the couple already chose.
         composeRule.onNodeWithText(context.getString(R.string.plan_wish_make_plan_confirm))
             .performScrollTo()
-            .assertIsNotEnabled()
+            .assertIsEnabled()
+            .performClick()
+
+        assertEquals(LocalDate.now().toString() to null, planned)
     }
 
     @Test
@@ -490,9 +495,9 @@ class PlanScreenTest {
     }
 
     @Test
-    fun schedulingPicksADayAndATimeBeforeItCanBeConfirmed() {
+    fun schedulingAcceptsADayWithoutRequiringATime() {
         val plan = aPlan(PlanStatus.IDEA, title = "A weekend away")
-        var scheduled: Triple<UUID, String, String>? = null
+        var scheduled: Triple<UUID, String, String?>? = null
         render(
             plans = listOf(plan),
             onSchedule = { id, startOn, startAt -> scheduled = Triple(id, startOn, startAt) },
@@ -500,23 +505,41 @@ class PlanScreenTest {
 
         composeRule.onNodeWithText("A weekend away").performScrollTo().performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule)).performClick()
-        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm))
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm_optional))
             .assertIsNotEnabled()
-
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_day))
             .performScrollTo()
             .performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
-        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm))
-            .assertIsNotEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm_optional))
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
 
+        assertEquals(Triple(plan.id, LocalDate.now().toString(), null), scheduled)
+    }
+
+    @Test
+    fun schedulingCanStillAddATime() {
+        val plan = aPlan(PlanStatus.IDEA, title = "A weekend away")
+        var scheduled: Triple<UUID, String, String?>? = null
+        render(
+            plans = listOf(plan),
+            onSchedule = { id, startOn, startAt -> scheduled = Triple(id, startOn, startAt) },
+        )
+
+        composeRule.onNodeWithText("A weekend away").performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule)).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_day))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_schedule_pick_time))
             .performScrollTo()
             .performClick()
         composeRule.onNodeWithText(context.getString(R.string.plan_picker_take)).performClick()
-        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm))
+        composeRule.onNodeWithText(context.getString(R.string.plan_schedule_confirm_optional))
             .performScrollTo()
-            .assertIsEnabled()
             .performClick()
 
         assertEquals(Triple(plan.id, LocalDate.now().toString(), "19:00"), scheduled)
@@ -549,6 +572,27 @@ class PlanScreenTest {
         } finally {
             TimeZone.setDefault(previousZone)
         }
+    }
+
+    @Test
+    fun dateOnlyScheduledPlanShowsThePersistedCalendarDate() {
+        val day = LocalDate.parse("2026-12-20")
+        val plan = aPlan(PlanStatus.PLANNED, title = "A weekend away").copy(plannedOn = day)
+        val locale = context.resources.configuration.locales[0]
+        val expected = day.format(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale),
+        )
+
+        render(plans = listOf(plan))
+
+        composeRule.onNodeWithText(context.getString(R.string.plan_focus_next)).assertExists()
+        composeRule.onNodeWithText(
+            context.getString(R.string.plan_scheduled_for, expected),
+        ).assertExists()
+        composeRule.onNodeWithText("A weekend away").performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.plan_scheduled_for, expected),
+        ).assertExists()
     }
 
     @Test
@@ -689,7 +733,7 @@ class PlanScreenTest {
         onRemoveWish: (UUID) -> Unit = {},
         onCreatePlan: (String, String, UUID?, String?, String?) -> Unit = { _, _, _, _, _ -> },
         onEditPlan: (UUID, String, String, UUID?) -> Unit = { _, _, _, _ -> },
-        onSchedule: (UUID, String, String) -> Unit = { _, _, _ -> },
+        onSchedule: (UUID, String, String?) -> Unit = { _, _, _ -> },
         onUnschedule: (UUID) -> Unit = {},
         onComplete: (UUID, String) -> Unit = { _, _ -> },
         onReturnToWish: (UUID) -> Unit = {},

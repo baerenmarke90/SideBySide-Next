@@ -592,16 +592,9 @@ internal fun PlanSheet(
                 color = SideBySideTheme.colors.textSecondary,
             )
         }
-        plan.plannedStart?.let { start ->
+        planTimingLine(plan)?.let { line ->
             Text(
-                text = stringResource(R.string.plan_scheduled_for, formattedDateTime(start)),
-                style = MaterialTheme.typography.bodySmall,
-                color = SideBySideTheme.colors.textSecondary,
-            )
-        }
-        plan.experiencedOn?.let { day ->
-            Text(
-                text = stringResource(R.string.plan_experienced_on, formattedDate(day)),
+                text = line,
                 style = MaterialTheme.typography.bodySmall,
                 color = SideBySideTheme.colors.textSecondary,
             )
