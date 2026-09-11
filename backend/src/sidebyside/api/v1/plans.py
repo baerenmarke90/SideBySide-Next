@@ -179,7 +179,7 @@ class PlanDetail(ApiModel):
     title: str
     description: str | None
     status: PlanStatus
-    planned_on: date | None
+    planned_on: date | None = None
     planned_start: datetime | None
     planned_end: datetime | None
     experienced_on: date | None
