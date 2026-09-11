@@ -40,7 +40,7 @@ class DashboardItem(ApiModel):
     id: UUID
     title_or_text: str | None
     occurred_on: date | None
-    scheduled_on: date | None
+    scheduled_on: date | None = None
     scheduled_at: datetime | None
     created_at: datetime | None
     preview_attachment_id: UUID | None = None
