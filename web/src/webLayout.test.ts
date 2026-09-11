@@ -110,7 +110,7 @@ describe('web layout tokens', () => {
     expect(stylesCss).toContain('--color-surface-panel:');
   });
 
-  it('resolves every custom property the stylesheets consume', () => {
+  it('resolves every custom property consumed by production Web stylesheets', () => {
     const sources = [
       stylesCss,
       shellCss,
@@ -118,15 +118,27 @@ describe('web layout tokens', () => {
       readSource('./theme.css'),
       readSource('./story-media.css'),
       readSource('./attachment-drafts.css'),
+      readSource('./demo.css'),
+      readSource('./product-reflow.css'),
+      readSource('./memory-create-polish.css'),
+      readSource('./planning-focused-create.css'),
       readSource('./components/CommentsPanel.css'),
+      readSource('./components/LoginExperience.css'),
       readSource('./components/M4ProductPages.css'),
       readSource('./components/MediaGallery.css'),
       readSource('./components/MemoryProductPage.css'),
+      readSource('./components/MoreOverviewPage.css'),
       readSource('./components/PrivateAreaProductPage.css'),
       readSource('./components/ProfilePage.css'),
+      readSource('./components/QuickCreateMenu.css'),
+      readSource('./components/RelatedPeopleAccessibility.css'),
       readSource('./components/RelatedPeoplePage.css'),
+      readSource('./components/SharedPlanningMotion.css'),
       readSource('./components/SharedPlanningPages.css'),
+      readSource('./components/SharedPlanningSanctuary.css'),
+      readSource('./components/StoryMomentMetadata.css'),
       readSource('./components/StoryProductPages.css'),
+      readSource('./components/TodayPage.css'),
     ].join('\n');
 
     const defined = new Set(
