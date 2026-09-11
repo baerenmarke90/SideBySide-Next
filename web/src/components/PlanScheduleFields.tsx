@@ -28,6 +28,12 @@ export function PlanScheduleFields({
   const [end, setEnd] = useState(defaultDate && defaultTime ? defaultEnd : '');
 
   useEffect(() => {
+    setDate(defaultDate);
+    setTime(defaultDate ? defaultTime : '');
+    setEnd(defaultDate && defaultTime ? defaultEnd : '');
+  }, [defaultDate, defaultEnd, defaultTime]);
+
+  useEffect(() => {
     const form = dateRef.current?.form;
     if (!form) return;
     const reset = () => {
