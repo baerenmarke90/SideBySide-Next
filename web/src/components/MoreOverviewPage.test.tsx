@@ -15,7 +15,8 @@ describe('MoreOverviewPage', () => {
     expect(html).toContain('href="/more/people"');
     expect(html).toContain('href="/more/places"');
     expect(html).toContain('href="/more/collections"');
-    expect(html).toContain('href="/more/private/notes"');
+    expect(html).toContain('href="/more/private"');
+    expect(html).not.toContain('href="/more/private/notes"');
 
     // Destinations duplicated by persistent header actions are removed from More cards
     expect(html).not.toContain('href="/more/notifications"');
