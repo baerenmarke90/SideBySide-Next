@@ -322,6 +322,7 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       name: navigation.quickCreateTitle,
     });
     await expect(dialog).toBeVisible();
+    await page.waitForTimeout(250);
 
     // Sheet is above backdrop and floating nav
     const sheetZ = await dialog.evaluate((el) =>
@@ -458,6 +459,7 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       name: navigation.quickCreateTitle,
     });
     await expect(dialog).toBeVisible();
+    await page.waitForTimeout(250);
 
     // Verify dialog does not overflow top or bottom of viewport
     const smallSheetBox = await dialog.boundingBox();
@@ -492,6 +494,7 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await page.setViewportSize({ width: 320, height: 600 });
     await trigger.click();
     await expect(dialog).toBeVisible();
+    await page.waitForTimeout(250);
 
     await expectNoHorizontalOverflow(page);
     const reflowSheetBox = await dialog.boundingBox();
