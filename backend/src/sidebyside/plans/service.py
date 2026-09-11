@@ -356,7 +356,7 @@ def schedule_plan(
     plan_id: UUID | str,
     *,
     expected_version: int,
-    planned_on: date | None,
+    planned_on: date | None = None,
     planned_start: datetime | None,
     planned_end: datetime | None,
 ) -> Plan:
