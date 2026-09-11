@@ -1375,6 +1375,18 @@
             ],
             "title": "Scheduledat"
           },
+          "scheduledOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduledon"
+          },
           "titleOrText": {
             "anyOf": [
               {
@@ -3811,7 +3823,7 @@
       },
       "PlanCreate": {
         "additionalProperties": false,
-        "description": "Direct plan creation defined by M3-D30.\n\n``status``, ``sourceWishId``, and all schedule fields are intentionally\nabsent. A plan starts as an idea; ``/schedule`` schedules it and\n``/complete`` completes it.",
+        "description": "Direct Plan creation with an optional atomic schedule.\n\nLifecycle state remains server-owned. Omitting ``schedule`` creates an\n``IDEA``; supplying a valid date-only or timed schedule creates a\n``PLANNED`` Plan in the same transaction.",
         "properties": {
           "description": {
             "title": "Description",
@@ -3821,6 +3833,10 @@
             "format": "uuid",
             "title": "Placeid",
             "type": "string"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/PlanSchedule",
+            "title": "Schedule"
           },
           "title": {
             "title": "Title",
@@ -3902,6 +3918,18 @@
               }
             ],
             "title": "Plannedend"
+          },
+          "plannedOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plannedon"
           },
           "plannedStart": {
             "anyOf": [
@@ -4023,10 +4051,16 @@
       },
       "PlanSchedule": {
         "additionalProperties": false,
+        "description": "One explicit Plan schedule representation.\n\n``plannedOn`` is a calendar day. ``plannedStart`` is a timezone-aware\ninstant. Exactly one of those semantic starts must be supplied; clients may\nnever synthesize a wall-clock time merely to encode ``plannedOn``.",
         "properties": {
           "plannedEnd": {
             "format": "date-time",
             "title": "Plannedend",
+            "type": "string"
+          },
+          "plannedOn": {
+            "format": "date",
+            "title": "Plannedon",
             "type": "string"
           },
           "plannedStart": {
@@ -4035,9 +4069,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "plannedStart"
-        ],
         "title": "PlanSchedule",
         "type": "object"
       },
@@ -4053,7 +4084,7 @@
       },
       "PlanUpdate": {
         "additionalProperties": false,
-        "description": "Domain correction without changing lifecycle status.\n\n``status``, ``plannedStart``, and ``plannedEnd`` are intentionally absent\nbecause lifecycle operations own them. ``experiencedOn`` is the one\nexception: it may be corrected on a completed plan without reopening it\n(M3-D04).",
+        "description": "Domain correction without changing lifecycle status.\n\nSchedule fields remain owned by ``/schedule`` and ``/unschedule``.\n``experiencedOn`` is the one exception: it may be corrected on a completed\nPlan without reopening it (M3-D04).",
         "properties": {
           "description": {
             "anyOf": [
@@ -8040,7 +8071,7 @@
       },
       "WishToPlan": {
         "additionalProperties": false,
-        "description": "Wish-to-Plan conversion request.\n\nEvery field is optional: without an explicit title the plan inherits the\nwish title. ``sourceWishId``, ``status``, and schedule fields are not\nsupplied by the client; the wish is identified by the path and everything\nelse is established server-side.",
+        "description": "Wish-to-Plan conversion request with an optional atomic schedule.\n\nWithout an explicit title the Plan inherits the Wish title. Supplying\n``schedule`` makes the new Plan date-only or timed without a second\nlifecycle request; omitting it preserves the existing unscheduled flow.",
         "properties": {
           "description": {
             "title": "Description",
@@ -8051,6 +8082,10 @@
             "title": "Placeid",
             "type": "string"
           },
+          "schedule": {
+            "$ref": "#/components/schemas/PlanSchedule",
+            "title": "Schedule"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -8060,7 +8095,7 @@
         "type": "object"
       },
       "WishToPlanResponse": {
-        "description": "Both resources returned from a conversion.\n\nConversion modifies the wish and creates the plan. Returning only one\nwould force the client to immediately reload the other and display stale\nstate in the meantime.",
+        "description": "Both resources returned from a conversion.",
         "properties": {
           "plan": {
             "$ref": "#/components/schemas/PlanDetail"

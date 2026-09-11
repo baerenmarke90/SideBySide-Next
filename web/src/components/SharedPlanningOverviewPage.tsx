@@ -18,6 +18,7 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
+import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import { WishStatus } from '../api/generated/models/WishStatus';
 import { invalidateDashboard } from '../client/dashboardQueries';
@@ -34,11 +35,13 @@ import { normalizeClientError } from '../client/problemDetails';
 import { planDetailPath, wishDetailPath } from '../client/routes';
 import {
   loadAllPlaces,
+  planScheduleFromInputs,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { useDismissiblePopover } from '../client/useDismissiblePopover';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { PlanScheduleFields } from './PlanScheduleFields';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -118,7 +121,7 @@ function PlanenSegmentedControl({
   function switchTo(segment: PlanenSegment, focus: boolean): void {
     onChange(segment);
     if (!focus) return;
-    (segment === 'wishes' ? wishesRef : plansRef).current?.focus();
+    (segment === 'plans' ? plansRef : wishesRef).current?.focus();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
@@ -198,17 +201,12 @@ interface PlacePickerCoords {
 }
 
 const PLACE_PICKER_VIEWPORT_MARGIN = 8;
-const PLACE_PICKER_PREFERRED_MAX_HEIGHT = 256; // matches --menu max-height: 16rem
+const PLACE_PICKER_PREFERRED_MAX_HEIGHT = 256;
 
 function computePlacePickerCoords(rect: DOMRect): PlacePickerCoords {
   const spaceBelow =
     window.innerHeight - rect.bottom - PLACE_PICKER_VIEWPORT_MARGIN * 2;
   const spaceAbove = rect.top - PLACE_PICKER_VIEWPORT_MARGIN * 2;
-  // Prefer opening below the trigger; flip above it only when there isn't
-  // enough room below but there is more room above, so the menu — rendered
-  // in a document-body portal with `position: fixed` — never ends up partly
-  // or fully beneath the viewport bottom, where page scrolling can never
-  // bring it back into view because a fixed element does not move on scroll.
   const placement: PlacePickerCoords['placement'] =
     spaceBelow < 120 && spaceAbove > spaceBelow ? 'above' : 'below';
 
@@ -235,14 +233,8 @@ function computePlacePickerCoords(rect: DOMRect): PlacePickerCoords {
 }
 
 /**
- * The Plan Create section lives inside a `.planen-panel.sbs-motion-reveal`
- * reveal animation, which creates its own stacking context for as long as
- * the animation targets `transform`. A `position: absolute` menu confined to
- * that stacking context can never paint above a *later* sibling's stacking
- * context, regardless of its own z-index — the sibling simply paints on top
- * by document order. The menu is therefore rendered in a portal at the
- * document body, positioned from the trigger's viewport rect, so it is not
- * confined to any ancestor's stacking context, overflow, or animation.
+ * Render the place menu outside animated/overflow stacking contexts so the
+ * compact product surface stays usable near the viewport edge.
  */
 function PlacePicker({
   id,
@@ -433,11 +425,6 @@ export function SharedPlanningOverviewPage({
     () => segmentForHash(location.hash) ?? 'plans',
   );
 
-  // Keep the visible segment in sync with the Quick Create / deep-link hash
-  // contract (#810/#856): a `useLayoutEffect` here commits the correct panel
-  // visibility before `RouteEntryHandoff`'s passive effect (mounted earlier
-  // in `AppShell`, so it would otherwise run first) calls `scrollIntoView`
-  // on a target that must not still be hidden behind the other segment.
   useLayoutEffect(() => {
     const segment = segmentForHash(location.hash);
     if (segment) setActiveSegment(segment);
@@ -492,6 +479,7 @@ export function SharedPlanningOverviewPage({
       title: string;
       description?: string;
       placeId?: string;
+      schedule?: PlanSchedule;
     }) => apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
     onSuccess: async () => {
       invalidate('plans');
@@ -530,20 +518,10 @@ export function SharedPlanningOverviewPage({
     createPlanPlace.mutate({ name, address: address || undefined });
   }
 
-  // Wünsche is the active idea backlog (#892): OPEN is requested server-side
-  // already, and re-filtered here too in case a status-filtered page ever
-  // returns a historical (PLANNED/COMPLETED) Wish, mirroring the same
-  // defensive re-filter Plans apply below.
   const wishItems = (
     wishes.data?.pages.flatMap((page) => page.items) ?? []
   ).filter((wish) => wish.status === WishStatus.OPEN);
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
-  // Dated, soonest-first PLANNED Plans lead the Pläne segment (mirroring the
-  // Dashboard/Today ordering), followed by everything else in fetch order -
-  // IDEA Plans and any PLANNED Plan without a plannedStart yet. COMPLETED
-  // Plans stay out of the overview entirely (see loadPlanningOverviewPlans),
-  // defensively re-filtered here too in case a status-filtered page ever
-  // returns one.
   const upcomingPlans = selectUpcomingPlans(planItems);
   const upcomingPlanIds = new Set(upcomingPlans.map((plan) => plan.id));
   const orderedPlanItems = [
@@ -567,11 +545,16 @@ export function SharedPlanningOverviewPage({
     const form = event.currentTarget;
     const data = new FormData(form);
     const description = String(data.get('description')).trim();
+    const schedule = planScheduleFromInputs(
+      String(data.get('plannedDate') ?? ''),
+      String(data.get('plannedTime') ?? ''),
+    );
     createPlan.mutate(
       {
         title: String(data.get('title')).trim(),
         description: description || undefined,
         placeId: selectedPlanPlaceId || undefined,
+        schedule,
       },
       {
         onSuccess: () => {
@@ -727,6 +710,7 @@ export function SharedPlanningOverviewPage({
                 ) : null}
               </div>
             ) : null}
+            <PlanScheduleFields idPrefix="create-plan-schedule" />
             <button type="submit" disabled={createPlan.isPending}>
               {createPlan.isPending
                 ? t('m5s3.common.saving')

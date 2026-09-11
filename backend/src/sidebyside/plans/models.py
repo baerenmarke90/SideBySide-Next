@@ -118,6 +118,15 @@ class Plan(
     plans do not conflict with one another.
     """
 
+    planned_on: Mapped[date | None] = mapped_column(Date)
+    """Calendar day for a genuinely date-only schedule, or NULL.
+
+    This is deliberately distinct from ``planned_start``. A date-only Plan is
+    not an instant and must therefore never be reconstructed through midnight,
+    noon, or another fabricated wall-clock time merely to satisfy a timestamp
+    field. Existing timed schedules continue to use ``planned_start``.
+    """
+
     planned_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     planned_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     experienced_on: Mapped[date | None] = mapped_column(Date)
@@ -141,9 +150,13 @@ class Plan(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Date invariants from M3-D04. They also live in the service; the
-        # database constraint prevents maintenance scripts or later migrations
-        # from bypassing them.
+        # A schedule has exactly one semantic start representation. Keeping the
+        # two columns mutually exclusive makes date-only versus timed explicit
+        # at the persistence boundary and prevents timezone inference later.
+        CheckConstraint(
+            "planned_on IS NULL OR planned_start IS NULL",
+            name="schedule_has_single_start",
+        ),
         CheckConstraint(
             "planned_end IS NULL OR planned_start IS NOT NULL",
             name="planned_end_needs_start",
@@ -153,11 +166,14 @@ class Plan(
             name="planned_end_not_before_start",
         ),
         CheckConstraint(
-            "status <> 'IDEA' OR (planned_start IS NULL AND planned_end IS NULL)",
+            "status <> 'IDEA' OR "
+            "(planned_on IS NULL AND planned_start IS NULL AND planned_end IS NULL)",
             name="idea_has_no_schedule",
         ),
         CheckConstraint(
-            "status <> 'PLANNED' OR planned_start IS NOT NULL",
+            "status <> 'PLANNED' OR "
+            "((planned_on IS NOT NULL AND planned_start IS NULL) OR "
+            "(planned_on IS NULL AND planned_start IS NOT NULL))",
             name="planned_needs_start",
         ),
         CheckConstraint(
@@ -195,6 +211,7 @@ class Plan(
         Index("ix_plans_place_id", "place_id"),
         Index("ix_plans_space_id_created_at_id", "space_id", "created_at", "id"),
         Index("ix_plans_space_id_status", "space_id", "status"),
+        Index("ix_plans_space_id_planned_on", "space_id", "planned_on"),
         Index("ix_plans_space_id_planned_start", "space_id", "planned_start"),
         Index(
             "ix_plans_search_fts",

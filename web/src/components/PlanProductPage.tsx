@@ -2,25 +2,32 @@ import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
+import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
 import { appRoutePath } from '../client/routes';
-import { invalidateDashboard } from '../client/dashboardQueries';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
-import { formatCompactWeekdayDate } from '../client/formatRecency';
-import { planPillTone, planStatusWord } from '../client/planningPresentation';
-import { DestinationIcon } from './DestinationIcon';
+import {
+  planPillTone,
+  planScheduleLabel,
+  planStatusWord,
+} from '../client/planningPresentation';
 import {
   dateFromInput,
   dateOnlyInput,
-  dateTimeFromInput,
   localDateTimeInput,
   loadAllPlaces,
   planningIfMatch,
+  planScheduleDateInput,
+  planScheduleFromInputs,
+  planScheduleTimeInput,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { resolvedLocale, useTranslation } from '../i18n';
-import { PageHeader } from './PageHeader';
+import { DestinationIcon } from './DestinationIcon';
 import { ListEntryIconButton } from './ListEntryActions';
+import { PageHeader } from './PageHeader';
+import { PlanScheduleFields } from './PlanScheduleFields';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -114,19 +121,17 @@ export function PlanProductPage({
   const scheduleMutation = useMutation({
     mutationFn: ({
       plan,
-      start,
-      end,
+      schedule,
     }: {
       plan: PlanDetail;
-      start: Date;
-      end?: Date;
+      schedule: PlanSchedule;
     }) =>
       apiCall(() =>
         apis.plans.schedulePlan({
           spaceId,
           planId: plan.id,
           ifMatch: planningIfMatch(plan),
-          planSchedule: { plannedStart: start, plannedEnd: end },
+          planSchedule: schedule,
         }),
       ),
     onSuccess: commitPlan,
@@ -243,10 +248,13 @@ export function PlanProductPage({
     event.preventDefault();
     if (!plan) return;
     const data = new FormData(event.currentTarget);
-    const start = dateTimeFromInput(String(data.get('plannedStart')));
-    const end = dateTimeFromInput(String(data.get('plannedEnd')));
-    if (!start) return;
-    scheduleMutation.mutate({ plan, start, end });
+    const schedule = planScheduleFromInputs(
+      String(data.get('plannedDate') ?? ''),
+      String(data.get('plannedTime') ?? ''),
+      String(data.get('plannedEnd') ?? ''),
+    );
+    if (!schedule) return;
+    scheduleMutation.mutate({ plan, schedule });
   }
 
   function submitComplete(event: FormEvent<HTMLFormElement>) {
@@ -268,6 +276,7 @@ export function PlanProductPage({
     ? (placesQuery.data?.find((place) => place.id === plan.placeId)?.name ??
       null)
     : null;
+  const scheduleLabel = planScheduleLabel(plan);
   const hasSubfacts = Boolean(plan.plannedEnd || plan.experiencedOn);
   const showsLifecycle =
     plan.capabilities.canEdit && plan.status !== 'COMPLETED';
@@ -277,9 +286,9 @@ export function PlanProductPage({
       {isEditing ? (
         <form
           id="plan-edit-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitEdit(e);
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitEdit(event);
           }}
         />
       ) : null}
@@ -319,9 +328,9 @@ export function PlanProductPage({
         aria-label={t('m5s3.plan.scheduleFacts')}
       >
         <div className="planen-detail-pills">
-          {plan.plannedStart ? (
+          {scheduleLabel ? (
             <span className="planen-pill planen-pill-date">
-              {formatCompactWeekdayDate(plan.plannedStart)}
+              {scheduleLabel}
             </span>
           ) : null}
           <span className={`planen-pill planen-pill-${planPillTone(plan)}`}>
@@ -517,24 +526,12 @@ export function PlanProductPage({
           <section className="planning-subsection">
             <h2>{t('m5s3.plan.lifecycleHeading')}</h2>
             <form className="form-grid" onSubmit={submitSchedule}>
-              <label htmlFor="plan-schedule-start">
-                {t('m5s3.plan.plannedStart')}
-              </label>
-              <input
-                id="plan-schedule-start"
-                name="plannedStart"
-                type="datetime-local"
-                required
-                defaultValue={localDateTimeInput(plan.plannedStart)}
-              />
-              <label htmlFor="plan-schedule-end">
-                {t('m5s3.plan.plannedEnd')}
-              </label>
-              <input
-                id="plan-schedule-end"
-                name="plannedEnd"
-                type="datetime-local"
-                defaultValue={localDateTimeInput(plan.plannedEnd)}
+              <PlanScheduleFields
+                idPrefix="plan-schedule"
+                defaultDate={planScheduleDateInput(plan)}
+                defaultTime={planScheduleTimeInput(plan)}
+                defaultEnd={localDateTimeInput(plan.plannedEnd)}
+                includeEnd
               />
               <div className="form-actions">
                 <button type="submit" disabled={scheduleMutation.isPending}>

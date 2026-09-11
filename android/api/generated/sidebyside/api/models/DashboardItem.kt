@@ -39,6 +39,7 @@ import kotlinx.serialization.Contextual
  * @param titleOrText 
  * @param type 
  * @param previewAttachmentId 
+ * @param scheduledOn 
  */
 @Serializable
 
@@ -63,7 +64,10 @@ data class DashboardItem (
     val type: DashboardItemType,
 
     @Contextual @SerialName(value = "previewAttachmentId")
-    val previewAttachmentId: java.util.UUID? = null
+    val previewAttachmentId: java.util.UUID? = null,
+
+    @Contextual @SerialName(value = "scheduledOn")
+    val scheduledOn: java.time.LocalDate? = null
 
 ) {
 

@@ -23,16 +23,18 @@
 
 package sidebyside.api.models
 
+import sidebyside.api.models.PlanSchedule
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Wish-to-Plan conversion request.  Every field is optional: without an explicit title the plan inherits the wish title. ``sourceWishId``, ``status``, and schedule fields are not supplied by the client; the wish is identified by the path and everything else is established server-side.
+ * Wish-to-Plan conversion request with an optional atomic schedule.  Without an explicit title the Plan inherits the Wish title. Supplying ``schedule`` makes the new Plan date-only or timed without a second lifecycle request; omitting it preserves the existing unscheduled flow.
  *
  * @param description 
  * @param placeId 
+ * @param schedule 
  * @param title 
  */
 @Serializable
@@ -44,6 +46,9 @@ data class WishToPlan (
 
     @Contextual @SerialName(value = "placeId")
     val placeId: java.util.UUID? = null,
+
+    @SerialName(value = "schedule")
+    val schedule: PlanSchedule? = null,
 
     @SerialName(value = "title")
     val title: kotlin.String? = null

@@ -91,11 +91,7 @@ export function formatRelativeTime(
 }
 
 /**
- * Formats relative date for upcoming events/plans:
- * - "Heute · 16. Feb." for today
- * - "Morgen · 17. Feb." for tomorrow
- * - "in X Tagen · 25. Feb." for 2 to 30 days in advance
- * - localized long date for dates beyond 30 days
+ * Formats relative date for upcoming real instants in the browser timezone.
  */
 export function formatUpcomingRelative(
   date: Date,
@@ -134,10 +130,50 @@ export function formatUpcomingRelative(
 }
 
 /**
- * Compact weekday + day + month date for the Planen product-reference
- * status/date pills (#859), e.g. "Sa, 14. Sep." Deliberately date-only:
- * true date-only Plan scheduling is tracked separately under #838.
+ * Relative presentation for an OpenAPI `date` carrier.
+ *
+ * The target date is read in UTC because the generated client encodes a pure
+ * calendar day at UTC midnight. The comparison date is browser-local today;
+ * only YYYY-MM-DD values are compared, so the scheduled day itself can never
+ * slide across a timezone boundary.
  */
+export function formatUpcomingCalendarDate(
+  date: Date,
+  t: TFunction,
+  now: Date = new Date(),
+  locale = resolvedLocale(),
+): string {
+  const targetKey = date.toISOString().slice(0, 10);
+  const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate(),
+  ).padStart(2, '0')}`;
+  const targetDay = Date.parse(`${targetKey}T00:00:00Z`);
+  const today = Date.parse(`${nowKey}T00:00:00Z`);
+  const diffDays = Math.round((targetDay - today) / (24 * 60 * 60 * 1000));
+
+  const formattedShort = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(date);
+
+  if (diffDays <= 0) {
+    return `${t('m5s5.common.today')} · ${formattedShort}`;
+  }
+  if (diffDays === 1) {
+    return `${t('m5s5.common.tomorrow')} · ${formattedShort}`;
+  }
+  if (diffDays >= 2 && diffDays <= 30) {
+    return `${t('m5s5.common.inDays', { count: diffDays })} · ${formattedShort}`;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+/** Compact weekday + date for a true instant in the user's local timezone. */
 export function formatCompactWeekdayDate(
   date: Date,
   locale = resolvedLocale(),
@@ -146,5 +182,25 @@ export function formatCompactWeekdayDate(
     weekday: 'short',
     day: 'numeric',
     month: 'short',
+  }).format(date);
+}
+
+/**
+ * Compact weekday + date for an OpenAPI `date` carrier.
+ *
+ * Generated TypeScript models represent a date as a Date at UTC midnight.
+ * Formatting that value in the browser timezone could shift it to the previous
+ * day. `timeZone: UTC` reads only the encoded calendar components and therefore
+ * preserves the authoritative day on every device.
+ */
+export function formatCompactCalendarDate(
+  date: Date,
+  locale = resolvedLocale(),
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
   }).format(date);
 }

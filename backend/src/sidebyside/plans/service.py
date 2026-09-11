@@ -20,9 +20,10 @@ lives in ``wishes.service``. This service calls ``plan_created``,
 ``wish.status`` itself. Each wish edge consequently has one implementation that
 validates its source state.
 
-**Fields clients do not set.** ``status``, ``sourceWishId``, ``plannedStart``,
-``plannedEnd``, and ``experiencedOn`` are produced only by lifecycle operations
-(M3-D04/D30). No create or update path accepts them as arbitrary parameters.
+**Schedule representation.** A date-only schedule uses ``plannedOn`` (SQL
+``DATE``); a timed schedule uses ``plannedStart``/``plannedEnd`` (timezone-aware
+instants). The two start representations are mutually exclusive. No lifecycle
+path converts a calendar date into a fabricated midnight/noon timestamp.
 """
 
 from __future__ import annotations
@@ -64,6 +65,7 @@ PLAN_STATUS_TRANSITION_INVALID = "PLAN_STATUS_TRANSITION_INVALID"
 PLAN_SOURCE_WISH_REQUIRED = "PLAN_SOURCE_WISH_REQUIRED"
 PLAN_HAS_SOURCE_WISH = "PLAN_HAS_SOURCE_WISH"
 PLAN_SCHEDULE_START_REQUIRED = "PLAN_SCHEDULE_START_REQUIRED"
+PLAN_SCHEDULE_CONFLICT = "PLAN_SCHEDULE_CONFLICT"
 PLAN_DATE_RANGE_INVALID = "PLAN_DATE_RANGE_INVALID"
 PLAN_EXPERIENCED_ON_REQUIRED = "PLAN_EXPERIENCED_ON_REQUIRED"
 PLAN_EXPERIENCED_ON_IN_FUTURE = "PLAN_EXPERIENCED_ON_IN_FUTURE"
@@ -166,17 +168,47 @@ def _validate_experienced_on(
     return value
 
 
-def _validate_schedule(planned_start: datetime | None, planned_end: datetime | None) -> None:
-    if planned_start is None:
+def _validate_schedule(
+    planned_on: date | None,
+    planned_start: datetime | None,
+    planned_end: datetime | None,
+) -> None:
+    if planned_on is None and planned_start is None:
         raise ValidationError(
-            "Scheduling a plan needs a start.",
+            "Scheduling a plan needs a date or a timed start.",
             PLAN_SCHEDULE_START_REQUIRED,
         )
-    if planned_end is not None and planned_end < planned_start:
+    if planned_on is not None and planned_start is not None:
+        raise ValidationError(
+            "A plan schedule cannot be both date-only and timed.",
+            PLAN_SCHEDULE_CONFLICT,
+        )
+    if planned_on is not None and planned_end is not None:
+        raise ValidationError(
+            "A date-only plan cannot have a timed end.",
+            PLAN_SCHEDULE_CONFLICT,
+        )
+    if planned_end is not None and planned_start is None:
+        raise ValidationError(
+            "A timed end requires a timed start.",
+            PLAN_SCHEDULE_START_REQUIRED,
+        )
+    if planned_end is not None and planned_start is not None and planned_end < planned_start:
         raise ValidationError(
             "A plan cannot end before it starts.",
             PLAN_DATE_RANGE_INVALID,
         )
+
+
+def _initial_schedule_status(
+    planned_on: date | None,
+    planned_start: datetime | None,
+    planned_end: datetime | None,
+) -> PlanStatus:
+    if planned_on is None and planned_start is None and planned_end is None:
+        return PlanStatus.IDEA
+    _validate_schedule(planned_on, planned_start, planned_end)
+    return PlanStatus.PLANNED
 
 
 def _resolve_place(
@@ -202,26 +234,30 @@ def create_plan(
     title: str,
     description: str | None,
     place_id: UUID | str | None,
+    planned_on: date | None = None,
+    planned_start: datetime | None = None,
+    planned_end: datetime | None = None,
 ) -> Plan:
-    """Create a direct plan as defined by M3-D30.
-
-    It always starts as ``IDEA``, without schedule and without source wish. A
-    plan is scheduled only through ``/schedule`` or completed spontaneously
-    through ``/complete``.
-    """
+    """Create a direct unscheduled, date-only, or timed Plan atomically."""
+    status = _initial_schedule_status(planned_on, planned_start, planned_end)
     plan = Plan(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=shared_privacy(),
-        status=PlanStatus.IDEA.value,
+        status=status.value,
         source_wish_id=None,
         place_id=_resolve_place(session, context, place_id),
+        planned_on=planned_on,
+        planned_start=planned_start,
+        planned_end=planned_end,
         payload=PlanPayload(title=_normalize_title(title), description=description),
     )
     session.add(plan)
     _flush(session)
     _record(session, plan, context.account_id, EventType.PLAN_CREATED)
     _flush(session)
+    if status == PlanStatus.PLANNED:
+        reminder_runtime.reconcile_space(session, context.space_id)
     return plan
 
 
@@ -260,8 +296,6 @@ def _lock_plan_and_source_wish(
     wish = wish_service.lock(session, context, source_wish_id)
     plan = _lock_plan(session, context, plan_id)
     if plan.source_wish_id != wish.id:
-        # The plan changed while waiting for the wish lock. Retrying here would
-        # risk recursion; return a conflict and let the caller reload.
         raise ConflictError(
             "The resource was changed since it was loaded.",
             ErrorCode.RESOURCE_VERSION_CONFLICT,
@@ -281,14 +315,7 @@ def update_plan(
     place_id: UUID | str | None,
     experienced_on: date | None,
 ) -> Plan:
-    """Correct plan content without changing lifecycle status (M3-D04).
-
-    Even a ``COMPLETED`` plan may be corrected without reopening it.
-    ``experiencedOn`` belongs to completed state and is therefore editable only
-    there; on an unfinished plan it would predeclare a completion date.
-    """
-    # Resolve place before locking the plan. Reversing the order relative to
-    # place deletion could let two requests block each other.
+    """Correct plan content without changing lifecycle status (M3-D04)."""
     next_place_id = (
         _resolve_place(session, context, place_id) if "place_id" in changed_fields else None
     )
@@ -305,7 +332,6 @@ def update_plan(
         assert title is not None
         next_title = _normalize_title(title)
     if "description" in changed_fields:
-        # Unlike title, description may be cleared.
         next_description = description
     if "experienced_on" in changed_fields:
         if plan.status != PlanStatus.COMPLETED.value:
@@ -330,10 +356,11 @@ def schedule_plan(
     plan_id: UUID | str,
     *,
     expected_version: int,
+    planned_on: date | None = None,
     planned_start: datetime | None,
     planned_end: datetime | None,
 ) -> Plan:
-    """Apply ``IDEA -> PLANNED`` or correct schedule on ``PLANNED``."""
+    """Apply ``IDEA -> PLANNED`` or replace a ``PLANNED`` schedule."""
     plan = _lock_plan(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -343,7 +370,8 @@ def schedule_plan(
             PLAN_STATUS_TRANSITION_INVALID,
         )
 
-    _validate_schedule(planned_start, planned_end)
+    _validate_schedule(planned_on, planned_start, planned_end)
+    plan.planned_on = planned_on
     plan.planned_start = planned_start
     plan.planned_end = planned_end
     plan.status = PlanStatus.PLANNED.value
@@ -362,7 +390,7 @@ def unschedule_plan(
     *,
     expected_version: int,
 ) -> Plan:
-    """Apply ``PLANNED -> IDEA`` and discard the schedule."""
+    """Apply ``PLANNED -> IDEA`` and discard either schedule representation."""
     plan = _lock_plan(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -372,6 +400,7 @@ def unschedule_plan(
             PLAN_STATUS_TRANSITION_INVALID,
         )
 
+    plan.planned_on = None
     plan.planned_start = None
     plan.planned_end = None
     plan.status = PlanStatus.IDEA.value
@@ -393,12 +422,7 @@ def complete_plan(
 ) -> tuple[Plan, Wish | None]:
     """Apply ``IDEA | PLANNED -> COMPLETED`` and complete a source wish too.
 
-    Both mutations occur in the same transaction. There is no observable
-    intermediate state in which the plan is complete while its wish is still
-    open.
-
-    Completion from ``IDEA`` is valid because shared experiences need not have
-    been scheduled first. A ``PLANNED`` plan keeps its schedule as history.
+    A scheduled plan keeps whichever schedule representation it had as history.
     """
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
@@ -430,12 +454,7 @@ def return_to_wish(
     *,
     expected_version: int,
 ) -> ReturnToWishResult:
-    """Discard the plan and reopen its wish (M3-D03).
-
-    This is intentionally destructive: plan title, description, and schedule
-    disappear and are not copied back into the wish. The UI must explain that
-    before confirmation.
-    """
+    """Discard the plan and reopen its wish (M3-D03)."""
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -469,19 +488,7 @@ def delete_plan(
     *,
     expected_version: int,
 ) -> None:
-    """Enforce the M3-D05 plan deletion matrix.
-
-    | Plan                         | Result                  |
-    |------------------------------|-------------------------|
-    | direct, any status           | allowed                 |
-    | source, ``IDEA`` / ``PLANNED`` | ``PLAN_HAS_SOURCE_WISH`` |
-    | source, ``COMPLETED``          | allowed                 |
-
-    An unfinished source plan is returned rather than deleted; otherwise a
-    ``PLANNED`` wish would remain without its plan. Deleting a completed source
-    plan leaves the wish ``COMPLETED`` so it can be deleted separately. There
-    is no cascade in the opposite direction.
-    """
+    """Enforce the M3-D05 plan deletion matrix."""
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -508,20 +515,13 @@ def convert_wish_to_plan(
     title: str | None,
     description: str | None,
     place_id: UUID | str | None,
+    planned_on: date | None = None,
+    planned_start: datetime | None = None,
+    planned_end: datetime | None = None,
 ) -> WishToPlanResult:
-    """Convert one wish into exactly one plan atomically and idempotently (M3-D02).
-
-    The operation follows the contract order: lock the wish, inspect any
-    originating plan, answer the idempotent case before version validation, and
-    only then convert.
-
-    The retry intentionally precedes ``If-Match``. A client whose successful
-    response was lost still holds the old wish version. Checking it first would
-    return a conflict for an operation that already succeeded, with creating a
-    second plan as the only apparent escape.
-    """
-    # Place first, then wish, then plan.
+    """Convert one wish into exactly one Plan atomically and idempotently."""
     resolved_place_id = _resolve_place(session, context, place_id)
+    status = _initial_schedule_status(planned_on, planned_start, planned_end)
 
     wish = wish_service.lock(session, context, wish_id)
     existing = session.execute(
@@ -534,8 +534,6 @@ def convert_wish_to_plan(
                 "This wish is planned but has no originating plan.",
                 wish_service.WISH_PLAN_STATE_CONFLICT,
             )
-        # Idempotent retry. A differing request deliberately does not overwrite
-        # the existing plan; further changes go through the plan itself.
         return WishToPlanResult(wish=wish, plan=existing, created=False)
 
     if wish.status == WishStatus.COMPLETED.value:
@@ -556,13 +554,13 @@ def convert_wish_to_plan(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=shared_privacy(),
-        status=PlanStatus.IDEA.value,
+        status=status.value,
         source_wish_id=wish.id,
         place_id=resolved_place_id,
+        planned_on=planned_on,
+        planned_start=planned_start,
+        planned_end=planned_end,
         payload=PlanPayload(
-            # Without an explicit title the plan inherits the wish title. From
-            # then on they diverge; later wish renaming does not change the plan
-            # (M3-D01).
             title=_normalize_title(title if title is not None else wish.payload.title),
             description=description,
         ),
@@ -571,9 +569,6 @@ def convert_wish_to_plan(
     try:
         _flush(session)
     except IntegrityError as error:
-        # Final integrity boundary: ``UNIQUE(source_wish_id)``. The wish lock
-        # should make this unreachable, but if it occurs it remains a domain
-        # conflict rather than a 500.
         raise ConflictError(
             "This wish already has an originating plan.",
             wish_service.WISH_HAS_ACTIVE_PLAN,
@@ -583,6 +578,8 @@ def convert_wish_to_plan(
     _flush(session)
 
     wish_service.plan_created(session, wish, context.account_id)
+    if status == PlanStatus.PLANNED:
+        reminder_runtime.reconcile_space(session, context.space_id)
     return WishToPlanResult(wish=wish, plan=plan, created=True)
 
 
@@ -595,16 +592,7 @@ def _ensure_wish_version(wish: Wish, expected_version: int) -> None:
 
 
 def detach_place(session: Session, place: Place, actor_id: UUID) -> None:
-    """Detach all plans from a place that is about to be deleted.
-
-    Called by the place service while it already holds the place lock. Plans are
-    locked here, preserving ``Place -> Plan`` ordering.
-
-    Every affected plan receives a new version and event. A silent
-    ``ON DELETE SET NULL`` would be simpler but could pull an association from
-    under a client that continues writing with its old version and never sees a
-    conflict.
-    """
+    """Detach all plans from a place that is about to be deleted."""
     affected = list(
         session.execute(
             select(Plan)
@@ -678,12 +666,7 @@ def list_plans(
     limit: int,
     status: PlanStatus | None,
 ) -> PlanPageResult:
-    """List newest plans first, ordered by metadata like wishes.
-
-    Ordering by ``plannedStart`` would be natural for a calendar view, but that
-    is a separate read surface with its own cursor and can be added later
-    without changing this contract.
-    """
+    """List newest plans first, ordered by metadata like wishes."""
     statement = readable(Plan, context)
     if status is not None:
         statement = statement.where(Plan.status == status.value)

@@ -23,17 +23,19 @@
 
 package sidebyside.api.models
 
+import sidebyside.api.models.PlanSchedule
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct plan creation defined by M3-D30.  ``status``, ``sourceWishId``, and all schedule fields are intentionally absent. A plan starts as an idea; ``/schedule`` schedules it and ``/complete`` completes it.
+ * Direct Plan creation with an optional atomic schedule.  Lifecycle state remains server-owned. Omitting ``schedule`` creates an ``IDEA``; supplying a valid date-only or timed schedule creates a ``PLANNED`` Plan in the same transaction.
  *
  * @param title 
  * @param description 
  * @param placeId 
+ * @param schedule 
  */
 @Serializable
 
@@ -46,7 +48,10 @@ data class PlanCreate (
     val description: kotlin.String? = null,
 
     @Contextual @SerialName(value = "placeId")
-    val placeId: java.util.UUID? = null
+    val placeId: java.util.UUID? = null,
+
+    @SerialName(value = "schedule")
+    val schedule: PlanSchedule? = null
 
 ) {
 

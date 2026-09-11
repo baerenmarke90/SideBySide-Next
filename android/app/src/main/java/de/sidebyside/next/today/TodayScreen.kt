@@ -253,7 +253,8 @@ private fun RetrospectiveEditorialCard(
 ) {
     val locale: Locale = LocalConfiguration.current.locales[0]
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
-    val day = item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+    val day = item.scheduledOn
+        ?: item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
         ?: item.occurredOn
 
     Column(
@@ -353,7 +354,8 @@ private fun DashboardCard(
 ) {
     val locale: Locale = LocalConfiguration.current.locales[0]
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
-    val day = item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+    val day = item.scheduledOn
+        ?: item.scheduledAt?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
         ?: item.occurredOn
 
     Surface(

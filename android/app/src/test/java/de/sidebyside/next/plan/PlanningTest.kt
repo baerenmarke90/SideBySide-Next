@@ -156,12 +156,30 @@ class PlanningTest {
         model.planWish(OPEN_WISH, "", "", null, "2026-09-20", "18:30")
         advanceUntilIdle()
 
-        // Scheduled against the *plan* the conversion just returned, not the
-        // wish's own version.
-        assertEquals(listOf(1), api.scheduleVersions)
-        val scheduledStart = api.schedules.single().plannedStart
+        // #838: the schedule is part of the conversion request itself. There
+        // must be no follow-up schedule call that could leave a partial state.
+        val schedule = requireNotNull(api.conversions.single().schedule)
+        assertTrue(api.schedules.isEmpty())
+        assertEquals(null, schedule.plannedOn)
+        val scheduledStart = requireNotNull(schedule.plannedStart)
         assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
         assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
+    }
+
+    @Test
+    fun turningAWishIntoAPlanCanCarryOnlyACalendarDay() = runTest(dispatcher) {
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN, version = 4)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.planWish(OPEN_WISH, "", "", null, "2026-09-20", null)
+        advanceUntilIdle()
+
+        val schedule = requireNotNull(api.conversions.single().schedule)
+        assertEquals(LocalDate.of(2026, 9, 20), schedule.plannedOn)
+        assertEquals(null, schedule.plannedStart)
+        assertTrue(api.schedules.isEmpty())
     }
 
     @Test
@@ -174,6 +192,7 @@ class PlanningTest {
         model.planWish(OPEN_WISH, "", "", null)
         advanceUntilIdle()
 
+        assertEquals(null, api.conversions.single().schedule)
         assertTrue(api.schedules.isEmpty())
     }
 
@@ -239,24 +258,25 @@ class PlanningTest {
         model.createPlan("A weekend away", "", null, "2026-09-20", "18:30")
         advanceUntilIdle()
 
-        assertEquals(listOf(1), api.scheduleVersions)
-        val scheduledStart = api.schedules.single().plannedStart
+        val schedule = requireNotNull(api.directlyCreated.single().schedule)
+        assertTrue(api.schedules.isEmpty())
+        assertEquals(null, schedule.plannedOn)
+        val scheduledStart = requireNotNull(schedule.plannedStart)
         assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
         assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
     }
 
     @Test
-    fun creatingAPlanDirectlyWithOnlyADayDoesNotScheduleAnything() = runTest(dispatcher) {
-        // A day without a time is never sent — `PlanSchedule.plannedStart` is a
-        // moment, not a date — so this must not schedule anything on its own,
-        // even though the plan is still created.
+    fun creatingAPlanDirectlyWithOnlyADayCreatesADateOnlySchedule() = runTest(dispatcher) {
         val api = PlanningApi()
         val model = signedIn(api)
 
         model.createPlan("A weekend away", "", null, "2026-09-20", null)
         advanceUntilIdle()
 
-        assertEquals(1, api.directlyCreated.size)
+        val schedule = requireNotNull(api.directlyCreated.single().schedule)
+        assertEquals(LocalDate.of(2026, 9, 20), schedule.plannedOn)
+        assertEquals(null, schedule.plannedStart)
         assertTrue(api.schedules.isEmpty())
     }
 
@@ -289,10 +309,28 @@ class PlanningTest {
         advanceUntilIdle()
 
         assertEquals(listOf(7), api.scheduleVersions)
-        val scheduledStart = api.schedules.single().plannedStart
+        val schedule = api.schedules.single()
+        assertEquals(null, schedule.plannedOn)
+        val scheduledStart = requireNotNull(schedule.plannedStart)
         assertEquals(LocalDate.of(2026, 9, 20), scheduledStart.toLocalDate())
         assertEquals(LocalTime.of(18, 30), scheduledStart.toLocalTime())
         assertTrue(api.completions.isEmpty())
+    }
+
+    @Test
+    fun schedulingWithOnlyADayUsesPlannedOn() = runTest(dispatcher) {
+        val api = PlanningApi(plans = listOf(aPlan(PlanStatus.IDEA, version = 7)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.schedulePlan(PLAN, "2026-09-20", null)
+        advanceUntilIdle()
+
+        assertEquals(listOf(7), api.scheduleVersions)
+        val schedule = api.schedules.single()
+        assertEquals(LocalDate.of(2026, 9, 20), schedule.plannedOn)
+        assertEquals(null, schedule.plannedStart)
     }
 
     @Test

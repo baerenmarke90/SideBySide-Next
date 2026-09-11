@@ -13,7 +13,11 @@ import {
   dashboardPreferencesQueryKey,
   limitUpcomingItems,
 } from '../client/dashboardPreferences';
-import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
+import {
+  formatRecency,
+  formatUpcomingCalendarDate,
+  formatUpcomingRelative,
+} from '../client/formatRecency';
 import {
   dashboardItemPath,
   engagementTargetPath,
@@ -356,7 +360,11 @@ function TodayAgendaRow({ item }: { item: DashboardItem }) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
   const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
-  const date = rawDate ? formatUpcomingRelative(rawDate, t) : null;
+  const date = item.scheduledOn
+    ? formatUpcomingCalendarDate(item.scheduledOn, t)
+    : rawDate
+      ? formatUpcomingRelative(rawDate, t)
+      : null;
   const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
 
   const rowInner = (

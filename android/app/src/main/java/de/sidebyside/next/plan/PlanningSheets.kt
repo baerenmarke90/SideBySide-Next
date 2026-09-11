@@ -364,11 +364,10 @@ internal fun PlanComposerSheet(
  * edit that already has a description or a place opens with them unfolded,
  * because hiding what someone wrote is not progressive disclosure.
  *
- * [allowSchedule] adds a day/time section next to `Mehr dazu`, so a couple
- * who already knows when never has to leave this sheet, reopen the new plan
- * and find the schedule action a second time. A day alone does not schedule
- * anything — [SheetPrimaryAction] below only turns on time picking once a day
- * is chosen, and submitting still works with neither set.
+ * [allowSchedule] adds a date-first scheduling section next to `Mehr dazu`, so
+ * a couple who already knows the day never has to reopen the new plan. Time is
+ * deliberately optional: a selected day is a complete date-only schedule, and
+ * no wall-clock value is invented when the time remains absent.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -481,13 +480,22 @@ private fun ColumnScope.PlanFields(
                 onClick = { dayPickerOpen = true },
             )
             if (day != null) {
+                SheetSecondaryAction(R.string.plan_schedule_clear_date, enabled = !busy) {
+                    day = null
+                    time = null
+                }
                 PickerRow(
-                    labelRes = R.string.plan_schedule_time,
+                    labelRes = R.string.plan_schedule_time_optional,
                     value = time,
                     placeholderRes = R.string.plan_schedule_pick_time,
                     enabled = !busy,
                     onClick = { timePickerOpen = true },
                 )
+                if (time != null) {
+                    SheetSecondaryAction(R.string.plan_schedule_clear_time, enabled = !busy) {
+                        time = null
+                    }
+                }
             }
         } else {
             SheetSecondaryAction(R.string.plan_schedule, enabled = !busy) {
@@ -495,12 +503,7 @@ private fun ColumnScope.PlanFields(
             }
         }
     }
-    // A day the couple picked is never sent on its own — `PlanSchedule` needs
-    // a time to go with it — so submit stays off between choosing the day and
-    // confirming a time rather than quietly dropping the day they already
-    // chose.
-    val scheduleReady = day == null || time != null
-    SheetPrimaryAction(submitLabelRes, enabled = !busy && title.isNotBlank() && scheduleReady) {
+    SheetPrimaryAction(submitLabelRes, enabled = !busy && title.isNotBlank()) {
         onSubmit(title, description, placeId, day, time)
     }
 
@@ -589,16 +592,9 @@ internal fun PlanSheet(
                 color = SideBySideTheme.colors.textSecondary,
             )
         }
-        plan.plannedStart?.let { start ->
+        planTimingLine(plan)?.let { line ->
             Text(
-                text = stringResource(R.string.plan_scheduled_for, formattedDateTime(start)),
-                style = MaterialTheme.typography.bodySmall,
-                color = SideBySideTheme.colors.textSecondary,
-            )
-        }
-        plan.experiencedOn?.let { day ->
-            Text(
-                text = stringResource(R.string.plan_experienced_on, formattedDate(day)),
+                text = line,
                 style = MaterialTheme.typography.bodySmall,
                 color = SideBySideTheme.colors.textSecondary,
             )
@@ -660,15 +656,19 @@ internal fun PlanScheduleSheet(
     plan: PlanDetail,
     busy: Boolean,
     onDismiss: () -> Unit,
-    onSubmit: (startOn: String, startAt: String) -> Unit,
+    onSubmit: (startOn: String, startAt: String?) -> Unit,
 ) {
     val existing = plan.plannedStart?.atZoneSameInstant(ZoneId.systemDefault())
-    val suggestedDay = existing?.toLocalDate() ?: LocalDate.now()
+    val suggestedDay = plan.plannedOn ?: existing?.toLocalDate() ?: LocalDate.now()
     val suggestedTime = existing?.toLocalTime()?.withSecond(0)?.withNano(0)
         ?: LocalTime.of(19, 0)
 
-    var day by rememberSaveable(plan.id) { mutableStateOf<String?>(null) }
-    var time by rememberSaveable(plan.id) { mutableStateOf<String?>(null) }
+    var day by rememberSaveable(plan.id) {
+        mutableStateOf((plan.plannedOn ?: existing?.toLocalDate())?.toString())
+    }
+    var time by rememberSaveable(plan.id) {
+        mutableStateOf(existing?.toLocalTime()?.withSecond(0)?.withNano(0)?.toString())
+    }
     var dayPickerOpen by rememberSaveable(plan.id) { mutableStateOf(false) }
     var timePickerOpen by rememberSaveable(plan.id) { mutableStateOf(false) }
 
@@ -688,18 +688,29 @@ internal fun PlanScheduleSheet(
             enabled = !busy,
             onClick = { dayPickerOpen = true },
         )
+        if (day != null) {
+            SheetSecondaryAction(R.string.plan_schedule_clear_date, enabled = !busy) {
+                day = null
+                time = null
+            }
+        }
         PickerRow(
-            labelRes = R.string.plan_schedule_time,
+            labelRes = R.string.plan_schedule_time_optional,
             value = time,
             placeholderRes = R.string.plan_schedule_pick_time,
-            enabled = !busy,
+            enabled = !busy && day != null,
             onClick = { timePickerOpen = true },
         )
+        if (time != null) {
+            SheetSecondaryAction(R.string.plan_schedule_clear_time, enabled = !busy) {
+                time = null
+            }
+        }
         SheetPrimaryAction(
-            R.string.plan_schedule_confirm,
-            enabled = !busy && day != null && time != null,
+            R.string.plan_schedule_confirm_optional,
+            enabled = !busy && day != null,
         ) {
-            onSubmit(day!!, time!!)
+            onSubmit(day!!, time)
         }
     }
 
@@ -762,9 +773,10 @@ internal fun PlanCompleteSheet(
     onSubmit: (experiencedOn: String) -> Unit,
 ) {
     val today = LocalDate.now()
-    val suggested = plan.plannedStart
-        ?.atZoneSameInstant(ZoneId.systemDefault())
-        ?.toLocalDate()
+    val suggested = (plan.plannedOn
+        ?: plan.plannedStart
+            ?.atZoneSameInstant(ZoneId.systemDefault())
+            ?.toLocalDate())
         ?.takeIf { !it.isAfter(today) }
         ?: today
 

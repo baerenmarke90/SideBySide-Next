@@ -50,6 +50,7 @@ import kotlinx.serialization.Contextual
  * @param title 
  * @param updatedAt 
  * @param version 
+ * @param plannedOn 
  */
 @Serializable
 
@@ -101,7 +102,10 @@ data class PlanDetail (
     val updatedAt: java.time.OffsetDateTime,
 
     @SerialName(value = "version")
-    val version: kotlin.Int
+    val version: kotlin.Int,
+
+    @Contextual @SerialName(value = "plannedOn")
+    val plannedOn: java.time.LocalDate? = null
 
 ) {
 

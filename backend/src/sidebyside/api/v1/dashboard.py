@@ -40,6 +40,7 @@ class DashboardItem(ApiModel):
     id: UUID
     title_or_text: str | None
     occurred_on: date | None
+    scheduled_on: date | None = None
     scheduled_at: datetime | None
     created_at: datetime | None
     preview_attachment_id: UUID | None = None
@@ -173,6 +174,7 @@ def _project_item(item: service.DashboardItem) -> DashboardItem:
         id=item.id,
         title_or_text=item.title_or_text,
         occurred_on=item.occurred_on,
+        scheduled_on=item.scheduled_on,
         scheduled_at=item.scheduled_at,
         created_at=item.created_at,
         preview_attachment_id=item.preview_attachment_id,

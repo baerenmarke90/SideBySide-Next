@@ -46,6 +46,7 @@ internal fun formattedDateTime(value: OffsetDateTime): String = value
             .withLocale(locale()),
     )
 
+/** A calendar date. It is deliberately never converted through a timezone. */
 @Composable
 internal fun formattedDate(value: LocalDate): String =
     value.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale()))
@@ -54,13 +55,16 @@ internal fun formattedDate(value: LocalDate): String =
  * The single timing line a plan card carries, or none.
  *
  * A plan that has been experienced is described by the day it happened; one
- * that has not is described by the day it is meant to. Showing both at once on
- * a card would turn the couple's plan back into a record with fields.
+ * that has not is described by the day it is meant to. A date-only schedule is
+ * rendered directly as LocalDate and therefore never acquires a fake clock.
  */
 @Composable
 internal fun planTimingLine(plan: PlanDetail): String? = when {
     plan.experiencedOn != null ->
         stringResource(R.string.plan_experienced_on, formattedDate(plan.experiencedOn!!))
+
+    plan.plannedOn != null ->
+        stringResource(R.string.plan_scheduled_for, formattedDate(plan.plannedOn!!))
 
     plan.plannedStart != null ->
         stringResource(R.string.plan_scheduled_for, formattedDateTime(plan.plannedStart!!))

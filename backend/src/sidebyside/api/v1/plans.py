@@ -30,12 +30,43 @@ from sidebyside.plans.models import Plan, PlanStatus
 router = APIRouter(tags=["plans"])
 
 
-class PlanCreate(ApiModel):
-    """Direct plan creation defined by M3-D30.
+class PlanSchedule(ApiModel):
+    """One explicit Plan schedule representation.
 
-    ``status``, ``sourceWishId``, and all schedule fields are intentionally
-    absent. A plan starts as an idea; ``/schedule`` schedules it and
-    ``/complete`` completes it.
+    ``plannedOn`` is a calendar day. ``plannedStart`` is a timezone-aware
+    instant. Exactly one of those semantic starts must be supplied; clients may
+    never synthesize a wall-clock time merely to encode ``plannedOn``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    planned_on: date | SkipJsonSchema[None] = None
+    planned_start: datetime | SkipJsonSchema[None] = None
+    planned_end: datetime | SkipJsonSchema[None] = None
+
+    @model_validator(mode="after")
+    def _validate_schedule(self) -> Self:
+        if "planned_on" in self.model_fields_set and self.planned_on is None:
+            raise ValueError("plannedOn must not be null")
+        if "planned_start" in self.model_fields_set and self.planned_start is None:
+            raise ValueError("plannedStart must not be null")
+        if "planned_end" in self.model_fields_set and self.planned_end is None:
+            raise ValueError("plannedEnd must not be null")
+        if self.planned_on is None and self.planned_start is None:
+            raise ValueError("plannedOn or plannedStart is required")
+        if self.planned_on is not None and self.planned_start is not None:
+            raise ValueError("plannedOn and plannedStart are mutually exclusive")
+        if self.planned_on is not None and self.planned_end is not None:
+            raise ValueError("plannedEnd requires plannedStart")
+        return self
+
+
+class PlanCreate(ApiModel):
+    """Direct Plan creation with an optional atomic schedule.
+
+    Lifecycle state remains server-owned. Omitting ``schedule`` creates an
+    ``IDEA``; supplying a valid date-only or timed schedule creates a
+    ``PLANNED`` Plan in the same transaction.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -43,6 +74,7 @@ class PlanCreate(ApiModel):
     title: str
     description: str | SkipJsonSchema[None] = None
     place_id: UUID | SkipJsonSchema[None] = None
+    schedule: PlanSchedule | SkipJsonSchema[None] = None
 
     @field_validator("title")
     @classmethod
@@ -59,22 +91,26 @@ class PlanCreate(ApiModel):
             raise ValueError("description must not be null")
         return value
 
+    @field_validator("schedule")
+    @classmethod
+    def _schedule_not_null(cls, value: PlanSchedule | None) -> PlanSchedule:
+        if value is None:
+            raise ValueError("schedule must not be null")
+        return value
+
 
 class PlanUpdate(ApiModel):
     """Domain correction without changing lifecycle status.
 
-    ``status``, ``plannedStart``, and ``plannedEnd`` are intentionally absent
-    because lifecycle operations own them. ``experiencedOn`` is the one
-    exception: it may be corrected on a completed plan without reopening it
-    (M3-D04).
+    Schedule fields remain owned by ``/schedule`` and ``/unschedule``.
+    ``experiencedOn`` is the one exception: it may be corrected on a completed
+    Plan without reopening it (M3-D04).
     """
 
     model_config = ConfigDict(extra="forbid")
 
     title: str | SkipJsonSchema[None] = None
     description: str | None = None
-    # Explicitly nullable so the place association can be removed without
-    # modifying the place itself.
     place_id: UUID | None = None
     experienced_on: date | SkipJsonSchema[None] = None
 
@@ -91,20 +127,6 @@ class PlanUpdate(ApiModel):
         return self
 
 
-class PlanSchedule(ApiModel):
-    model_config = ConfigDict(extra="forbid")
-
-    planned_start: datetime
-    planned_end: datetime | SkipJsonSchema[None] = None
-
-    @field_validator("planned_end")
-    @classmethod
-    def _end_not_null(cls, value: datetime | None) -> datetime:
-        if value is None:
-            raise ValueError("plannedEnd must not be null")
-        return value
-
-
 class PlanComplete(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -112,12 +134,11 @@ class PlanComplete(ApiModel):
 
 
 class WishToPlan(ApiModel):
-    """Wish-to-Plan conversion request.
+    """Wish-to-Plan conversion request with an optional atomic schedule.
 
-    Every field is optional: without an explicit title the plan inherits the
-    wish title. ``sourceWishId``, ``status``, and schedule fields are not
-    supplied by the client; the wish is identified by the path and everything
-    else is established server-side.
+    Without an explicit title the Plan inherits the Wish title. Supplying
+    ``schedule`` makes the new Plan date-only or timed without a second
+    lifecycle request; omitting it preserves the existing unscheduled flow.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -125,6 +146,7 @@ class WishToPlan(ApiModel):
     title: str | SkipJsonSchema[None] = None
     description: str | SkipJsonSchema[None] = None
     place_id: UUID | SkipJsonSchema[None] = None
+    schedule: PlanSchedule | SkipJsonSchema[None] = None
 
     @field_validator("title")
     @classmethod
@@ -140,6 +162,13 @@ class WishToPlan(ApiModel):
             raise ValueError("description must not be null")
         return value
 
+    @field_validator("schedule")
+    @classmethod
+    def _schedule_not_null(cls, value: PlanSchedule | None) -> PlanSchedule:
+        if value is None:
+            raise ValueError("schedule must not be null")
+        return value
+
 
 class PlanDetail(ApiModel):
     id: UUID
@@ -150,6 +179,7 @@ class PlanDetail(ApiModel):
     title: str
     description: str | None
     status: PlanStatus
+    planned_on: date | None = None
     planned_start: datetime | None
     planned_end: datetime | None
     experienced_on: date | None
@@ -167,12 +197,7 @@ class PlanPage(ApiModel):
 
 
 class WishToPlanResponse(ApiModel):
-    """Both resources returned from a conversion.
-
-    Conversion modifies the wish and creates the plan. Returning only one
-    would force the client to immediately reload the other and display stale
-    state in the meantime.
-    """
+    """Both resources returned from a conversion."""
 
     wish: WishDetail
     plan: PlanDetail
@@ -201,6 +226,7 @@ def _plan_detail(
         title=plan.payload.title,
         description=plan.payload.description,
         status=PlanStatus(plan.status),
+        planned_on=plan.planned_on,
         planned_start=plan.planned_start,
         planned_end=plan.planned_end,
         experienced_on=plan.experienced_on,
@@ -209,14 +235,19 @@ def _plan_detail(
         updated_at=plan.updated_at,
         creator=creator,
         capabilities=ResourceCapabilities(
-            # M3-D01: both partners, independent of ``createdBy``.
             can_edit=True,
-            # M3-D05: a non-completed source plan is returned to a wish rather
-            # than deleted.
             can_delete=plan.source_wish_id is None or is_completed,
             can_comment=False,
         ),
     )
+
+
+def _schedule_values(
+    schedule: PlanSchedule | None,
+) -> tuple[date | None, datetime | None, datetime | None]:
+    if schedule is None:
+        return None, None, None
+    return schedule.planned_on, schedule.planned_start, schedule.planned_end
 
 
 @router.post(
@@ -232,12 +263,16 @@ def create_plan(
     response: Response,
     body: PlanCreate,
 ) -> PlanDetail:
+    planned_on, planned_start, planned_end = _schedule_values(body.schedule)
     plan = service.create_plan(
         session,
         authorization,
         title=body.title,
         description=body.description,
         place_id=body.place_id,
+        planned_on=planned_on,
+        planned_start=planned_start,
+        planned_end=planned_end,
     )
     response.headers["ETag"] = etag_for(plan.version)
     return _plan_detail(session, authorization, plan)
@@ -361,6 +396,7 @@ def schedule_plan(
         authorization,
         plan_id,
         expected_version=expected_version,
+        planned_on=body.planned_on,
         planned_start=body.planned_start,
         planned_end=body.planned_end,
     )
@@ -435,8 +471,6 @@ def return_plan_to_wish(
         plan_id,
         expected_version=expected_version,
     )
-    # The ETag belongs to the wish: the plan no longer exists, so the client's
-    # next write can only target the wish.
     response.headers["ETag"] = etag_for(result.wish.version)
     return PlanReturnToWishResponse(
         wish=wish_detail(session, authorization, result.wish),
@@ -469,6 +503,7 @@ def convert_wish_to_plan(
     expected_version: IfMatchVersion,
     wish_id: Annotated[str, Path(alias="wishId")],
 ) -> WishToPlanResponse:
+    planned_on, planned_start, planned_end = _schedule_values(body.schedule)
     result = service.convert_wish_to_plan(
         session,
         authorization,
@@ -477,6 +512,9 @@ def convert_wish_to_plan(
         title=body.title,
         description=body.description,
         place_id=body.place_id,
+        planned_on=planned_on,
+        planned_start=planned_start,
+        planned_end=planned_end,
     )
     if not result.created:
         response.status_code = http_status.HTTP_200_OK

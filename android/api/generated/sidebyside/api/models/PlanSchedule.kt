@@ -29,20 +29,24 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * One explicit Plan schedule representation.  ``plannedOn`` is a calendar day. ``plannedStart`` is a timezone-aware instant. Exactly one of those semantic starts must be supplied; clients may never synthesize a wall-clock time merely to encode ``plannedOn``.
  *
- * @param plannedStart 
  * @param plannedEnd 
+ * @param plannedOn 
+ * @param plannedStart 
  */
 @Serializable
 
 data class PlanSchedule (
 
-    @Contextual @SerialName(value = "plannedStart")
-    val plannedStart: java.time.OffsetDateTime,
-
     @Contextual @SerialName(value = "plannedEnd")
-    val plannedEnd: java.time.OffsetDateTime? = null
+    val plannedEnd: java.time.OffsetDateTime? = null,
+
+    @Contextual @SerialName(value = "plannedOn")
+    val plannedOn: java.time.LocalDate? = null,
+
+    @Contextual @SerialName(value = "plannedStart")
+    val plannedStart: java.time.OffsetDateTime? = null
 
 ) {
 
