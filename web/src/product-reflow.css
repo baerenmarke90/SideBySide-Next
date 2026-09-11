@@ -60,17 +60,13 @@
     display: none;
   }
 
-  .mobile-bottom-nav {
+  .mobile-bottom-shell {
     display: grid;
-  }
-
-  .mobile-quick-create {
-    display: flex;
   }
 
   .product-shell .product-main {
     width: calc(100% - 2rem);
-    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom));
+    padding-bottom: var(--shell-content-bottom-clearance);
   }
 }
 

@@ -145,8 +145,8 @@ describe('web layout tokens', () => {
 
 describe('compact navigation', () => {
   it('owns the bottom navigation grid in one stylesheet', () => {
-    expect(ruleBlock(shellCss, '.mobile-bottom-nav')).toContain(
-      'grid-auto-columns: minmax(44px, 1fr)',
+    expect(ruleBlock(shellCss, '.mobile-bottom-shell')).toContain(
+      'grid-template-columns: repeat(5, minmax(0, 1fr))',
     );
 
     const pageStylesheets = [
@@ -158,6 +158,7 @@ describe('compact navigation', () => {
       readSource('./components/StoryProductPages.css'),
     ];
     for (const css of pageStylesheets) {
+      expect(css).not.toContain('.mobile-bottom-shell');
       expect(css).not.toContain('.mobile-bottom-nav');
     }
   });
