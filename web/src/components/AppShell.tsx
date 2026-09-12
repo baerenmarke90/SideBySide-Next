@@ -133,7 +133,8 @@ export function AppShell({
   const isPrivateArea = location.pathname.startsWith('/more/private');
   const gamesPath = appRoutePath('games');
   const isGamesArea =
-    location.pathname === gamesPath || location.pathname.startsWith(`${gamesPath}/`);
+    location.pathname === gamesPath ||
+    location.pathname.startsWith(`${gamesPath}/`);
 
   useEffect(
     () => () => {
