@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { formatDateInputValue } from '../client/dateInput';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   chapterDetailPath,
@@ -15,7 +16,7 @@ import {
   dateOnlyInput,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { useTranslation } from '../i18n';
+import { resolvedLocale, useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './PlanStoryContinuation.css';
@@ -350,10 +351,18 @@ export function PlanStoryContinuation({
     event.preventDefault();
     if (!captureMode) return;
     const data = new FormData(event.currentTarget);
-    const title = String(data.get('title') || '').trim();
-    const happenedOn = dateFromInput(String(data.get('happenedOn') || ''));
+    const authoredTitle = String(data.get('title') || '').trim();
+    const happenedOnValue = String(data.get('happenedOn') || '');
+    const happenedOn = dateFromInput(happenedOnValue);
     const body = String(data.get('body') || '').trim();
-    if (!title || !happenedOn) return;
+    if (!happenedOn) return;
+    const title =
+      captureMode === 'MEMORY' && !authoredTitle
+        ? t('memoryProduct.createFallbackTitle', {
+            date: formatDateInputValue(happenedOnValue, resolvedLocale()),
+          })
+        : authoredTitle;
+    if (!title) return;
     createMutation.mutate({
       kind: captureMode,
       title,
@@ -436,7 +445,7 @@ export function PlanStoryContinuation({
           <input
             id="plan-story-title"
             name="title"
-            required
+            required={captureMode === 'MILESTONE'}
             maxLength={200}
             defaultValue={plan.title}
           />

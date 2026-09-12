@@ -11,8 +11,9 @@ import {
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
+import { formatDateInputValue } from '../client/dateInput';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
-import { i18n } from '../i18n';
+import { i18n, resolvedLocale } from '../i18n';
 import { PlanStoryContinuation } from './PlanStoryContinuation';
 
 const plan: PlanDetail = {
@@ -119,18 +120,23 @@ describe('PlanStoryContinuation', () => {
     ) as HTMLTextAreaElement;
 
     expect(title.value).toBe('Picnic in the park');
+    expect(title.required).toBe(false);
     expect(date.value).toBe('2026-09-14');
     expect(note.value).toBe('Bring the picnic blanket.');
 
+    fireEvent.change(title, { target: { value: '   ' } });
     fireEvent.click(
       screen.getByRole('button', { name: i18n.t('m5s3.planStory.saveStory') }),
     );
 
+    const fallbackTitle = i18n.t('memoryProduct.createFallbackTitle', {
+      date: formatDateInputValue('2026-09-14', resolvedLocale()),
+    });
     await waitFor(() => expect(mocks.createMemory).toHaveBeenCalledTimes(1));
     expect(mocks.createMemory).toHaveBeenCalledWith({
       spaceId: 'space-1',
       memoryCreate: {
-        title: 'Picnic in the park',
+        title: fallbackTitle,
         body: 'Bring the picnic blanket.',
         happenedOn: new Date('2026-09-14T00:00:00Z'),
       },
@@ -168,6 +174,10 @@ describe('PlanStoryContinuation', () => {
         name: i18n.t('m5s3.planStory.milestoneAction'),
       }),
     );
+    const title = screen.getByLabelText(
+      i18n.t('m5s3.common.title'),
+    ) as HTMLInputElement;
+    expect(title.required).toBe(true);
     fireEvent.click(
       screen.getByRole('button', { name: i18n.t('m5s3.planStory.saveStory') }),
     );
