@@ -130,3 +130,5 @@ jobs:
           git add web/e2e/tests/floating-bottom-nav.spec.ts
           git commit -m "test(web): cover Our Moments child-route reflow (#863)"
           git push origin HEAD:feat/863-slice-b-sofa-mode
+
+# Triggered after workflow registration so the browser regression is committed.
