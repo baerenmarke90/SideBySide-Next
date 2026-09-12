@@ -1,9 +1,4 @@
-import {
-  type FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
@@ -246,7 +241,11 @@ export function WishProductPage({
       ) : null}
       <PageHeader
         before={
-          <Link ref={backLinkRef} className="back-link" to={appRoutePath('plan')}>
+          <Link
+            ref={backLinkRef}
+            className="back-link"
+            to={appRoutePath('plan')}
+          >
             {t('m5s3.common.back')}
           </Link>
         }
