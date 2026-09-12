@@ -48,7 +48,7 @@ class RequireSelfHostedSecretsTest(unittest.TestCase):
             require_self_hosted_secrets(self.env_file)
 
     def test_accepts_credentials_from_the_env_file(self) -> None:
-        self._write_env("POSTGRES_USER=sidebyside\nPOSTGRES_PASSWORD=a-real-secret\n")
+        self._write_env("POSTGRES_USER=sidebyside\nPOSTGRES_PASSWORD=a-real-secret # local\n")
         with mock.patch.dict(os.environ, {}, clear=True):
             require_self_hosted_secrets(self.env_file)
 
@@ -78,12 +78,26 @@ class RejectProductionEnvironmentTest(unittest.TestCase):
         self.env_file.write_text(f"SBS_ENVIRONMENT={environment}\n", encoding="utf-8")
 
     def test_accepts_development_only(self) -> None:
-        self._write_env("development")
+        self._write_env("development # local verification")
         with mock.patch.dict(os.environ, {}, clear=True):
             reject_production_environment(self.env_file)
 
     def test_rejects_production_dotenv(self) -> None:
         self._write_env("production")
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            CheckoutError, "verified source builds are not allowed"
+        ):
+            reject_production_environment(self.env_file)
+
+    def test_rejects_production_with_inline_comment(self) -> None:
+        self._write_env("production # deployed")
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            CheckoutError, "verified source builds are not allowed"
+        ):
+            reject_production_environment(self.env_file)
+
+    def test_rejects_quoted_production_with_trailing_comment(self) -> None:
+        self._write_env('"production" # deployed')
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
             CheckoutError, "verified source builds are not allowed"
         ):
@@ -97,9 +111,16 @@ class RejectProductionEnvironmentTest(unittest.TestCase):
             reject_production_environment(self.env_file)
 
     def test_development_process_override_cannot_mask_production_dotenv(self) -> None:
-        self._write_env("production")
+        self._write_env("production # deployed")
         with mock.patch.dict(os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True), self.assertRaisesRegex(
             CheckoutError, "verified source builds are not allowed"
+        ):
+            reject_production_environment(self.env_file)
+
+    def test_rejects_ambiguous_interpolated_environment(self) -> None:
+        self._write_env("${DEPLOYMENT_MODE:-production}")
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            CheckoutError, "explicit development, demo, or test"
         ):
             reject_production_environment(self.env_file)
 
