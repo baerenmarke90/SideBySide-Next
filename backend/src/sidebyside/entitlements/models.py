@@ -63,6 +63,7 @@ class Capability(StrEnum):
     SURPRISE_MODE_VAULT = "surprise_mode.vault"
     THEME_BESPOKE_PACKS = "theme.bespoke_packs"
     INTEGRATION_EXTERNAL_SYNC = "integration.external_sync"
+    GAMES_COUPLE = "games.couple"
 
 
 class EntitlementGrant(IdMixin, TimestampMixin, Base):
