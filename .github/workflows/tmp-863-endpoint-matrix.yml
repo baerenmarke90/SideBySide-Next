@@ -1,0 +1,41 @@
+name: Temporary #863 Endpoint Matrix Sync
+
+on:
+  push:
+    branches:
+      - feat/863-moments-candidates
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: ${{ !contains(github.event.head_commit.message, '[matrix-sync]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/863-moments-candidates
+          fetch-depth: 0
+      - name: Register Games route in endpoint matrix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text()
+          needle = '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/entitlements"),\n    Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),'''
+          replacement = '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/entitlements"),\n    Endpoint("GET", "/api/v1/spaces/{spaceId}/games/moments/candidates"),\n    Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),'''
+          if needle not in text:
+              raise SystemExit('Expected endpoint-matrix insertion point not found')
+          updated = text.replace(needle, replacement, 1)
+          path.write_text(updated)
+          PY
+      - name: Commit endpoint matrix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/tests/integration/test_endpoint_matrix.py
+          git commit -m "test(api): cover Games candidates in tenant matrix [matrix-sync]"
+          git push origin HEAD:feat/863-moments-candidates
