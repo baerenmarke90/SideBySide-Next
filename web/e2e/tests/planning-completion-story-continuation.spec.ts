@@ -1,0 +1,325 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import de from '../../src/i18n/locales/de';
+import m5s3 from '../../src/i18n/locales/m5s3';
+
+const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
+const SPACE_ID = '22222222-2222-4222-8222-222222222222';
+const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
+const PLAN_ID = '44444444-4444-4444-8444-444444444444';
+const TEST_NOW = '2026-09-12T07:00:00Z';
+const EXPERIENCED_ON = '2026-09-11';
+
+async function installMocks(page: Page): Promise<void> {
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const pathname = new URL(request.url()).pathname;
+    const fulfillJson = async (body: unknown, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+
+    if (method === 'GET' && pathname === '/api/v1/instance/status') {
+      await fulfillJson({
+        maintenanceMode: false,
+        registrationAvailable: true,
+        registrationUnavailableReason: null,
+        auth: {
+          localPassword: true,
+          passkey: true,
+          magicLink: true,
+          oidc: false,
+        },
+      });
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/v1/auth/sign-in') {
+      await fulfillJson({
+        account: { displayName: 'Anna', id: ACCOUNT_ID },
+        tokens: {
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          accessToken: 'planning-completion-access-token',
+          refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+          refreshToken: 'planning-completion-refresh-token',
+        },
+      });
+      return;
+    }
+
+    if (method === 'POST' && pathname === '/api/v1/auth/refresh') {
+      await fulfillJson({
+        accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        accessToken: 'planning-completion-access-token-refreshed',
+        refreshExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        refreshToken: 'planning-completion-refresh-token-refreshed',
+      });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/me') {
+      await fulfillJson({ displayName: 'Anna', id: ACCOUNT_ID });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
+      await fulfillJson({ serverAdmin: false });
+      return;
+    }
+
+    if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
+      await fulfillJson([
+        { role: 'MEMBER', spaceId: SPACE_ID, status: 'ACTIVE' },
+      ]);
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+      await fulfillJson({ id: SPACE_ID, createdAt: TEST_NOW, partners: [] });
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/profile`) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        version: 1,
+        relationshipStartedOn: null,
+        showRelationshipDuration: false,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profile-preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
+    ) {
+      await fulfillJson({
+        recentShared: [],
+        relationshipDuration: null,
+        retrospective: null,
+        space: { partner: null, spaceId: SPACE_ID },
+        upcoming: [],
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${ACCOUNT_ID}`
+    ) {
+      await fulfillJson({
+        accountId: ACCOUNT_ID,
+        createdAt: TEST_NOW,
+        displayName: 'Anna',
+        id: PROFILE_ID,
+        preferences: [],
+        profileAttachmentId: null,
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+    ) {
+      await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/plans/${PLAN_ID}`
+    ) {
+      await fulfillJson({
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: { id: ACCOUNT_ID, displayName: 'Anna' },
+        description: 'Die Decke nicht vergessen.',
+        experiencedOn: EXPERIENCED_ON,
+        id: PLAN_ID,
+        placeId: null,
+        plannedEnd: null,
+        plannedStart: null,
+        sourceWishId: null,
+        spaceId: SPACE_ID,
+        status: 'COMPLETED',
+        title: 'Picknick im Park',
+        updatedAt: TEST_NOW,
+        version: 4,
+      });
+      return;
+    }
+
+    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/places`) {
+      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      return;
+    }
+
+    await fulfillJson(
+      {
+        code: 'E2E_UNEXPECTED_REQUEST',
+        detail: `Planning completion test does not define ${method} ${pathname}.`,
+        status: 500,
+        title: 'Unexpected browser test request',
+      },
+      500,
+    );
+  });
+}
+
+async function signIn(page: Page): Promise<void> {
+  await page.goto('/today');
+  await page.getByLabel(de.login.email).fill('anna@example.org');
+  await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
+  await page.getByRole('button', { name: de.login.submit }).click();
+  await expect(page.getByLabel(de.login.email)).toHaveCount(0);
+}
+
+async function assertNoHorizontalOverflow(page: Page): Promise<void> {
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+}
+
+async function assertNoWcagViolations(page: Page): Promise<void> {
+  const result = await new AxeBuilder({ page })
+    .withTags([
+      'wcag2a',
+      'wcag2aa',
+      'wcag21a',
+      'wcag21aa',
+      'wcag22a',
+      'wcag22aa',
+    ])
+    .analyze();
+  const summary = result.violations
+    .map(
+      (violation) =>
+        `${violation.id} (${violation.impact ?? 'unknown'}): ${violation.nodes.length} node(s)`,
+    )
+    .join('\n');
+  expect(result.violations, summary || 'No axe violations').toEqual([]);
+}
+
+type VisualScenario = {
+  name: string;
+  viewport: { width: number; height: number };
+  theme: 'light' | 'dark';
+};
+
+const visualScenarios: VisualScenario[] = [
+  { name: '390-light', viewport: { width: 390, height: 844 }, theme: 'light' },
+  { name: '390-dark', viewport: { width: 390, height: 844 }, theme: 'dark' },
+  { name: '320-reflow', viewport: { width: 320, height: 720 }, theme: 'light' },
+  {
+    name: 'expanded-light',
+    viewport: { width: 1280, height: 900 },
+    theme: 'light',
+  },
+];
+
+async function prepareScenario(
+  page: Page,
+  scenario: VisualScenario,
+): Promise<void> {
+  await page.setViewportSize(scenario.viewport);
+  await page.addInitScript((theme) => {
+    window.localStorage.setItem('sidebyside.theme', theme);
+  }, scenario.theme);
+  await installMocks(page);
+  await signIn(page);
+  await page.goto(`/plan/plans/${PLAN_ID}`);
+
+  await expect(
+    page.getByRole('heading', { name: m5s3.plan.completedTitle }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.memoryAction }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.milestoneAction }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.chapterAction }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.later }),
+  ).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-theme',
+    scenario.theme,
+  );
+  await assertNoHorizontalOverflow(page);
+}
+
+async function captureEvidence(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  await page.screenshot({
+    path: testInfo.outputPath(`planning-893-completion-${name}.png`),
+    fullPage: true,
+  });
+}
+
+for (const scenario of visualScenarios) {
+  test(`completed Plan continuation: ${scenario.name}`, async ({ page }, testInfo) => {
+    await prepareScenario(page, scenario);
+    if (scenario.name === '390-light') await assertNoWcagViolations(page);
+    await captureEvidence(page, testInfo, scenario.name);
+  });
+}
+
+test('completed Plan continuation preserves Memory capture semantics and Chapter disclosure', async ({
+  page,
+}) => {
+  await prepareScenario(page, visualScenarios[0]);
+
+  await page
+    .getByRole('button', { name: m5s3.planStory.memoryAction })
+    .click();
+  const title = page.getByLabel(m5s3.common.title);
+  const date = page.getByLabel(m5s3.plan.experiencedOn);
+  const note = page.getByLabel(m5s3.planStory.noteLabel);
+  await expect(title).toHaveValue('Picknick im Park');
+  await expect(title).not.toHaveAttribute('required');
+  await expect(date).toHaveValue(EXPERIENCED_ON);
+  await expect(note).toHaveValue('Die Decke nicht vergessen.');
+
+  await page.getByRole('button', { name: de.common.cancel }).click();
+  await page
+    .getByRole('button', { name: m5s3.planStory.chapterAction })
+    .click();
+  await expect(page.getByText(m5s3.planStory.chapterNeedsStory)).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.chapterViaMemory }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: m5s3.planStory.chapterViaMilestone }),
+  ).toBeVisible();
+});
