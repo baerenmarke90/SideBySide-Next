@@ -181,7 +181,7 @@ async function installMocks(page: Page): Promise<void> {
       method === 'POST' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/wishes/${WISH_ID}/complete`
     ) {
-      if (request.headers()['if-match'] !== '"1"') {
+      if (request.headers()['if-match'] !== '1') {
         await fulfillJson(
           {
             code: 'RESOURCE_VERSION_CONFLICT',
