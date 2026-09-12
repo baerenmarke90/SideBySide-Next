@@ -88,7 +88,7 @@ jobs:
           printf '%s\n' 'COMPOSE_PROJECT_NAME=sidebyside-verified-ci' >> .env
 
           docker compose --profile self-hosted --env-file .env config --quiet
-          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+          docker compose --profile self-hosted \
             --env-file deploy/self-hosted-release.env.example config --quiet
           docker compose --profile cloud --env-file deploy/cloud-managed.env.example config --quiet
           docker compose --profile dev-db config --quiet
@@ -96,7 +96,7 @@ jobs:
       - name: Released Self-Hosted is image-only (#827)
         run: |
           set -euo pipefail
-          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+          docker compose --profile self-hosted \
             --env-file deploy/self-hosted-release.env.example config --format json \
             > /tmp/compose-self-hosted-release.json
 
@@ -106,6 +106,8 @@ jobs:
             (.services.worker.image == .services.api.image) and
             (.services.migrate.image == .services.api.image) and
             (.services.web.image == "ghcr.io/baerenmarke90/eimir-web:v0.1.0") and
+            (.services.api.pull_policy == "always") and
+            (.services.web.pull_policy == "always") and
             (.services.api | has("build") | not) and
             (.services.worker | has("build") | not) and
             (.services.migrate | has("build") | not) and
@@ -116,7 +118,7 @@ jobs:
 
           SBS_SELF_HOSTED_BACKEND_IMAGE='ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
           SBS_SELF_HOSTED_WEB_IMAGE='ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
-          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+          docker compose --profile self-hosted \
             --env-file deploy/self-hosted-release.env.example config --format json \
             > /tmp/compose-self-hosted-digest.json
           jq -e '
@@ -130,6 +132,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile \
+            scripts/build_self_hosted_source.py \
             scripts/deployment_smoke.py \
             scripts/check_environment_isolation.py \
             scripts/check_runtime_environment.py \
@@ -177,18 +180,24 @@ jobs:
         run: |
           set -euo pipefail
           revision=$(python3 scripts/compose_checked.py --print-revision)
+          short_revision=${revision:0:12}
           test "$revision" = "$(git rev-parse HEAD)"
 
           python3 scripts/compose_checked.py \
             --expected-revision "$revision" \
             config --format json > /tmp/compose-verified.json
 
-          jq -e --arg revision "$revision" '
+          jq -e --arg backend "sidebyside-backend:verified-${short_revision}" \
+                --arg web "sidebyside-web:verified-${short_revision}" '
             (.services | has("demo-init") | not) and
-            (.services.api.build.args.SBS_BUILD_REVISION == $revision) and
-            (.services.worker.build.args.SBS_BUILD_REVISION == $revision) and
-            (.services.migrate.build.args.SBS_BUILD_REVISION == $revision) and
-            (.services.web.build.args.SBS_BUILD_REVISION == $revision)
+            (.services.api.image == $backend) and
+            (.services.worker.image == $backend) and
+            (.services.migrate.image == $backend) and
+            (.services.web.image == $web) and
+            (.services.api.pull_policy == "never") and
+            (.services.web.pull_policy == "never") and
+            (.services.api | has("build") | not) and
+            (.services.web | has("build") | not)
           ' /tmp/compose-verified.json
 
           cp compose.yaml /tmp/compose-verified-source.yaml
@@ -225,7 +234,7 @@ jobs:
             exit 1
           fi
 
-      - name: Arcane remote source uses explicit source-build override
+      - name: Arcane remote source build uses local image boundary
         run: |
           set -euo pipefail
           cp .env .env-arcane
@@ -233,23 +242,20 @@ jobs:
           SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
           SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
           SBS_BUILD_REVISION=main
+          SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-arcane
+          SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-arcane
+          SBS_SELF_HOSTED_PULL_POLICY=never
           EOF
 
-          docker compose --profile self-hosted --env-file .env-arcane config --format json \
-            > /tmp/compose-arcane.json
-
+          python3 scripts/build_self_hosted_source.py --env-file .env-arcane --print-plan \
+            > /tmp/source-build-plan.json
           jq -e '
-            (.services | has("demo-init") | not) and
-            (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
-            (.services.api.build.context == .services.migrate.build.context) and
-            (.services.worker.build.context == .services.migrate.build.context) and
-            (.services.api.build.args.SBS_BUILD_REVISION == "main") and
-            (.services.worker.build.args.SBS_BUILD_REVISION == "main") and
-            (.services.migrate.build.args.SBS_BUILD_REVISION == "main") and
-            (.services.web.build.args.SBS_BUILD_REVISION == "main") and
-            (.services.web.build.context | endswith(":web")) and
-            (.services.migrate.build.context | endswith(":backend"))
-          ' /tmp/compose-arcane.json
+            (.revision == "main") and
+            (.backendContext | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#main:backend")) and
+            (.webContext | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#main:web")) and
+            (.backendImage == "sidebyside-backend:source-arcane") and
+            (.webImage == "sidebyside-web:source-arcane")
+          ' /tmp/source-build-plan.json
 
       - name: Bind address is safe and explicitly configurable
         run: |
@@ -269,6 +275,9 @@ jobs:
             .services.web.ports[0].host_ip == "127.0.0.2"
           ' /tmp/compose-bind.json
 
+      - name: Build local source images for integration checks
+        run: python3 scripts/build_self_hosted_source.py --env-file .env
+
       - name: Occupied API port fails clearly
         run: |
           cp .env .env-conflict
@@ -280,7 +289,7 @@ jobs:
           sleep 1
 
           set +e
-          output=$(timeout 300 docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict up -d --build api 2>&1)
+          output=$(timeout 300 docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict up -d api 2>&1)
           status=$?
           set -e
 
@@ -306,7 +315,7 @@ jobs:
           trap - EXIT
 
       - name: Start source-built Self-Hosted test stack
-        run: docker compose --profile self-hosted --env-file .env up -d --build --wait --wait-timeout 300
+        run: docker compose --profile self-hosted --env-file .env up -d --wait --wait-timeout 300
 
       - name: Shared Compose network is active
         run: |
@@ -340,7 +349,6 @@ jobs:
         run: |
           docker compose --profile self-hosted --env-file .env exec -T api python - <<'PY'
           import socket
-
           address = socket.gethostbyname("postgres")
           if not address:
               raise SystemExit("postgres was not resolved through Docker DNS")
