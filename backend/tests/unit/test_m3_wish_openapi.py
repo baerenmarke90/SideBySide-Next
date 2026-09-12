@@ -64,18 +64,13 @@ def test_mutations_require_if_match() -> None:
         parameters = paths[path][method].get("parameters", [])
         names = {parameter["name"] for parameter in parameters}
         assert "If-Match" in names
-        required = next(
-            parameter for parameter in parameters if parameter["name"] == "If-Match"
-        )
+        required = next(parameter for parameter in parameters if parameter["name"] == "If-Match")
         assert required["required"] is True
 
 
 def test_create_does_not_require_if_match() -> None:
     """A Wish that does not exist yet has no version to compare."""
-    names = {
-        parameter["name"]
-        for parameter in _paths()[COLLECTION]["post"].get("parameters", [])
-    }
+    names = {parameter["name"] for parameter in _paths()[COLLECTION]["post"].get("parameters", [])}
     assert "If-Match" not in names
 
 
