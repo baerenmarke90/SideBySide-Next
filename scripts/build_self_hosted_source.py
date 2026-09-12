@@ -20,26 +20,61 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_TAG_COMPONENT_RE = re.compile(r"^[a-z0-9_][a-z0-9_.-]{0,127}$")
+SOURCE_ENVIRONMENTS = frozenset({"development", "demo", "test"})
 
 
 class SourceBuildError(RuntimeError):
     """The requested source image build is unsafe or invalid."""
 
 
+def compose_dotenv_value(raw: str) -> str:
+    """Parse the Compose dotenv comment/quoting subset used by operator files."""
+
+    value = raw.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        escaped = False
+        for index in range(1, len(value)):
+            char = value[index]
+            if quote == '"' and char == "\\" and not escaped:
+                escaped = True
+                continue
+            if char == quote and not escaped:
+                trailing = value[index + 1 :].strip()
+                if trailing and not trailing.startswith("#"):
+                    raise SourceBuildError("dotenv quoted value has unsupported trailing content")
+                return value[1:index]
+            escaped = False
+        raise SourceBuildError("dotenv quoted value is not terminated")
+
+    match = re.search(r"\s+#", value)
+    if match is not None:
+        value = value[: match.start()].rstrip()
+    return value
+
+
 def read_dotenv(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     if not path.is_file():
         return values
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise SourceBuildError("source-build env file could not be read") from exc
+    for lineno, raw in enumerate(lines, start=1):
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        values[key] = value
+        if not key:
+            raise SourceBuildError(f"invalid dotenv assignment on line {lineno}")
+        try:
+            values[key] = compose_dotenv_value(value)
+        except SourceBuildError as exc:
+            raise SourceBuildError(f"invalid dotenv value for {key} on line {lineno}") from exc
     return values
 
 
@@ -50,27 +85,28 @@ def effective(values: dict[str, str], key: str, default: str = "") -> str:
 
 
 def reject_production_source_build(values: dict[str, str]) -> None:
-    """Reject Production declared by either dotenv or process environment.
+    """Accept only explicit non-Production source-build modes from both sources."""
 
-    A one-command process override must not be able to mask a Production dotenv
-    while local source images are built for a later Compose invocation.
-    """
+    dotenv_environment = values.get("SBS_ENVIRONMENT", "development").strip().lower()
+    process_raw = os.environ.get("SBS_ENVIRONMENT")
+    process_environment = process_raw.strip().lower() if process_raw is not None else None
 
-    dotenv_environment = values.get("SBS_ENVIRONMENT", "").strip().lower()
-    process_environment = os.environ.get("SBS_ENVIRONMENT", "").strip().lower()
     if dotenv_environment == "production" or process_environment == "production":
         raise SourceBuildError(
             "source builds are not allowed when SBS_ENVIRONMENT=production is declared"
         )
+    if dotenv_environment not in SOURCE_ENVIRONMENTS:
+        raise SourceBuildError(
+            "source-build env file must declare an explicit development, demo, or test environment"
+        )
+    if process_environment is not None and process_environment not in SOURCE_ENVIRONMENTS:
+        raise SourceBuildError(
+            "process SBS_ENVIRONMENT must be development, demo, or test for source builds"
+        )
 
 
 def require_local_tag(reference: str, label: str, repository: str) -> str:
-    """Accept only an unqualified SideBySide-local repository and explicit tag.
-
-    This is intentionally an allowlist rather than a blacklist for registry URLs.
-    Source-build output must never target a registry/digest identity or a different
-    repository name; publication is owned exclusively by the protected release job.
-    """
+    """Accept only an unqualified SideBySide-local repository and explicit tag."""
 
     prefix = f"{repository}:"
     if not reference.startswith(prefix):
@@ -82,13 +118,7 @@ def require_local_tag(reference: str, label: str, repository: str) -> str:
 
 
 def require_safe_source_context(context: str, label: str) -> str:
-    """Reject URL credentials/query data before plans can reach logs or Docker.
-
-    Remote Git authentication belongs to BuildKit/Arcane credential mechanisms,
-    never inside a source URL. Query-bearing URLs are rejected as well because a
-    diagnostic ``--print-plan`` would otherwise echo arbitrary query values.
-    Existing supported examples use fragments (``#ref:subdir``), which remain safe.
-    """
+    """Reject URL credentials/query data before plans can reach logs or Docker."""
 
     if "://" not in context:
         return context
