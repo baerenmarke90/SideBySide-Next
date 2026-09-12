@@ -1,0 +1,89 @@
+name: Temporary 863 lint cleanup
+
+on:
+  push:
+    branches:
+      - feat/863-slice-b-sofa-mode
+    paths:
+      - .github/workflows/tmp-863-lint-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/863-slice-b-sofa-mode
+      - name: Apply focused lint fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'pattern missing in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              'web/src/client/ourMomentsSession.ts',
+              "    if (!selectedCard || selectedCard.state !== 'hidden') return;",
+              "    if (selectedCard?.state !== 'hidden') return;",
+          )
+
+          replace_once(
+              'web/src/components/OurMomentsGamePage.tsx',
+              '''        <p\n          className="our-moments-score"\n          aria-label={t('games.momentsGame.scoreAria')}\n        >''',
+              '''        <div\n          className="our-moments-score"\n          role="group"\n          aria-label={t('games.momentsGame.scoreAria')}\n        >''',
+          )
+          replace_once(
+              'web/src/components/OurMomentsGamePage.tsx',
+              '''          </span>\n        </p>\n      </section>''',
+              '''          </span>\n        </div>\n      </section>''',
+          )
+
+          css = Path('web/src/components/OurMomentsGamePage.css')
+          text = css.read_text()
+          score = '''.our-moments-score strong {\n  color: var(--color-text);\n}\n\n'''
+          if score not in text:
+              raise SystemExit('score selector block missing')
+          text = text.replace(score, '', 1)
+          anchor = '''.our-moments-turn > div > span {\n  color: var(--color-text-secondary);\n  font-size: 0.85rem;\n}\n\n'''
+          if anchor not in text:
+              raise SystemExit('turn span block missing')
+          text = text.replace(anchor, score + anchor, 1)
+
+          context_strong = '''.our-moments-card-context strong {\n  color: var(--color-text);\n  font-family: var(--font-display);\n  font-size: clamp(1rem, 4vw, 1.25rem);\n  line-height: 1.15;\n}\n\n'''
+          context_span = '''.our-moments-card-context span {\n  color: var(--color-text-secondary);\n  font-size: 0.85rem;\n}\n\n'''
+          for block in (context_strong, context_span):
+              if block not in text:
+                  raise SystemExit('context selector block missing')
+              text = text.replace(block, '', 1)
+          marker = '''.our-moments-turn > div > span {\n'''
+          if marker not in text:
+              raise SystemExit('CSS insertion marker missing')
+          text = text.replace(marker, context_strong + context_span + marker, 1)
+          css.write_text(text)
+          PY
+      - name: Install locked dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format touched files
+        working-directory: web
+        run: >-
+          npx biome format --write
+          src/client/ourMomentsSession.ts
+          src/components/OurMomentsGamePage.tsx
+          src/components/OurMomentsGamePage.css
+          src/components/OurMomentsGamePage.test.tsx
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web
+          git commit -m "fix(web): satisfy Our Moments lint contracts (#863)"
+          git push origin HEAD:feat/863-slice-b-sofa-mode
