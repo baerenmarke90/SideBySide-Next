@@ -681,7 +681,9 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     const cancelBox = await cancelButton.boundingBox();
     const shellBox = await zoomShell.boundingBox();
     if (cancelBox && shellBox) {
-      expect(cancelBox.y + cancelBox.height).toBeLessThanOrEqual(shellBox.y + 1);
+      expect(cancelBox.y + cancelBox.height).toBeLessThanOrEqual(
+        shellBox.y + 1,
+      );
     }
 
     await page.goto('/today');
@@ -701,7 +703,9 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     await expect(zoomDialog).toHaveCount(0);
   });
 
-  test('captures required visual evidence matrix', async ({ page }, testInfo) => {
+  test('captures required visual evidence matrix', async ({
+    page,
+  }, testInfo) => {
     test.setTimeout(90_000);
     await installApiMocks(page);
 
