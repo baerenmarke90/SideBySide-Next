@@ -24,26 +24,23 @@ jobs:
 
           path = Path('backend/tests/integration/test_endpoint_matrix.py')
           text = path.read_text()
-          needle = '''    Endpoint(
-              "POST",
-              "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",
-              body={},
-              if_match=True,
-              resource_absence="WISH_NOT_FOUND",
-          ),
-          '''
-          addition = '''    Endpoint(
-              "POST",
-              "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete",
-              if_match=True,
-              resource_absence="WISH_NOT_FOUND",
-          ),
-          '''
-          if addition in text:
+          plan_path = '        "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",\n'
+          addition = (
+              '    Endpoint(\n'
+              '        "POST",\n'
+              '        "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete",\n'
+              '        if_match=True,\n'
+              '        resource_absence="WISH_NOT_FOUND",\n'
+              '    ),\n'
+          )
+          complete_path = '        "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete",\n'
+          if complete_path in text:
               raise SystemExit('Endpoint already present; refusing duplicate insertion.')
-          if needle not in text:
+          marker = text.index(plan_path)
+          insertion = text.rfind('    Endpoint(\n', 0, marker)
+          if insertion < 0:
               raise SystemExit('Expected Wish-to-Plan matrix entry not found.')
-          path.write_text(text.replace(needle, addition + needle, 1))
+          path.write_text(text[:insertion] + addition + text[insertion:])
           PY
           git diff --check
           git diff -- backend/tests/integration/test_endpoint_matrix.py
