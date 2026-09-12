@@ -3,7 +3,9 @@
 
 The gate creates a disposable Compose project with synthetic-only credentials
 and data. It never accepts an operator project name, environment file, or data
-path, so its volume cleanup cannot target a real deployment.
+path, so its volume cleanup cannot target a real deployment. CI deliberately
+adds the explicit source-build override; released Self-Hosted uses image-only
+``compose.yaml`` instead.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE_FILE = ROOT / "compose.yaml"
+SOURCE_BUILD_COMPOSE_FILE = ROOT / "deploy" / "compose.source-build.yaml"
 RECOVERY_SCRIPT = ROOT / "scripts" / "self_hosted_recovery.py"
 DEPLOYMENT_SMOKE_SCRIPT = ROOT / "scripts" / "deployment_smoke.py"
 FIXTURE_SCRIPT = ROOT / "backend" / "scripts" / "recovery_fixture.py"
@@ -133,6 +136,8 @@ class Scenario:
             str(self.env_file),
             "-f",
             str(COMPOSE_FILE),
+            "-f",
+            str(SOURCE_BUILD_COMPOSE_FILE),
             *arguments,
         ]
 
