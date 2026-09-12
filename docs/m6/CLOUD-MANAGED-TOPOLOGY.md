@@ -326,9 +326,10 @@ the `self-hosted` profile only where this topology requires it:
   `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the
   S3-compatible backend instead (§3.3);
 - no `demo-init` service (§5);
-- `cloud-api`/`cloud-worker`/`cloud-web`/`cloud-migrate` use `image:` references to
-  the exact `#519` released image archives instead of `build:` — Cloud/Managed
-  never builds from source at deploy time;
+- `cloud-api`/`cloud-worker`/`cloud-web`/`cloud-migrate` use `image:` references
+  derived from the exact `#519` released image archives instead of `build:`;
+  Production references are digest-qualified and Cloud/Managed never builds from
+  source at deploy time;
 - explicit named volumes for the deletion-journal path (§3.5) and, when `local`
   MediaStore is selected, the media directory (§3.3), documented as requiring a
   shared/network-backed implementation whenever more than one API/worker replica
@@ -339,24 +340,69 @@ the environment-specific contract. The operator's actual managed-platform
 deployment descriptor (whichever container platform is selected) is derived from
 this canonical Compose profile; there is no hand-maintained alternate manifest.
 
-### 4.1 Image provenance
+### 4.1 Image provenance and deployment identity
 
 Per `docs/m6/IMMUTABLE-RELEASES.md`, `#519` publishes `backend-runtime.image.tar`
 and `web-runtime.image.tar` (`docker save` archives) attached to an immutable
 GitHub Release, not a registry push. For Cloud/Managed:
 
-1. the operator downloads the exact release's image archives and manifest;
+1. the operator downloads the exact release's image archives and the exact
+   `sidebyside-release-manifest.json` asset;
 2. verifies the manifest/attestation/SBOM per `#519`/`#193`;
-3. `docker load`s the archives and pushes them, unmodified, to the registry the
-   managed platform pulls from, tagged with the immutable release tag
-   (`v<product-version>`) — never `latest`;
-4. set `SBS_BACKEND_IMAGE` and `SBS_WEB_IMAGE` in the Cloud environment to those
-   exact pushed references before rendering/using the `cloud` profile.
+3. `docker load`s the archives and pushes those loaded images, without rebuild,
+   to the registry the managed platform pulls from. A `v<product-version>` tag may
+   be added as a human locator, but it is not trusted as immutable identity;
+4. resolve the registry-reported digest for each promoted image and set
+   `SBS_BACKEND_IMAGE` and `SBS_WEB_IMAGE` to digest-qualified references such as
+   `registry.example/sidebyside-backend@sha256:<digest>` and
+   `registry.example/sidebyside-web@sha256:<digest>`;
+5. render the canonical Cloud profile and run the existing #519 manifest tool's
+   `cloud-deployment` binding before rollout. The binding validates the **resolved**
+   Compose image values, requires `cloud-api`, `cloud-worker` and `cloud-migrate`
+   to resolve to the exact same backend reference, requires the Web digest
+   reference, rejects every `build:` fallback, and emits only the selected image
+   identity plus the #519 release/artifact binding;
+6. for a non-initial release, provide the previous Cloud deployment identity that
+   matches the #519 manifest's `previousKnownGood` release. That keeps rollback
+   selection on exact backend/Web registry digests instead of reconstructing it
+   later from a mutable tag.
+
+A representative preflight is:
+
+```bash
+docker compose --profile cloud --env-file <production-env> config --format json \
+  > /tmp/sidebyside-cloud-compose.json
+
+python3 scripts/release_manifest.py cloud-deployment \
+  --manifest sidebyside-release-manifest.json \
+  --compose-config /tmp/sidebyside-cloud-compose.json \
+  --output cloud-deployment-identity.json
+
+rm -f /tmp/sidebyside-cloud-compose.json
+```
+
+The full resolved Compose JSON is transient because it can contain environment
+configuration/secrets; it is **not** deployment evidence and must not be archived.
+`cloud-deployment-identity.json` intentionally contains only non-secret release,
+artifact and image identity. For a non-initial release, add
+`--previous-deployment-identity <previous-cloud-deployment-identity.json>`.
 
 No image is rebuilt from source for Cloud/Managed promotion; this is the "build
 once, publish immutable artifacts" decision `#519` already made, applied at the
-deployment boundary. A floating tag (`latest`, `main`, or an unpinned branch
-reference) is never an acceptable Production image reference (§7).
+deployment boundary. A Docker/OCI tag is never immutable by definition: `latest`,
+`main`, branch names, `v1.0.0`, `1.2.3`, and arbitrary custom tags are all rejected
+when they are the entire Production image identity. A tag may coexist with an
+`@sha256:<digest>` suffix, because the digest — not the tag — is what pins the
+artifact.
+
+The #519 chain remains the product release source of truth:
+
+`product version -> Git tag -> immutable source SHA -> release manifest -> artifact digests`
+
+The registry digest is an additional transport/deployment identity for the exact
+promoted OCI object. It is not a second product release identity and is not expected
+to equal the SHA-256 of the `docker save` archive byte-for-byte; those digests identify
+different representations and are recorded side by side.
 
 ## 5. Demo exclusion
 
@@ -392,8 +438,10 @@ topology:
    secret-management process; secrets are never recovered from application
    backups.
 5. **Application release identity** — `#519`'s previous-known-good release
-   selection; redeploying an old image never implies a database rollback (same
-   rule as `OPERATIONS-RECOVERY.md` §5).
+   selection plus the matching previous Cloud deployment identity. Rollback must
+   reuse the exact previously recorded backend/Web `@sha256:` references; it must
+   not resolve a SemVer or other tag again. Redeploying an old application never
+   implies a database rollback (same rule as `OPERATIONS-RECOVERY.md` §5).
 
 **Provider-managed backup is not recovery evidence until a real restore has been
 exercised against this exact topology.** `#524` is responsible for performing (or
@@ -410,15 +458,23 @@ explicitly rather than silently assumed away.
 
 ## 7. Contract tests
 
-`tools/ci/test_cloud_managed_topology.py` enforces the mechanical parts of this
-contract so they cannot silently regress:
+`tools/ci/test_cloud_managed_topology.py` and `tools/ci/test_release_manifest.py`
+enforce the mechanical parts of this contract so they cannot silently regress:
 
 - the canonical `cloud` profile resolves to exactly `cloud-api`, `cloud-worker`,
   `cloud-web`, and `cloud-migrate` and does not activate bundled PostgreSQL or
   `demo-init`;
 - all Cloud process services use `image:` rather than source `build:`;
 - missing image configuration resolves only to a deliberately non-runnable
-  sentinel, never `latest`, `main`, or a source-build fallback;
+  sentinel and fails the Production identity validator;
+- tag-only image references are rejected, including `:latest`, `:main`,
+  `:v1.0.0`, and arbitrary tags such as `:some-tag`;
+- `@sha256:<64-hex-digest>` references pass the image-identity contract;
+- `cloud-api`, `cloud-worker`, and `cloud-migrate` must resolve to exactly the
+  same backend image reference, while `cloud-web` carries the selected Web image;
+- the Cloud deployment identity is bound to the final signed #519 release
+  manifest, its backend/Web artifact digests, and the exact previous-known-good
+  deployment identity for non-initial releases;
 - `cloud-migrate` has no automatic restart policy;
 - the deletion-journal path is mounted from a dedicated named volume for both
   `local`-media and `s3`-media resolved configurations;
@@ -431,9 +487,8 @@ contract so they cannot silently regress:
   the Development template and rejects reused sensitive values.
 
 These are configuration-contract tests, not a new deployment platform or a second
-CI environment. They run inside the existing `Self-Hosted Deployment Guard`
-workflow and are gated by the same `deployment_guard` change-scope classification
-as the canonical Compose contract.
+CI environment. They run inside the existing deployment/release guards; the
+canonical single-Compose contract remains unchanged.
 
 ## 8. Security / privacy
 
@@ -443,6 +498,9 @@ as the canonical Compose contract.
   are never handed to the application process;
 - database and object storage are never publicly reachable (§3.2, §3.4);
 - secrets stay outside images/source/release manifests/SBOM (§3.6);
+- resolved Compose output used for the image-identity preflight is transient and
+  must not be retained as evidence because it can contain injected secrets; only
+  the scrubbed Cloud deployment identity output is retained;
 - the deletion journal remains protected, recovery-sensitive pseudonymous metadata
   even though it contains no relationship/private content (§3.5);
 - backup, log and metrics data receive the same sensitivity treatment as
