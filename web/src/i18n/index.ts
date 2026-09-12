@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import accountSettings from './locales/accountSettings';
 import de from './locales/de';
 import demo from './locales/demo';
+import games from './locales/games';
 import importantDates from './locales/importantDates';
 import m5s3 from './locales/m5s3';
 import m5s5 from './locales/m5s5';
@@ -40,6 +41,7 @@ if (!i18n.isInitialized) {
           accountSettings,
           navigation: { ...de.navigation, ...navigation },
           demo,
+          games,
           importantDates,
           m5s3,
           m5s5,
