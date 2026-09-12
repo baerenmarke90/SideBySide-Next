@@ -28,6 +28,7 @@ import { DestinationIcon } from './DestinationIcon';
 import { ListEntryIconButton } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { PlanScheduleFields } from './PlanScheduleFields';
+import { PlanStoryContinuation } from './PlanStoryContinuation';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -485,18 +486,12 @@ export function PlanProductPage({
         ) : null}
 
         {plan.status === 'COMPLETED' ? (
-          <section className="plan-completed-celebration sbs-motion-reveal">
-            <h2>{t('m5s3.plan.completedTitle')}</h2>
-            <p className="plan-completed-intro">
-              {t('m5s3.plan.completedBody')}
-            </p>
-            <Link
-              className="button-link primary"
-              to={`/story/memories/new?title=${encodeURIComponent(plan.title)}`}
-            >
-              {t('m5s3.plan.createMemoryFromPlan')}
-            </Link>
-          </section>
+          <PlanStoryContinuation
+            apis={apis}
+            spaceId={spaceId}
+            plan={plan}
+            focusOnMount={completeMutation.isSuccess}
+          />
         ) : null}
 
         {!isEditing && plan.description ? (
