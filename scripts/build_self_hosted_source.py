@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_TAG_COMPONENT_RE = re.compile(r"^[a-z0-9_][a-z0-9_.-]{0,127}$")
@@ -65,6 +66,28 @@ def require_local_tag(reference: str, label: str, repository: str) -> str:
     return reference
 
 
+def require_safe_source_context(context: str, label: str) -> str:
+    """Reject URL credentials/query data before plans can reach logs or Docker.
+
+    Remote Git authentication belongs to BuildKit/Arcane credential mechanisms,
+    never inside a source URL. Query-bearing URLs are rejected as well because a
+    diagnostic ``--print-plan`` would otherwise echo arbitrary query values.
+    Existing supported examples use fragments (``#ref:subdir``), which remain safe.
+    """
+
+    if "://" not in context:
+        return context
+    try:
+        parsed = urlsplit(context)
+    except ValueError as exc:
+        raise SourceBuildError(f"{label} is not a valid source URL") from exc
+    if parsed.username is not None or parsed.password is not None:
+        raise SourceBuildError(f"{label} must not contain URL credentials")
+    if parsed.query:
+        raise SourceBuildError(f"{label} must not contain URL query values")
+    return context
+
+
 def plan(
     env_file: Path,
     *,
@@ -84,11 +107,14 @@ def plan(
     resolved_revision = revision or effective(
         values, "SBS_BUILD_REVISION", "unverified-local-checkout"
     )
-    resolved_backend_context = backend_context or effective(
-        values, "SBS_BACKEND_BUILD_CONTEXT", str(ROOT / "backend")
+    resolved_backend_context = require_safe_source_context(
+        backend_context
+        or effective(values, "SBS_BACKEND_BUILD_CONTEXT", str(ROOT / "backend")),
+        "SBS_BACKEND_BUILD_CONTEXT",
     )
-    resolved_web_context = web_context or effective(
-        values, "SBS_WEB_BUILD_CONTEXT", str(ROOT / "web")
+    resolved_web_context = require_safe_source_context(
+        web_context or effective(values, "SBS_WEB_BUILD_CONTEXT", str(ROOT / "web")),
+        "SBS_WEB_BUILD_CONTEXT",
     )
     resolved_backend_image = require_local_tag(
         backend_image
