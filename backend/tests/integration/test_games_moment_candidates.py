@@ -233,10 +233,8 @@ def test_candidates_return_only_usable_shared_ready_photo_memories(
     }
     assert items[str(eligible.id)]["imageAttachmentId"] != str(later_image.id)
     assert items[str(fallback_date.id)]["imageAttachmentId"] == str(fallback_image.id)
-    assert (
-        items[str(fallback_date.id)]["effectiveDate"]
-        == fallback_date.created_at.date().isoformat()
-    )
+    expected_fallback_date = fallback_date.created_at.date().isoformat()
+    assert items[str(fallback_date.id)]["effectiveDate"] == expected_fallback_date
 
 
 def test_candidate_set_is_identical_for_both_partners_and_tenant_guarded(
