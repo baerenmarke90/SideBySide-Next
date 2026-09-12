@@ -1719,6 +1719,55 @@
         "title": "ExportStatus",
         "type": "string"
       },
+      "GameMemoryCandidate": {
+        "description": "Minimal authorized Memory context required by `Unsere Momente`.",
+        "properties": {
+          "effectiveDate": {
+            "format": "date",
+            "title": "Effectivedate",
+            "type": "string"
+          },
+          "imageAttachmentId": {
+            "format": "uuid",
+            "title": "Imageattachmentid",
+            "type": "string"
+          },
+          "memoryId": {
+            "format": "uuid",
+            "title": "Memoryid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "memoryId",
+          "title",
+          "effectiveDate",
+          "imageAttachmentId"
+        ],
+        "title": "GameMemoryCandidate",
+        "type": "object"
+      },
+      "GameMemoryCandidateSet": {
+        "description": "Bounded candidate pool without hidden/private-derived totals.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GameMemoryCandidate"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GameMemoryCandidateSet",
+        "type": "object"
+      },
       "GiftIdeaCreate": {
         "additionalProperties": false,
         "properties": {
@@ -14473,6 +14522,69 @@
         "summary": "Get Space Entitlements",
         "tags": [
           "entitlements"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/games/moments/candidates": {
+      "get": {
+        "description": "Return Premium-authorized shared photo Memories for the first #863 grammar.\n\nNormal authentication and Space membership are resolved before this route\nreceives `authorization`. Commercial entitlement is then enforced on the\nserver. The actual content query remains constrained by the existing\n`readable()` authorization predicate and existing attachment bindings.",
+        "operationId": "getGameMomentCandidates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameMemoryCandidateSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Game Moment Candidates",
+        "tags": [
+          "games"
         ]
       }
     },
