@@ -125,6 +125,36 @@ class SourceBuildPlanTest(unittest.TestCase):
                 ):
                     plan(env_file)
 
+    def test_authenticated_git_urls_are_rejected_before_plan_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_file = Path(temp_dir) / ".env"
+            env_file.write_text(
+                "SBS_ENVIRONMENT=development\n"
+                "SBS_BACKEND_BUILD_CONTEXT=https://user:token@example.invalid/project.git#main:backend\n"
+                "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web\n"
+                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
+                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(SourceBuildError, "must not contain URL credentials"):
+                    plan(env_file)
+
+    def test_query_bearing_git_urls_are_rejected_before_plan_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_file = Path(temp_dir) / ".env"
+            env_file.write_text(
+                "SBS_ENVIRONMENT=development\n"
+                "SBS_BACKEND_BUILD_CONTEXT=https://example.invalid/project.git?token=secret#main:backend\n"
+                "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web\n"
+                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
+                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(SourceBuildError, "must not contain URL query values"):
+                    plan(env_file)
+
 
 if __name__ == "__main__":
     unittest.main()
