@@ -371,6 +371,14 @@ export function PlanStoryContinuation({
     });
   }
 
+  function dismissContinuation() {
+    const focusTarget = headingRef.current
+      ?.closest('.planning-page')
+      ?.querySelector<HTMLAnchorElement>('.back-link');
+    focusTarget?.focus();
+    setDismissed(true);
+  }
+
   if (dismissed) return null;
 
   return (
@@ -406,7 +414,7 @@ export function PlanStoryContinuation({
             <button
               type="button"
               className="tertiary"
-              onClick={() => setDismissed(true)}
+              onClick={dismissContinuation}
             >
               {t('m5s3.planStory.later')}
             </button>
