@@ -163,6 +163,10 @@ def check_production_image_identity(
         return ["Production image identity requires rendered Compose services"]
 
     problems: list[str] = []
+    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
+    if not declared_version:
+        problems.append("Production env file must set non-empty SBS_RELEASE_VERSION")
+
     backend_images: list[str] = []
     versions: list[str] = []
     for service_name in SELF_HOSTED_BACKEND_SERVICES:
@@ -202,8 +206,6 @@ def check_production_image_identity(
         problems.append("Production api/worker/migrate must use one exact backend image identity")
     if len(set(versions)) > 1:
         problems.append("Production backend and Web images must use one product release version")
-
-    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
     if declared_version and any(version != declared_version for version in versions):
         problems.append("Production application images must match SBS_RELEASE_VERSION")
     return problems
@@ -308,22 +310,37 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="also compare rendered critical settings with existing Compose containers",
     )
+    parser.add_argument(
+        "--image-identity-only",
+        action="store_true",
+        help="verify only released Self-Hosted image identity; used before first-install bootstrap",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.image_identity_only and args.check_running:
+        print("runtime environment check failed: --image-identity-only cannot be combined with --check-running", file=sys.stderr)
+        return 2
+    if args.image_identity_only and args.profile != "self-hosted":
+        print("runtime environment check failed: --image-identity-only is Self-Hosted-only", file=sys.stderr)
+        return 2
+
     try:
         dotenv = parse_dotenv(args.env_file)
         selected_services = PROFILE_RUNTIME_SERVICES.get(args.profile)
         config = load_rendered_config(args)
         rendered = rendered_runtime_environments(config, service_names=selected_services)
-        problems = check_dotenv_to_rendered(dotenv, rendered)
-        if args.profile == "self-hosted":
-            problems.extend(check_production_image_identity(dotenv, config, rendered))
-        if args.check_running:
-            running = inspect_running_services(args, rendered)
-            problems.extend(check_rendered_to_running(rendered, running))
+        if args.image_identity_only:
+            problems = check_production_image_identity(dotenv, config, rendered)
+        else:
+            problems = check_dotenv_to_rendered(dotenv, rendered)
+            if args.profile == "self-hosted":
+                problems.extend(check_production_image_identity(dotenv, config, rendered))
+            if args.check_running:
+                running = inspect_running_services(args, rendered)
+                problems.extend(check_rendered_to_running(rendered, running))
     except RuntimeEnvironmentError as exc:
         print(f"runtime environment check failed: {exc}", file=sys.stderr)
         return 2
@@ -334,7 +351,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"- {problem}", file=sys.stderr)
         return 1
 
-    scope = "rendered and running" if args.check_running else "rendered"
+    scope = "image identity" if args.image_identity_only else (
+        "rendered and running" if args.check_running else "rendered"
+    )
     print(f"runtime environment check passed ({scope} configuration)")
     return 0
 
