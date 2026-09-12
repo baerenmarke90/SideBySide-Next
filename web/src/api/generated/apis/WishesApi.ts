@@ -44,6 +44,12 @@ import {
     WishUpdateToJSON,
 } from '../models/WishUpdate';
 
+export interface CompleteWishRequest {
+    wishId: string;
+    spaceId: string;
+    ifMatch: string;
+}
+
 export interface CreateWishRequest {
     spaceId: string;
     wishCreate: WishCreate;
@@ -78,6 +84,70 @@ export interface UpdateWishRequest {
  * 
  */
 export class WishesApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for completeWish without sending the request
+     */
+    async completeWishRequestOpts(requestParameters: CompleteWishRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['wishId'] == null) {
+            throw new runtime.RequiredError(
+                'wishId',
+                'Required parameter "wishId" was null or undefined when calling completeWish().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling completeWish().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling completeWish().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/wishes/{wishId}/complete`;
+        urlPath = urlPath.replace('{wishId}', encodeURIComponent(String(requestParameters['wishId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Complete Wish
+     */
+    async completeWishRaw(requestParameters: CompleteWishRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WishDetail>> {
+        const requestOptions = await this.completeWishRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WishDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Complete Wish
+     */
+    async completeWish(requestParameters: CompleteWishRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WishDetail> {
+        const response = await this.completeWishRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for createWish without sending the request
