@@ -1,6 +1,7 @@
 import {
   ACTIVITY_ROUTE,
   APP_ROUTES,
+  PRIMARY_APP_ROUTES,
   CHAPTER_CREATE_ROUTE,
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
@@ -39,7 +40,14 @@ import {
 } from './routes';
 
 describe('primary navigation', () => {
-  it('carries exactly five destinations in the documented order', () => {
+  it('keeps four primary destinations while preserving the stable Games route', () => {
+    expect(PRIMARY_APP_ROUTES.map((route) => route.id)).toEqual([
+      'today',
+      'story',
+      'plan',
+      'more',
+    ]);
+    expect(PRIMARY_APP_ROUTES).toHaveLength(4);
     expect(APP_ROUTES.map((route) => route.id)).toEqual([
       'today',
       'story',
@@ -47,7 +55,6 @@ describe('primary navigation', () => {
       'games',
       'more',
     ]);
-    expect(APP_ROUTES).toHaveLength(5);
     expect(DEFAULT_APP_ROUTE).toBe('/today');
   });
 
@@ -66,11 +73,13 @@ describe('primary navigation', () => {
     expect(withSubRoutes).toEqual(['today', 'story', 'plan', 'games', 'more']);
   });
 
-  it('uses the fifth primary slot for Games and keeps Discover out of the shell', () => {
-    const paths: readonly string[] = APP_ROUTES.map((route) => route.path);
-    expect(paths).toContain('/games');
-    expect(paths).not.toContain('/discover');
-    expect(paths).toHaveLength(5);
+  it('keeps Games out of the primary shell while preserving its canonical route', () => {
+    const primaryPaths: readonly string[] = PRIMARY_APP_ROUTES.map(
+      (route) => route.path,
+    );
+    expect(primaryPaths).not.toContain('/games');
+    expect(primaryPaths).not.toContain('/discover');
+    expect(appRoutePath('games')).toBe('/games');
   });
 
   it('keeps Search and Activity out of primary navigation', () => {
@@ -156,8 +165,8 @@ describe('content deep links', () => {
     expect(activeNavigationArea('/story')).toBe('story');
     expect(activeNavigationArea('/story/chapters')).toBe('story');
     expect(activeNavigationArea('/plan/chapters/c1')).toBe('story');
-    expect(activeNavigationArea('/games')).toBe('games');
-    expect(activeNavigationArea('/games/our-moments')).toBe('games');
+    expect(activeNavigationArea('/games')).toBe('more');
+    expect(activeNavigationArea('/games/our-moments')).toBe('more');
     expect(activeNavigationArea('/more')).toBe('more');
     expect(activeNavigationArea('/more/places')).toBe('more');
     expect(activeNavigationArea('/plan/places/p1')).toBe('more');

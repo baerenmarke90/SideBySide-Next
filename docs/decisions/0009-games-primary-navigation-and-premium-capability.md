@@ -1,6 +1,6 @@
 # Decision 0009: Games owns the fifth primary destination and one couple-scoped Premium capability
 
-**Status:** Accepted  
+**Status:** Accepted; primary-navigation placement superseded by Decision 0010 / #905  
 **Date:** September 12, 2026  
 **Owning issue:** #902  
 **Parent product decision:** #866  

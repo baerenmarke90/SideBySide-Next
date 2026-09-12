@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import {
+  appRoutePath,
   MORE_COLLECTIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
   MORE_PLACES_ROUTE,
@@ -23,6 +24,12 @@ interface MoreDestination {
  * Notifications, Profile, and Settings are accessed directly from the header.
  */
 const MORE_DESTINATIONS: readonly MoreDestination[] = [
+  {
+    path: appRoutePath('games'),
+    icon: 'games',
+    titleKey: 'navigation.games',
+    descriptionKey: 'games.intro',
+  },
   {
     path: MORE_PEOPLE_ROUTE,
     icon: 'people',

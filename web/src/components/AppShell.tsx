@@ -12,7 +12,7 @@ import {
 } from '../client/productReadCache';
 import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
-  APP_ROUTES,
+  PRIMARY_APP_ROUTES,
   type AppRouteDefinition,
   activeNavigationArea,
   appRoutePath,
@@ -52,7 +52,7 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
 function PrimaryNavigationLinks() {
   return (
     <>
-      {APP_ROUTES.map((route) => (
+      {PRIMARY_APP_ROUTES.map((route) => (
         <NavigationLink key={route.id} route={route} />
       ))}
     </>
