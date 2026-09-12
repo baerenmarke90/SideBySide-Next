@@ -5,10 +5,7 @@ import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
 import games from '../i18n/locales/games';
-import {
-  GAMES_COUPLE_CAPABILITY,
-  GamesProductArea,
-} from './GamesProductArea';
+import { GAMES_COUPLE_CAPABILITY, GamesProductArea } from './GamesProductArea';
 
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 
