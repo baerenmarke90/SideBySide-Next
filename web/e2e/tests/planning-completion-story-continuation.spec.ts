@@ -236,8 +236,8 @@ const visualScenarios: VisualScenario[] = [
   { name: '390-dark', viewport: { width: 390, height: 844 }, theme: 'dark' },
   { name: '320-reflow', viewport: { width: 320, height: 720 }, theme: 'light' },
   {
-    name: 'expanded-light',
-    viewport: { width: 1280, height: 900 },
+    name: '1440-expanded-light',
+    viewport: { width: 1440, height: 900 },
     theme: 'light',
   },
 ];
@@ -322,4 +322,19 @@ test('completed Plan continuation preserves Memory capture semantics and Chapter
   await expect(
     page.getByRole('button', { name: m5s3.planStory.chapterViaMilestone }),
   ).toBeVisible();
+});
+
+test('Später dismisses the continuation and restores focus to stable Plan navigation', async ({
+  page,
+}) => {
+  await prepareScenario(page, visualScenarios[0]);
+
+  const backLink = page.getByRole('link', { name: m5s3.common.back });
+  await page.getByRole('button', { name: m5s3.planStory.later }).click();
+
+  await expect(
+    page.getByRole('heading', { name: m5s3.plan.completedTitle }),
+  ).toHaveCount(0);
+  await expect(backLink).toBeFocused();
+  await expect(page).toHaveURL(new RegExp(`/plan/plans/${PLAN_ID}$`));
 });
