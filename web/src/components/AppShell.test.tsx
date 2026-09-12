@@ -86,6 +86,7 @@ describe('AppShell', () => {
     expect(html).toContain(`>${navigation.today}<`);
     expect(html).toContain('href="/story"');
     expect(html).toContain('href="/plan"');
+    expect(html).toContain('href="/games"');
     expect(html).toContain('href="/more"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('/reminders');
@@ -107,7 +108,7 @@ describe('AppShell', () => {
     );
   });
 
-  it('does not render Discover before its domain exists', () => {
+  it('keeps the retired primary Discover destination out of the shell', () => {
     expect(renderShell('/story')).not.toContain('href="/discover"');
   });
 
@@ -187,7 +188,7 @@ describe('AppShell', () => {
     expect(html).toContain('aria-expanded="false"');
 
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
-    for (const path of ['/today', '/story', '/plan', '/more']) {
+    for (const path of ['/today', '/story', '/plan', '/games', '/more']) {
       expect(compact).toContain(`href="${path}"`);
     }
   });
@@ -198,6 +199,8 @@ describe('AppShell', () => {
     ['/story', '/story'],
     ['/plan', '/plan'],
     ['/plan/wishes/wish-1', '/plan'],
+    ['/games', '/games'],
+    ['/games/our-moments', '/games'],
     ['/more', '/more'],
     ['/more/people', '/more'],
     ['/more/profile', '/more'],
@@ -214,6 +217,7 @@ describe('AppShell', () => {
   it.each([
     ['/story', '/today'],
     ['/story', '/plan'],
+    ['/story', '/games'],
     ['/story', '/more'],
     ['/more/people', '/today'],
     ['/today/activity', '/story'],
@@ -373,13 +377,13 @@ describe('AppShell', () => {
     expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
   });
 
-  it('integrates Quick Create into floating bottom shell with four-destination navigation (#882)', () => {
+  it('integrates Quick Create into floating bottom shell with five-destination navigation (#882/#902)', () => {
     const html = renderShell('/today');
     const shellIndex = html.indexOf('mobile-bottom-shell');
     expect(shellIndex).toBeGreaterThanOrEqual(0);
     const bottomShell = html.slice(shellIndex);
 
-    // Navigation landmark has exactly the 4 primary destinations
+    // Navigation landmark has exactly the 5 primary product destinations.
     const navMatch = bottomShell.match(
       /<nav\b[^>]*class="mobile-bottom-nav"[^>]*>([\s\S]*?)<\/nav>/,
     );
@@ -388,7 +392,7 @@ describe('AppShell', () => {
 
     const navLinks =
       navContent.match(/<a\b[^>]*class="shell-nav-link[^"]*"[^>]*>/g) ?? [];
-    expect(navLinks).toHaveLength(4);
+    expect(navLinks).toHaveLength(5);
 
     expect(navContent).toContain('href="/today"');
     expect(navContent).toContain(`>${navigation.today}<`);
@@ -396,10 +400,12 @@ describe('AppShell', () => {
     expect(navContent).toContain(`>${navigation.story}<`);
     expect(navContent).toContain('href="/plan"');
     expect(navContent).toContain(`>${navigation.plan}<`);
+    expect(navContent).toContain('href="/games"');
+    expect(navContent).toContain(`>${navigation.games}<`);
     expect(navContent).toContain('href="/more"');
     expect(navContent).toContain(`>${navigation.more}<`);
 
-    // Center Quick Create is a button action sibling inside the bottom shell, not a nav link
+    // Quick Create is a button action sibling inside the bottom shell, not a nav link.
     expect(navContent).not.toContain('quick-create-trigger');
 
     const quickCreateSlot = bottomShell.slice(
@@ -410,7 +416,7 @@ describe('AppShell', () => {
     expect(quickCreateSlot).toContain(`aria-label="${navigation.newContent}"`);
     expect(quickCreateSlot).toContain('aria-haspopup="dialog"');
 
-    // No standalone FAB outside the mobile-bottom-shell
+    // No standalone FAB outside the mobile-bottom-shell.
     const htmlBeforeShell = html.slice(0, shellIndex);
     expect(htmlBeforeShell).not.toContain('mobile-quick-create');
   });

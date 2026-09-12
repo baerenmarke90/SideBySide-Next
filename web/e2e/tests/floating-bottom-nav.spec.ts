@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import de from '../../src/i18n/locales/de';
+import games from '../../src/i18n/locales/games';
 import navigation from '../../src/i18n/locales/navigation';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -158,9 +159,29 @@ async function installApiMocks(page: Page): Promise<void> {
 
     if (
       method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/entitlements`
+    ) {
+      await fulfillJson({
+        spaceId: SPACE_ID,
+        tier: 'PREMIUM',
+        status: 'ACTIVE',
+        effectiveUntil: null,
+        isInGracePeriod: false,
+        capabilities: ['games.couple'],
+      });
+      return;
+    }
+
+    if (
+      method === 'GET' &&
       pathname === `/api/v1/spaces/${SPACE_ID}/story/timeline`
     ) {
-      await fulfillJson({ hasMore: false, items: [], nextCursor: null });
+      await fulfillJson({
+        availableYears: [],
+        hasMore: false,
+        items: [],
+        nextCursor: null,
+      });
       return;
     }
 
@@ -230,14 +251,22 @@ async function signIn(page: Page): Promise<void> {
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
 }
 
-test.describe('Floating Bottom Navigation (#882)', () => {
+async function waitForGamesHub(page: Page): Promise<void> {
+  await page.waitForURL('**/games');
+  await expect(
+    page.getByRole('heading', { name: games.title, level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText(games.unlocked.title)).toBeVisible();
+}
+
+test.describe('Floating Bottom Navigation (#882/#902)', () => {
   test.beforeAll(() => {
     if (!fs.existsSync(EVIDENCE_DIR)) {
       fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
     }
   });
 
-  test('shell composition: exactly four destinations + centered Quick Create action in one floating shell', async ({
+  test('shell composition: five destinations + centered Quick Create action in one floating shell', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -249,21 +278,20 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     const floatingShell = page.locator('.mobile-bottom-shell');
     await expect(floatingShell).toBeVisible();
 
-    // 1. Navigation landmark has exactly four destination links
     const nav = floatingShell.locator('.mobile-bottom-nav');
     await expect(nav).toBeVisible();
     const links = nav.locator('a.shell-nav-link');
-    await expect(links).toHaveCount(4);
+    await expect(links).toHaveCount(5);
 
     const labels = await links.allInnerTexts();
-    expect(labels.map((l) => l.trim())).toEqual([
+    expect(labels.map((label) => label.trim())).toEqual([
       navigation.today,
       navigation.story,
       navigation.plan,
+      navigation.games,
       navigation.more,
     ]);
 
-    // 2. Exactly one Quick Create trigger in compact shell, which is a button, not a link
     const trigger = floatingShell.locator(
       '.mobile-quick-create button.quick-create-trigger',
     );
@@ -272,28 +300,26 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
     await expect(trigger).toHaveAttribute('type', 'button');
 
-    // No old independent FAB outside the floating shell
     const oldFab = page.locator('body > .mobile-quick-create');
     await expect(oldFab).toHaveCount(0);
 
-    // 3. Horizontal centering between Momente and Planen
-    const momenteBox = await links.nth(1).boundingBox();
-    const triggerBox = await trigger.boundingBox();
+    // Quick Create remains between Planen and Spielen in the six-slot shell.
     const planenBox = await links.nth(2).boundingBox();
-    expect(momenteBox).not.toBeNull();
-    expect(triggerBox).not.toBeNull();
+    const triggerBox = await trigger.boundingBox();
+    const spielenBox = await links.nth(3).boundingBox();
     expect(planenBox).not.toBeNull();
+    expect(triggerBox).not.toBeNull();
+    expect(spielenBox).not.toBeNull();
 
-    if (momenteBox && triggerBox && planenBox) {
-      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
+    if (planenBox && triggerBox && spielenBox) {
+      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
         triggerBox.x + 5,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        planenBox.x + 5,
+        spielenBox.x + 5,
       );
     }
 
-    // 4. Floating geometry: inset from viewport edges and elevated above bottom
     const shellBox = await floatingShell.boundingBox();
     expect(shellBox).not.toBeNull();
     if (shellBox) {
@@ -317,30 +343,29 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     const trigger = page.locator('.mobile-bottom-shell .quick-create-trigger');
     await trigger.click();
 
-    // Sheet dialog opens
     const dialog = page.getByRole('dialog', {
       name: navigation.quickCreateTitle,
     });
     await expect(dialog).toBeVisible();
     await page.waitForTimeout(250);
 
-    // Sheet is above backdrop and floating nav
-    const sheetZ = await dialog.evaluate((el) =>
-      Number.parseInt(getComputedStyle(el).zIndex, 10),
+    const sheetZ = await dialog.evaluate((element) =>
+      Number.parseInt(getComputedStyle(element).zIndex, 10),
     );
     const navZ = await page
       .locator('.mobile-bottom-shell')
-      .evaluate((el) => Number.parseInt(getComputedStyle(el).zIndex, 10));
+      .evaluate((element) =>
+        Number.parseInt(getComputedStyle(element).zIndex, 10),
+      );
     expect(sheetZ).toBeGreaterThan(navZ);
 
-    // Fully rounded floating panel geometry: both top and bottom corners are rounded
-    const radii = await dialog.evaluate((el) => {
-      const cs = getComputedStyle(el);
+    const radii = await dialog.evaluate((element) => {
+      const style = getComputedStyle(element);
       return {
-        topLeft: Number.parseFloat(cs.borderTopLeftRadius),
-        topRight: Number.parseFloat(cs.borderTopRightRadius),
-        bottomLeft: Number.parseFloat(cs.borderBottomLeftRadius),
-        bottomRight: Number.parseFloat(cs.borderBottomRightRadius),
+        topLeft: Number.parseFloat(style.borderTopLeftRadius),
+        topRight: Number.parseFloat(style.borderTopRightRadius),
+        bottomLeft: Number.parseFloat(style.borderBottomLeftRadius),
+        bottomRight: Number.parseFloat(style.borderBottomRightRadius),
       };
     });
     expect(radii.topLeft).toBeGreaterThanOrEqual(16);
@@ -348,7 +373,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     expect(radii.bottomLeft).toBeGreaterThanOrEqual(16);
     expect(radii.bottomRight).toBeGreaterThanOrEqual(16);
 
-    // Horizontal insets: panel does not stretch to viewport edges
     const sheetBox = await dialog.boundingBox();
     const navBox = await page.locator('.mobile-bottom-shell').boundingBox();
     expect(sheetBox).not.toBeNull();
@@ -357,53 +381,34 @@ test.describe('Floating Bottom Navigation (#882)', () => {
 
     expect(sheetBox.x).toBeGreaterThan(0);
     expect(sheetBox.x + sheetBox.width).toBeLessThan(390);
-
-    // Clear visual separation from floating bottom navigation (no clipping, no collision)
     expect(navBox.y - (sheetBox.y + sheetBox.height)).toBeGreaterThanOrEqual(8);
 
-    // All 7 authoritative actions present inside dialog
-    await expect(
-      dialog.getByText(navigation.quickCreateMemory, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreateHeartMoment, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreateMilestone, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreateWish, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreatePlan, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreateForMe, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreatePrivateNote, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(navigation.quickCreateGiftIdea, { exact: true }),
-    ).toBeVisible();
+    for (const item of [
+      navigation.quickCreateMemory,
+      navigation.quickCreateHeartMoment,
+      navigation.quickCreateMilestone,
+      navigation.quickCreateWish,
+      navigation.quickCreatePlan,
+      navigation.quickCreateForMe,
+      navigation.quickCreatePrivateNote,
+      navigation.quickCreateGiftIdea,
+    ]) {
+      await expect(dialog.getByText(item, { exact: true })).toBeVisible();
+    }
 
-    // Accessibility: axe clean on open floating Quick Create panel in Light mode
     const axeResultsLight = await new AxeBuilder({ page })
       .include('.quick-create-mobile-sheet')
       .analyze();
     expect(axeResultsLight.violations).toEqual([]);
 
-    // Capture sheet open evidence (Light mode)
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '00-quick-create-sheet-open-390.png'),
     });
 
-    // Dark mode verification and evidence
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.documentElement.style.colorScheme = 'dark';
     });
-    // Allow CSS theme color transitions to settle before running axe
     await page.waitForTimeout(250);
     const axeResultsDark = await new AxeBuilder({ page })
       .include('.quick-create-mobile-sheet')
@@ -414,28 +419,23 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '00-quick-create-sheet-open-390-dark.png'),
     });
 
-    // Restore Light mode for subsequent assertions
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'light');
       document.documentElement.style.colorScheme = 'light';
     });
 
-    // Focus trap & focus return verification
     const closeButton = dialog.getByRole('button', {
       name: navigation.closeMenu,
     });
     await expect(closeButton).toBeFocused();
 
-    // Shift+Tab from close button wraps to last item
     await page.keyboard.press('Shift+Tab');
     const lastItem = dialog.locator('a[href="/more/private/gift-ideas/new"]');
     await expect(lastItem).toBeFocused();
 
-    // Tab wraps back to close button
     await page.keyboard.press('Tab');
     await expect(closeButton).toBeFocused();
 
-    // Dismiss via Escape and verify focus return to trigger
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
@@ -446,7 +446,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
   }) => {
     await installApiMocks(page);
 
-    // 1. Constrained height (390x500)
     await page.setViewportSize({ width: 390, height: 500 });
     await page.goto('/login');
     await signIn(page);
@@ -461,36 +460,33 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(dialog).toBeVisible();
     await page.waitForTimeout(250);
 
-    // Verify dialog does not overflow top or bottom of viewport
     const smallSheetBox = await dialog.boundingBox();
     const smallNavBox = await page
       .locator('.mobile-bottom-shell')
       .boundingBox();
     expect(smallSheetBox).not.toBeNull();
     expect(smallNavBox).not.toBeNull();
-    if (!smallSheetBox || !smallNavBox)
+    if (!smallSheetBox || !smallNavBox) {
       throw new Error('Missing bounding boxes');
+    }
 
     expect(smallSheetBox.y).toBeGreaterThanOrEqual(0);
     expect(
       smallNavBox.y - (smallSheetBox.y + smallSheetBox.height),
     ).toBeGreaterThanOrEqual(8);
 
-    // Verify reachability: scroll to the lowest item (Gift Idea) and verify it is visible and clickable
     const giftIdeaItem = dialog.getByText(navigation.quickCreateGiftIdea, {
       exact: true,
     });
     await giftIdeaItem.scrollIntoViewIfNeeded();
     await expect(giftIdeaItem).toBeVisible();
 
-    // Close via close button
     const closeButton = dialog.getByRole('button', {
       name: navigation.closeMenu,
     });
     await closeButton.click();
     await expect(dialog).toHaveCount(0);
 
-    // 2. 320px reflow
     await page.setViewportSize({ width: 320, height: 600 });
     await trigger.click();
     await expect(dialog).toBeVisible();
@@ -503,7 +499,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     expect(reflowSheetBox.x).toBeGreaterThan(0);
     expect(reflowSheetBox.x + reflowSheetBox.width).toBeLessThanOrEqual(320);
 
-    // Dismiss via backdrop click
     const backdrop = page.locator('.quick-create-mobile-backdrop');
     await backdrop.click({ position: { x: 10, y: 10 } });
     await expect(dialog).toHaveCount(0);
@@ -517,30 +512,32 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await page.waitForURL('**/today');
 
     const links = page.locator('.mobile-bottom-nav a.shell-nav-link');
+    await expect(links).toHaveCount(5);
 
-    // On /today, first link has active class and aria-current
     await expect(links.nth(0)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(0)).toHaveAttribute('aria-current', 'page');
     await expect(links.nth(1)).not.toHaveClass(/shell-nav-link-active/);
 
-    // Navigate to /story
     await links.nth(1).click();
     await page.waitForURL('**/story');
     await expect(links.nth(1)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(1)).toHaveAttribute('aria-current', 'page');
     await expect(links.nth(0)).not.toHaveClass(/shell-nav-link-active/);
 
-    // Navigate to /plan
     await links.nth(2).click();
     await page.waitForURL('**/plan');
     await expect(links.nth(2)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(2)).toHaveAttribute('aria-current', 'page');
 
-    // Navigate to /more
     await links.nth(3).click();
-    await page.waitForURL('**/more');
+    await waitForGamesHub(page);
     await expect(links.nth(3)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(3)).toHaveAttribute('aria-current', 'page');
+
+    await links.nth(4).click();
+    await page.waitForURL('**/more');
+    await expect(links.nth(4)).toHaveClass(/shell-nav-link-active/);
+    await expect(links.nth(4)).toHaveAttribute('aria-current', 'page');
   });
 
   test('scroll clearance: Memory Create actions scroll fully clear of floating navigation', async ({
@@ -560,7 +557,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(saveButton).toBeVisible();
     await expect(cancelButton).toBeVisible();
 
-    // Scroll to bottom
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(100);
 
@@ -572,7 +568,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     expect(shellBox).not.toBeNull();
 
     if (saveBox && cancelBox && shellBox) {
-      // Both the save button and bottom-most cancel link must be strictly above the floating bar top
       expect(saveBox.y + saveBox.height).toBeLessThan(shellBox.y);
       expect(cancelBox.y + cancelBox.height).toBeLessThan(shellBox.y);
       expect(
@@ -581,7 +576,7 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     }
   });
 
-  test('accessibility: axe clean on today and memory create', async ({
+  test('accessibility: axe clean on today, Games and memory create', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -595,6 +590,11 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       .analyze();
     expect(todayAxe.violations).toEqual([]);
 
+    await page.goto('/games');
+    await waitForGamesHub(page);
+    const gamesAxe = await new AxeBuilder({ page }).analyze();
+    expect(gamesAxe.violations).toEqual([]);
+
     await page.goto('/story/memories/new');
     const memoryAxe = await new AxeBuilder({ page })
       .disableRules(['color-contrast'])
@@ -605,15 +605,12 @@ test.describe('Floating Bottom Navigation (#882)', () => {
   test('200 percent zoom / large-text: floating navigation remains usable and collision-free', async ({
     page,
   }) => {
-    // 780px viewport at 200% zoom represents the 390px mobile reference under 2x layout scale
-    // following the established pattern in people-important-dates-mobile-first.spec.ts
     await page.setViewportSize({ width: 780, height: 844 });
     await installApiMocks(page);
     await page.goto('/login');
     await signIn(page);
     await page.waitForURL('**/today');
 
-    // Apply established repository zoom methodology
     await page.locator('html').evaluate((element) => {
       element.style.zoom = '2';
     });
@@ -624,50 +621,45 @@ test.describe('Floating Bottom Navigation (#882)', () => {
         ),
     );
 
-    // 1. No horizontal overflow
     await expectNoHorizontalOverflow(page);
 
-    // 2. Floating navigation remains visible and usable
     const floatingShell = page.locator('.mobile-bottom-shell');
     await expect(floatingShell).toBeVisible();
 
-    // 3. Four destination labels remain understandable and present
     const links = floatingShell.locator('.mobile-bottom-nav a.shell-nav-link');
-    await expect(links).toHaveCount(4);
-    for (let i = 0; i < 4; i += 1) {
-      await expect(links.nth(i)).toBeVisible();
+    await expect(links).toHaveCount(5);
+    for (let index = 0; index < 5; index += 1) {
+      await expect(links.nth(index)).toBeVisible();
     }
     const labels = await links.allInnerTexts();
-    expect(labels.map((l) => l.trim())).toEqual([
+    expect(labels.map((label) => label.trim())).toEqual([
       navigation.today,
       navigation.story,
       navigation.plan,
+      navigation.games,
       navigation.more,
     ]);
 
-    // 4. Center Quick Create action remains correctly positioned & visible
     const trigger = floatingShell.locator(
       '.mobile-quick-create button.quick-create-trigger',
     );
     await expect(trigger).toBeVisible();
 
-    // 5. No collision between destinations and center action
-    const momenteBox = await links.nth(1).boundingBox();
-    const triggerBox = await trigger.boundingBox();
     const planenBox = await links.nth(2).boundingBox();
-    expect(momenteBox).not.toBeNull();
-    expect(triggerBox).not.toBeNull();
+    const triggerBox = await trigger.boundingBox();
+    const spielenBox = await links.nth(3).boundingBox();
     expect(planenBox).not.toBeNull();
-    if (momenteBox && triggerBox && planenBox) {
-      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
+    expect(triggerBox).not.toBeNull();
+    expect(spielenBox).not.toBeNull();
+    if (planenBox && triggerBox && spielenBox) {
+      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
         triggerBox.x + 1,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        planenBox.x + 1,
+        spielenBox.x + 1,
       );
     }
 
-    // 6. Bottom content/actions on Memory Create remain scrollable clear of the shell under 200% zoom
     await page.goto('/story/memories/new');
     await page.locator('html').evaluate((element) => {
       element.style.zoom = '2';
@@ -681,18 +673,19 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(100);
 
-    const cancelBtn = page.getByRole('link', { name: de.common.cancel });
+    const cancelButton = page.getByRole('link', { name: de.common.cancel });
     const zoomShell = page.locator('.mobile-bottom-shell');
-    await expect(cancelBtn).toBeVisible();
+    await expect(cancelButton).toBeVisible();
     await expect(zoomShell).toBeVisible();
 
-    const cancelB = await cancelBtn.boundingBox();
-    const shellB = await zoomShell.boundingBox();
-    if (cancelB && shellB) {
-      expect(cancelB.y + cancelB.height).toBeLessThanOrEqual(shellB.y + 1);
+    const cancelBox = await cancelButton.boundingBox();
+    const shellBox = await zoomShell.boundingBox();
+    if (cancelBox && shellBox) {
+      expect(cancelBox.y + cancelBox.height).toBeLessThanOrEqual(
+        shellBox.y + 1,
+      );
     }
 
-    // 7. Quick Create floating panel opens and maintains bounds under 200% zoom
     await page.goto('/today');
     await page.locator('html').evaluate((element) => {
       element.style.zoom = '2';
@@ -710,11 +703,12 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     await expect(zoomDialog).toHaveCount(0);
   });
 
-  test('captures required visual evidence matrix', async ({ page }) => {
+  test('captures required visual evidence matrix', async ({
+    page,
+  }, testInfo) => {
     test.setTimeout(90_000);
     await installApiMocks(page);
 
-    // 1. /today — 390x844 Light
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto('/login');
@@ -724,7 +718,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '01-today-390-light.png'),
     });
 
-    // 2. /today — 390x844 Dark
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.evaluate(() => {
       localStorage.setItem('sidebyside.theme', 'dark');
@@ -737,7 +730,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '02-today-390-dark.png'),
     });
 
-    // 3. Memory Create — 390x844 Light
     await page.emulateMedia({ colorScheme: 'light' });
     await page.evaluate(() => {
       localStorage.setItem('sidebyside.theme', 'light');
@@ -750,7 +742,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '03-memory-create-390-light.png'),
     });
 
-    // 4. Memory Create — 390x844 Dark
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.evaluate(() => {
       localStorage.setItem('sidebyside.theme', 'dark');
@@ -763,7 +754,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '04-memory-create-390-dark.png'),
     });
 
-    // 5. Plan create state — 390x844 Light
     await page.emulateMedia({ colorScheme: 'light' });
     await page.evaluate(() => {
       localStorage.setItem('sidebyside.theme', 'light');
@@ -775,13 +765,11 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '05-plan-390-light.png'),
     });
 
-    // 6. Representative Momente surface — 390x844 Light
     await page.goto('/story');
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '06-momente-390-light.png'),
     });
 
-    // 7. 320 CSS px reflow
     await page.setViewportSize({ width: 320, height: 600 });
     await page.goto('/today');
     await expectNoHorizontalOverflow(page);
@@ -789,14 +777,12 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '07-reflow-320px.png'),
     });
 
-    // 8. Representative small-height state (390x640)
     await page.setViewportSize({ width: 390, height: 640 });
     await page.goto('/today');
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '08-small-height-390x640.png'),
     });
 
-    // 9. Constrained-height form focus state (390x500) representing software-keyboard occlusion
     await page.setViewportSize({ width: 390, height: 500 });
     await page.goto('/story/memories/new');
     const titleInput = page.getByLabel(de.memory.titleLabel);
@@ -805,7 +791,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '09-constrained-height-form-focus.png'),
     });
 
-    // 10. Expanded desktop regression (1280x800)
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/today');
     await expect(page.locator('.mobile-bottom-shell')).toBeHidden();
@@ -814,7 +799,6 @@ test.describe('Floating Bottom Navigation (#882)', () => {
       path: path.join(EVIDENCE_DIR, '10-expanded-desktop-1280x800.png'),
     });
 
-    // 11. Large text / 200 percent layout zoom (780x844 representing 390px reference)
     await page.setViewportSize({ width: 780, height: 844 });
     await page.goto('/today');
     await page.locator('html').evaluate((element) => {
@@ -828,6 +812,67 @@ test.describe('Floating Bottom Navigation (#882)', () => {
     );
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, '11-zoom-200-percent.png'),
+    });
+
+    // #902 Product Reference evidence: Compact Light/Dark, 320 reflow and Expanded.
+    await page.locator('html').evaluate((element) => {
+      element.style.zoom = '1';
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.evaluate(() => {
+      localStorage.setItem('sidebyside.theme', 'light');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+    });
+    await page.goto('/games');
+    await waitForGamesHub(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath('shell-games-390-light.png'),
+      fullPage: true,
+    });
+
+    const gamesAxeLight = await new AxeBuilder({ page }).analyze();
+    expect(gamesAxeLight.violations).toEqual([]);
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.evaluate(() => {
+      localStorage.setItem('sidebyside.theme', 'dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.style.colorScheme = 'dark';
+    });
+    await page.reload();
+    await waitForGamesHub(page);
+    await page.screenshot({
+      path: testInfo.outputPath('shell-games-390-dark.png'),
+      fullPage: true,
+    });
+    const gamesAxeDark = await new AxeBuilder({ page }).analyze();
+    expect(gamesAxeDark.violations).toEqual([]);
+
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.evaluate(() => {
+      localStorage.setItem('sidebyside.theme', 'light');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+    });
+    await page.reload();
+    await waitForGamesHub(page);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: testInfo.outputPath('shell-games-320-reflow.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.reload();
+    await waitForGamesHub(page);
+    await expect(page.locator('.mobile-bottom-shell')).toBeHidden();
+    await expect(page.locator('.shell-nav')).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath('shell-games-expanded-1280.png'),
+      fullPage: true,
     });
   });
 });

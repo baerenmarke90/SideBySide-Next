@@ -11,6 +11,7 @@ const navigation = {
   today: 'Wir',
   story: 'Momente',
   plan: 'Planen',
+  games: 'Spielen',
   more: 'Mehr',
   search: 'Suche',
   notifications: 'Benachrichtigungen',
@@ -45,8 +46,6 @@ const navigation = {
   quickCreateChapter: 'Kapitel',
   quickCreatePlace: 'Ort',
   quickCreateCollection: 'Gemeinsame Liste',
-  // Reserved for the M7 Discover area; declared so the label is not reused.
-  discover: 'Entdecken',
   logout: 'Abmelden',
 };
 
