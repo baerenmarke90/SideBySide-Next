@@ -6,10 +6,10 @@
 #   cloud        Cloud/Managed runtime using immutable release images
 #   dev-db       PostgreSQL-only database for local source development/tests
 #
-# Normal released Self-Hosted deployment is image-only. Developers and CI that
-# intentionally build the checked-out source add deploy/compose.source-build.yaml.
-# Environment-specific behavior belongs in configuration, not a second released
-# production topology.
+# Normal released Self-Hosted deployment is image-only. Developers and CI may
+# intentionally build local source images with scripts/build_self_hosted_source.py,
+# then point this same canonical manifest at those local image tags. No second
+# tracked Compose topology exists.
 
 x-self-hosted-database-environment: &self-hosted-database-environment
   SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
@@ -64,14 +64,16 @@ x-cloud-runtime-environment: &cloud-runtime-environment
 # Released Self-Hosted consumes first-class release images. The SemVer default is
 # the repository's current product version; operators may use the exact digest-
 # qualified references recorded with the GitHub Release via the two override
-# variables below for a fully locked deployment.
+# variables below for a fully locked deployment. `always` is the released safe
+# default; local source development deliberately sets `never` after building its
+# local tags with scripts/build_self_hosted_source.py.
 x-self-hosted-backend-image: &self-hosted-backend-image
   image: "${SBS_SELF_HOSTED_BACKEND_IMAGE:-ghcr.io/baerenmarke90/eimir-backend:v${SBS_RELEASE_VERSION:-0.1.0}}"
-  pull_policy: always
+  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
 
 x-self-hosted-web-image: &self-hosted-web-image
   image: "${SBS_SELF_HOSTED_WEB_IMAGE:-ghcr.io/baerenmarke90/eimir-web:v${SBS_RELEASE_VERSION:-0.1.0}}"
-  pull_policy: always
+  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
 
 # Cloud/Managed intentionally has image-only process services. The sentinel
 # defaults keep inactive profiles renderable; the Cloud env contract and CI
