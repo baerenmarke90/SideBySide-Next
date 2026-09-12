@@ -324,7 +324,7 @@ test('completed Plan continuation preserves Memory capture semantics and Chapter
   ).toBeVisible();
 });
 
-test('Später dismisses the continuation and restores focus to stable Plan navigation', async ({
+test('Later dismisses the continuation and restores focus to stable Plan navigation', async ({
   page,
 }) => {
   await prepareScenario(page, visualScenarios[0]);
