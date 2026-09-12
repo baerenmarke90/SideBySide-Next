@@ -15,12 +15,14 @@ import {
   APP_ROUTES,
   type AppRouteDefinition,
   activeNavigationArea,
+  appRoutePath,
   DEFAULT_APP_ROUTE,
   SEARCH_ROUTE,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { GamesProductArea } from './GamesProductArea';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
@@ -129,6 +131,9 @@ export function AppShell({
 
   const location = useLocation();
   const isPrivateArea = location.pathname.startsWith('/more/private');
+  const gamesPath = appRoutePath('games');
+  const isGamesArea =
+    location.pathname === gamesPath || location.pathname.startsWith(`${gamesPath}/`);
 
   useEffect(
     () => () => {
@@ -240,7 +245,15 @@ export function AppShell({
           className="product-main sbs-motion-reveal"
           tabIndex={-1}
         >
-          {children}
+          {isGamesArea ? (
+            <GamesProductArea
+              apiBaseUrl={apiBaseUrl}
+              accessToken={accessToken}
+              spaceId={spaceId}
+            />
+          ) : (
+            children
+          )}
         </main>
       </div>
 
