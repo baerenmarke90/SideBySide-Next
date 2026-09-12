@@ -15,7 +15,11 @@
   border-radius: var(--radius-card);
   padding: clamp(var(--space-5), 5vw, var(--space-7));
   background:
-    radial-gradient(circle at top right, var(--color-brand-surface), transparent 45%),
+    radial-gradient(
+      circle at top right,
+      var(--color-brand-surface),
+      transparent 45%
+    ),
     var(--color-surface-raised);
   box-shadow: var(--shadow-card);
 }
@@ -24,7 +28,11 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   background:
-    radial-gradient(circle at top right, var(--color-shared-surface), transparent 50%),
+    radial-gradient(
+      circle at top right,
+      var(--color-shared-surface),
+      transparent 50%
+    ),
     var(--color-surface-raised);
 }
 
