@@ -72,6 +72,11 @@ jobs:
     if: needs.changes.outputs.recovery == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      SBS_SELF_HOSTED_BACKEND_IMAGE: sidebyside-backend:source-recovery
+      SBS_SELF_HOSTED_WEB_IMAGE: sidebyside-web:source-recovery
+      SBS_SELF_HOSTED_PULL_POLICY: never
+      SBS_BUILD_REVISION: unverified-local-checkout
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,6 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile \
+            scripts/build_self_hosted_source.py \
             scripts/self_hosted_recovery.py \
             scripts/self_hosted_deletion_reconcile.py \
             scripts/self_hosted_recovery_acceptance.py \
@@ -92,48 +98,11 @@ jobs:
             scripts.test_self_hosted_recovery \
             scripts.test_self_hosted_deletion_reconcile
 
-      - name: Prepare ephemeral CI source-build overlay
-        run: |
-          set -euo pipefail
-          cat > deploy/compose.source-build.yaml <<'YAML'
-          x-source-backend-build: &source-backend-build
-            image: "sidebyside-backend:source-${SBS_BUILD_REVISION:-unverified-local-checkout}"
-            build:
-              context: "${SBS_BACKEND_BUILD_CONTEXT:-./backend}"
-              args:
-                SBS_BUILD_REVISION: "${SBS_BUILD_REVISION:-unverified-local-checkout}"
-            pull_policy: build
-          x-source-web-build: &source-web-build
-            image: "sidebyside-web:source-${SBS_BUILD_REVISION:-unverified-local-checkout}"
-            build:
-              context: "${SBS_WEB_BUILD_CONTEXT:-./web}"
-              args:
-                SBS_BUILD_REVISION: "${SBS_BUILD_REVISION:-unverified-local-checkout}"
-                VITE_SBS_API_BASE_URL: ""
-                VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
-                VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"
-                VITE_SBS_DEMO_RESET_TIMER: "${SBS_DEMO_MODE_RESET_TIMER:-false}"
-                VITE_SBS_DEMO_RESET_INTERVAL: "${SBS_DEMO_MODE_RESET_INTERVAL:-6h}"
-            pull_policy: build
-          services:
-            migrate:
-              <<: *source-backend-build
-            demo-init:
-              <<: *source-backend-build
-            api:
-              <<: *source-backend-build
-            worker:
-              <<: *source-backend-build
-            web:
-              <<: *source-web-build
-          YAML
+      - name: Build local source images for recovery acceptance
+        run: python3 scripts/build_self_hosted_source.py
 
       - name: Fresh restore and prior-schema upgrade acceptance
         run: python3 scripts/self_hosted_recovery_acceptance.py
 
       - name: Account deletion survives older restore
         run: python3 scripts/account_deletion_recovery_acceptance.py
-
-      - name: Remove ephemeral source-build overlay
-        if: always()
-        run: rm -f deploy/compose.source-build.yaml
