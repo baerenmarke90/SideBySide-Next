@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed contract checks for the #519 protected publication workflow."""
+"""Fail-closed contract checks for the #519/#827 protected publication workflow."""
 
 from __future__ import annotations
 
@@ -35,11 +35,11 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_privileged_job_is_protected_and_least_privileged(self) -> None:
         self.assertIn("environment:\n      name: production-release", self.workflow)
         self.assertIn(
-            "permissions:\n      contents: write\n      id-token: write\n      attestations: write",
+            "permissions:\n      contents: write\n      packages: write\n      id-token: write\n      attestations: write",
             self.workflow,
         )
         self.assertIn("permissions:\n  contents: read", self.workflow)
-        self.assertNotIn("packages: write", self.workflow)
+        self.assertEqual(self.workflow.count("packages: write"), 1)
 
     def test_publish_requires_explicit_confirmation_and_merged_main_source(self) -> None:
         self.assertIn("confirm_publish:", self.workflow)
@@ -53,6 +53,36 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn('--target "$GITHUB_SHA"', self.workflow)
         self.assertIn('git rev-list -n 1 "$tag"', self.workflow)
         self.assertIn("cmp --silent", self.workflow)
+
+    def test_runtime_images_load_exact_evidence_archives_without_rebuild(self) -> None:
+        publish_step = self.workflow.split(
+            "Publish exact build-once runtime images to GHCR", 1
+        )[1].split("Write human-readable release notes", 1)[0]
+        self.assertIn("docker load --input", publish_step)
+        self.assertIn("release-evidence/backend-runtime.image.tar", publish_step)
+        self.assertIn("release-evidence/web-runtime.image.tar", publish_step)
+        self.assertIn("sidebyside-backend:evidence-${SOURCE_REVISION}", publish_step)
+        self.assertIn("sidebyside-web:evidence-${SOURCE_REVISION}", publish_step)
+        self.assertIn("ghcr.io/${owner}/eimir-backend", publish_step)
+        self.assertIn("ghcr.io/${owner}/eimir-web", publish_step)
+        self.assertIn('source_tag="sha-${SOURCE_REVISION}"', publish_step)
+        self.assertIn('version_tag="v${RELEASE_VERSION}"', publish_step)
+        self.assertIn("docker manifest inspect", publish_step)
+        self.assertIn("different image bytes", publish_step)
+        self.assertIn("different digest", publish_step)
+        self.assertIn("self-hosted-image-identity.json", publish_step)
+        self.assertIn("releaseArtifactSha256", publish_step)
+        self.assertNotIn("docker build", publish_step)
+        self.assertNotIn(":latest", publish_step)
+
+    def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
+        self.assertIn("self-hosted-image-identity.json", self.workflow)
+        self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
+        self.assertIn(
+            "release-evidence/self-hosted-image-identity.json",
+            self.workflow,
+        )
+        self.assertIn("digest-qualified references", self.workflow)
 
     def test_signing_material_is_environment_only_and_ephemeral(self) -> None:
         required = (
