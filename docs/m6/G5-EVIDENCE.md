@@ -59,6 +59,13 @@ user fixtures in the evidence report.
 
 These inputs reduce duplicated work but do not waive the integrated G5 checks.
 
+Post-rehearsal privacy hardening under #670 is part of the current G5-11 evidence
+contract: retained `SPACE_SHARED` history must expose a semantic former-member
+author state, suppress removed profile identity, and let Web/Android localize the
+neutral label without rendering the technical persistence tombstone. This updates
+the living evidence requirement only; it does not rewrite the historical
+2026-09-05 rehearsal result.
+
 ## 4. G5 criteria
 
 | ID | Criterion | Required evidence / owner | S0 status | 2026-09-05 rehearsal status |
@@ -73,7 +80,7 @@ These inputs reduce duplicated work but do not waive the integrated G5 checks.
 | G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` | `PASS` — live incident drill produced sanitized logs/correlation IDs throughout, no secret/ProtectedPayload leakage (report §6) |
 | G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` | `PASS` — full database-readiness-loss drill executed live with real timestamps (report §6) |
 | G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` | `PASS` — verified against merged code/tests when #518 closed this session; `test_space_offboarding*.py` family green in CI (report §8) |
-| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and minimal pseudonymous recovery-metadata classification; #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
+| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and minimal pseudonymous recovery-metadata classification; #670 semantic former-member projection for retained shared history; #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
 | G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` | `PASS` — ADR-0006 + Feature Matrix v1.1 authoritative; launch channel declared (`ENTITLEMENT-BOUNDARY.md` §7.1) |
 | G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` | `PASS` for `ADMIN_GRANT` (grant/downgrade/audit exercised live end to end); `NOT_APPLICABLE` for `GOOGLE_PLAY`/`CLOUD_STRIPE`/`SELF_HOSTED_KEY` (report §7) |
 | G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` | `PASS` — live cross-tenant probe (404) and ServerAdmin content-boundary check both confirmed (report §8) |

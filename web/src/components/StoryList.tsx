@@ -155,7 +155,7 @@ export function StoryList({
                           />
                           <span>
                             {t('story.byAuthor', {
-                              author: storyAuthorLabel(author.displayName),
+                              author: storyAuthorLabel(author),
                             })}
                           </span>
                         </span>

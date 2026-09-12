@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.api.schema import AuthorSummary
 from sidebyside.attachments.binding import AccountProfileAttachment
+from sidebyside.identity.deletion_models import AccountDeletion
 from sidebyside.identity.models import Account
 
 
@@ -17,31 +18,39 @@ def resolve_author_summaries(
     session: Session,
     account_ids: Iterable[UUID],
 ) -> dict[UUID, AuthorSummary]:
-    """Batch-resolve AuthorSummary projections with profile_attachment_id in a single query.
+    """Batch-resolve privacy-safe AuthorSummary projections in one query.
 
-    Performs a single SQL outer join between Account and AccountProfileAttachment,
-    preventing N+1 queries across list, timeline, and activity endpoints.
+    An accepted AccountDeletion is the authoritative former-member signal. Once
+    it exists, the projection suppresses the stored display name and avatar even
+    if slower deletion cleanup has not removed those rows yet. Suspension alone
+    must never be interpreted as deletion.
     """
     ids = set(account_ids)
     if not ids:
         return {}
 
     statement = (
-        select(Account, AccountProfileAttachment.attachment_id)
+        select(
+            Account,
+            AccountProfileAttachment.attachment_id,
+            AccountDeletion.account_id.label("deleted_account_id"),
+        )
         .outerjoin(
             AccountProfileAttachment,
             AccountProfileAttachment.account_id == Account.id,
         )
+        .outerjoin(AccountDeletion, AccountDeletion.account_id == Account.id)
         .where(Account.id.in_(ids))
     )
     rows = session.execute(statement).all()
     return {
         account.id: AuthorSummary(
             id=account.id,
-            display_name=account.display_name,
-            profile_attachment_id=attachment_id,
+            display_name="" if deleted_account_id is not None else account.display_name,
+            is_former_member=deleted_account_id is not None,
+            profile_attachment_id=None if deleted_account_id is not None else attachment_id,
         )
-        for account, attachment_id in rows
+        for account, attachment_id, deleted_account_id in rows
     }
 
 
@@ -51,7 +60,7 @@ def resolve_author_summary(
     *,
     resource: str = "Author",
 ) -> AuthorSummary:
-    """Resolve a single AuthorSummary projection with profile_attachment_id."""
+    """Resolve a single privacy-safe AuthorSummary projection."""
     summaries = resolve_author_summaries(session, (account_id,))
     summary = summaries.get(account_id)
     if summary is None:

@@ -33,6 +33,7 @@ import kotlinx.serialization.Contextual
  *
  * @param displayName 
  * @param id 
+ * @param isFormerMember 
  * @param profileAttachmentId 
  */
 @Serializable
@@ -44,6 +45,9 @@ data class AuthorSummary (
 
     @Contextual @SerialName(value = "id")
     val id: java.util.UUID,
+
+    @SerialName(value = "isFormerMember")
+    val isFormerMember: kotlin.Boolean? = false,
 
     @Contextual @SerialName(value = "profileAttachmentId")
     val profileAttachmentId: java.util.UUID? = null

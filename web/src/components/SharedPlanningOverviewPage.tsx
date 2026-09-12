@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -606,7 +607,7 @@ export function SharedPlanningOverviewPage({
                 key={plan.id}
                 title={plan.title}
                 attribution={t('m5s3.overview.createdBy', {
-                  name: plan.creator.displayName,
+                  name: authorDisplayName(plan.creator),
                 })}
                 pillLabel={planPillLabel(t, plan)}
                 pillTone={planPillTone(plan)}
@@ -747,7 +748,7 @@ export function SharedPlanningOverviewPage({
                 key={wish.id}
                 title={wish.title}
                 attribution={t('m5s3.overview.createdBy', {
-                  name: wish.creator.displayName,
+                  name: authorDisplayName(wish.creator),
                 })}
                 pillLabel={t(`m5s3.wish.status.${wish.status}`)}
                 pillTone={wishPillTone(wish.status)}

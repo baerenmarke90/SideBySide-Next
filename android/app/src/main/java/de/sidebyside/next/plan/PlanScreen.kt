@@ -35,6 +35,7 @@ import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.story.displayNameForUi
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
 import de.sidebyside.next.shell.WindowWidthClass
@@ -684,7 +685,8 @@ private fun WishCard(wish: WishDetail, onOpen: () -> Unit, modifier: Modifier = 
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
-            wish.creator.displayName.takeIf { it.isNotBlank() }?.let { name ->
+            wish.creator.displayNameForUi(stringResource(R.string.author_former_member))
+                .takeIf { it.isNotBlank() }?.let { name ->
                 Text(
                     text = stringResource(R.string.plan_wish_by, name),
                     style = MaterialTheme.typography.bodySmall,

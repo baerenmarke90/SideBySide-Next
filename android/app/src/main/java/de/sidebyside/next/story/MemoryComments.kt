@@ -98,7 +98,7 @@ fun MemoryComments(
                     verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
                 ) {
                     Text(
-                        text = comment.author.displayName,
+                        text = comment.author.displayNameForUi(stringResource(R.string.author_former_member)),
                         style = MaterialTheme.typography.labelSmall,
                         color = SideBySideTheme.colors.brandStrong,
                     )

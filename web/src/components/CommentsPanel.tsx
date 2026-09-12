@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import {
@@ -239,7 +240,7 @@ export function CommentsPanel({
             return (
               <li key={comment.id} className="comment-card">
                 <div className="comment-head">
-                  <strong>{comment.author.displayName}</strong>
+                  <strong>{authorDisplayName(comment.author)}</strong>
                   <span>
                     <time dateTime={comment.createdAt.toISOString()}>
                       {commentTimestamp(comment.createdAt)}

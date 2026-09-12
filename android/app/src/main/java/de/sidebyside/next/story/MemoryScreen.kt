@@ -301,7 +301,7 @@ private fun MemoryHeader(memory: MemoryDetail) {
                 .semantics { heading() },
         )
         Text(
-            text = stringResource(R.string.memory_written_by, memory.author.displayName),
+            text = stringResource(R.string.memory_written_by, memory.author.displayNameForUi(stringResource(R.string.author_former_member))),
             style = MaterialTheme.typography.bodySmall,
             color = SideBySideTheme.colors.textSecondary,
         )

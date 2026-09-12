@@ -1,3 +1,4 @@
+import { authorDisplayName } from './authorPresentation';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
 import type { TFunction } from 'i18next';
 
@@ -9,7 +10,11 @@ export function getNotificationItemTitle(
   const isOwn = Boolean(
     currentAccountId && item.actor?.id === currentAccountId,
   );
-  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
+  const actorName = isOwn
+    ? t('m5s5.activity.you')
+    : item.actor
+      ? authorDisplayName(item.actor)
+      : undefined;
   const targetTitle = item.target?.title;
 
   if (item.kind === 'COMMENT_CREATED') {

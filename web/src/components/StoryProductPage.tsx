@@ -559,9 +559,7 @@ export function StoryProductPage({
                         />
                         <span>
                           {t('story.byAuthor', {
-                            author: storyAuthorLabel(
-                              featuredAuthor.displayName,
-                            ),
+                            author: storyAuthorLabel(featuredAuthor),
                           })}
                         </span>
                       </span>
@@ -720,7 +718,7 @@ export function StoryProductPage({
                                         <span>
                                           {t('story.byAuthor', {
                                             author: storyAuthorLabel(
-                                              entry.author.displayName,
+                                              entry.author,
                                             ),
                                           })}
                                         </span>

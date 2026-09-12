@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -342,7 +343,9 @@ export function PlanProductPage({
           {placeName
             ? `${t('m5s3.plan.placeLabel', { name: placeName })} · `
             : ''}
-          {t('m5s3.overview.createdBy', { name: plan.creator.displayName })}
+          {t('m5s3.overview.createdBy', {
+            name: authorDisplayName(plan.creator),
+          })}
         </p>
         {hasSubfacts ? (
           <div className="planen-detail-subfacts">

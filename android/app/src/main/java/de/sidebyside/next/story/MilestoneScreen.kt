@@ -262,7 +262,7 @@ private fun MilestoneHeader(milestone: MilestoneDetail) {
                 .semantics { heading() },
         )
         Text(
-            text = stringResource(R.string.milestone_written_by, milestone.author.displayName),
+            text = stringResource(R.string.milestone_written_by, milestone.author.displayNameForUi(stringResource(R.string.author_former_member))),
             style = MaterialTheme.typography.bodySmall,
             color = SideBySideTheme.colors.textSecondary,
         )

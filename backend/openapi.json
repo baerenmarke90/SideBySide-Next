@@ -607,6 +607,11 @@
             "title": "Id",
             "type": "string"
           },
+          "isFormerMember": {
+            "default": false,
+            "title": "Isformermember",
+            "type": "boolean"
+          },
           "profileAttachmentId": {
             "format": "uuid",
             "title": "Profileattachmentid",

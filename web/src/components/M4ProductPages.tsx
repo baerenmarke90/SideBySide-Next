@@ -11,6 +11,7 @@ import type { NotificationItem } from '../api/generated/models/NotificationItem'
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import type { SearchResult } from '../api/generated/models/SearchResult';
+import { authorDisplayName } from '../client/authorPresentation';
 import {
   engagementTargetPath,
   opaqueNextCursor,
@@ -270,7 +271,11 @@ function ActivityCard({
   const isOwn = Boolean(
     currentAccountId && item.actor?.id === currentAccountId,
   );
-  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
+  const actorName = isOwn
+    ? t('m5s5.activity.you')
+    : item.actor
+      ? authorDisplayName(item.actor)
+      : undefined;
 
   const actionText = isOwn
     ? t(`m5s5.activityActionOwn.${item.kind}`)

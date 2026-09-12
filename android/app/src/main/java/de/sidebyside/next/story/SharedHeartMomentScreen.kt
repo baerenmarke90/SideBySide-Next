@@ -109,7 +109,7 @@ fun SharedHeartMomentScreen(
                 Text(
                     text = stringResource(
                         R.string.heart_moment_shared_by,
-                        moment.author.displayName,
+                        moment.author.displayNameForUi(stringResource(R.string.author_former_member)),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = SideBySideTheme.colors.textSecondary,
