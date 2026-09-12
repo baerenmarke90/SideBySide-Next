@@ -28,6 +28,8 @@ import {
   memoryDetailPath,
   milestoneDetailPath,
   STORY_CHAPTERS_ROUTE,
+  STORY_YEARS_ROUTE,
+  storyYearPath,
 } from '../client/routes';
 import { loadAuthorizedStoryImage } from '../client/storyMediaLoader';
 import {
@@ -365,14 +367,6 @@ export function StoryProductPage({
     () => buildTapestryBands(items, t, locale, tapestryColumnCount),
     [items, t, locale, tapestryColumnCount],
   );
-
-  const uniqueYears = useMemo(() => {
-    const years = new Set<number>();
-    for (const item of items) {
-      years.add(item.effectiveDate.getFullYear());
-    }
-    return Array.from(years).sort((a, b) => b - a);
-  }, [items]);
 
   const featuredMedia =
     featuredItem?.kind === 'MEMORY'
@@ -798,35 +792,38 @@ export function StoryProductPage({
             </Link>
           </div>
 
-          {/* 4. Year Archive */}
-          {uniqueYears.length > 0 ? (
+          {/* 4. Year Archive — availability comes from the authorized
+              server projection, never from the currently loaded page. */}
+          {availableYears.length > 0 ? (
             <section
               className="momente-year-archive"
               aria-labelledby="momente-years-heading"
             >
-              <div>
-                <h3
-                  id="momente-years-heading"
-                  className="momente-section-title"
+              <div className="momente-section-header">
+                <div>
+                  <h3
+                    id="momente-years-heading"
+                    className="momente-section-title"
+                  >
+                    {t('story.yearArchiveTitle')}
+                  </h3>
+                  <p className="momente-section-subhead">
+                    {t('story.yearArchiveSubtitle')}
+                  </p>
+                </div>
+                <Link
+                  to={STORY_YEARS_ROUTE}
+                  className="momente-stream-all-link"
                 >
-                  {t('story.yearArchiveTitle')}
-                </h3>
-                <p className="momente-section-subhead">
-                  {t('story.yearArchiveSubtitle')}
-                </p>
+                  {t('story.yearArchiveAll')}
+                </Link>
               </div>
               <div className="momente-year-pills">
-                {uniqueYears.map((year) => (
-                  <button
+                {availableYears.slice(0, 4).map((year) => (
+                  <Link
                     key={year}
-                    type="button"
+                    to={storyYearPath(year)}
                     className="momente-year-pill"
-                    onClick={() => {
-                      const next = new URLSearchParams(searchParams);
-                      next.set('tab', 'timeline');
-                      next.set('year', String(year));
-                      setSearchParams(next, { replace: true });
-                    }}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -846,7 +843,7 @@ export function StoryProductPage({
                       <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                     <span>{year}</span>
-                  </button>
+                  </Link>
                 ))}
               </div>
             </section>

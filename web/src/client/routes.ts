@@ -127,6 +127,8 @@ export const SERVER_ADMIN_ROUTE = '/server-admin';
 /* Story content ---------------------------------------------------------- */
 
 export const STORY_CHAPTERS_ROUTE = '/story/chapters';
+export const STORY_YEARS_ROUTE = '/story/years';
+export const STORY_YEAR_ROUTE_PATTERN = '/story/years/:year';
 export const MEMORY_CREATE_ROUTE = '/story/memories/new';
 export const MEMORY_DETAIL_ROUTE_PATTERN = '/story/memories/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/story/memories/:memoryId/edit';
@@ -243,6 +245,10 @@ export function milestoneDetailPath(milestoneId: string): string {
 
 export function milestoneEditPath(milestoneId: string): string {
   return `${milestoneDetailPath(milestoneId)}/edit`;
+}
+
+export function storyYearPath(year: number): string {
+  return `/story/years/${encodeURIComponent(String(year))}`;
 }
 
 export function wishDetailPath(wishId: string): string {
