@@ -43,6 +43,15 @@ export function DestinationIcon({ icon }: { icon: AppRouteIcon }) {
           <path d="M6 5h12v15H6V5Zm3-2h6v4H9V3Zm0 8 2 2 4-4m-6 8h6" />
         </svg>
       );
+    case 'games':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="8" cy="10" r="3" />
+          <circle cx="16" cy="10" r="3" />
+          <path d="M4.5 19c.8-2.6 2.5-4 5-4h5c2.5 0 4.2 1.4 5 4" />
+          <path d="m12 3.5.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7.7-1.6Z" />
+        </svg>
+      );
     case 'more':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
