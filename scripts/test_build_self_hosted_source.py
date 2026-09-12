@@ -50,26 +50,24 @@ class LocalImageTagTest(unittest.TestCase):
 class SourceBuildPlanTest(unittest.TestCase):
     PRODUCTION_ERROR = "source builds are not allowed when SBS_ENVIRONMENT=production is declared"
 
+    def write_env(self, *lines: str) -> tuple[tempfile.TemporaryDirectory[str], Path]:
+        temporary = tempfile.TemporaryDirectory()
+        env_file = Path(temporary.name) / ".env"
+        env_file.write_text("\n".join((*lines, "")), encoding="utf-8")
+        return temporary, env_file
+
     def test_env_plan_uses_explicit_local_images_and_source_contexts(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "\n".join(
-                    (
-                        "SBS_ENVIRONMENT=development",
-                        "SBS_BUILD_REVISION=0123456789abcdef0123456789abcdef01234567",
-                        "SBS_BACKEND_BUILD_CONTEXT=https://github.com/example/project.git#main:backend",
-                        "SBS_WEB_BUILD_CONTEXT=https://github.com/example/project.git#main:web",
-                        "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-ci",
-                        "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-ci",
-                        "SBS_DEMO_MODE=false",
-                        "",
-                    )
-                ),
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {}, clear=True):
-                build_plan = plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_BUILD_REVISION=0123456789abcdef0123456789abcdef01234567",
+            "SBS_BACKEND_BUILD_CONTEXT=https://github.com/example/project.git#main:backend",
+            "SBS_WEB_BUILD_CONTEXT=https://github.com/example/project.git#main:web",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-ci",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-ci",
+            "SBS_DEMO_MODE=false",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True):
+            build_plan = plan(env_file)
 
         self.assertEqual(build_plan["backendImage"], "sidebyside-backend:source-ci")
         self.assertEqual(build_plan["webImage"], "sidebyside-web:source-ci")
@@ -83,86 +81,105 @@ class SourceBuildPlanTest(unittest.TestCase):
         )
 
     def test_registry_target_in_env_is_rejected_before_docker_execution(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=development\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.0\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaises(SourceBuildError):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.0",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaises(SourceBuildError):
+            plan(env_file)
 
     def test_production_dotenv_is_rejected_before_source_build(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=production\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=production",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
+
+    def test_production_with_compose_inline_comment_is_rejected(self) -> None:
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=production # deployed",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
+
+    def test_quoted_production_with_trailing_comment_is_rejected(self) -> None:
+        temporary, env_file = self.write_env(
+            'SBS_ENVIRONMENT="production" # deployed',
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
 
     def test_process_environment_cannot_override_development_into_production(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=development\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True):
-                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
 
     def test_process_development_cannot_mask_production_dotenv(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=production\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True):
-                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=production # deployed",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
+
+    def test_ambiguous_interpolated_environment_is_rejected(self) -> None:
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=${DEPLOYMENT_MODE:-production}",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, "explicit development, demo, or test"
+        ):
+            plan(env_file)
 
     def test_authenticated_git_urls_are_rejected_before_plan_output(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=development\n"
-                "SBS_BACKEND_BUILD_CONTEXT=https://user:token@example.invalid/project.git#main:backend\n"
-                "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaisesRegex(SourceBuildError, "must not contain URL credentials"):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_BACKEND_BUILD_CONTEXT=https://user:token@example.invalid/project.git#main:backend",
+            "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, "must not contain URL credentials"
+        ):
+            plan(env_file)
 
     def test_query_bearing_git_urls_are_rejected_before_plan_output(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            env_file = Path(temp_dir) / ".env"
-            env_file.write_text(
-                "SBS_ENVIRONMENT=development\n"
-                "SBS_BACKEND_BUILD_CONTEXT=https://example.invalid/project.git?token=secret#main:backend\n"
-                "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web\n"
-                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
-                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
-                encoding="utf-8",
-            )
-            with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaisesRegex(SourceBuildError, "must not contain URL query values"):
-                    plan(env_file)
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_BACKEND_BUILD_CONTEXT=https://example.invalid/project.git?token=secret#main:backend",
+            "SBS_WEB_BUILD_CONTEXT=https://example.invalid/project.git#main:web",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, "must not contain URL query values"
+        ):
+            plan(env_file)
 
 
 if __name__ == "__main__":
