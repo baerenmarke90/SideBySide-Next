@@ -533,6 +533,29 @@ jobs:
           version_tag="v${RELEASE_VERSION}"
           source_tag="sha-${SOURCE_REVISION}"
 
+          manifest_state() {
+            local ref="$1"
+            local output
+            local status
+
+            set +e
+            output=$(docker manifest inspect "$ref" 2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -eq 0 ]; then
+              printf '%s\n' exists
+              return 0
+            fi
+            if printf '%s\n' "$output" | grep -qiE 'manifest unknown|no such manifest'; then
+              printf '%s\n' absent
+              return 0
+            fi
+
+            echo "Unable to verify registry identity for ${ref}; refusing publication." >&2
+            return 1
+          }
+
           publish_archive() {
             local archive="$1"
             local source_image="$2"
@@ -546,18 +569,25 @@ jobs:
 
             local source_ref="${repository}:${source_tag}"
             local version_ref="${repository}:${version_tag}"
+            local source_state
+            local version_state
 
-            if docker manifest inspect "$source_ref" >/dev/null 2>&1; then
+            source_state=$(manifest_state "$source_ref")
+            if [ "$source_state" = "exists" ]; then
               docker pull "$source_ref" >/dev/null
+              local remote_id
               remote_id=$(docker image inspect "$source_ref" --format '{{.Id}}')
               if [ "$remote_id" != "$local_id" ]; then
                 echo "Existing immutable source tag ${source_ref} points to different image bytes." >&2
                 exit 1
               fi
-            else
+            elif [ "$source_state" = "absent" ]; then
               docker tag "$source_image" "$source_ref"
               docker push "$source_ref"
               docker pull "$source_ref" >/dev/null
+            else
+              echo "Unexpected registry identity state for ${source_ref}." >&2
+              exit 1
             fi
 
             source_digest_ref=$(docker image inspect "$source_ref" \
@@ -566,7 +596,8 @@ jobs:
             test -n "$source_digest_ref"
             digest="${source_digest_ref#*@}"
 
-            if docker manifest inspect "$version_ref" >/dev/null 2>&1; then
+            version_state=$(manifest_state "$version_ref")
+            if [ "$version_state" = "exists" ]; then
               docker pull "$version_ref" >/dev/null
               version_digest_ref=$(docker image inspect "$version_ref" \
                 --format '{{range .RepoDigests}}{{println .}}{{end}}' \
@@ -575,7 +606,7 @@ jobs:
                 echo "Version tag ${version_ref} already exists with a different digest." >&2
                 exit 1
               fi
-            else
+            elif [ "$version_state" = "absent" ]; then
               docker tag "$source_ref" "$version_ref"
               docker push "$version_ref"
               docker pull "$version_ref" >/dev/null
@@ -583,6 +614,9 @@ jobs:
                 --format '{{range .RepoDigests}}{{println .}}{{end}}' \
                 | grep -F "${repository}@sha256:" | head -n 1)
               test "$version_digest_ref" = "$source_digest_ref"
+            else
+              echo "Unexpected registry identity state for ${version_ref}." >&2
+              exit 1
             fi
 
             printf '%s@%s\n' "$version_ref" "$digest" > "$result_file"
