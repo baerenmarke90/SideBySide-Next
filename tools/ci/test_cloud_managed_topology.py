@@ -30,6 +30,7 @@ LEGACY_COMPOSE_REFERENCES = (
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import check_environment_isolation as isolation  # noqa: E402
+import release_manifest  # noqa: E402
 
 
 def _read(path: Path) -> str:
@@ -54,6 +55,10 @@ def _tracked_files() -> list[Path]:
         capture_output=True,
     )
     return [ROOT / raw.decode("utf-8") for raw in result.stdout.split(b"\0") if raw]
+
+
+def _digest_ref(name: str, digit: str) -> str:
+    return f"registry.example/{name}@sha256:{digit * 64}"
 
 
 class CanonicalComposeRepositoryContractTest(unittest.TestCase):
@@ -169,6 +174,8 @@ class CloudComposeTextContractTest(unittest.TestCase):
             sentinel = f"invalid.invalid/{image}:configuration-required"
             self.assertIn(f"${{{var}:-{sentinel}}}", self.compose)
             self.assertTrue(sentinel.split("/", 1)[0].endswith(".invalid"))
+            with self.assertRaises(release_manifest.ManifestError):
+                release_manifest.require_digest_image_reference(sentinel, label=var)
 
     def test_migrate_never_restarts_automatically(self) -> None:
         self.assertIn('restart: "no"', _service_block(self.compose, "cloud-migrate"))
@@ -214,6 +221,71 @@ class CloudComposeTextContractTest(unittest.TestCase):
         self.assertNotIn("SBS_MAIL_TRANSPORT:-log", cloud_anchor)
 
 
+class CloudRuntimeImageIdentityContractTest(unittest.TestCase):
+    """#668: tag-only Production identities are never considered immutable."""
+
+    def _config(self, backend: str, web: str) -> dict:
+        return {
+            "services": {
+                "cloud-api": {"image": backend},
+                "cloud-worker": {"image": backend},
+                "cloud-migrate": {"image": backend},
+                "cloud-web": {"image": web},
+            }
+        }
+
+    def test_tag_only_references_are_rejected(self) -> None:
+        valid_backend = _digest_ref("sidebyside-backend", "1")
+        valid_web = _digest_ref("sidebyside-web", "2")
+        for tag in ("latest", "main", "v1.0.0", "some-tag"):
+            with self.subTest(tag=tag, role="backend"):
+                with self.assertRaises(release_manifest.ManifestError):
+                    release_manifest.cloud_images_from_compose(
+                        self._config(f"registry.example/sidebyside-backend:{tag}", valid_web)
+                    )
+            with self.subTest(tag=tag, role="web"):
+                with self.assertRaises(release_manifest.ManifestError):
+                    release_manifest.cloud_images_from_compose(
+                        self._config(valid_backend, f"registry.example/sidebyside-web:{tag}")
+                    )
+
+    def test_digest_references_are_accepted(self) -> None:
+        backend = _digest_ref("sidebyside-backend", "1")
+        web = _digest_ref("sidebyside-web", "2")
+        self.assertEqual(
+            release_manifest.cloud_images_from_compose(self._config(backend, web)),
+            (backend, web),
+        )
+
+    def test_backend_services_must_resolve_to_the_same_digest_identity(self) -> None:
+        config = self._config(
+            _digest_ref("sidebyside-backend", "1"),
+            _digest_ref("sidebyside-web", "2"),
+        )
+        config["services"]["cloud-worker"]["image"] = _digest_ref(
+            "sidebyside-backend", "3"
+        )
+        with self.assertRaises(release_manifest.ManifestError):
+            release_manifest.cloud_images_from_compose(config)
+
+    def test_missing_identity_and_source_build_fail_closed(self) -> None:
+        config = self._config(
+            _digest_ref("sidebyside-backend", "1"),
+            _digest_ref("sidebyside-web", "2"),
+        )
+        config["services"]["cloud-web"].pop("image")
+        with self.assertRaises(release_manifest.ManifestError):
+            release_manifest.cloud_images_from_compose(config)
+
+        config = self._config(
+            _digest_ref("sidebyside-backend", "1"),
+            _digest_ref("sidebyside-web", "2"),
+        )
+        config["services"]["cloud-api"]["build"] = {"context": "backend"}
+        with self.assertRaises(release_manifest.ManifestError):
+            release_manifest.cloud_images_from_compose(config)
+
+
 @unittest.skipUnless(shutil.which("docker"), "docker is required to resolve compose config")
 class CloudComposeResolvedConfigTest(unittest.TestCase):
     """Validates that the cloud profile resolves to the managed topology."""
@@ -249,8 +321,8 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
 
     def _valid_overrides(self) -> dict[str, str]:
         return {
-            "SBS_BACKEND_IMAGE": "registry.example/sidebyside-backend:v1.0.0",
-            "SBS_WEB_IMAGE": "registry.example/sidebyside-web:v1.0.0",
+            "SBS_BACKEND_IMAGE": _digest_ref("sidebyside-backend", "1"),
+            "SBS_WEB_IMAGE": _digest_ref("sidebyside-web", "2"),
             "SBS_DATABASE_URL": "postgresql+psycopg://user:pass@db.private:5432/sidebyside",
             "SBS_ACCOUNT_DELETION_INSTANCE_ID": "00000000-0000-0000-0000-000000000000",
         }
@@ -264,17 +336,17 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
 
     def test_resolved_services_reference_images_not_builds(self) -> None:
         config = self._resolve(self._valid_overrides())
+        expected_backend = _digest_ref("sidebyside-backend", "1")
+        expected_web = _digest_ref("sidebyside-web", "2")
         for name in ("cloud-api", "cloud-migrate", "cloud-worker"):
-            self.assertEqual(
-                config["services"][name]["image"],
-                "registry.example/sidebyside-backend:v1.0.0",
-            )
+            self.assertEqual(config["services"][name]["image"], expected_backend)
             self.assertNotIn("build", config["services"][name])
-        self.assertEqual(
-            config["services"]["cloud-web"]["image"],
-            "registry.example/sidebyside-web:v1.0.0",
-        )
+        self.assertEqual(config["services"]["cloud-web"]["image"], expected_web)
         self.assertNotIn("build", config["services"]["cloud-web"])
+        self.assertEqual(
+            release_manifest.cloud_images_from_compose(config),
+            (expected_backend, expected_web),
+        )
 
     def test_resolved_media_store_defaults_to_local_without_s3(self) -> None:
         config = self._resolve(self._valid_overrides())
@@ -318,6 +390,8 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
                 "invalid.invalid/sidebyside-backend:configuration-required",
             )
             self.assertNotIn("build", config["services"][name])
+        with self.assertRaises(release_manifest.ManifestError):
+            release_manifest.cloud_images_from_compose(config)
 
 
 def _pairs(lines: list[str]):
@@ -332,7 +406,8 @@ def _pairs(lines: list[str]):
 class CloudEnvironmentTemplateTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.values = dict(_pairs(_read(CLOUD_ENV_EXAMPLE).splitlines()))
+        cls.text = _read(CLOUD_ENV_EXAMPLE)
+        cls.values = dict(_pairs(cls.text.splitlines()))
 
     def test_selects_canonical_cloud_profile(self) -> None:
         self.assertEqual(self.values["COMPOSE_PROFILES"], "cloud")
@@ -341,13 +416,13 @@ class CloudEnvironmentTemplateTest(unittest.TestCase):
 
     def test_declares_local_media_store_as_supported_default(self) -> None:
         self.assertEqual(self.values["SBS_MEDIA_STORE"], "local")
-        self.assertIn("# SBS_MEDIA_STORE=s3", _read(CLOUD_ENV_EXAMPLE))
+        self.assertIn("# SBS_MEDIA_STORE=s3", self.text)
 
-    def test_image_placeholders_are_not_floating_tags(self) -> None:
+    def test_image_placeholders_require_digest_identity(self) -> None:
         for var in ("SBS_BACKEND_IMAGE", "SBS_WEB_IMAGE"):
-            value = self.values[var]
-            self.assertNotIn(":latest", value)
-            self.assertNotRegex(value, r":main$")
+            self.assertEqual(self.values[var], "")
+        self.assertIn("@sha256:<digest>", self.text)
+        self.assertIn("tag-only", self.text)
 
     def test_isolated_from_persistent_development_template(self) -> None:
         development = isolation.parse_dotenv(DEV_ENV_EXAMPLE)

@@ -29,6 +29,14 @@ The product is not rebuilt for that promotion. Self-Hosted retains the #375 veri
 source path and the released image-archive path. Neither mode identifies Production
 by mutable `main`.
 
+An OCI/Docker **tag is not immutable identity**, even when its spelling looks like an
+immutable product version such as `v1.0.0`: a registry can move a tag to different
+content. Cloud/Managed Production therefore uses a digest-qualified registry reference
+(`registry/repository@sha256:<digest>`) as its transport/deployment identity. A tag may
+remain before the `@sha256:` suffix for operator readability, but a tag alone is never
+sufficient. This registry digest supplements the #519 release identity; it does not
+create a second product release identity.
+
 ## Version policy
 
 Launch versions use SemVer and have exactly two human-facing representations:
@@ -240,6 +248,33 @@ release owner must configure GitHub before the first production run:
 If any of these conditions is absent, the workflow must fail rather than falling back
 to debug signing, unsigned publication or a repository secret.
 
+## Cloud/Managed deployment binding
+
+Cloud registry promotion happens **after** the final #519 release exists. It therefore
+does not rewrite or extend the published release manifest. Instead,
+`scripts/release_manifest.py cloud-deployment` consumes that exact final manifest and
+the resolved canonical `cloud` Compose configuration and emits a small deployment
+identity record containing only:
+
+- product version/tag, source revision and SHA-256 of the exact #519 release manifest;
+- the existing #519 `backend-runtime` and `web-runtime` archive SHA-256 values;
+- the exact digest-qualified backend and Web registry references/digests actually
+  selected by Compose;
+- backend roles (`api`, `worker`, `migrate`) as one shared image identity;
+- the exact previous-known-good Cloud deployment identity for a non-initial release.
+
+The command rejects tag-only references (`latest`, `main`, `v1.0.0`, arbitrary branch
+or custom tags), missing images, any `build:` fallback, backend-role image divergence,
+an unsigned/non-final #519 manifest, and a previous deployment identity that does not
+match the canonical #519 `previousKnownGood` record. The output is deployment evidence,
+not another release manifest, and contains no Compose environment or secret values.
+
+Because registry manifest digests and `docker save` archive digests identify different
+representations, they are recorded side by side rather than incorrectly compared for
+string equality. The invariant is: the already verified #519 archive is loaded and
+pushed without rebuild; the registry-reported digest of that promoted image becomes the
+exact pull identity used by Production.
+
 ## Self-Hosted and Cloud/Managed
 
 Both operating models consume the same release identity:
@@ -247,13 +282,15 @@ Both operating models consume the same release identity:
 `product version -> Git tag -> immutable source SHA -> release manifest -> artifact digests`
 
 Self-Hosted may deploy the released archives directly or use the verified-source path
-from #375. Cloud/Managed may promote the exact archives to an OCI registry and record
-registry digests, but must not rebuild them. Commercial entitlement state is unrelated
-to artifact identity.
+from #375. Cloud/Managed promotes the exact archives to an OCI registry, records the
+registry digests as transport/deployment identity, and deploys only digest-qualified
+references. It must not rebuild them. Commercial entitlement state is unrelated to
+artifact identity.
 
 ## Focused test contract
 
-`tools/ci/test_release_manifest.py` covers release-manifest invariants.
+`tools/ci/test_release_manifest.py` covers release-manifest invariants plus the #668
+Cloud deployment binding, digest-only OCI identity and previous-known-good linkage.
 
 `tools/ci/test_release_publish_workflow.py` covers the privileged publication boundary,
 including:

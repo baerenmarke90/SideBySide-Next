@@ -2,7 +2,9 @@
 """Build and verify the immutable SideBySide release manifest.
 
 The manifest consumes #193 release evidence. It does not build artifacts, sign
-Android packages or infer database rollback safety.
+Android packages or infer database rollback safety. Cloud/Managed deployment
+identity is derived from that same manifest and a resolved canonical Compose
+configuration; it is deployment evidence, not a second product release identity.
 """
 
 from __future__ import annotations
@@ -17,8 +19,13 @@ from typing import Any
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$")
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+OCI_SHA256_REFERENCE = re.compile(r"^(?P<name>[^@\s]+)@sha256:(?P<digest>[0-9a-f]{64})$")
 REQUIRED_ARTIFACTS = {"backend-runtime", "web-runtime", "android-apk", "android-aab"}
 BACKEND_ROLES = {"api", "worker", "migrate"}
+CLOUD_BACKEND_SERVICES = ("cloud-api", "cloud-worker", "cloud-migrate")
+CLOUD_WEB_SERVICE = "cloud-web"
+CLOUD_SERVICES = {*CLOUD_BACKEND_SERVICES, CLOUD_WEB_SERVICE}
+CLOUD_DEPLOYMENT_KIND = "sidebyside-cloud-deployment-identity"
 
 
 class ManifestError(ValueError):
@@ -53,6 +60,70 @@ def safe_relative_path(value: str) -> PurePosixPath:
 def require_semver(version: str) -> None:
     if not SEMVER.fullmatch(version):
         raise ManifestError(f"Product version is not SemVer: {version!r}")
+
+
+def require_digest_image_reference(value: object, *, label: str) -> tuple[str, str]:
+    """Return a normalized OCI reference and digest or fail closed.
+
+    A tag may be present before ``@`` for operator readability, but the digest is
+    mandatory. Tag-only references -- including SemVer tags -- are mutable and
+    therefore never valid Cloud/Managed Production identity.
+    """
+    if not isinstance(value, str):
+        raise ManifestError(f"{label} image reference must be a string")
+    reference = value.strip()
+    match = OCI_SHA256_REFERENCE.fullmatch(reference)
+    if match is None:
+        raise ManifestError(
+            f"{label} image must be pinned as <registry/repository>@sha256:<64-hex-digest>; "
+            "tag-only references are not immutable deployment identity"
+        )
+    return reference, f"sha256:{match.group('digest')}"
+
+
+def cloud_images_from_compose(config: dict[str, Any]) -> tuple[str, str]:
+    """Validate and extract exact Cloud/Managed image identities.
+
+    The input is the JSON emitted by ``docker compose --profile cloud ... config
+    --format json``. That makes the recorded identity the value Compose actually
+    resolved after environment interpolation rather than a second hand-maintained
+    deployment manifest.
+    """
+    services = config.get("services")
+    if not isinstance(services, dict):
+        raise ManifestError("Resolved Compose configuration has no services object")
+    if set(services) != CLOUD_SERVICES:
+        raise ManifestError(
+            "Resolved Cloud Compose configuration must contain exactly cloud-api, "
+            "cloud-worker, cloud-migrate and cloud-web"
+        )
+
+    backend_reference: str | None = None
+    for service_name in CLOUD_BACKEND_SERVICES:
+        service = services.get(service_name)
+        if not isinstance(service, dict):
+            raise ManifestError(f"Resolved Compose service {service_name} is invalid")
+        if "build" in service:
+            raise ManifestError(f"{service_name} must not have a source build fallback")
+        reference, _ = require_digest_image_reference(
+            service.get("image"), label=service_name
+        )
+        if backend_reference is None:
+            backend_reference = reference
+        elif reference != backend_reference:
+            raise ManifestError(
+                "cloud-api, cloud-worker and cloud-migrate must use the exact same backend image"
+            )
+
+    web = services.get(CLOUD_WEB_SERVICE)
+    if not isinstance(web, dict):
+        raise ManifestError("Resolved Compose service cloud-web is invalid")
+    if "build" in web:
+        raise ManifestError("cloud-web must not have a source build fallback")
+    web_reference, _ = require_digest_image_reference(web.get("image"), label=CLOUD_WEB_SERVICE)
+
+    assert backend_reference is not None
+    return backend_reference, web_reference
 
 
 def validate_evidence(evidence: dict[str, Any], version: str) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
@@ -175,6 +246,163 @@ def validate_manifest_shape(manifest: dict[str, Any], *, require_signed_android:
         raise ManifestError("Manifest must preserve the explicit database rollback boundary")
 
 
+def _artifact_digest(manifest: dict[str, Any], artifact_id: str) -> str:
+    for artifact in manifest["artifacts"]:
+        if artifact.get("id") == artifact_id:
+            return str(artifact["sha256"])
+    raise ManifestError(f"Release manifest has no {artifact_id} artifact")
+
+
+def _validate_cloud_image_record(
+    value: object,
+    *,
+    label: str,
+    expected_roles: set[str],
+    expected_artifact_sha256: str | None = None,
+) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ManifestError(f"Cloud deployment {label} image record is missing")
+    reference, digest = require_digest_image_reference(value.get("reference"), label=label)
+    if value.get("digest") != digest:
+        raise ManifestError(f"Cloud deployment {label} digest does not match its image reference")
+    artifact_sha = value.get("releaseArtifactSha256")
+    if not isinstance(artifact_sha, str) or not SHA256.fullmatch(artifact_sha):
+        raise ManifestError(f"Cloud deployment {label} release artifact digest is invalid")
+    if expected_artifact_sha256 is not None and artifact_sha != expected_artifact_sha256:
+        raise ManifestError(f"Cloud deployment {label} is bound to the wrong #519 artifact digest")
+    if set(value.get("roles", [])) != expected_roles:
+        raise ManifestError(f"Cloud deployment {label} roles are inconsistent")
+    return {
+        "reference": reference,
+        "digest": digest,
+        "releaseArtifactSha256": artifact_sha,
+        "roles": sorted(expected_roles),
+    }
+
+
+def _validate_previous_cloud_identity(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ManifestError("Cloud deployment previousKnownGood must be an object or null")
+    version = value.get("version")
+    tag = value.get("tag")
+    source = value.get("sourceRevision")
+    manifest_sha = value.get("releaseManifestSha256")
+    if not isinstance(version, str):
+        raise ManifestError("Previous Cloud deployment version is missing")
+    require_semver(version)
+    if tag != f"v{version}":
+        raise ManifestError("Previous Cloud deployment tag must be exactly v<product-version>")
+    if not isinstance(source, str) or not SHA40.fullmatch(source):
+        raise ManifestError("Previous Cloud deployment source revision is invalid")
+    if not isinstance(manifest_sha, str) or not SHA256.fullmatch(manifest_sha):
+        raise ManifestError("Previous Cloud deployment release manifest digest is invalid")
+    images = value.get("images")
+    if not isinstance(images, dict) or set(images) != {"backend", "web"}:
+        raise ManifestError("Previous Cloud deployment must contain backend and Web images")
+    backend = _validate_cloud_image_record(
+        images["backend"], label="previous backend", expected_roles=BACKEND_ROLES
+    )
+    web = _validate_cloud_image_record(
+        images["web"], label="previous web", expected_roles={"web"}
+    )
+    return {
+        "version": version,
+        "tag": tag,
+        "sourceRevision": source,
+        "releaseManifestSha256": manifest_sha,
+        "images": {"backend": backend, "web": web},
+    }
+
+
+def validate_cloud_deployment_identity(identity: dict[str, Any]) -> None:
+    if identity.get("schemaVersion") != 1 or identity.get("kind") != CLOUD_DEPLOYMENT_KIND:
+        raise ManifestError("Unsupported Cloud deployment identity schema")
+    release = identity.get("release")
+    if not isinstance(release, dict):
+        raise ManifestError("Cloud deployment identity has no release binding")
+    product = release.get("product")
+    if not isinstance(product, dict):
+        raise ManifestError("Cloud deployment identity has no product identity")
+    version = product.get("version")
+    if not isinstance(version, str):
+        raise ManifestError("Cloud deployment product version is missing")
+    require_semver(version)
+    if product.get("tag") != f"v{version}":
+        raise ManifestError("Cloud deployment release tag must be exactly v<product-version>")
+    source = release.get("sourceRevision")
+    if not isinstance(source, str) or not SHA40.fullmatch(source):
+        raise ManifestError("Cloud deployment source revision is invalid")
+    manifest_sha = release.get("releaseManifestSha256")
+    if not isinstance(manifest_sha, str) or not SHA256.fullmatch(manifest_sha):
+        raise ManifestError("Cloud deployment release manifest digest is invalid")
+    artifacts = release.get("artifacts")
+    if not isinstance(artifacts, dict) or set(artifacts) != {"backend-runtime", "web-runtime"}:
+        raise ManifestError("Cloud deployment release binding must contain backend and Web artifacts")
+    for artifact_id, digest in artifacts.items():
+        if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            raise ManifestError(f"Cloud deployment {artifact_id} digest is invalid")
+
+    images = identity.get("images")
+    if not isinstance(images, dict) or set(images) != {"backend", "web"}:
+        raise ManifestError("Cloud deployment identity must contain backend and Web images")
+    _validate_cloud_image_record(
+        images["backend"],
+        label="backend",
+        expected_roles=BACKEND_ROLES,
+        expected_artifact_sha256=artifacts["backend-runtime"],
+    )
+    _validate_cloud_image_record(
+        images["web"],
+        label="web",
+        expected_roles={"web"},
+        expected_artifact_sha256=artifacts["web-runtime"],
+    )
+
+    previous = identity.get("previousKnownGood")
+    if previous is not None:
+        _validate_previous_cloud_identity(previous)
+
+
+def previous_cloud_deployment_identity(
+    path: Path | None, expected: object
+) -> dict[str, Any] | None:
+    if expected is None:
+        if path is not None:
+            raise ManifestError(
+                "Initial release cannot also declare a previous Cloud deployment identity"
+            )
+        return None
+    if not isinstance(expected, dict):
+        raise ManifestError("Release manifest previousKnownGood identity is invalid")
+    if path is None:
+        raise ManifestError(
+            "Non-initial Cloud deployment requires the previous-known-good Cloud deployment identity"
+        )
+
+    identity = load_json(path)
+    validate_cloud_deployment_identity(identity)
+    release = identity["release"]
+    product = release["product"]
+    checks = {
+        "version": product["version"],
+        "tag": product["tag"],
+        "sourceRevision": release["sourceRevision"],
+        "manifestSha256": release["releaseManifestSha256"],
+    }
+    for key, actual in checks.items():
+        if expected.get(key) != actual:
+            raise ManifestError(
+                f"Previous Cloud deployment identity does not match #519 previousKnownGood {key}"
+            )
+    return {
+        "version": product["version"],
+        "tag": product["tag"],
+        "sourceRevision": release["sourceRevision"],
+        "releaseManifestSha256": release["releaseManifestSha256"],
+        "images": identity["images"],
+    }
+
+
 def build_manifest(args: argparse.Namespace) -> int:
     evidence = load_json(args.evidence_index)
     source, artifacts, android = validate_evidence(evidence, args.version)
@@ -226,6 +454,67 @@ def verify_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
+def build_cloud_deployment_identity(args: argparse.Namespace) -> int:
+    manifest = load_json(args.manifest)
+    validate_manifest_shape(manifest, require_signed_android=True)
+    compose = load_json(args.compose_config)
+    backend_reference, web_reference = cloud_images_from_compose(compose)
+    backend_reference, backend_digest = require_digest_image_reference(
+        backend_reference, label="backend"
+    )
+    web_reference, web_digest = require_digest_image_reference(web_reference, label="web")
+
+    backend_artifact = _artifact_digest(manifest, "backend-runtime")
+    web_artifact = _artifact_digest(manifest, "web-runtime")
+    previous = previous_cloud_deployment_identity(
+        args.previous_deployment_identity, manifest.get("previousKnownGood")
+    )
+    identity = {
+        "schemaVersion": 1,
+        "kind": CLOUD_DEPLOYMENT_KIND,
+        "release": {
+            "product": {
+                "name": manifest["product"].get("name", "SideBySide"),
+                "version": manifest["product"]["version"],
+                "tag": manifest["product"]["tag"],
+            },
+            "sourceRevision": manifest["sourceRevision"],
+            "releaseManifestSha256": sha256(args.manifest),
+            "artifacts": {
+                "backend-runtime": backend_artifact,
+                "web-runtime": web_artifact,
+            },
+        },
+        "images": {
+            "backend": {
+                "reference": backend_reference,
+                "digest": backend_digest,
+                "releaseArtifactSha256": backend_artifact,
+                "roles": sorted(BACKEND_ROLES),
+            },
+            "web": {
+                "reference": web_reference,
+                "digest": web_digest,
+                "releaseArtifactSha256": web_artifact,
+                "roles": ["web"],
+            },
+        },
+        "previousKnownGood": previous,
+        "evidence": {
+            "source": "#519 release manifest + resolved canonical cloud Compose config",
+            "databaseRollbackImplied": False,
+        },
+    }
+    validate_cloud_deployment_identity(identity)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(
+        "Verified Cloud deployment identity "
+        f"{manifest['product']['tag']} backend={backend_digest} web={web_digest}"
+    )
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description=__doc__)
     sub = root.add_subparsers(dest="command", required=True)
@@ -245,6 +534,25 @@ def parser() -> argparse.ArgumentParser:
     verify.add_argument("--artifact-root", type=Path, required=True)
     verify.add_argument("--require-signed-android", action="store_true")
     verify.set_defaults(handler=verify_manifest)
+
+    cloud = sub.add_parser(
+        "cloud-deployment",
+        help="Bind a final #519 release to digest-pinned resolved Cloud Compose images",
+    )
+    cloud.add_argument("--manifest", type=Path, required=True)
+    cloud.add_argument(
+        "--compose-config",
+        type=Path,
+        required=True,
+        help="JSON from docker compose --profile cloud ... config --format json",
+    )
+    cloud.add_argument(
+        "--previous-deployment-identity",
+        type=Path,
+        help="Required for a non-initial release; exact prior Cloud deployment identity",
+    )
+    cloud.add_argument("--output", type=Path, required=True)
+    cloud.set_defaults(handler=build_cloud_deployment_identity)
     return root
 
 
