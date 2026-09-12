@@ -54,6 +54,7 @@ class SourceBuildPlanTest(unittest.TestCase):
             env_file.write_text(
                 "\n".join(
                     (
+                        "SBS_ENVIRONMENT=development",
                         "SBS_BUILD_REVISION=0123456789abcdef0123456789abcdef01234567",
                         "SBS_BACKEND_BUILD_CONTEXT=https://github.com/example/project.git#main:backend",
                         "SBS_WEB_BUILD_CONTEXT=https://github.com/example/project.git#main:web",
@@ -83,12 +84,45 @@ class SourceBuildPlanTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             env_file = Path(temp_dir) / ".env"
             env_file.write_text(
+                "SBS_ENVIRONMENT=development\n"
                 "SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.0\n"
                 "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {}, clear=True):
                 with self.assertRaises(SourceBuildError):
+                    plan(env_file)
+
+    def test_production_dotenv_is_rejected_before_source_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_file = Path(temp_dir) / ".env"
+            env_file.write_text(
+                "SBS_ENVIRONMENT=production\n"
+                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
+                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(
+                    SourceBuildError,
+                    "source builds are not allowed for SBS_ENVIRONMENT=production",
+                ):
+                    plan(env_file)
+
+    def test_process_environment_cannot_override_development_into_production(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_file = Path(temp_dir) / ".env"
+            env_file.write_text(
+                "SBS_ENVIRONMENT=development\n"
+                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
+                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True):
+                with self.assertRaisesRegex(
+                    SourceBuildError,
+                    "source builds are not allowed for SBS_ENVIRONMENT=production",
+                ):
                     plan(env_file)
 
 
