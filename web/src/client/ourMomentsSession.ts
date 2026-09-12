@@ -157,7 +157,9 @@ export function createLocalOurMomentsSession(
 
   function beginRound(): void {
     if (!sourceParticipants || sourceMoments.length < 3) {
-      throw new Error('Our Moments requires two participants and at least three prepared moments.');
+      throw new Error(
+        'Our Moments requires two participants and at least three prepared moments.',
+      );
     }
     clearMismatchTimer();
     emit({
@@ -189,11 +191,7 @@ export function createLocalOurMomentsSession(
   }
 
   function selectCard(cardId: string): void {
-    if (
-      disposed ||
-      snapshot.status !== 'playing' ||
-      snapshot.inputLocked
-    ) {
+    if (disposed || snapshot.status !== 'playing' || snapshot.inputLocked) {
       return;
     }
 
@@ -269,10 +267,7 @@ export function createLocalOurMomentsSession(
         ...moment,
         effectiveDate: new Date(moment.effectiveDate),
       }));
-      sourceParticipants = [
-        { ...participants[0] },
-        { ...participants[1] },
-      ];
+      sourceParticipants = [{ ...participants[0] }, { ...participants[1] }];
       beginRound();
     },
     restart() {

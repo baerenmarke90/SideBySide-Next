@@ -133,9 +133,7 @@ export function AppShell({
   const location = useLocation();
   const isPrivateArea = location.pathname.startsWith('/more/private');
   const gamesPath = appRoutePath('games');
-  const isGamesArea =
-    location.pathname === gamesPath ||
-    location.pathname.startsWith(`${gamesPath}/`);
+  const isGamesHub = location.pathname === gamesPath;
 
   useEffect(
     () => () => {
@@ -247,7 +245,7 @@ export function AppShell({
           className="product-main sbs-motion-reveal"
           tabIndex={-1}
         >
-          {isGamesArea ? (
+          {isGamesHub ? (
             <GamesProductArea
               apiBaseUrl={apiBaseUrl}
               accessToken={accessToken}

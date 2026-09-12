@@ -151,6 +151,20 @@
   white-space: nowrap;
 }
 
+.games-entry-link {
+  text-decoration: none;
+}
+
+.games-entry-link:hover {
+  border-color: var(--color-brand-text);
+  box-shadow: var(--shadow-card);
+}
+
+.games-entry-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
 @media (max-width: 599px) {
   .games-entry {
     grid-template-columns: auto minmax(0, 1fr);

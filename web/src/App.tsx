@@ -64,6 +64,7 @@ import {
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
+  GAMES_MOMENTS_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
   HEART_MOMENT_EDIT_ROUTE_PATTERN,
@@ -118,6 +119,7 @@ import {
   SearchProductPage,
 } from './components/M4ProductPages';
 import { MemoryProductPage } from './components/MemoryProductPage';
+import { OurMomentsGamePage } from './components/OurMomentsGamePage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
 import { PageHeader } from './components/PageHeader';
@@ -698,6 +700,17 @@ function AuthenticatedApp({
           <Route
             path={SEARCH_ROUTE}
             element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}
+          />
+          <Route
+            path={GAMES_MOMENTS_ROUTE}
+            element={
+              <OurMomentsGamePage
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                spaceId={spaceId}
+                currentAccountId={account.id}
+              />
+            }
           />
           <Route path={appRoutePath('more')} element={<MoreOverviewPage />} />
           <Route

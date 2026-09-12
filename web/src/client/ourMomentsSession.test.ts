@@ -24,7 +24,8 @@ function firstPairCardIds(
 ): [string, string] {
   const first = cards[0];
   const partner = cards.find(
-    (candidate) => candidate.pairId === first.pairId && candidate.id !== first.id,
+    (candidate) =>
+      candidate.pairId === first.pairId && candidate.id !== first.id,
   );
   if (!partner) throw new Error('Pair fixture missing.');
   return [first.id, partner.id];
@@ -47,7 +48,9 @@ describe('Our Moments local sofa session', () => {
   it('selects four pairs normally, three for a smaller board and none below the privacy-safe minimum', () => {
     const source = moments(6);
     expect(selectOurMomentsRound(source, () => 0.5)).toHaveLength(4);
-    expect(selectOurMomentsRound(source.slice(0, 3), () => 0.5)).toHaveLength(3);
+    expect(selectOurMomentsRound(source.slice(0, 3), () => 0.5)).toHaveLength(
+      3,
+    );
     expect(selectOurMomentsRound(source.slice(0, 2), () => 0.5)).toEqual([]);
   });
 
@@ -65,9 +68,9 @@ describe('Our Moments local sofa session', () => {
 
     expect(after).not.toBe(before);
     expect(after.cards).not.toBe(before.cards);
-    expect(after.cards.find((card) => card.id === before.cards[0].id)?.state).toBe(
-      'revealed',
-    );
+    expect(
+      after.cards.find((card) => card.id === before.cards[0].id)?.state,
+    ).toBe('revealed');
     expect(before.cards[0].state).toBe('hidden');
   });
 
@@ -90,7 +93,9 @@ describe('Our Moments local sofa session', () => {
     session.dispatch({ type: 'SELECT_CARD', cardId: secondId });
     const locked = session.getSnapshot();
     expect(locked.inputLocked).toBe(true);
-    expect(locked.cards.filter((card) => card.state === 'revealed')).toHaveLength(2);
+    expect(
+      locked.cards.filter((card) => card.state === 'revealed'),
+    ).toHaveLength(2);
 
     session.dispatch({ type: 'SELECT_CARD', cardId: thirdId });
     expect(session.getSnapshot()).toBe(locked);
@@ -99,7 +104,9 @@ describe('Our Moments local sofa session', () => {
     const resolved = session.getSnapshot();
     expect(resolved.inputLocked).toBe(false);
     expect(resolved.activePlayerIndex).toBe(1);
-    expect(resolved.cards.filter((card) => card.state === 'revealed')).toHaveLength(0);
+    expect(
+      resolved.cards.filter((card) => card.state === 'revealed'),
+    ).toHaveLength(0);
   });
 
   it('keeps the turn on a match and pauses on the relationship reveal before continuing', () => {
@@ -108,7 +115,9 @@ describe('Our Moments local sofa session', () => {
 
     const initial = session.getSnapshot();
     const [firstId, secondId] = firstPairCardIds(initial.cards);
-    const expectedPairId = initial.cards.find((card) => card.id === firstId)?.pairId;
+    const expectedPairId = initial.cards.find(
+      (card) => card.id === firstId,
+    )?.pairId;
     session.dispatch({ type: 'SELECT_CARD', cardId: firstId });
     session.dispatch({ type: 'SELECT_CARD', cardId: secondId });
 

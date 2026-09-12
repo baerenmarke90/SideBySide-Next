@@ -5,10 +5,7 @@ import { GamesApi } from '../api/generated/apis/GamesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { PartnerView } from '../api/generated/models/PartnerView';
 import { Configuration } from '../api/generated/runtime';
-import {
-  appRoutePath,
-  GAMES_MOMENTS_ROUTE,
-} from '../client/routes';
+import { appRoutePath } from '../client/routes';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   createLocalOurMomentsSession,
@@ -28,9 +25,7 @@ import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
 export interface OurMomentsGameSetup {
-  participants:
-    | readonly [OurMomentsParticipant, OurMomentsParticipant]
-    | null;
+  participants: readonly [OurMomentsParticipant, OurMomentsParticipant] | null;
   moments: readonly PreparedOurMoment[];
 }
 
@@ -113,9 +108,7 @@ function OurMomentsCardButton({
       className={`our-moments-card our-moments-card-${card.state} our-moments-card-${card.face}`}
       aria-label={cardAccessibleName(card, index, total, t)}
       disabled={disabled}
-      onClick={() =>
-        session.dispatch({ type: 'SELECT_CARD', cardId: card.id })
-      }
+      onClick={() => session.dispatch({ type: 'SELECT_CARD', cardId: card.id })}
     >
       {hidden ? (
         <span className="our-moments-card-back" aria-hidden="true">
@@ -182,7 +175,10 @@ function OurMomentsSessionView({
           <button type="button" onClick={() => session.restart()}>
             {t('games.momentsGame.restart')}
           </button>
-          <Link className="button-link secondary-link" to={appRoutePath('games')}>
+          <Link
+            className="button-link secondary-link"
+            to={appRoutePath('games')}
+          >
             {t('games.momentsGame.backToGames')}
           </Link>
         </div>
@@ -201,7 +197,10 @@ function OurMomentsSessionView({
             })}
           </strong>
         </div>
-        <p className="our-moments-score" aria-label={t('games.momentsGame.scoreAria')}>
+        <p
+          className="our-moments-score"
+          aria-label={t('games.momentsGame.scoreAria')}
+        >
           <span>
             {participants[0].displayName} <strong>{snapshot.scores[0]}</strong>
           </span>
@@ -221,15 +220,11 @@ function OurMomentsSessionView({
           <img src={snapshot.revealedMatch.imageUrl} alt="" />
           <div>
             <p className="eyebrow">{t('games.momentsGame.matchEyebrow')}</p>
-            <h2 id="our-moments-match-title">
-              {snapshot.revealedMatch.title}
-            </h2>
+            <h2 id="our-moments-match-title">{snapshot.revealedMatch.title}</h2>
             <p>{formatMomentDate(snapshot.revealedMatch.effectiveDate)}</p>
             <button
               type="button"
-              onClick={() =>
-                session.dispatch({ type: 'CONTINUE_AFTER_MATCH' })
-              }
+              onClick={() => session.dispatch({ type: 'CONTINUE_AFTER_MATCH' })}
             >
               {t('games.momentsGame.continue')}
             </button>
@@ -342,7 +337,8 @@ export function OurMomentsGamePage({
   });
 
   useEffect(() => {
-    const urls = setupQuery.data?.moments.map((moment) => moment.imageUrl) ?? [];
+    const urls =
+      setupQuery.data?.moments.map((moment) => moment.imageUrl) ?? [];
     return () => {
       if (typeof URL.revokeObjectURL !== 'function') return;
       for (const url of urls) {
@@ -404,8 +400,6 @@ export function OurMomentsGamePage({
           }}
         />
       )}
-
-      <span className="sr-only">{GAMES_MOMENTS_ROUTE}</span>
     </div>
   );
 }

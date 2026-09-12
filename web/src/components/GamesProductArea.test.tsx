@@ -59,7 +59,9 @@ describe('GamesProductArea', () => {
     expectFiveGameEntries();
     expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
     expect(
-      screen.queryByRole('link', { name: new RegExp(games.entries.moments.title) }),
+      screen.queryByRole('link', {
+        name: new RegExp(games.entries.moments.title),
+      }),
     ).toBeNull();
 
     const detailsButton = screen.getByRole('button', {
