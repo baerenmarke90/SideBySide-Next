@@ -53,6 +53,16 @@ const m5s3 = {
       'Gebt eurem Wunsch einen konkreten Platz in eurer Planung. Datum und Uhrzeit bleiben optional; ohne eigenen Plantitel wird der Wunschtitel übernommen.',
     convert: 'Als Plan weiterführen',
     converting: 'Wird umgewandelt …',
+    completeHeading: 'Schon erlebt?',
+    completeIntro:
+      'Wenn dieser Wunsch einfach so Wirklichkeit geworden ist, könnt ihr ihn direkt als erfüllt markieren.',
+    complete: 'Als erfüllt markieren',
+    completing: 'Wird abgeschlossen …',
+    completionTitle: 'Wunsch erfüllt',
+    completionIntro:
+      'Möchtet ihr daraus auch eine Erinnerung für eure gemeinsame Geschichte festhalten?',
+    createMemory: 'Erinnerung daraus festhalten',
+    completionDone: 'Fertig',
     deleteConsequence:
       'Der Wunsch wird gelöscht. Bereits separat vorhandene Inhalte werden dadurch nicht verändert.',
     completedBody: 'Aus diesem Wunsch wurde Wirklichkeit.',

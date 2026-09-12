@@ -428,6 +428,12 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     ),
     Endpoint(
         "POST",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete",
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpoint(
+        "POST",
         "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",
         body={},
         if_match=True,

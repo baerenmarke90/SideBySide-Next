@@ -55,8 +55,8 @@ class WishUpdate(ApiModel):
     """Wish title correction.
 
     There is deliberately no ``status`` field. Wish status is controlled only
-    by the Wish-to-Plan contract (M3-D02/D03/D04); an arbitrary status PATCH
-    would provide a way around that lifecycle.
+    by explicit lifecycle commands; an arbitrary status PATCH would provide a
+    way around those transitions.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -185,6 +185,29 @@ def get_wish(
     wish_id: Annotated[str, Path(alias="wishId")],
 ) -> WishDetail:
     wish = service.get_wish(session, authorization, wish_id)
+    response.headers["ETag"] = etag_for(wish.version)
+    return wish_detail(session, authorization, wish)
+
+
+@router.post(
+    "/spaces/{spaceId}/wishes/{wishId}/complete",
+    response_model=WishDetail,
+    operation_id="completeWish",
+    responses={200: {"headers": ETAG_HEADERS}, **problem_responses(401, 404, 409, 422)},
+)
+def complete_wish(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+    expected_version: IfMatchVersion,
+    wish_id: Annotated[str, Path(alias="wishId")],
+) -> WishDetail:
+    wish = service.complete_direct_wish(
+        session,
+        authorization,
+        wish_id,
+        expected_version=expected_version,
+    )
     response.headers["ETag"] = etag_for(wish.version)
     return wish_detail(session, authorization, wish)
 

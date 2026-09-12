@@ -11,15 +11,16 @@ exception.
 
 Second, status. ``Wish.status`` is not a client-settable field:
 ``OPEN -> PLANNED`` happens only through wish-to-plan conversion,
-``PLANNED -> OPEN`` through ``return-to-wish``, and
-``PLANNED -> COMPLETED`` through completion of the originating plan
-(M3-D02/D03/D04).
+``PLANNED -> OPEN`` through ``return-to-wish``,
+``PLANNED -> COMPLETED`` through completion of the originating plan, and
+``OPEN -> COMPLETED`` only through the explicit direct-completion command.
 
-The plan service triggers those three edges because only it knows the plan. The
-transitions themselves still live here: ``plan_created``, ``plan_completed``,
-and ``plan_returned`` are the only functions that write ``status``, and each
-validates its own source state. PATCH cannot bypass them, and another caller
-cannot move the state machine along an alternate path.
+The plan service triggers the three plan-owned edges because only it knows the
+plan. The transitions themselves still live here: ``plan_created``,
+``plan_completed``, ``plan_returned``, and ``complete_direct_wish`` are the only
+functions that write ``status``, and each validates its own source state. PATCH
+cannot bypass them, and another caller cannot move the state machine along an
+alternate path.
 """
 
 from __future__ import annotations
@@ -180,6 +181,55 @@ def lock(session: Session, context: AuthorizationContext, wish_id: UUID | str) -
     it would for an unknown ID.
     """
     return require_writable_locked(session, Wish, context, wish_id)
+
+
+def complete_direct_wish(
+    session: Session,
+    context: AuthorizationContext,
+    wish_id: UUID | str,
+    *,
+    expected_version: int,
+) -> Wish:
+    """Apply ``OPEN -> COMPLETED`` when a wish happened without a Plan.
+
+    This is deliberately a dedicated lifecycle command instead of a writable
+    ``status`` field. A Wish that has entered the Plan lifecycle remains owned
+    by that lifecycle, including completion of its originating Plan.
+    """
+    wish = lock(session, context, wish_id)
+    _ensure_expected_version(wish, expected_version)
+    plan = session.execute(
+        select(Plan).where(Plan.source_wish_id == wish.id).with_for_update()
+    ).scalar_one_or_none()
+
+    if wish.status == WishStatus.COMPLETED.value:
+        raise ConflictError(
+            "This wish is already completed.",
+            WISH_ALREADY_COMPLETED,
+        )
+
+    if wish.status == WishStatus.PLANNED.value:
+        if plan is None:
+            raise ConflictError(
+                "This wish is planned but has no originating plan.",
+                WISH_PLAN_STATE_CONFLICT,
+            )
+        raise ConflictError(
+            "This wish has an active plan. Complete the plan instead.",
+            WISH_HAS_ACTIVE_PLAN,
+        )
+
+    if plan is not None:
+        raise ConflictError(
+            "This wish is open but still has an originating plan.",
+            WISH_PLAN_STATE_CONFLICT,
+        )
+
+    wish.status = WishStatus.COMPLETED.value
+    _flush(session)
+    record_event(session, wish, context.account_id, EventType.WISH_COMPLETED)
+    _flush(session)
+    return wish
 
 
 def plan_created(session: Session, wish: Wish, actor_id: UUID) -> None:
