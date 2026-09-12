@@ -106,7 +106,9 @@ describe('Our Moments local sofa session', () => {
     const session = createLocalOurMomentsSession({ random: () => 0.5 });
     session.start(moments(3), participants);
 
-    const [firstId, secondId] = firstPairCardIds(session.getSnapshot().cards);
+    const initial = session.getSnapshot();
+    const [firstId, secondId] = firstPairCardIds(initial.cards);
+    const expectedPairId = initial.cards.find((card) => card.id === firstId)?.pairId;
     session.dispatch({ type: 'SELECT_CARD', cardId: firstId });
     session.dispatch({ type: 'SELECT_CARD', cardId: secondId });
 
@@ -115,7 +117,7 @@ describe('Our Moments local sofa session', () => {
     expect(reveal.inputLocked).toBe(true);
     expect(reveal.activePlayerIndex).toBe(0);
     expect(reveal.scores).toEqual([1, 0]);
-    expect(reveal.revealedMatch?.memoryId).toBe(reveal.cards[0].pairId);
+    expect(reveal.revealedMatch?.memoryId).toBe(expectedPairId);
 
     session.dispatch({ type: 'CONTINUE_AFTER_MATCH' });
     expect(session.getSnapshot().status).toBe('playing');
