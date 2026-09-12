@@ -23,6 +23,7 @@ REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 REQUIRED_SELF_HOSTED_ENV = ("POSTGRES_USER", "POSTGRES_PASSWORD")
 NO_BUILD_COMMANDS = frozenset({"config", "down", "ps", "logs", "images", "version"})
+SOURCE_ENVIRONMENTS = frozenset({"development", "demo", "test"})
 
 
 class CheckoutError(RuntimeError):
@@ -101,6 +102,32 @@ def export_verified_snapshot(root: Path, revision: str, target: Path) -> None:
         archive_path.unlink(missing_ok=True)
 
 
+def compose_dotenv_value(raw: str) -> str:
+    value = raw.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        escaped = False
+        for index in range(1, len(value)):
+            char = value[index]
+            if quote == '"' and char == "\\" and not escaped:
+                escaped = True
+                continue
+            if char == quote and not escaped:
+                trailing = value[index + 1 :].strip()
+                if trailing and not trailing.startswith("#"):
+                    raise CheckoutError("dotenv quoted value has unsupported trailing content")
+                return value[1:index]
+            escaped = False
+        raise CheckoutError("dotenv quoted value is not terminated")
+
+    match = re.search(r"\s+#", value)
+    if match is not None:
+        value = value[: match.start()].rstrip()
+    return value
+
+
 def dotenv_value(path: Path, key: str) -> str | None:
     if not path.is_file():
         return None
@@ -108,26 +135,36 @@ def dotenv_value(path: Path, key: str) -> str | None:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError as exc:
         raise CheckoutError("the deployment .env file could not be read") from exc
-    for raw_line in lines:
+    for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         candidate, value = line.split("=", 1)
         if candidate.strip() != key:
             continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        return value
+        try:
+            return compose_dotenv_value(value)
+        except CheckoutError as exc:
+            raise CheckoutError(f"invalid dotenv value for {key} on line {lineno}") from exc
     return None
 
 
 def reject_production_environment(env_file: Path) -> None:
-    dotenv_environment = (dotenv_value(env_file, "SBS_ENVIRONMENT") or "").strip().lower()
-    process_environment = os.environ.get("SBS_ENVIRONMENT", "").strip().lower()
+    dotenv_environment = (dotenv_value(env_file, "SBS_ENVIRONMENT") or "development").strip().lower()
+    process_raw = os.environ.get("SBS_ENVIRONMENT")
+    process_environment = process_raw.strip().lower() if process_raw is not None else None
+
     if dotenv_environment == "production" or process_environment == "production":
         raise CheckoutError(
             "verified source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+        )
+    if dotenv_environment not in SOURCE_ENVIRONMENTS:
+        raise CheckoutError(
+            "verified source env file must declare an explicit development, demo, or test environment"
+        )
+    if process_environment is not None and process_environment not in SOURCE_ENVIRONMENTS:
+        raise CheckoutError(
+            "process SBS_ENVIRONMENT must be development, demo, or test for verified source builds"
         )
 
 
