@@ -40,6 +40,7 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
     <NavLink
       to={route.path}
       className={`shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`}
+      aria-current={isActive ? 'page' : undefined}
     >
       <span className="shell-nav-icon">
         <DestinationIcon icon={route.icon} />
