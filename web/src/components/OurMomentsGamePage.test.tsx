@@ -81,9 +81,10 @@ describe('OurMomentsGamePage', () => {
       level: 2,
     });
     expect(screen.getByText(games.momentsGame.sparseBody)).toBeTruthy();
-    expect(
-      screen.getByRole('link', { name: games.momentsGame.sparseAction }),
-    ).toHaveAttribute('href', '/story');
+    const storyLink = screen.getByRole('link', {
+      name: games.momentsGame.sparseAction,
+    });
+    expect(storyLink.getAttribute('href')).toBe('/story');
   });
 
   it('does not construct a board when the active Space is not a two-partner couple', async () => {
