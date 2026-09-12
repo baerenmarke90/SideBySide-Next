@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
@@ -37,7 +37,7 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const isActive = activeArea === route.id;
 
   return (
-    <NavLink
+    <Link
       to={route.path}
       className={`shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`}
       aria-current={isActive ? 'page' : undefined}
@@ -46,7 +46,7 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
         <DestinationIcon icon={route.icon} />
       </span>
       <span>{t(route.labelKey)}</span>
-    </NavLink>
+    </Link>
   );
 }
 
