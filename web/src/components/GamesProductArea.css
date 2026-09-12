@@ -204,10 +204,6 @@
 }
 
 @media (max-width: 360px) {
-  .mobile-bottom-nav .shell-nav-link {
-    font-size: 0.64rem;
-  }
-
   .games-access-panel {
     padding: var(--space-4);
   }
