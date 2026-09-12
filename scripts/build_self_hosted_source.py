@@ -49,6 +49,21 @@ def effective(values: dict[str, str], key: str, default: str = "") -> str:
     return values.get(key, default)
 
 
+def reject_production_source_build(values: dict[str, str]) -> None:
+    """Reject Production declared by either dotenv or process environment.
+
+    A one-command process override must not be able to mask a Production dotenv
+    while local source images are built for a later Compose invocation.
+    """
+
+    dotenv_environment = values.get("SBS_ENVIRONMENT", "").strip().lower()
+    process_environment = os.environ.get("SBS_ENVIRONMENT", "").strip().lower()
+    if dotenv_environment == "production" or process_environment == "production":
+        raise SourceBuildError(
+            "source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+        )
+
+
 def require_local_tag(reference: str, label: str, repository: str) -> str:
     """Accept only an unqualified SideBySide-local repository and explicit tag.
 
@@ -98,11 +113,7 @@ def plan(
     web_image: str | None = None,
 ) -> dict[str, object]:
     values = read_dotenv(env_file)
-    environment = effective(values, "SBS_ENVIRONMENT", "development").strip().lower()
-    if environment == "production":
-        raise SourceBuildError(
-            "source builds are not allowed for SBS_ENVIRONMENT=production"
-        )
+    reject_production_source_build(values)
 
     resolved_revision = revision or effective(
         values, "SBS_BUILD_REVISION", "unverified-local-checkout"
