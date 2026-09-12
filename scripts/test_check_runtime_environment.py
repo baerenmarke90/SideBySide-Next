@@ -111,7 +111,9 @@ class ProductionImageIdentityTest(unittest.TestCase):
     def test_accepts_one_versioned_release_for_production(self) -> None:
         self.assertEqual(
             check_production_image_identity(
-                {"SBS_ENVIRONMENT": "production"}, image_config(), rendered()
+                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+                image_config(),
+                rendered(),
             ),
             [],
         )
@@ -119,7 +121,7 @@ class ProductionImageIdentityTest(unittest.TestCase):
     def test_accepts_digest_qualified_release_refs(self) -> None:
         self.assertEqual(
             check_production_image_identity(
-                {"SBS_ENVIRONMENT": "production"},
+                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
                 image_config(
                     backend=f"{BACKEND}@sha256:{DIGEST}",
                     web=f"{WEB}@sha256:{DIGEST}",
@@ -181,6 +183,21 @@ class ProductionImageIdentityTest(unittest.TestCase):
             rendered(),
         )
         self.assertIn("Production backend and Web images must use one product release version", problems)
+
+    def test_rejects_joint_image_override_that_disagrees_with_declared_release(self) -> None:
+        problems = check_production_image_identity(
+            {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+            image_config(
+                backend="ghcr.io/baerenmarke90/eimir-backend:v0.1.1",
+                web="ghcr.io/baerenmarke90/eimir-web:v0.1.1",
+            ),
+            rendered(),
+        )
+        self.assertIn("Production application images must match SBS_RELEASE_VERSION", problems)
+        self.assertNotIn(
+            "Production backend and Web images must use one product release version",
+            problems,
+        )
 
     def test_rejects_build_fallback_or_never_pull(self) -> None:
         problems = check_production_image_identity(
