@@ -145,9 +145,9 @@ describe('PlanStoryContinuation', () => {
     await screen.findByText(i18n.t('m5s3.planStory.memorySaved'));
     await waitFor(() => expect(mocks.listChapters).toHaveBeenCalledTimes(1));
 
-    const chapterChoice = screen.getByLabelText(
+    const chapterChoice = (await screen.findByLabelText(
       i18n.t('m5s3.planStory.chapterChoiceLabel'),
-    ) as HTMLSelectElement;
+    )) as HTMLSelectElement;
     fireEvent.change(chapterChoice, { target: { value: 'chapter-1' } });
     fireEvent.click(
       screen.getByRole('button', {
@@ -194,9 +194,9 @@ describe('PlanStoryContinuation', () => {
     expect(mocks.createMemory).not.toHaveBeenCalled();
 
     await screen.findByText(i18n.t('m5s3.planStory.milestoneSaved'));
-    const chapterChoice = screen.getByLabelText(
+    const chapterChoice = (await screen.findByLabelText(
       i18n.t('m5s3.planStory.chapterChoiceLabel'),
-    ) as HTMLSelectElement;
+    )) as HTMLSelectElement;
     fireEvent.change(chapterChoice, { target: { value: 'chapter-1' } });
     fireEvent.click(
       screen.getByRole('button', {
@@ -234,9 +234,9 @@ describe('PlanStoryContinuation', () => {
     );
 
     await screen.findByText(i18n.t('m5s3.planStory.memorySaved'));
-    const chapterChoice = screen.getByLabelText(
+    const chapterChoice = (await screen.findByLabelText(
       i18n.t('m5s3.planStory.chapterChoiceLabel'),
-    ) as HTMLSelectElement;
+    )) as HTMLSelectElement;
     fireEvent.change(chapterChoice, { target: { value: '__new__' } });
 
     fireEvent.change(
