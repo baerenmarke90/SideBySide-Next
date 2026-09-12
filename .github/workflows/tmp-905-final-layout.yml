@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   sync:
-    if: ${{ !contains(github.event.head_commit.message, '[905-layout-sync]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -22,57 +21,51 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          def replace_preserving_newlines(path, old, new, count=1):
+          def replace_if_present(path, old, new, count=1):
               p = Path(path)
               raw = p.read_bytes()
               newline = '\r\n' if b'\r\n' in raw else '\n'
               text = raw.decode('utf-8').replace('\r\n', '\n')
-              if old not in text:
-                  raise SystemExit(f'Expected text not found in {path}: {old!r}')
-              text = text.replace(old, new, count)
-              p.write_bytes(text.replace('\n', newline).encode('utf-8'))
+              if old in text:
+                  text = text.replace(old, new, count)
+                  p.write_bytes(text.replace('\n', newline).encode('utf-8'))
 
           shell = 'web/src/shell.css'
-          replace_preserving_newlines(
+          replace_if_present(
               shell,
-              '''.mobile-bottom-shell .mobile-quick-create {
-  grid-column: 3;
-  grid-row: 1;''',
-              '''.mobile-bottom-shell .mobile-quick-create {
-  grid-column: 4;
-  grid-row: 1;''',
+              '.mobile-bottom-shell .mobile-quick-create {\n  grid-column: 3;\n  grid-row: 1;',
+              '.mobile-bottom-shell .mobile-quick-create {\n  grid-column: 4;\n  grid-row: 1;',
           )
-          replace_preserving_newlines(
+          replace_if_present(
               shell,
-              '''.mobile-bottom-nav .shell-nav-link:nth-child(3) {
-  grid-column: 4;
-  grid-row: 1;''',
-              '''.mobile-bottom-nav .shell-nav-link:nth-child(3) {
-  grid-column: 3;
-  grid-row: 1;''',
+              '.mobile-bottom-nav .shell-nav-link:nth-child(3) {\n  grid-column: 4;\n  grid-row: 1;',
+              '.mobile-bottom-nav .shell-nav-link:nth-child(3) {\n  grid-column: 3;\n  grid-row: 1;',
           )
 
           e2e = 'web/e2e/tests/floating-bottom-nav.spec.ts'
-          replace_preserving_newlines(
+          replace_if_present(
               e2e,
               "test('shell composition: four destinations + centered Quick Create action in one floating shell'",
               "test('shell composition: four destinations + Quick Create after Planen in one floating shell'",
           )
-          replace_preserving_newlines(
+          replace_if_present(
               e2e,
               '// Quick Create remains centered between Planen and Mehr in the five-slot shell.',
               '// Keep the accepted product order: Wir · Momente · Planen · + · Mehr.',
           )
-          replace_preserving_newlines(
+          replace_if_present(
               e2e,
               '    await expect(links).toHaveCount(5);\n    for (let index = 0; index < 4; index += 1) {',
               '    await expect(links).toHaveCount(4);\n    for (let index = 0; index < 4; index += 1) {',
           )
           PY
-      - name: Commit final layout correction
+      - name: Commit final layout correction when needed
         run: |
+          if git diff --quiet; then
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add web/src/shell.css web/e2e/tests/floating-bottom-nav.spec.ts
-          git commit -m "fix(web): preserve Planen before Quick Create (#905) [905-layout-sync]"
+          git commit -m "fix(web): preserve Planen before Quick Create (#905)"
           git push origin HEAD:fix/905-games-under-more
