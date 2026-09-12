@@ -156,7 +156,7 @@ async function installMocks(page: Page): Promise<void> {
         createdAt: TEST_NOW,
         createdBy: ACCOUNT_ID,
         creator: { id: ACCOUNT_ID, displayName: 'Anna' },
-        description: 'Die Decke nicht vergessen.',
+        description: 'Remember the blanket.',
         experiencedOn: EXPERIENCED_ON,
         id: PLAN_ID,
         placeId: null,
@@ -165,7 +165,7 @@ async function installMocks(page: Page): Promise<void> {
         sourceWishId: null,
         spaceId: SPACE_ID,
         status: 'COMPLETED',
-        title: 'Picknick im Park',
+        title: 'Picnic in the park',
         updatedAt: TEST_NOW,
         version: 4,
       });
@@ -306,10 +306,10 @@ test('completed Plan continuation preserves Memory capture semantics and Chapter
   const title = page.getByLabel(m5s3.common.title);
   const date = page.getByLabel(m5s3.plan.experiencedOn);
   const note = page.getByLabel(m5s3.planStory.noteLabel);
-  await expect(title).toHaveValue('Picknick im Park');
+  await expect(title).toHaveValue('Picnic in the park');
   await expect(title).not.toHaveAttribute('required');
   await expect(date).toHaveValue(EXPERIENCED_ON);
-  await expect(note).toHaveValue('Die Decke nicht vergessen.');
+  await expect(note).toHaveValue('Remember the blanket.');
 
   await page.getByRole('button', { name: de.common.cancel }).click();
   await page
