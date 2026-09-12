@@ -59,7 +59,10 @@ function parseYear(raw: string | undefined): number | null {
 function EmptyYearsState() {
   const { t } = useTranslation();
   return (
-    <section className="story-years-empty" aria-labelledby="story-years-empty-title">
+    <section
+      className="story-years-empty"
+      aria-labelledby="story-years-empty-title"
+    >
       <h2 id="story-years-empty-title">{t('storyYears.emptyTitle')}</h2>
       <p>{t('storyYears.emptyBody')}</p>
       <Link className="button-link secondary-link" to={appRoutePath('story')}>
@@ -142,7 +145,9 @@ export function StoryYearsIndexPage({
         />
       ) : null}
 
-      {yearsQuery.data && availableYears.length === 0 ? <EmptyYearsState /> : null}
+      {yearsQuery.data && availableYears.length === 0 ? (
+        <EmptyYearsState />
+      ) : null}
 
       {availableYears.length > 0 ? (
         <ol className="story-years-list" aria-label={t('storyYears.listAria')}>

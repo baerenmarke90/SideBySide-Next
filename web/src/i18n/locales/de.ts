@@ -228,9 +228,9 @@ const de = {
     chaptersTitle: 'Kapitel unserer Geschichte',
     chaptersDesc:
       'Gemeinsame Erlebnisse und Reisen nach Lebensabschnitten bündeln.',
-    yearArchiveTitle: 'Jahre entdecken',
-    yearArchiveSubtitle:
-      'Direkt zu den Momenten eines bestimmten Jahres springen',
+    yearArchiveTitle: 'Unsere Jahre',
+    yearArchiveSubtitle: 'Eure gemeinsamen Momente, Jahr für Jahr.',
+    yearArchiveAll: 'Alle Jahre ansehen →',
     loadingAria: 'Momente werden geladen',
     loadErrorTitle: 'Die Momente konnten nicht geladen werden.',
     loadErrorFallback: 'Bitte versuche es erneut.',
@@ -256,6 +256,35 @@ const de = {
     shared: 'Für uns beide',
     photos_one: '{{count}} Foto',
     photos_other: '{{count}} Fotos',
+  },
+  storyYears: {
+    backToMoments: '← Zurück zu Momente',
+    backToYears: '← Unsere Jahre',
+    eyebrow: 'Jahresarchiv',
+    title: 'Unsere Jahre',
+    intro: 'Eure gemeinsame Geschichte, Jahr für Jahr.',
+    listAria: 'Gemeinsame Jahre',
+    currentYearLabel: 'Unser Jahr bisher',
+    currentYearHint: 'Die Momente, die ihr dieses Jahr festgehalten habt.',
+    pastYearLabel: 'Unser Jahr {{year}}',
+    pastYearHint: 'Gemeinsame Momente aus diesem Jahr.',
+    openYear: 'Unser Jahr {{year}} öffnen',
+    detailTitle: 'Unser Jahr {{year}}',
+    currentYearIntro:
+      'Die Momente, die ihr {{year}} bisher miteinander festgehalten habt.',
+    pastYearIntro:
+      'Die gemeinsamen Momente, die ihr {{year}} festgehalten habt.',
+    emptyTitle: 'Noch keine gemeinsamen Jahre',
+    emptyBody:
+      'Sobald ihr gemeinsame Momente festhaltet, findet ihr sie hier nach Jahren wieder.',
+    unavailableTitle: 'Dieses Jahr ist noch leer',
+    unavailableBody:
+      'Für {{year}} gibt es keine gemeinsamen Momente in eurer Jahreschronik.',
+    invalidTitle: 'Jahr nicht gefunden',
+    invalidBody: 'Diese Jahresansicht ist nicht verfügbar.',
+    loadMore: 'Weitere Momente laden',
+    loadingMore: 'Weitere Momente werden geladen …',
+    offline: 'Offline – zuletzt gespeicherte Jahreschronik',
   },
   memory: {
     backToStory: '← Zurück zu Momente',

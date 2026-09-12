@@ -141,7 +141,7 @@
   flex: 1 1 auto;
   height: 1px;
   background: var(--color-border-subtle);
-  content: '';
+  content: "";
 }
 
 .story-year-month-header h2 {
@@ -201,4 +201,8 @@
   .story-year-link:hover {
     transform: none;
   }
+}
+
+.momente-year-pill {
+  text-decoration: none; /* #868-year-pill-link */
 }

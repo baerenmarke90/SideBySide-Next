@@ -85,6 +85,8 @@ import {
   SEARCH_ROUTE,
   SERVER_ADMIN_ROUTE,
   STORY_CHAPTERS_ROUTE,
+  STORY_YEAR_ROUTE_PATTERN,
+  STORY_YEARS_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
@@ -133,6 +135,10 @@ import {
 import { SettingsPage } from './components/SettingsPage';
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
+import {
+  StoryYearDetailPage,
+  StoryYearsIndexPage,
+} from './components/StoryYearsPage';
 import { ThemeControl } from './components/ThemeControl';
 import { TodayPage } from './components/TodayPage';
 import { UiState } from './components/UiState';
@@ -582,6 +588,30 @@ function AuthenticatedApp({
             path={appRoutePath('story')}
             element={
               <StoryProductPage
+                apis={apis}
+                accountId={account.id}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
+              />
+            }
+          />
+          <Route
+            path={STORY_YEARS_ROUTE}
+            element={
+              <StoryYearsIndexPage
+                apis={apis}
+                accountId={account.id}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
+              />
+            }
+          />
+          <Route
+            path={STORY_YEAR_ROUTE_PATTERN}
+            element={
+              <StoryYearDetailPage
                 apis={apis}
                 accountId={account.id}
                 spaceId={spaceId}

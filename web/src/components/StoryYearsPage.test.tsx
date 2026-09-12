@@ -9,10 +9,7 @@ import {
   type StoryFilters,
 } from '../client/storyProduct';
 import { StoryProductPage } from './StoryProductPage';
-import {
-  StoryYearDetailPage,
-  StoryYearsIndexPage,
-} from './StoryYearsPage';
+import { StoryYearDetailPage, StoryYearsIndexPage } from './StoryYearsPage';
 
 const loadMemoryImage = async () => 'blob:test-image';
 
