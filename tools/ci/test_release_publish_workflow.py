@@ -75,6 +75,18 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertNotIn("docker build", publish_step)
         self.assertNotIn(":latest", publish_step)
 
+    def test_registry_identity_lookup_fails_closed_on_uncertainty(self) -> None:
+        publish_step = self.workflow.split(
+            "Publish exact build-once runtime images to GHCR", 1
+        )[1].split("Write human-readable release notes", 1)[0]
+        self.assertIn("manifest_state()", publish_step)
+        self.assertIn("manifest unknown|no such manifest", publish_step)
+        self.assertIn("Unable to verify registry identity", publish_step)
+        self.assertIn('source_state=$(manifest_state "$source_ref")', publish_step)
+        self.assertIn('version_state=$(manifest_state "$version_ref")', publish_step)
+        self.assertNotIn('if docker manifest inspect "$source_ref"', publish_step)
+        self.assertNotIn('if docker manifest inspect "$version_ref"', publish_step)
+
     def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
         self.assertIn("self-hosted-image-identity.json", self.workflow)
         self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
