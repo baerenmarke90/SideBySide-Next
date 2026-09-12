@@ -232,7 +232,7 @@
 
 .planen-detail-subfacts {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 0.85rem;
 }
 
