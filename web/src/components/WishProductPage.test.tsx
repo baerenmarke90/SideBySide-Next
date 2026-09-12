@@ -34,7 +34,12 @@ function completedWish(): WishDetail {
 
 function LocationProbe() {
   const location = useLocation();
-  return <output aria-label="current-location">{location.pathname}{location.search}</output>;
+  return (
+    <output aria-label="current-location">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
 }
 
 function renderWish(
@@ -51,10 +56,7 @@ function renderWish(
     authorSummaryQueryKeys.wishDetail('space-1', wish.id),
     wish,
   );
-  queryClient.setQueryData(
-    ['m5-s3', 'wish-conversion-places', 'space-1'],
-    [],
-  );
+  queryClient.setQueryData(['m5-s3', 'wish-conversion-places', 'space-1'], []);
 
   const apis = {
     wishes: { completeWish },
@@ -132,7 +134,9 @@ describe('WishProductPage direct completion', () => {
       screen.getByRole('button', { name: i18n.t('m5s3.wish.complete') }),
     );
     await user.click(
-      await screen.findByRole('button', { name: i18n.t('m5s3.wish.createMemory') }),
+      await screen.findByRole('button', {
+        name: i18n.t('m5s3.wish.createMemory'),
+      }),
     );
 
     expect(screen.getByLabelText('current-location').textContent).toBe(
