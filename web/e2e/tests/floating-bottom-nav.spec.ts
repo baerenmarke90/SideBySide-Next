@@ -259,14 +259,14 @@ async function waitForGamesHub(page: Page): Promise<void> {
   await expect(page.getByText(games.unlocked.title)).toBeVisible();
 }
 
-test.describe('Floating Bottom Navigation (#882/#902)', () => {
+test.describe('Floating Bottom Navigation (#882/#905)', () => {
   test.beforeAll(() => {
     if (!fs.existsSync(EVIDENCE_DIR)) {
       fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
     }
   });
 
-  test('shell composition: five destinations + centered Quick Create action in one floating shell', async ({
+  test('shell composition: four destinations + centered Quick Create before Planen in one floating shell', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -281,14 +281,13 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     const nav = floatingShell.locator('.mobile-bottom-nav');
     await expect(nav).toBeVisible();
     const links = nav.locator('a.shell-nav-link');
-    await expect(links).toHaveCount(5);
+    await expect(links).toHaveCount(4);
 
     const labels = await links.allInnerTexts();
     expect(labels.map((label) => label.trim())).toEqual([
       navigation.today,
       navigation.story,
       navigation.plan,
-      navigation.games,
       navigation.more,
     ]);
 
@@ -303,20 +302,20 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     const oldFab = page.locator('body > .mobile-quick-create');
     await expect(oldFab).toHaveCount(0);
 
-    // Quick Create remains between Planen and Spielen in the six-slot shell.
-    const planenBox = await links.nth(2).boundingBox();
+    // Keep the accepted product order: Wir · Momente · + · Planen · Mehr.
+    const momenteBox = await links.nth(1).boundingBox();
     const triggerBox = await trigger.boundingBox();
-    const spielenBox = await links.nth(3).boundingBox();
-    expect(planenBox).not.toBeNull();
+    const planenBox = await links.nth(2).boundingBox();
+    expect(momenteBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
-    expect(spielenBox).not.toBeNull();
+    expect(planenBox).not.toBeNull();
 
-    if (planenBox && triggerBox && spielenBox) {
-      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
+    if (momenteBox && triggerBox && planenBox) {
+      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
         triggerBox.x + 5,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        spielenBox.x + 5,
+        planenBox.x + 5,
       );
     }
 
@@ -512,7 +511,7 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     await page.waitForURL('**/today');
 
     const links = page.locator('.mobile-bottom-nav a.shell-nav-link');
-    await expect(links).toHaveCount(5);
+    await expect(links).toHaveCount(4);
 
     await expect(links.nth(0)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(0)).toHaveAttribute('aria-current', 'page');
@@ -530,14 +529,16 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     await expect(links.nth(2)).toHaveAttribute('aria-current', 'page');
 
     await links.nth(3).click();
-    await waitForGamesHub(page);
+    await page.waitForURL('**/more');
     await expect(links.nth(3)).toHaveClass(/shell-nav-link-active/);
     await expect(links.nth(3)).toHaveAttribute('aria-current', 'page');
 
-    await links.nth(4).click();
-    await page.waitForURL('**/more');
-    await expect(links.nth(4)).toHaveClass(/shell-nav-link-active/);
-    await expect(links.nth(4)).toHaveAttribute('aria-current', 'page');
+    await page
+      .getByRole('link', { name: new RegExp(navigation.games) })
+      .click();
+    await waitForGamesHub(page);
+    await expect(links.nth(3)).toHaveClass(/shell-nav-link-active/);
+    await expect(links.nth(3)).toHaveAttribute('aria-current', 'page');
   });
 
   test('scroll clearance: Memory Create actions scroll fully clear of floating navigation', async ({
@@ -627,8 +628,8 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     await expect(floatingShell).toBeVisible();
 
     const links = floatingShell.locator('.mobile-bottom-nav a.shell-nav-link');
-    await expect(links).toHaveCount(5);
-    for (let index = 0; index < 5; index += 1) {
+    await expect(links).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
       await expect(links.nth(index)).toBeVisible();
     }
     const labels = await links.allInnerTexts();
@@ -636,7 +637,6 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
       navigation.today,
       navigation.story,
       navigation.plan,
-      navigation.games,
       navigation.more,
     ]);
 
@@ -645,18 +645,18 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
     );
     await expect(trigger).toBeVisible();
 
-    const planenBox = await links.nth(2).boundingBox();
+    const momenteBox = await links.nth(1).boundingBox();
     const triggerBox = await trigger.boundingBox();
-    const spielenBox = await links.nth(3).boundingBox();
-    expect(planenBox).not.toBeNull();
+    const planenBox = await links.nth(2).boundingBox();
+    expect(momenteBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
-    expect(spielenBox).not.toBeNull();
-    if (planenBox && triggerBox && spielenBox) {
-      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
+    expect(planenBox).not.toBeNull();
+    if (momenteBox && triggerBox && planenBox) {
+      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
         triggerBox.x + 1,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        spielenBox.x + 1,
+        planenBox.x + 1,
       );
     }
 
@@ -848,6 +848,7 @@ test.describe('Floating Bottom Navigation (#882/#902)', () => {
       path: testInfo.outputPath('shell-games-390-dark.png'),
       fullPage: true,
     });
+
     const gamesAxeDark = await new AxeBuilder({ page }).analyze();
     expect(gamesAxeDark.violations).toEqual([]);
 

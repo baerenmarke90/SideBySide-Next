@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
@@ -12,7 +12,7 @@ import {
 } from '../client/productReadCache';
 import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
-  APP_ROUTES,
+  PRIMARY_APP_ROUTES,
   type AppRouteDefinition,
   activeNavigationArea,
   appRoutePath,
@@ -37,22 +37,23 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const isActive = activeArea === route.id;
 
   return (
-    <NavLink
+    <Link
       to={route.path}
       className={`shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`}
+      aria-current={isActive ? 'page' : undefined}
     >
       <span className="shell-nav-icon">
         <DestinationIcon icon={route.icon} />
       </span>
       <span>{t(route.labelKey)}</span>
-    </NavLink>
+    </Link>
   );
 }
 
 function PrimaryNavigationLinks() {
   return (
     <>
-      {APP_ROUTES.map((route) => (
+      {PRIMARY_APP_ROUTES.map((route) => (
         <NavigationLink key={route.id} route={route} />
       ))}
     </>

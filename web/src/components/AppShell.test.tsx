@@ -86,7 +86,7 @@ describe('AppShell', () => {
     expect(html).toContain(`>${navigation.today}<`);
     expect(html).toContain('href="/story"');
     expect(html).toContain('href="/plan"');
-    expect(html).toContain('href="/games"');
+    expect(html).not.toContain('href="/games"');
     expect(html).toContain('href="/more"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('/reminders');
@@ -188,9 +188,10 @@ describe('AppShell', () => {
     expect(html).toContain('aria-expanded="false"');
 
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
-    for (const path of ['/today', '/story', '/plan', '/games', '/more']) {
+    for (const path of ['/today', '/story', '/plan', '/more']) {
       expect(compact).toContain(`href="${path}"`);
     }
+    expect(compact).not.toContain('href="/games"');
   });
 
   it.each([
@@ -199,8 +200,8 @@ describe('AppShell', () => {
     ['/story', '/story'],
     ['/plan', '/plan'],
     ['/plan/wishes/wish-1', '/plan'],
-    ['/games', '/games'],
-    ['/games/our-moments', '/games'],
+    ['/games', '/more'],
+    ['/games/our-moments', '/more'],
     ['/more', '/more'],
     ['/more/people', '/more'],
     ['/more/profile', '/more'],
@@ -217,7 +218,6 @@ describe('AppShell', () => {
   it.each([
     ['/story', '/today'],
     ['/story', '/plan'],
-    ['/story', '/games'],
     ['/story', '/more'],
     ['/more/people', '/today'],
     ['/today/activity', '/story'],
@@ -377,13 +377,13 @@ describe('AppShell', () => {
     expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
   });
 
-  it('integrates Quick Create into floating bottom shell with five-destination navigation (#882/#902)', () => {
+  it('integrates Quick Create into floating bottom shell with four primary destinations (#882/#905)', () => {
     const html = renderShell('/today');
     const shellIndex = html.indexOf('mobile-bottom-shell');
     expect(shellIndex).toBeGreaterThanOrEqual(0);
     const bottomShell = html.slice(shellIndex);
 
-    // Navigation landmark has exactly the 5 primary product destinations.
+    // Navigation landmark has exactly the 4 primary product destinations.
     const navMatch = bottomShell.match(
       /<nav\b[^>]*class="mobile-bottom-nav"[^>]*>([\s\S]*?)<\/nav>/,
     );
@@ -392,7 +392,7 @@ describe('AppShell', () => {
 
     const navLinks =
       navContent.match(/<a\b[^>]*class="shell-nav-link[^"]*"[^>]*>/g) ?? [];
-    expect(navLinks).toHaveLength(5);
+    expect(navLinks).toHaveLength(4);
 
     expect(navContent).toContain('href="/today"');
     expect(navContent).toContain(`>${navigation.today}<`);
@@ -400,8 +400,7 @@ describe('AppShell', () => {
     expect(navContent).toContain(`>${navigation.story}<`);
     expect(navContent).toContain('href="/plan"');
     expect(navContent).toContain(`>${navigation.plan}<`);
-    expect(navContent).toContain('href="/games"');
-    expect(navContent).toContain(`>${navigation.games}<`);
+    expect(navContent).not.toContain('href="/games"');
     expect(navContent).toContain('href="/more"');
     expect(navContent).toContain(`>${navigation.more}<`);
 

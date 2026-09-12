@@ -151,41 +151,6 @@
   white-space: nowrap;
 }
 
-/*
- * #902 expands the accepted compact shell from four destinations plus Quick
- * Create to five destinations plus Quick Create. The shell remains one fixed,
- * thumb-reachable row; Games receives the fifth product slot without hiding
- * or displacing the global creation action.
- */
-.mobile-bottom-shell {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  max-width: 32rem;
-}
-
-.mobile-bottom-nav .shell-nav-link:nth-child(1) {
-  grid-column: 1;
-}
-
-.mobile-bottom-nav .shell-nav-link:nth-child(2) {
-  grid-column: 2;
-}
-
-.mobile-bottom-nav .shell-nav-link:nth-child(3) {
-  grid-column: 3;
-}
-
-.mobile-bottom-shell .mobile-quick-create {
-  grid-column: 4;
-}
-
-.mobile-bottom-nav .shell-nav-link:nth-child(4) {
-  grid-column: 5;
-}
-
-.mobile-bottom-nav .shell-nav-link:nth-child(5) {
-  grid-column: 6;
-}
-
 @media (max-width: 599px) {
   .games-entry {
     grid-template-columns: auto minmax(0, 1fr);

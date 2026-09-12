@@ -1,10 +1,11 @@
 # Information Architecture for SideBySide Next
 
 **Status:** Binding foundation for Web and App  
-**Version:** 1.4  
-**Effective from:** September 1, 2026  
+**Version:** 1.5  
+**Effective from:** September 12, 2026  
 **Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`  
-**Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`
+**Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`  
+**Games placement decided by:** `decisions/0010-games-secondary-navigation-under-more.md`  
 **Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`
 
 This document defines navigation, naming, routes, and product-function
@@ -32,17 +33,16 @@ conventions.
 | `today` | Wir | shared overview, partner pulse, and next meaningful actions | now |
 | `story` | Momente | non-public shared timeline of memories, milestones, and chapters | now |
 | `plan` | Planen | wishes and concrete plans; shopping later | now |
-| `discover` | Entdecken | curated inspiration for shared time | **M7** |
-| `more` | Mehr | people, places, shared lists, private area, and settings | now |
+| `more` | Mehr | games plus secondary shared, private, and account-adjacent areas | now |
 
-`discover` depends on the Discover domain, which `docs/ROADMAP.md` places in
-M7. Its route ID, label and position in the order are reserved from now, and it
-is not rendered before its domain exists: a reserved route is not dead
-navigation, but a visible empty area would be. Until M7 the primary navigation
-therefore carries four destinations.
+The previous top-level `discover` reservation is superseded by Decision 0009.
+Discovery experiences remain product behavior inside `Momente`; they do not
+consume a persistent primary-navigation slot.
 
-The label *Entdecken* is reserved for this area and must not be reused for a
-navigation group, a section heading, or any other surface.
+`Spielen` is a first-class product area with the stable route ID `games` and
+canonical path `/games`, but Decision 0010 deliberately places its entry under
+`Mehr`. It is therefore not a fifth persistent primary destination. When a
+user is inside `/games` or `/games/...`, `Mehr` remains the active primary area.
 
 The visible label **Wir** intentionally replaces previous **Heute** and
 **Übersicht** designations while retaining the stable `today` route ID and
@@ -96,12 +96,8 @@ SideBySide Next
 │   │   ├── checklist
 │   │   └── media and notes
 │   └── Einkauf (later, feature-controlled)
-├── Entdecken (M7)
-│   ├── feed
-│   ├── filters
-│   ├── recommendation
-│   └── convert into wish or plan
 └── Mehr
+    ├── Spielen (relationship-native games; canonical route `/games`)
     ├── Menschen (related people and important dates)
     ├── Orte (shared places and destinations)
     ├── Gemeinsame Listen (collections)
@@ -134,9 +130,9 @@ Deep-Linkable.
    collection.
 
 Wishes and plans must not appear as isolated data worlds. Converting a wish
-into a plan is a visible, understandable state transition. Discover does not
-create a fourth copy of content; it can adopt a recommendation as a wish or
-plan.
+into a plan is a visible, understandable state transition. Discovery behavior
+inside Momente does not create a fourth copy of content; it may adopt a
+recommendation as a wish or plan where that product flow exists.
 
 Life chapters (Kapitel) are preserved under Momente. Places (Orte) and shared
 lists (Gemeinsame Listen) are organized under Mehr.
@@ -169,8 +165,7 @@ Links. IDs are opaque, stable identifiers.
 | Plans | `/plan/plans` |
 | Open plan | `/plan/plans/:planId` |
 | Shopping reserved for later domain | `/plan/shopping` |
-| Discover, reserved for M7 | `/discover` |
-| Open recommendation, reserved for M7 | `/discover/:recommendationId` |
+| Games hub (Spielen, entry under Mehr) | `/games` |
 | More | `/more` |
 | Places (Mehr) | `/plan/places` |
 | Open place | `/plan/places/:placeId` |
@@ -237,7 +232,7 @@ destinations.
 | Wishes | list or detail | list or detail | list + detail |
 | Plans | list or detail | list or detail | list + detail + optional support |
 | Shopping, later | one list | list + optional recipe card | list + recipe/detail pane |
-| Discover | feed + detail screen | feed + detail | grid/feed + detail pane |
+| Games | hub or gameplay | hub or gameplay | hub or gameplay |
 | Settings | stacked pages | categorized page | categories + setting detail |
 
 On small windows, detail replaces the list. On large windows, the list remains
@@ -314,7 +309,7 @@ Before M1, decide:
 ## 11. Acceptance criteria
 
 - [ ] Every feature belongs to exactly one primary area or a documented
-      utility/account surface.
+      secondary/utility/account surface.
 - [ ] Web and App use stable shared route IDs and domain terminology.
 - [ ] Bottom Bar and Sidebar use the same primary destination order.
 - [ ] Detail routes support Deep Links.

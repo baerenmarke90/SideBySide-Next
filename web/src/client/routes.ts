@@ -41,7 +41,7 @@ export interface AppRouteDefinition {
   end: boolean;
 }
 
-/** Primary navigation. At most five destinations, in the documented order. */
+/** Stable top-level route registry. Primary shell destinations are derived below. */
 export const APP_ROUTES = [
   {
     id: 'today',
@@ -79,6 +79,11 @@ export const APP_ROUTES = [
     end: false,
   },
 ] as const satisfies readonly AppRouteDefinition[];
+
+/** Primary shell destinations. Games is intentionally discovered through More. */
+export const PRIMARY_APP_ROUTES = APP_ROUTES.filter(
+  (route) => route.id !== 'games',
+);
 
 export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
 
@@ -199,7 +204,7 @@ export function activeNavigationArea(pathname: string): AppRouteId | null {
   ) {
     return 'story';
   }
-  if (pathname === '/games' || pathname.startsWith('/games/')) return 'games';
+  if (pathname === '/games' || pathname.startsWith('/games/')) return 'more';
   if (
     pathname === '/more' ||
     pathname.startsWith('/more/') ||
