@@ -20,7 +20,10 @@ EXTERNAL_ACTION_PINS = {
 
 
 def action_uses(text: str) -> list[str]:
-    return [match.group(1) for match in re.finditer(r"^\s*-?\s*uses:\s*([^\s#]+)", text, re.MULTILINE)]
+    return [
+        match.group(1)
+        for match in re.finditer(r"^\s*-?\s*uses:\s*([^\s#]+)", text, re.MULTILINE)
+    ]
 
 
 class ReleasePublishWorkflowContractTest(unittest.TestCase):
@@ -44,7 +47,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_publish_requires_explicit_confirmation_and_merged_main_source(self) -> None:
         self.assertIn("confirm_publish:", self.workflow)
         self.assertIn('if [ "$CONFIRM_PUBLISH" != "true" ]', self.workflow)
-        self.assertIn("git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main", self.workflow)
+        self.assertIn('git merge-base --is-ancestor "$GITHUB_SHA" origin/main', self.workflow)
         self.assertIn("Require existing repository checks to be green", self.workflow)
 
     def test_release_identity_is_immutable_and_not_overwritten(self) -> None:
@@ -57,7 +60,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_runtime_images_load_exact_evidence_archives_without_rebuild(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Write human-readable release notes", 1)[0]
+        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
         self.assertIn("docker load --input", publish_step)
         self.assertIn("release-evidence/backend-runtime.image.tar", publish_step)
         self.assertIn("release-evidence/web-runtime.image.tar", publish_step)
@@ -78,7 +81,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_registry_identity_lookup_fails_closed_on_uncertainty(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Write human-readable release notes", 1)[0]
+        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
         self.assertIn("manifest_state()", publish_step)
         self.assertIn("manifest unknown|no such manifest", publish_step)
         self.assertIn("Unable to verify registry identity", publish_step)
@@ -90,11 +93,39 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
         self.assertIn("self-hosted-image-identity.json", self.workflow)
         self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
-        self.assertIn(
-            "release-evidence/self-hosted-image-identity.json",
-            self.workflow,
-        )
+        self.assertIn("release-evidence/self-hosted-image-identity.json", self.workflow)
         self.assertIn("digest-qualified references", self.workflow)
+
+    def test_self_hosted_operator_bundle_is_minimal_deterministic_and_reverified(self) -> None:
+        bundle_step = self.workflow.split(
+            "Build deterministic Self-Hosted operator bundle", 1
+        )[1].split("Write human-readable release notes", 1)[0]
+        self.assertIn('bundle_name="eimir-self-hosted-v${RELEASE_VERSION}"', bundle_step)
+        self.assertIn('cp -- compose.yaml "$bundle_root/compose.yaml"', bundle_step)
+        self.assertIn("deploy/self-hosted-release.env.example", bundle_step)
+        self.assertIn("scripts/self_hosted_release.py", bundle_step)
+        self.assertIn("scripts/check_runtime_environment.py", bundle_step)
+        self.assertIn("--sort=name", bundle_step)
+        self.assertIn("--mtime='UTC 1970-01-01'", bundle_step)
+        self.assertIn("--owner=0 --group=0 --numeric-owner", bundle_step)
+        self.assertIn("gzip -n -c", bundle_step)
+        self.assertIn("tar -tzf", bundle_step)
+        self.assertIn("expected-self-hosted-bundle.txt", bundle_step)
+        self.assertNotIn("backend/", bundle_step)
+        self.assertNotIn("web/", bundle_step)
+        self.assertIn('--pattern "$bundle"', self.workflow)
+        self.assertIn('"release-evidence/$bundle"', self.workflow)
+        self.assertIn('"$RUNNER_TEMP/published-release/$bundle"', self.workflow)
+
+    def test_release_workflow_tracks_operator_bundle_inputs(self) -> None:
+        for path in (
+            '"compose.yaml"',
+            '"deploy/self-hosted-release.env.example"',
+            '"scripts/self_hosted_release.py"',
+            '"scripts/check_runtime_environment.py"',
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, self.workflow)
 
     def test_signing_material_is_environment_only_and_ephemeral(self) -> None:
         required = (
@@ -108,9 +139,9 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
                 self.assertIn(marker, self.workflow)
         self.assertIn('keystore="$RUNNER_TEMP/sidebyside-upload.jks"', self.workflow)
         self.assertIn("trap 'rm -f \"$keystore\"' EXIT", self.workflow)
-        signing_step = self.workflow.split("Build and verify final signed Android artifacts", 1)[1].split(
-            "Install verified Syft release", 1
-        )[0]
+        signing_step = self.workflow.split(
+            "Build and verify final signed Android artifacts", 1
+        )[1].split("Install verified Syft release", 1)[0]
         self.assertNotIn('echo "$KEYSTORE_BASE64"', signing_step)
         self.assertNotIn('cat "$keystore"', signing_step)
 
@@ -126,8 +157,12 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("sidebyside-release-unsigned.aab", self.workflow)
 
     def test_final_signed_bytes_get_fresh_sbom_and_attestations(self) -> None:
-        self.assertIn('syft scan "file:release-evidence/android/sidebyside-release.apk"', self.workflow)
-        self.assertIn('syft scan "file:release-evidence/android/sidebyside-release.aab"', self.workflow)
+        self.assertIn(
+            'syft scan "file:release-evidence/android/sidebyside-release.apk"', self.workflow
+        )
+        self.assertIn(
+            'syft scan "file:release-evidence/android/sidebyside-release.aab"', self.workflow
+        )
         self.assertIn("bundle-prefix: android-apk-signed", self.workflow)
         self.assertIn("bundle-prefix: android-aab-signed", self.workflow)
         self.assertIn("gh attestation verify", self.workflow)
