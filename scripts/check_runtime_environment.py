@@ -35,10 +35,40 @@ RELEASE_IMAGE_RE = re.compile(
     r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
     r"(?:@sha256:[0-9a-f]{64})?$"
 )
+SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 class RuntimeEnvironmentError(RuntimeError):
     """The intended, rendered, or running runtime configuration is inconsistent."""
+
+
+def compose_dotenv_value(raw: str) -> str:
+    value = raw.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        escaped = False
+        for index in range(1, len(value)):
+            char = value[index]
+            if quote == '"' and char == "\\" and not escaped:
+                escaped = True
+                continue
+            if char == quote and not escaped:
+                trailing = value[index + 1 :].strip()
+                if trailing and not trailing.startswith("#"):
+                    raise RuntimeEnvironmentError(
+                        "dotenv quoted value has unsupported trailing content"
+                    )
+                return value[1:index]
+            escaped = False
+        raise RuntimeEnvironmentError("dotenv quoted value is not terminated")
+
+    match = re.search(r"\s+#", value)
+    if match is not None:
+        value = value[: match.start()].rstrip()
+    return value
 
 
 def parse_dotenv(path: Path) -> dict[str, str]:
@@ -56,14 +86,16 @@ def parse_dotenv(path: Path) -> dict[str, str]:
             line = line[7:].lstrip()
         if "=" not in line:
             raise RuntimeEnvironmentError(f"{path}:{lineno}: expected KEY=VALUE")
-        key, value = line.split("=", 1)
+        key, raw_value = line.split("=", 1)
         key = key.strip()
-        value = value.strip()
         if not key:
             raise RuntimeEnvironmentError(f"{path}:{lineno}: empty variable name")
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-            value = value[1:-1]
-        values[key] = value
+        try:
+            values[key] = compose_dotenv_value(raw_value)
+        except RuntimeEnvironmentError as exc:
+            raise RuntimeEnvironmentError(
+                f"{path}:{lineno}: invalid dotenv value for {key}"
+            ) from exc
     return values
 
 
@@ -140,8 +172,7 @@ def _release_image_version(reference: Any, expected_role: str) -> str | None:
     match = RELEASE_IMAGE_RE.fullmatch(reference)
     if match is None or match.group(1) != expected_role:
         return None
-    tag = reference.split(":v", 1)[1].split("@", 1)[0]
-    return tag
+    return reference.split(":v", 1)[1].split("@", 1)[0]
 
 
 def check_production_image_identity(
@@ -208,6 +239,98 @@ def check_production_image_identity(
         problems.append("Production backend and Web images must use one product release version")
     if declared_version and any(version != declared_version for version in versions):
         problems.append("Production application images must match SBS_RELEASE_VERSION")
+    return problems
+
+
+def load_release_image_identity(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise RuntimeEnvironmentError(f"could not read release image identity: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeEnvironmentError("release image identity is not valid JSON") from exc
+    if not isinstance(value, dict):
+        raise RuntimeEnvironmentError("release image identity must be a JSON object")
+    return value
+
+
+def check_published_release_image_identity(
+    dotenv: dict[str, str], config: dict[str, Any], identity: dict[str, Any]
+) -> list[str]:
+    """Bind rendered Production images to the exact published release identity."""
+
+    problems: list[str] = []
+    if identity.get("schemaVersion") != 1 or identity.get("kind") != "sidebyside-self-hosted-image-identity":
+        return ["Unsupported Self-Hosted release image identity schema"]
+
+    product = identity.get("product")
+    if not isinstance(product, dict):
+        return ["Self-Hosted release image identity has no product binding"]
+    version = product.get("version")
+    if not isinstance(version, str) or product.get("tag") != f"v{version}":
+        problems.append("Self-Hosted release image identity has invalid product version/tag")
+    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
+    if isinstance(version, str) and declared_version != version:
+        problems.append("Self-Hosted release image identity does not match SBS_RELEASE_VERSION")
+
+    source = identity.get("sourceRevision")
+    if not isinstance(source, str) or not SHA40_RE.fullmatch(source):
+        problems.append("Self-Hosted release image identity has invalid sourceRevision")
+
+    images = identity.get("images")
+    if not isinstance(images, dict) or set(images) != {"backend", "web"}:
+        problems.append("Self-Hosted release image identity must contain backend and web records")
+        return problems
+
+    expected: dict[str, str] = {}
+    for role, expected_roles in (
+        ("backend", {"api", "worker", "migrate"}),
+        ("web", {"web"}),
+    ):
+        record = images.get(role)
+        if not isinstance(record, dict):
+            problems.append(f"Self-Hosted release {role} image record is missing")
+            continue
+        reference = record.get("reference")
+        digest = record.get("digest")
+        parsed_version = _release_image_version(reference, role)
+        if (
+            not isinstance(reference, str)
+            or "@sha256:" not in reference
+            or parsed_version != version
+        ):
+            problems.append(
+                f"Self-Hosted release {role} reference must be digest-qualified for the selected version"
+            )
+            continue
+        actual_digest = reference.split("@", 1)[1]
+        if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest) or digest != actual_digest:
+            problems.append(f"Self-Hosted release {role} digest does not match its reference")
+            continue
+        if set(record.get("roles", [])) != expected_roles:
+            problems.append(f"Self-Hosted release {role} roles are inconsistent")
+            continue
+        expected[role] = reference
+
+    services = config.get("services")
+    if not isinstance(services, dict):
+        problems.append("Published release image binding requires rendered Compose services")
+        return problems
+
+    backend_reference = expected.get("backend")
+    if backend_reference is not None:
+        for service_name in SELF_HOSTED_BACKEND_SERVICES:
+            service = services.get(service_name)
+            if not isinstance(service, dict) or service.get("image") != backend_reference:
+                problems.append(
+                    f"Production service {service_name} does not match published backend image identity"
+                )
+    web_reference = expected.get("web")
+    web_service = services.get("web")
+    if web_reference is not None and (
+        not isinstance(web_service, dict) or web_service.get("image") != web_reference
+    ):
+        problems.append("Production service web does not match published web image identity")
     return problems
 
 
@@ -284,7 +407,9 @@ def inspect_running_services(
         if len(container_ids) != 1:
             running[service_name] = None
             continue
-        output = run_command(["docker", "inspect", "--format", "{{json .Config.Env}}", container_ids[0]])
+        output = run_command(
+            ["docker", "inspect", "--format", "{{json .Config.Env}}", container_ids[0]]
+        )
         try:
             values = json.loads(output)
         except json.JSONDecodeError as exc:
@@ -305,6 +430,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--compose-file", type=Path)
     parser.add_argument("--profile", default="self-hosted")
     parser.add_argument("--project-name")
+    parser.add_argument("--release-image-identity", type=Path)
     parser.add_argument(
         "--check-running",
         action="store_true",
@@ -321,10 +447,22 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if args.image_identity_only and args.check_running:
-        print("runtime environment check failed: --image-identity-only cannot be combined with --check-running", file=sys.stderr)
+        print(
+            "runtime environment check failed: --image-identity-only cannot be combined with --check-running",
+            file=sys.stderr,
+        )
         return 2
     if args.image_identity_only and args.profile != "self-hosted":
-        print("runtime environment check failed: --image-identity-only is Self-Hosted-only", file=sys.stderr)
+        print(
+            "runtime environment check failed: --image-identity-only is Self-Hosted-only",
+            file=sys.stderr,
+        )
+        return 2
+    if args.release_image_identity is not None and args.profile != "self-hosted":
+        print(
+            "runtime environment check failed: --release-image-identity is Self-Hosted-only",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -341,6 +479,9 @@ def main(argv: list[str] | None = None) -> int:
             if args.check_running:
                 running = inspect_running_services(args, rendered)
                 problems.extend(check_rendered_to_running(rendered, running))
+        if args.release_image_identity is not None:
+            identity = load_release_image_identity(args.release_image_identity)
+            problems.extend(check_published_release_image_identity(dotenv, config, identity))
     except RuntimeEnvironmentError as exc:
         print(f"runtime environment check failed: {exc}", file=sys.stderr)
         return 2
