@@ -6,8 +6,7 @@ const games = {
   premium: {
     badge: 'eimir. Pro',
     title: 'Gemeinsam spielen gehört zu eimir. Pro.',
-    body:
-      'Die Spiele machen aus eurer gemeinsamen Welt neue kleine Erlebnisse. Eure normalen Erinnerungen, Wünsche und Pläne bleiben davon unabhängig.',
+    body: 'Die Spiele machen aus eurer gemeinsamen Welt neue kleine Erlebnisse. Eure normalen Erinnerungen, Wünsche und Pläne bleiben davon unabhängig.',
     action: 'Premium ansehen',
     detailsTitle: 'Ein Premium-Bereich für euch beide',
     detailsBody:
