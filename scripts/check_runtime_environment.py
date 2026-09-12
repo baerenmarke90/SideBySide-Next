@@ -202,6 +202,10 @@ def check_production_image_identity(
         problems.append("Production api/worker/migrate must use one exact backend image identity")
     if len(set(versions)) > 1:
         problems.append("Production backend and Web images must use one product release version")
+
+    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
+    if declared_version and any(version != declared_version for version in versions):
+        problems.append("Production application images must match SBS_RELEASE_VERSION")
     return problems
 
 
