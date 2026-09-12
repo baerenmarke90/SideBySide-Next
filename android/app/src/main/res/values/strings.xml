@@ -180,6 +180,7 @@
     <string name="memory_back">Zurück zur Geschichte</string>
     <string name="memory_gone_title">Diese Erinnerung gibt es nicht mehr</string>
     <string name="memory_gone_body">Sie wurde gelöscht. Eure übrige Geschichte ist unverändert.</string>
+    <string name="author_former_member">Ehemaliges Mitglied</string>
     <string name="memory_written_by">Festgehalten von %1$s</string>
 
     <string name="profile_settings_title">Profil</string>

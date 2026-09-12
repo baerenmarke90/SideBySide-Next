@@ -31,6 +31,7 @@ class ApiModel(BaseModel):
 class AuthorSummary(ApiModel):
     id: UUID
     display_name: str
+    is_former_member: bool = False
     profile_attachment_id: UUID | SkipJsonSchema[None] = Field(
         default=None,
         exclude_if=lambda value: value is None,

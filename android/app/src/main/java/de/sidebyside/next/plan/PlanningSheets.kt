@@ -45,6 +45,7 @@ import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.story.displayNameForUi
 import de.sidebyside.next.shell.PlacePicker
 import java.time.Instant
 import java.time.LocalDate
@@ -233,7 +234,8 @@ internal fun WishSheet(
     PlanningSheet(onDismiss = onDismiss) {
         SheetEyebrow(R.string.plan_wish_eyebrow)
         SheetHeading(wish.title)
-        wish.creator.displayName.takeIf { it.isNotBlank() }?.let { name ->
+        wish.creator.displayNameForUi(stringResource(R.string.author_former_member))
+                .takeIf { it.isNotBlank() }?.let { name ->
             Text(
                 text = stringResource(R.string.plan_wish_by, name),
                 style = MaterialTheme.typography.bodySmall,

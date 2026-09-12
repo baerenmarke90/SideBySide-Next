@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from sidebyside.api.authors import resolve_author_summary
 from sidebyside.auth import sessions
 from sidebyside.authorization import PrivacyClass
 from sidebyside.core.clock import now
@@ -253,6 +254,14 @@ def test_core_cleanup_deletes_private_identity_state_but_retains_shared_history(
         )
         == 1
     )
+    retained_author = resolve_author_summary(
+        session,
+        shared_memory.owner_id,
+        resource="Memory author",
+    )
+    assert retained_author.is_former_member is True
+    assert retained_author.display_name == ""
+    assert retained_author.profile_attachment_id is None
 
     # Only the deleted owner's OWNER_ONLY data is removed.
     assert _count(session, PrivateNote, PrivateNote.id == own_private.id) == 0

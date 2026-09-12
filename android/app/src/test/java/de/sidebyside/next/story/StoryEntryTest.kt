@@ -46,6 +46,20 @@ class StoryEntryTest {
     }
 
     @Test
+    fun preservesFormerMemberStateForLocalizedPresentation() {
+        val former = AuthorSummary(
+            displayName = "",
+            id = UUID.randomUUID(),
+            isFormerMember = true,
+        )
+
+        val entry = memoryItem(author = former).toEntry()
+
+        assertTrue(entry.authorIsFormerMember)
+        assertEquals("", entry.authorName)
+    }
+
+    @Test
     fun groupsConsecutiveEntriesUnderTheirDay() {
         val first = LocalDate.of(2026, 8, 20)
         val second = LocalDate.of(2026, 8, 18)
@@ -148,13 +162,14 @@ private fun attachment(
 private fun memoryItem(
     date: LocalDate = DEFAULT_DATE,
     attachments: List<MemoryAttachmentSummary> = emptyList(),
+    author: AuthorSummary = AUTHOR,
 ) = StoryItem.MemoryWrapper(
     StoryMemoryItem(
         effectiveDate = date,
         kind = StoryMemoryItem.Kind.MEMORY,
         memory = MemorySummary(
             attachments = attachments,
-            author = AUTHOR,
+            author = author,
             capabilities = CAPABILITIES,
             createdAt = CREATED,
             happenedOn = date,

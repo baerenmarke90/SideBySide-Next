@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -822,7 +823,7 @@ export function HeartMomentProductPage({
           <footer className="heart-moment-provenance-footer">
             <p>
               {t('heartMomentProduct.provenance', {
-                author: heartMoment.author.displayName,
+                author: authorDisplayName(heartMoment.author),
                 createdAt: formatCreatedAt(heartMoment.createdAt),
               })}
             </p>

@@ -212,7 +212,7 @@ private fun MemoryCard(
             )
 
             Text(
-                text = stringResource(R.string.story_by_author, entry.authorName),
+                text = stringResource(R.string.story_by_author, entry.presentedAuthorName()),
                 style = MaterialTheme.typography.bodySmall,
                 color = SideBySideTheme.colors.textSecondary,
                 maxLines = 1,
@@ -299,7 +299,7 @@ private fun MilestoneCard(
             )
 
             Text(
-                text = stringResource(R.string.story_by_author, entry.authorName),
+                text = stringResource(R.string.story_by_author, entry.presentedAuthorName()),
                 style = MaterialTheme.typography.bodySmall,
                 color = SideBySideTheme.colors.textSecondary,
                 maxLines = 1,
@@ -362,7 +362,7 @@ private fun HeartMomentCard(
             )
 
             Text(
-                text = stringResource(R.string.story_by_author, entry.authorName),
+                text = stringResource(R.string.story_by_author, entry.presentedAuthorName()),
                 style = MaterialTheme.typography.bodySmall,
                 color = SideBySideTheme.colors.textSecondary,
                 maxLines = 1,
@@ -409,6 +409,10 @@ private fun StoryEmpty() {
  * too small to recognise. The rest belong to the Memory's own screen.
  */
 private const val MAX_IMAGES_PER_ENTRY = 3
+
+@Composable
+private fun StoryEntry.presentedAuthorName(): String =
+    if (authorIsFormerMember) stringResource(R.string.author_former_member) else authorName
 
 private fun StoryEntryKind.labelRes(): Int = when (this) {
     StoryEntryKind.MEMORY -> R.string.story_kind_memory

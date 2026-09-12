@@ -9,6 +9,7 @@ const relationshipComponents = {
   couplePresenceDurationAction: 'Beziehungsdetails ansehen',
   couplePresenceYouFallback: 'Du',
   couplePresencePartnerFallback: 'Dein Partner',
+  formerMemberLabel: 'Ehemaliges Mitglied',
 
   thinkingOfYouSendToPartner: 'Lieben Gruß an {{partner}} senden',
   thinkingOfYouAction: 'Ich denke an dich',

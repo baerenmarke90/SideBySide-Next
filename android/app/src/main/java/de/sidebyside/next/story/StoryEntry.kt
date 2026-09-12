@@ -22,6 +22,7 @@ data class StoryEntry(
     val text: String,
     val authorName: String,
     val images: List<StoryImageRef>,
+    val authorIsFormerMember: Boolean = false,
 )
 
 /**
@@ -64,6 +65,7 @@ fun StoryItem.toEntry(): StoryEntry = when (this) {
         date = value.effectiveDate,
         text = value.memory.title,
         authorName = value.memory.author.displayName,
+        authorIsFormerMember = value.memory.author.isFormerMember == true,
         images = value.memory.attachments
             .filter { it.mediaType == MediaType.IMAGE && it.status == ATTACHMENT_READY }
             .sortedBy { it.position }
@@ -82,6 +84,7 @@ fun StoryItem.toEntry(): StoryEntry = when (this) {
         date = value.effectiveDate,
         text = value.milestone.title,
         authorName = value.milestone.author.displayName,
+        authorIsFormerMember = value.milestone.author.isFormerMember == true,
         images = emptyList(),
     )
 
@@ -91,6 +94,7 @@ fun StoryItem.toEntry(): StoryEntry = when (this) {
         date = value.effectiveDate,
         text = value.heartMoment.text,
         authorName = value.heartMoment.author.displayName,
+        authorIsFormerMember = value.heartMoment.author.isFormerMember == true,
         images = listOfNotNull(
             value.heartMoment.attachment
                 ?.takeIf { it.mediaType == MediaType.IMAGE && it.status == ATTACHMENT_READY }

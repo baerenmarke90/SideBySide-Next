@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -508,7 +509,7 @@ export function MilestoneProductPage({
           <footer className="milestone-provenance-footer">
             <p>
               {t('milestoneProduct.provenance', {
-                author: milestone.author.displayName,
+                author: authorDisplayName(milestone.author),
                 createdAt: formatCreatedAt(milestone.createdAt),
               })}
             </p>

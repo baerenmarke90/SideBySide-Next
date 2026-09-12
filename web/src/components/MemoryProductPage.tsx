@@ -1,3 +1,4 @@
+import { authorDisplayName } from '../client/authorPresentation';
 import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -630,7 +631,7 @@ export function MemoryProductPage({
           <footer className="memory-provenance-footer">
             <p>
               {t('memoryProduct.provenance', {
-                author: memory.author.displayName,
+                author: authorDisplayName(memory.author),
                 createdAt: formatCreatedAt(memory.createdAt),
               })}
             </p>

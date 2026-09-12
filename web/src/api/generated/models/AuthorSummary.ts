@@ -33,6 +33,12 @@ export interface AuthorSummary {
     id: string;
     /**
      * 
+     * @type {boolean}
+     * @memberof AuthorSummary
+     */
+    isFormerMember?: boolean;
+    /**
+     * 
      * @type {string}
      * @memberof AuthorSummary
      */
@@ -60,6 +66,7 @@ export function AuthorSummaryFromJSONTyped(json: any, ignoreDiscriminator: boole
         
         'displayName': json['displayName'],
         'id': json['id'],
+        'isFormerMember': json['isFormerMember'] == null ? undefined : json['isFormerMember'],
         'profileAttachmentId': json['profileAttachmentId'] == null ? undefined : json['profileAttachmentId'],
     };
 }
@@ -77,6 +84,7 @@ export function AuthorSummaryToJSONTyped(value?: AuthorSummary | null, ignoreDis
         
         'displayName': value['displayName'],
         'id': value['id'],
+        'isFormerMember': value['isFormerMember'],
         'profileAttachmentId': value['profileAttachmentId'],
     };
 }

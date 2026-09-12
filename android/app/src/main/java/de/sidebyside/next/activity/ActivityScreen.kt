@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.story.displayNameForUi
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
 import sidebyside.api.models.ActivityItem
@@ -152,7 +153,11 @@ fun activitySentence(
     currentAccountId: java.util.UUID?,
 ): String {
     val isOwn = currentAccountId != null && entry.actor?.id == currentAccountId
-    val actorName = if (isOwn) stringResource(R.string.activity_you) else entry.actor?.displayName
+    val actorName = if (isOwn) {
+        stringResource(R.string.activity_you)
+    } else {
+        entry.actor?.displayNameForUi(stringResource(R.string.author_former_member))
+    }
     val targetTitle = entry.target?.title?.takeIf { it.isNotBlank() }
 
     return when {
