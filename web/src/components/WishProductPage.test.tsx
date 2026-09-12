@@ -59,7 +59,10 @@ function renderWish(
   queryClient.setQueryData(['m5-s3', 'wish-conversion-places', 'space-1'], []);
 
   const apis = {
-    wishes: { completeWish },
+    wishes: {
+      completeWish,
+      getWish: vi.fn().mockResolvedValue(wish),
+    },
   } as unknown as SharedPlanningApis;
 
   render(
