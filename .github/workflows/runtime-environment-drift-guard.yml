@@ -7,6 +7,8 @@ on:
       - .env.example
       - deploy/cloud-managed.env.example
       - deploy/persistent-development.env.example
+      - deploy/self-hosted-release.env.example
+      - scripts/build_self_hosted_source.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
       - backend/src/sidebyside/identity/deletion_bootstrap.py
@@ -22,6 +24,8 @@ on:
       - .env.example
       - deploy/cloud-managed.env.example
       - deploy/persistent-development.env.example
+      - deploy/self-hosted-release.env.example
+      - scripts/build_self_hosted_source.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
       - backend/src/sidebyside/identity/deletion_bootstrap.py
@@ -48,6 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile \
+            scripts/build_self_hosted_source.py \
             scripts/check_runtime_environment.py \
             scripts/test_check_runtime_environment.py \
             backend/src/sidebyside/identity/deletion_bootstrap.py
@@ -81,7 +86,7 @@ jobs:
           grep -Fq -- '--confirm-new-installation' docs/ACCOUNT-DELETION-SELF-HOSTED.md
           grep -Fq 'recovery failure' docs/ACCOUNT-DELETION-SELF-HOSTED.md
 
-      - name: Arcane-style deletion authority render cannot drift from dotenv
+      - name: Development deletion authority render cannot drift from dotenv
         run: |
           set -euo pipefail
           cp .env.example .env-runtime-guard
@@ -103,76 +108,49 @@ jobs:
           docker compose --profile self-hosted --env-file .env-runtime-guard config --format json \
             > /tmp/runtime-guard-compose.json
           jq -e '
+            (.services | has("demo-init") | not) and
             (.services.api.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
-            (.services.worker.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
-            (.services["demo-init"].environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
+            (.services.worker.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
           ' /tmp/runtime-guard-compose.json
 
-      - name: Arcane Production source identity is immutable
+      - name: Released Self-Hosted Production image identity is immutable by policy
         run: |
           set -euo pipefail
-          revision=$(git rev-parse HEAD)
-          short_revision=${revision:0:12}
-          other_revision=0000000000000000000000000000000000000000
-          repository=https://github.com/baerenmarke90/SideBySide-Next.git
-
-          cp .env.example .env-production-source-guard
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-production-source-guard
-          sed -i 's/^SBS_ENVIRONMENT=.*/SBS_ENVIRONMENT=production/' .env-production-source-guard
-          sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-source-guard
-          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-source-guard
-          cat >>.env-production-source-guard <<EOF
-          SBS_BACKEND_BUILD_CONTEXT=${repository}#${revision}:backend
-          SBS_WEB_BUILD_CONTEXT=${repository}#${revision}:web
-          SBS_BUILD_REVISION=${revision}
-          EOF
+          cp deploy/self-hosted-release.env.example .env-production-image-guard
+          sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-image-guard
+          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-image-guard
 
           python3 scripts/check_runtime_environment.py \
-            --env-file .env-production-source-guard \
+            --env-file .env-production-image-guard \
             --profile self-hosted
 
           expect_rejected() {
             label=$1
             shift
             if env "$@" python3 scripts/check_runtime_environment.py \
-              --env-file .env-production-source-guard \
+              --env-file .env-production-image-guard \
               --profile self-hosted; then
-              echo "Runtime guard accepted unsafe Production source identity: $label"
+              echo "Runtime guard accepted unsafe Production image identity: $label"
               exit 1
             fi
           }
 
-          expect_rejected main \
-            "SBS_BACKEND_BUILD_CONTEXT=${repository}#main:backend" \
-            "SBS_WEB_BUILD_CONTEXT=${repository}#main:web" \
-            "SBS_BUILD_REVISION=main"
+          expect_rejected latest \
+            SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:latest
           expect_rejected branch \
-            "SBS_BACKEND_BUILD_CONTEXT=${repository}#release/test:backend" \
-            "SBS_WEB_BUILD_CONTEXT=${repository}#release/test:web" \
-            "SBS_BUILD_REVISION=release/test"
-          expect_rejected tag \
-            "SBS_BACKEND_BUILD_CONTEXT=${repository}#v1.0.0:backend" \
-            "SBS_WEB_BUILD_CONTEXT=${repository}#v1.0.0:web" \
-            "SBS_BUILD_REVISION=v1.0.0"
-          expect_rejected short-sha \
-            "SBS_BACKEND_BUILD_CONTEXT=${repository}#${short_revision}:backend" \
-            "SBS_WEB_BUILD_CONTEXT=${repository}#${short_revision}:web" \
-            "SBS_BUILD_REVISION=${short_revision}"
-          expect_rejected blank-default \
-            "SBS_BACKEND_BUILD_CONTEXT=" \
-            "SBS_WEB_BUILD_CONTEXT=" \
-            "SBS_BUILD_REVISION="
-          expect_rejected backend-web-mismatch \
-            "SBS_WEB_BUILD_CONTEXT=${repository}#${other_revision}:web"
-          expect_rejected declared-revision-mismatch \
-            "SBS_BUILD_REVISION=${other_revision}"
+            SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:main
+          expect_rejected local-source \
+            SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local \
+            SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local
+          expect_rejected version-mismatch \
+            SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.1
+          expect_rejected no-pull \
+            SBS_SELF_HOSTED_PULL_POLICY=never
 
       - name: Production dotenv must carry the deletion authority
         run: |
           set -euo pipefail
-          cp .env.example .env-production-guard
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-production-guard
-          sed -i 's/^SBS_ENVIRONMENT=.*/SBS_ENVIRONMENT=production/' .env-production-guard
+          cp deploy/self-hosted-release.env.example .env-production-guard
           sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=/' .env-production-guard
 
           if python3 scripts/check_runtime_environment.py \
