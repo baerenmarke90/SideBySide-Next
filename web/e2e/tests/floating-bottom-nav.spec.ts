@@ -266,7 +266,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     }
   });
 
-  test('shell composition: four destinations + Quick Create after Planen in one floating shell', async ({
+  test('shell composition: four destinations + centered Quick Create before Planen in one floating shell', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -302,20 +302,20 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     const oldFab = page.locator('body > .mobile-quick-create');
     await expect(oldFab).toHaveCount(0);
 
-    // Keep the accepted product order: Wir · Momente · Planen · + · Mehr.
-    const planenBox = await links.nth(2).boundingBox();
+    // Keep the accepted product order: Wir · Momente · + · Planen · Mehr.
+    const momenteBox = await links.nth(1).boundingBox();
     const triggerBox = await trigger.boundingBox();
-    const moreBox = await links.nth(3).boundingBox();
-    expect(planenBox).not.toBeNull();
+    const planenBox = await links.nth(2).boundingBox();
+    expect(momenteBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
-    expect(moreBox).not.toBeNull();
+    expect(planenBox).not.toBeNull();
 
-    if (planenBox && triggerBox && moreBox) {
-      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
+    if (momenteBox && triggerBox && planenBox) {
+      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
         triggerBox.x + 5,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        moreBox.x + 5,
+        planenBox.x + 5,
       );
     }
 
@@ -645,18 +645,18 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     );
     await expect(trigger).toBeVisible();
 
-    const planenBox = await links.nth(2).boundingBox();
+    const momenteBox = await links.nth(1).boundingBox();
     const triggerBox = await trigger.boundingBox();
-    const moreBox = await links.nth(3).boundingBox();
-    expect(planenBox).not.toBeNull();
+    const planenBox = await links.nth(2).boundingBox();
+    expect(momenteBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
-    expect(moreBox).not.toBeNull();
-    if (planenBox && triggerBox && moreBox) {
-      expect(planenBox.x + planenBox.width).toBeLessThanOrEqual(
+    expect(planenBox).not.toBeNull();
+    if (momenteBox && triggerBox && planenBox) {
+      expect(momenteBox.x + momenteBox.width).toBeLessThanOrEqual(
         triggerBox.x + 1,
       );
       expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(
-        moreBox.x + 1,
+        planenBox.x + 1,
       );
     }
 
@@ -848,6 +848,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
       path: testInfo.outputPath('shell-games-390-dark.png'),
       fullPage: true,
     });
+
     const gamesAxeDark = await new AxeBuilder({ page }).analyze();
     expect(gamesAxeDark.violations).toEqual([]);
 
