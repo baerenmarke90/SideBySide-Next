@@ -266,7 +266,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     }
   });
 
-  test('shell composition: four destinations + centered Quick Create action in one floating shell', async ({
+  test('shell composition: four destinations + Quick Create after Planen in one floating shell', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -302,7 +302,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     const oldFab = page.locator('body > .mobile-quick-create');
     await expect(oldFab).toHaveCount(0);
 
-    // Quick Create remains centered between Planen and Mehr in the five-slot shell.
+    // Keep the accepted product order: Wir · Momente · Planen · + · Mehr.
     const planenBox = await links.nth(2).boundingBox();
     const triggerBox = await trigger.boundingBox();
     const moreBox = await links.nth(3).boundingBox();
@@ -628,7 +628,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     await expect(floatingShell).toBeVisible();
 
     const links = floatingShell.locator('.mobile-bottom-nav a.shell-nav-link');
-    await expect(links).toHaveCount(5);
+    await expect(links).toHaveCount(4);
     for (let index = 0; index < 4; index += 1) {
       await expect(links.nth(index)).toBeVisible();
     }

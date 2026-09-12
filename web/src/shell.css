@@ -659,7 +659,7 @@
 }
 
 .mobile-bottom-shell .mobile-quick-create {
-  grid-column: 3;
+  grid-column: 4;
   grid-row: 1;
   display: flex;
   align-items: center;
@@ -669,7 +669,7 @@
 }
 
 .mobile-bottom-nav .shell-nav-link:nth-child(3) {
-  grid-column: 4;
+  grid-column: 3;
   grid-row: 1;
 }
 
