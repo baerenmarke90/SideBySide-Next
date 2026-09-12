@@ -103,7 +103,7 @@ export function StoryYearsIndexPage({
 
   useEffect(() => {
     const result = yearsQuery.data;
-    if (!result || result.source !== 'network') return;
+    if (result?.source !== 'network') return;
     void saveProductReadCacheEntry({
       accountId,
       spaceId,

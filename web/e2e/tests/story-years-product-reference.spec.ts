@@ -324,7 +324,9 @@ test.describe('Our Years Product Reference (#868)', () => {
     ).toBeVisible();
     await expect(page.locator('.story-year-link')).toHaveCount(3);
     await expect(
-      page.getByRole('link', { name: de.storyYears.openYear.replace('{{year}}', '2025') }),
+      page.getByRole('link', {
+        name: de.storyYears.openYear.replace('{{year}}', '2025'),
+      }),
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
@@ -356,10 +358,9 @@ test.describe('Our Years Product Reference (#868)', () => {
     await expect(page.locator('.story-card-milestone')).toHaveCount(1);
     await expect(page.locator('.story-card-memory.has-image')).toHaveCount(1);
 
-    const firstMonth = await months.first().textContent();
-    const lastMonth = await months.last().textContent();
-    expect(firstMonth?.toLowerCase()).toContain('januar');
-    expect(lastMonth?.toLowerCase()).toContain('dezember');
+    const cards = page.locator('.story-card');
+    await expect(cards.first()).toContainText('Winter walk by the lake');
+    await expect(cards.last()).toContainText('Evening at the winter market');
     await expectNoHorizontalOverflow(page);
 
     await captureScreenshot(
@@ -382,12 +383,9 @@ test.describe('Our Years Product Reference (#868)', () => {
     await openAnnualDetail(page);
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await captureScreenshot(
-      page,
-      testInfo,
-      '03-story-year-2025-390-dark.png',
-      { fullPage: true },
-    );
+    await captureScreenshot(page, testInfo, '03-story-year-2025-390-dark.png', {
+      fullPage: true,
+    });
   });
 
   test('320 CSS px reflows without horizontal overflow', async ({
