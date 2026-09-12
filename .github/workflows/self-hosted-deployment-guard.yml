@@ -88,8 +88,43 @@ jobs:
           printf '%s\n' 'COMPOSE_PROJECT_NAME=sidebyside-verified-ci' >> .env
 
           docker compose --profile self-hosted --env-file .env config --quiet
+          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+            --env-file deploy/self-hosted-release.env.example config --quiet
           docker compose --profile cloud --env-file deploy/cloud-managed.env.example config --quiet
           docker compose --profile dev-db config --quiet
+
+      - name: Released Self-Hosted is image-only (#827)
+        run: |
+          set -euo pipefail
+          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+            --env-file deploy/self-hosted-release.env.example config --format json \
+            > /tmp/compose-self-hosted-release.json
+
+          jq -e '
+            (.services | has("demo-init") | not) and
+            (.services.api.image == "ghcr.io/baerenmarke90/eimir-backend:v0.1.0") and
+            (.services.worker.image == .services.api.image) and
+            (.services.migrate.image == .services.api.image) and
+            (.services.web.image == "ghcr.io/baerenmarke90/eimir-web:v0.1.0") and
+            (.services.api | has("build") | not) and
+            (.services.worker | has("build") | not) and
+            (.services.migrate | has("build") | not) and
+            (.services.web | has("build") | not) and
+            (.services.api.depends_on.migrate.condition == "service_completed_successfully") and
+            (.services.worker.depends_on.migrate.condition == "service_completed_successfully")
+          ' /tmp/compose-self-hosted-release.json
+
+          SBS_SELF_HOSTED_BACKEND_IMAGE='ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+          SBS_SELF_HOSTED_WEB_IMAGE='ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
+          COMPOSE_FILE=compose.yaml docker compose --profile self-hosted \
+            --env-file deploy/self-hosted-release.env.example config --format json \
+            > /tmp/compose-self-hosted-digest.json
+          jq -e '
+            (.services.api.image | contains("@sha256:")) and
+            (.services.worker.image == .services.api.image) and
+            (.services.migrate.image == .services.api.image) and
+            (.services.web.image | contains("@sha256:"))
+          ' /tmp/compose-self-hosted-digest.json
 
       - name: Deployment helper syntax and isolation contract
         run: |
@@ -149,10 +184,10 @@ jobs:
             config --format json > /tmp/compose-verified.json
 
           jq -e --arg revision "$revision" '
+            (.services | has("demo-init") | not) and
             (.services.api.build.args.SBS_BUILD_REVISION == $revision) and
             (.services.worker.build.args.SBS_BUILD_REVISION == $revision) and
             (.services.migrate.build.args.SBS_BUILD_REVISION == $revision) and
-            (.services["demo-init"].build.args.SBS_BUILD_REVISION == $revision) and
             (.services.web.build.args.SBS_BUILD_REVISION == $revision)
           ' /tmp/compose-verified.json
 
@@ -190,7 +225,7 @@ jobs:
             exit 1
           fi
 
-      - name: Arcane remote source uses the canonical Self-Hosted profile
+      - name: Arcane remote source uses explicit source-build override
         run: |
           set -euo pipefail
           cp .env .env-arcane
@@ -204,13 +239,13 @@ jobs:
             > /tmp/compose-arcane.json
 
           jq -e '
+            (.services | has("demo-init") | not) and
             (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
             (.services.api.build.context == .services.migrate.build.context) and
             (.services.worker.build.context == .services.migrate.build.context) and
             (.services.api.build.args.SBS_BUILD_REVISION == "main") and
             (.services.worker.build.args.SBS_BUILD_REVISION == "main") and
             (.services.migrate.build.args.SBS_BUILD_REVISION == "main") and
-            (.services["demo-init"].build.args.SBS_BUILD_REVISION == "main") and
             (.services.web.build.args.SBS_BUILD_REVISION == "main") and
             (.services.web.build.context | endswith(":web")) and
             (.services.migrate.build.context | endswith(":backend"))
@@ -270,7 +305,7 @@ jobs:
           docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans
           trap - EXIT
 
-      - name: Start normal Self-Hosted stack
+      - name: Start source-built Self-Hosted test stack
         run: docker compose --profile self-hosted --env-file .env up -d --build --wait --wait-timeout 300
 
       - name: Shared Compose network is active
