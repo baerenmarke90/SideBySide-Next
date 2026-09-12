@@ -1,0 +1,146 @@
+name: Temporary 863 Slice B wiring
+
+on:
+  push:
+    branches:
+      - feat/863-slice-b-sofa-mode
+    paths:
+      - .github/workflows/tmp-863-slice-b.yml
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/863-slice-b-sofa-mode
+      - name: Wire route, shell and hub
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text()
+              if old not in text:
+                  raise SystemExit(f"pattern not found in {path}: {old[:80]!r}")
+              target.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              'web/src/client/routes.ts',
+              '/* Story content ---------------------------------------------------------- */',
+              "/* Games content ---------------------------------------------------------- */\n\nexport const GAMES_MOMENTS_ROUTE = '/games/our-moments';\n\n/* Story content ---------------------------------------------------------- */",
+          )
+
+          replace_once(
+              'web/src/client/deepLinks.ts',
+              '  COLLECTION_DETAIL_ROUTE_PATTERN,\n  HEART_MOMENT_DETAIL_ROUTE_PATTERN,',
+              '  COLLECTION_DETAIL_ROUTE_PATTERN,\n  GAMES_MOMENTS_ROUTE,\n  HEART_MOMENT_DETAIL_ROUTE_PATTERN,',
+          )
+          replace_once(
+              'web/src/client/deepLinks.ts',
+              "  COLLECTION_DETAIL_ROUTE_PATTERN,\n  SEARCH_ROUTE,\n  appRoutePath('more'),",
+              "  COLLECTION_DETAIL_ROUTE_PATTERN,\n  appRoutePath('games'),\n  GAMES_MOMENTS_ROUTE,\n  SEARCH_ROUTE,\n  appRoutePath('more'),",
+          )
+
+          replace_once(
+              'web/src/components/AppShell.tsx',
+              "  const gamesPath = appRoutePath('games');\n  const isGamesArea =\n    location.pathname === gamesPath ||\n    location.pathname.startsWith(`${gamesPath}/`);",
+              "  const gamesPath = appRoutePath('games');\n  const isGamesHub = location.pathname === gamesPath;",
+          )
+          replace_once(
+              'web/src/components/AppShell.tsx',
+              '          {isGamesArea ? (',
+              '          {isGamesHub ? (',
+          )
+
+          replace_once(
+              'web/src/main.tsx',
+              "import './components/GamesProductArea.css';\n",
+              "import './components/GamesProductArea.css';\nimport './components/OurMomentsGamePage.css';\n",
+          )
+
+          replace_once(
+              'web/src/App.tsx',
+              '  COLLECTION_DETAIL_ROUTE_PATTERN,\n  DEFAULT_APP_ROUTE,',
+              '  COLLECTION_DETAIL_ROUTE_PATTERN,\n  DEFAULT_APP_ROUTE,\n  GAMES_MOMENTS_ROUTE,',
+          )
+          replace_once(
+              'web/src/App.tsx',
+              "import { MemoryProductPage } from './components/MemoryProductPage';\n",
+              "import { MemoryProductPage } from './components/MemoryProductPage';\nimport { OurMomentsGamePage } from './components/OurMomentsGamePage';\n",
+          )
+          replace_once(
+              'web/src/App.tsx',
+              "          <Route\n            path={SEARCH_ROUTE}\n            element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}\n          />\n          <Route path={appRoutePath('more')} element={<MoreOverviewPage />} />",
+              "          <Route\n            path={SEARCH_ROUTE}\n            element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}\n          />\n          <Route\n            path={GAMES_MOMENTS_ROUTE}\n            element={\n              <OurMomentsGamePage\n                apiBaseUrl={apiBaseUrl}\n                accessToken={tokens.accessToken}\n                spaceId={spaceId}\n                currentAccountId={account.id}\n              />\n            }\n          />\n          <Route path={appRoutePath('more')} element={<MoreOverviewPage />} />",
+          )
+
+          replace_once(
+              'web/src/components/OurMomentsGamePage.tsx',
+              "import {\n  appRoutePath,\n  GAMES_MOMENTS_ROUTE,\n} from '../client/routes';",
+              "import { appRoutePath } from '../client/routes';",
+          )
+          replace_once(
+              'web/src/components/OurMomentsGamePage.tsx',
+              "\n      <span className=\"sr-only\">{GAMES_MOMENTS_ROUTE}</span>",
+              '',
+          )
+
+          replace_once(
+              'web/src/components/GamesProductArea.css',
+              '@media (max-width: 599px) {',
+              ".games-entry-link {\n  text-decoration: none;\n}\n\n.games-entry-link:hover {\n  border-color: var(--color-brand-text);\n  box-shadow: var(--shadow-card);\n}\n\n.games-entry-link:focus-visible {\n  outline: 3px solid var(--color-focus);\n  outline-offset: 3px;\n}\n\n@media (max-width: 599px) {",
+          )
+
+          replace_once(
+              'web/src/components/AppShell.test.tsx',
+              "  it.each([\n    ['/today', '/today'],",
+              "  it('renders a nested Games route through the normal route content seam', () => {\n    const html = renderShell('/games/our-moments');\n\n    expect(html).toContain('Content fixture');\n    expect(html).not.toContain('games-product-page');\n  });\n\n  it.each([\n    ['/today', '/today'],",
+          )
+
+          replace_once(
+              'web/src/client/routes.test.ts',
+              '  DEFAULT_APP_ROUTE,\n  HEART_MOMENT_CREATE_ROUTE,',
+              '  DEFAULT_APP_ROUTE,\n  GAMES_MOMENTS_ROUTE,\n  HEART_MOMENT_CREATE_ROUTE,',
+          )
+          replace_once(
+              'web/src/client/routes.test.ts',
+              "    expect(appRoutePath('games')).toBe('/games');\n    expect(appRoutePath('more')).toBe('/more');",
+              "    expect(appRoutePath('games')).toBe('/games');\n    expect(GAMES_MOMENTS_ROUTE).toBe('/games/our-moments');\n    expect(appRoutePath('more')).toBe('/more');",
+          )
+          PY
+      - name: Install locked Web dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format changed Web files
+        working-directory: web
+        run: >-
+          npx biome format --write
+          src/App.tsx
+          src/main.tsx
+          src/client/routes.ts
+          src/client/routes.test.ts
+          src/client/deepLinks.ts
+          src/client/ourMomentsSession.ts
+          src/client/ourMomentsSession.test.ts
+          src/components/AppShell.tsx
+          src/components/AppShell.test.tsx
+          src/components/GamesProductArea.tsx
+          src/components/GamesProductArea.test.tsx
+          src/components/OurMomentsGamePage.tsx
+          src/components/OurMomentsGamePage.test.tsx
+          src/i18n/locales/games.ts
+      - name: Commit branch wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "feat(web): wire Our Moments sofa route (#863)"
+          git push origin HEAD:feat/863-slice-b-sofa-mode
