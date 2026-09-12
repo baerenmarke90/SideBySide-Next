@@ -48,9 +48,11 @@ export function GamesProductArea({
     queryFn: async () => {
       try {
         if (loadEntitlement) return await loadEntitlement();
-        return await entitlementApi.getSpaceEntitlementsApiV1SpacesSpaceIdEntitlementsGet({
-          spaceId,
-        });
+        return await entitlementApi.getSpaceEntitlementsApiV1SpacesSpaceIdEntitlementsGet(
+          {
+            spaceId,
+          },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -82,15 +84,22 @@ export function GamesProductArea({
         <>
           {gamesUnlocked ? (
             <section className="games-access-panel games-access-panel-unlocked">
-              <span className="games-premium-badge">{t('games.unlocked.badge')}</span>
+              <span className="games-premium-badge">
+                {t('games.unlocked.badge')}
+              </span>
               <div>
                 <h2>{t('games.unlocked.title')}</h2>
                 <p>{t('games.unlocked.body')}</p>
               </div>
             </section>
           ) : (
-            <section className="games-access-panel" aria-labelledby="games-premium-heading">
-              <span className="games-premium-badge">{t('games.premium.badge')}</span>
+            <section
+              className="games-access-panel"
+              aria-labelledby="games-premium-heading"
+            >
+              <span className="games-premium-badge">
+                {t('games.premium.badge')}
+              </span>
               <div className="games-access-copy">
                 <h2 id="games-premium-heading">{t('games.premium.title')}</h2>
                 <p>{t('games.premium.body')}</p>
@@ -105,7 +114,10 @@ export function GamesProductArea({
                 {t('games.premium.action')}
               </button>
               {showPremiumDetails ? (
-                <div id="games-premium-details" className="games-premium-details">
+                <div
+                  id="games-premium-details"
+                  className="games-premium-details"
+                >
                   <strong>{t('games.premium.detailsTitle')}</strong>
                   <p>{t('games.premium.detailsBody')}</p>
                 </div>
@@ -120,7 +132,9 @@ export function GamesProductArea({
                   {String(index + 1).padStart(2, '0')}
                 </div>
                 <div className="games-entry-copy">
-                  <p className="games-entry-role">{t(`games.entries.${entry}.role`)}</p>
+                  <p className="games-entry-role">
+                    {t(`games.entries.${entry}.role`)}
+                  </p>
                   <h2>{t(`games.entries.${entry}.title`)}</h2>
                   <p>{t(`games.entries.${entry}.description`)}</p>
                 </div>
