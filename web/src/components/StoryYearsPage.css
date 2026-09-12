@@ -158,6 +158,10 @@
   width: 100%;
 }
 
+.story-year-page .story-card-meta time {
+  color: var(--color-text-secondary);
+}
+
 .story-year-pagination {
   display: flex;
   justify-content: center;
