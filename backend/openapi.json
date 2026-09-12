@@ -8113,7 +8113,7 @@
       },
       "WishUpdate": {
         "additionalProperties": false,
-        "description": "Wish title correction.\n\nThere is deliberately no ``status`` field. Wish status is controlled only\nby the Wish-to-Plan contract (M3-D02/D03/D04); an arbitrary status PATCH\nwould provide a way around that lifecycle.",
+        "description": "Wish title correction.\n\nThere is deliberately no ``status`` field. Wish status is controlled only\nby explicit lifecycle commands; an arbitrary status PATCH would provide a\nway around those transitions.",
         "properties": {
           "title": {
             "title": "Title",
@@ -24528,6 +24528,106 @@
           }
         },
         "summary": "Update Wish",
+        "tags": [
+          "wishes"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete": {
+      "post": {
+        "operationId": "completeWish",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wishId",
+            "required": true,
+            "schema": {
+              "title": "Wishid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WishDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Complete Wish",
         "tags": [
           "wishes"
         ]

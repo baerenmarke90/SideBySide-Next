@@ -6,7 +6,9 @@ from sidebyside.main import create_app
 
 COLLECTION = "/api/v1/spaces/{spaceId}/plans"
 DETAIL = "/api/v1/spaces/{spaceId}/plans/{planId}"
-CONVERT = "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan"
+WISH_DETAIL = "/api/v1/spaces/{spaceId}/wishes/{wishId}"
+WISH_COMPLETE = f"{WISH_DETAIL}/complete"
+CONVERT = f"{WISH_DETAIL}/plan"
 LIFECYCLE = (
     f"{DETAIL}/schedule",
     f"{DETAIL}/unschedule",
@@ -39,6 +41,7 @@ def test_plan_routes_have_frozen_operation_ids() -> None:
     assert paths[f"{DETAIL}/complete"]["post"]["operationId"] == "completePlan"
     assert paths[f"{DETAIL}/return-to-wish"]["post"]["operationId"] == "returnPlanToWish"
     assert paths[CONVERT]["post"]["operationId"] == "convertWishToPlan"
+    assert paths[WISH_COMPLETE]["post"]["operationId"] == "completeWish"
 
 
 def test_the_decided_wish_and_plan_surface_is_now_complete() -> None:
@@ -46,7 +49,8 @@ def test_the_decided_wish_and_plan_surface_is_now_complete() -> None:
     plan_paths = {path for path in _paths() if "/plans" in path}
     assert wish_paths == {
         "/api/v1/spaces/{spaceId}/wishes",
-        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        WISH_DETAIL,
+        WISH_COMPLETE,
         CONVERT,
     }
     assert plan_paths == {COLLECTION, DETAIL, *LIFECYCLE}
@@ -58,6 +62,7 @@ def test_every_lifecycle_operation_requires_if_match() -> None:
         (DETAIL, "patch"),
         (DETAIL, "delete"),
         (CONVERT, "post"),
+        (WISH_COMPLETE, "post"),
         *((path, "post") for path in LIFECYCLE),
     ]
     for path, method in versioned:
