@@ -81,12 +81,12 @@ describe('GamesProductArea', () => {
     });
     expect(screen.queryByText(games.premium.title)).toBeNull();
     expectFiveGameEntries();
-    expect(screen.getByText(games.status.playNow)).toBeTruthy();
     expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(4);
 
     const momentsLink = screen.getByRole('link', {
       name: new RegExp(games.entries.moments.title),
     });
+    expect(momentsLink.textContent).toContain(games.status.playNow);
     expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
   });
 });
