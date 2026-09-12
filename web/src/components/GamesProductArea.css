@@ -1,0 +1,223 @@
+.games-product-page {
+  width: min(100%, 54rem);
+  margin-inline: auto;
+}
+
+.games-heading {
+  margin-bottom: var(--space-6);
+}
+
+.games-access-panel {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: clamp(var(--space-5), 5vw, var(--space-7));
+  background:
+    radial-gradient(circle at top right, var(--color-brand-surface), transparent 45%),
+    var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.games-access-panel-unlocked {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  background:
+    radial-gradient(circle at top right, var(--color-shared-surface), transparent 50%),
+    var(--color-surface-raised);
+}
+
+.games-premium-badge,
+.games-entry-status {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 1.75rem;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-3);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  font-size: 0.75rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.games-access-copy h2,
+.games-access-panel-unlocked h2,
+.games-entry h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+}
+
+.games-access-copy h2,
+.games-access-panel-unlocked h2 {
+  font-size: clamp(1.3rem, 4vw, 1.75rem);
+}
+
+.games-access-copy p,
+.games-access-panel-unlocked p,
+.games-premium-details p {
+  max-width: 42rem;
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.games-premium-action {
+  justify-self: start;
+  min-height: 44px;
+}
+
+.games-premium-details {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-4);
+}
+
+.games-premium-details strong {
+  color: var(--color-text);
+}
+
+.games-shelf {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.games-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 7rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.games-entry:nth-child(even) {
+  margin-left: clamp(0rem, 3vw, var(--space-5));
+}
+
+.games-entry-index {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.games-entry-copy {
+  min-width: 0;
+}
+
+.games-entry-role {
+  margin: 0 0 var(--space-1);
+  color: var(--color-brand-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.games-entry h2 {
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+
+.games-entry-copy > p:last-child {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.games-entry-status {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/*
+ * #902 expands the accepted compact shell from four destinations plus Quick
+ * Create to five destinations plus Quick Create. The shell remains one fixed,
+ * thumb-reachable row; Games receives the fifth product slot without hiding
+ * or displacing the global creation action.
+ */
+.mobile-bottom-shell {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  max-width: 32rem;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(1) {
+  grid-column: 1;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(2) {
+  grid-column: 2;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(3) {
+  grid-column: 3;
+}
+
+.mobile-bottom-shell .mobile-quick-create {
+  grid-column: 4;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(4) {
+  grid-column: 5;
+}
+
+.mobile-bottom-nav .shell-nav-link:nth-child(5) {
+  grid-column: 6;
+}
+
+@media (max-width: 599px) {
+  .games-entry {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .games-entry:nth-child(even) {
+    margin-left: 0;
+  }
+
+  .games-entry-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-bottom-nav .shell-nav-link {
+    font-size: 0.64rem;
+  }
+
+  .games-access-panel {
+    padding: var(--space-4);
+  }
+
+  .games-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .games-entry-index,
+  .games-entry-status {
+    grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .games-product-page *,
+  .games-product-page *::before,
+  .games-product-page *::after {
+    scroll-behavior: auto;
+  }
+}
