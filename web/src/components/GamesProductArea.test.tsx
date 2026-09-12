@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
+import { GAMES_MOMENTS_ROUTE } from '../client/routes';
 import games from '../i18n/locales/games';
 import { GAMES_COUPLE_CAPABILITY, GamesProductArea } from './GamesProductArea';
 
@@ -29,12 +31,14 @@ function renderGames(view: SpaceEntitlementView) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <GamesProductArea
-        apiBaseUrl="http://api.example.test"
-        accessToken="test-token"
-        spaceId={SPACE_ID}
-        loadEntitlement={async () => view}
-      />
+      <MemoryRouter initialEntries={['/games']}>
+        <GamesProductArea
+          apiBaseUrl="http://api.example.test"
+          accessToken="test-token"
+          spaceId={SPACE_ID}
+          loadEntitlement={async () => view}
+        />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -54,6 +58,9 @@ describe('GamesProductArea', () => {
     await screen.findByText(games.premium.title);
     expectFiveGameEntries();
     expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
+    expect(
+      screen.queryByRole('link', { name: new RegExp(games.entries.moments.title) }),
+    ).toBeNull();
 
     const detailsButton = screen.getByRole('button', {
       name: games.premium.action,
@@ -64,7 +71,7 @@ describe('GamesProductArea', () => {
     expect(detailsButton.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('unlocks the hub presentation only when the centralized Games capability is present', async () => {
+  it('opens Our Moments for the centralized Games capability while later games remain unavailable', async () => {
     renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
 
     await waitFor(() => {
@@ -72,6 +79,12 @@ describe('GamesProductArea', () => {
     });
     expect(screen.queryByText(games.premium.title)).toBeNull();
     expectFiveGameEntries();
-    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(5);
+    expect(screen.getByText(games.status.playNow)).toBeTruthy();
+    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(4);
+
+    const momentsLink = screen.getByRole('link', {
+      name: new RegExp(games.entries.moments.title),
+    });
+    expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
   });
 });
