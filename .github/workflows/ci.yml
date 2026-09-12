@@ -308,12 +308,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare the documented first startup
-        # Follow the guide: copy, replace the password, and start. The test value
-        # is a CI-only value and not a secret.
+        # Follow the guide: copy, replace the password, build local Development
+        # images, and then start the single canonical Compose topology. The test
+        # value is a CI-only value and not a secret.
         run: |
+          set -euo pipefail
           cp .env.example .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-for-the-test-run/' .env
           docker compose config --quiet
+          python3 scripts/build_self_hosted_source.py --env-file .env
 
       - name: Start stack
         run: docker compose up -d --wait --wait-timeout 300
