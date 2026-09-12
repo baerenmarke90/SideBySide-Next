@@ -20,6 +20,7 @@ const games = {
   status: {
     premium: 'Pro',
     comingSoon: 'Bald verfügbar',
+    playNow: 'Spielen',
   },
   entries: {
     moments: {
@@ -47,6 +48,36 @@ const games = {
       title: 'Zeitreise',
       description: 'Taucht tiefer in eure gemeinsame Geschichte ein.',
     },
+  },
+  momentsGame: {
+    back: 'Zurück zu Spielen',
+    intro:
+      'Dreht abwechselnd Karten um und findet die Fotos wieder, die zu euren gemeinsamen Erinnerungen gehören.',
+    loadingTitle: 'Eure Momente werden gemischt',
+    loadingBody: 'Wir laden nur Erinnerungen, die ihr beide sehen dürft.',
+    coupleRequiredTitle: 'Dieses Spiel gehört euch beiden',
+    coupleRequiredBody:
+      'Unsere Momente ist für einen gemeinsamen Bereich mit genau zwei Partnern gedacht.',
+    sparseEyebrow: 'Noch ein bisschen Geschichte sammeln',
+    sparseTitle: 'Für eine Runde fehlen noch gemeinsame Fotomomente.',
+    sparseBody:
+      'Sobald ihr mindestens drei gemeinsame Erinnerungen mit Foto festgehalten habt, kann eure erste Runde starten. Private Inhalte werden dafür niemals verwendet.',
+    sparseAction: 'Zu euren Momenten',
+    turnLabel: 'Am Zug',
+    turnValue: '{{name}} ist dran',
+    scoreAria: 'Gefundene Paare',
+    boardAria: 'Memory-Spielfeld mit euren gemeinsamen Momenten',
+    cardHidden: 'Karte {{index}} von {{total}}, verdeckt',
+    cardPhotoRevealed: 'Foto zu {{title}}, aufgedeckt',
+    cardContextRevealed: 'Erinnerung {{title}}, {{date}}, aufgedeckt',
+    cardMatched: 'Gefundenes Paar: {{title}}, {{date}}',
+    matchEyebrow: 'Wiedergefunden',
+    continue: 'Weiter',
+    finishEyebrow: 'Eure Runde',
+    finishTitle: 'Ihr habt alle Momente wiedergefunden.',
+    finishBody: '{{count}} kleine Geschichten aus eurem gemeinsamen Leben.',
+    restart: 'Noch einmal',
+    backToGames: 'Andere Spiele ansehen',
   },
 };
 
