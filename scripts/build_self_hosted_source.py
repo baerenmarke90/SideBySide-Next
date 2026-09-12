@@ -75,6 +75,12 @@ def plan(
     web_image: str | None = None,
 ) -> dict[str, object]:
     values = read_dotenv(env_file)
+    environment = effective(values, "SBS_ENVIRONMENT", "development").strip().lower()
+    if environment == "production":
+        raise SourceBuildError(
+            "source builds are not allowed for SBS_ENVIRONMENT=production"
+        )
+
     resolved_revision = revision or effective(
         values, "SBS_BUILD_REVISION", "unverified-local-checkout"
     )
