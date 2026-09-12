@@ -20,10 +20,10 @@ The persistent primary Web navigation is:
 Wir · Momente · Planen · Mehr
 ```
 
-On compact Web, Quick Create remains the centered global action, producing the established five-slot shell:
+On compact Web, Quick Create remains the centered global action in the original accepted third slot, producing the established five-slot shell:
 
 ```text
-Wir · Momente · Planen · + · Mehr
+Wir · Momente · + · Planen · Mehr
 ```
 
 `Spielen` is exposed from the `Mehr` overview as a secondary destination.
@@ -50,7 +50,8 @@ This decision does not change the commercial or authorization model from Decisio
 
 ## Consequences
 
-- Compact navigation returns to the less crowded five-slot shell of four destinations plus Quick Create.
+- Compact navigation returns to the established five-slot order `Wir · Momente · + · Planen · Mehr`.
+- Quick Create stays centered between `Momente` and `Planen`; moving Games must not reorder the remaining compact shell.
 - Expanded Web navigation also omits `Spielen` as a primary destination for consistent information architecture.
 - `Mehr` gains a Games entry using the existing Games icon and product copy.
 - `/games` and future `/games/...` gameplay routes continue to work without path changes.
