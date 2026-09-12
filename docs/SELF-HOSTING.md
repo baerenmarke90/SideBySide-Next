@@ -1,104 +1,62 @@
 # Secure Self-Hosted Operation
 
-Persistent Development, release-candidate verification, Production promotion, and
+Persistent Development, release-candidate verification, Production promotion and
 rollback are governed by
 [`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`](DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md).
-This document covers secure instance operation; it must not be used to bypass the
-Development-before-Production promotion gates defined there.
+This document is the operator runbook for Self-Hosted instances.
 
 ## Operating modes
 
-The bundled stack supports a convenient local source-test mode and a hardened released
-Production mode. Both use the **same tracked `compose.yaml`**. There is no second
-Production Compose topology.
+The repository has one tracked runtime topology: `compose.yaml`.
 
 | | local source test | released Production |
 |---|---|---|
 | `SBS_ENVIRONMENT` | `development` | `production` |
-| application images | local images built by `scripts/build_self_hosted_source.py` | versioned GHCR release images |
-| Compose application `build:` | none | none |
-| pull policy | `never` for the intentionally local tags | `always` |
-| cursor signing key | local fallback allowed | required, at least 32 characters |
-| Account deletion authority | optional until self-delete is exercised | stable instance UUID + protected forward journal required before API traffic is served |
-| outgoing mail | `log` allowed | `smtp` or `none`, never `log` |
-| `SBS_PUBLIC_BASE_URL` | HTTP localhost allowed | HTTPS required |
-| `/docs` | available | disabled |
-| release identity | explicitly non-release local image | GitHub Release + source SHA + published OCI identity |
+| application images | local images built before Compose | published GHCR release images |
+| application `build:` in Compose | none | none |
+| pull policy | `never` for intentional local tags | `always` |
+| supported start entry point | raw Compose after local prebuild | `scripts/self_hosted_release.py` |
+| release identity | non-release local tag | release version + source SHA + OCI digest |
+| mail | `log`, `smtp`, or `none` | `smtp` or `none`; never `log` |
+| public origin | HTTP localhost allowed | HTTPS required |
 
-The default is test mode by design ([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)).
-Initial evaluation must work without an SMTP account or public HTTPS domain. Web and API
-bind to loopback by default.
+The default development experience remains usable without SMTP or a public HTTPS domain.
+Released Production is deliberately stricter.
 
 ## Local source test
 
-Copy the development template, build the two local application images, then start the
-single canonical Compose topology:
+Local source testing builds application images first, then runs the same canonical
+Compose topology:
 
 ```bash
 cp .env.example .env
-# Replace at least POSTGRES_PASSWORD with a strong random value.
-# Set SBS_BOOTSTRAP_TOKEN to a separate random value with at least 32 characters.
+# Replace POSTGRES_PASSWORD and optionally set a bootstrap token.
 python3 scripts/build_self_hosted_source.py --env-file .env
 docker compose --profile self-hosted --env-file .env config --quiet
 docker compose --profile self-hosted --env-file .env \
   up -d --wait --wait-timeout 300
 ```
 
-`.env.example` points the canonical Compose services at local tags and sets
-`SBS_SELF_HOSTED_PULL_POLICY=never`, so Docker will not accidentally replace those test
-images from a registry. `scripts/build_self_hosted_source.py` is a development/CI tool;
-it is not a released Production fallback.
+`.env.example` points application services at local tags and sets
+`SBS_SELF_HOSTED_PULL_POLICY=never`. The source builder refuses Production and refuses
+registry/digest targets. It is not a Production fallback.
 
-`API_PORT=8000` and `WEB_PORT=8080` are defaults only. If either host port is already
-occupied, select a free port in `.env` before startup, for example:
-
-```dotenv
-API_PORT=8010
-WEB_PORT=8081
-SBS_PUBLIC_BASE_URL=http://localhost:8081
-```
-
-The published ports must remain bound to the intended interface. For the default local
-setup:
-
-```bash
-docker compose --profile self-hosted --env-file .env port api 8000
-docker compose --profile self-hosted --env-file .env port web 8080
-```
-
-Both should report `127.0.0.1`. An unexpected `0.0.0.0`, `::`, or external address is
-not an acceptable default.
-
-## Verified source testing
-
-`scripts/compose_checked.py` remains available for CI and exceptional verified-source
-acceptance. It is **not** the released Production install path.
-
-The wrapper:
-
-- requires a clean checkout;
-- can require an exact 40-character source SHA;
-- exports `compose.yaml`, backend and Web from that exact committed tree;
-- builds local backend/Web images from the exported source;
-- runs the exported canonical Compose file against those local tags with pull disabled.
-
-Example:
-
-```bash
-CANDIDATE=<40-character-approved-commit-sha>
-git checkout "$CANDIDATE"
-python3 scripts/compose_checked.py \
-  --expected-revision "$CANDIDATE" \
-  up -d --force-recreate --wait --wait-timeout 300
-```
-
-This proves a checkout/source candidate. It does not turn a source checkout into a
+For verified source acceptance, `scripts/compose_checked.py` may export one exact clean
+Git snapshot, build local backend/Web images and run canonical Compose against those
+local tags. That wrapper also refuses Production. It proves source; it does not create a
 published release.
 
-## Released Production installation
+## Released Production files
 
-Released Self-Hosted consumes the OCI images published by the protected #519/#827
-release workflow. The target host does **not** compile backend or Web source.
+A released Self-Hosted installation needs the release bundle files plus Docker/Compose:
+
+- `compose.yaml`;
+- `deploy/self-hosted-release.env.example`;
+- `scripts/self_hosted_release.py`;
+- `scripts/check_runtime_environment.py`.
+
+The protected release workflow packages these operator files with the published release.
+The target host does **not** need backend/Web source and never builds application images.
 
 Start from the release template:
 
@@ -106,199 +64,184 @@ Start from the release template:
 cp deploy/self-hosted-release.env.example .env
 ```
 
-Set at least the Production database password, public origin/hosts, cursor signing key,
-mail choice and the other instance-specific values. Select the exact product release:
+Set instance-specific values and select the published product version:
 
 ```dotenv
+SBS_ENVIRONMENT=production
 SBS_RELEASE_VERSION=0.1.0
+POSTGRES_PASSWORD=<strong-production-only-value>
+SBS_PUBLIC_BASE_URL=https://sidebyside.example
+SBS_ALLOWED_HOSTS=["sidebyside.example"]
+SBS_CURSOR_SIGNING_KEY=<stable-random-value-at-least-32-characters>
 ```
 
-The default references are:
+The default application images are the matching GHCR version tags:
 
 ```text
 ghcr.io/baerenmarke90/eimir-backend:v<release-version>
 ghcr.io/baerenmarke90/eimir-web:v<release-version>
 ```
 
-For a fully locked deployment, use the digest-qualified references from the GitHub
-Release asset `self-hosted-image-identity.json`:
+For byte-level locking, use the digest-qualified references from the same GitHub
+Release's `self-hosted-image-identity.json`:
 
 ```dotenv
 SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:<digest>
 SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:<digest>
 ```
 
-Do not set `SBS_SELF_HOSTED_PULL_POLICY=never` in Production. The Production runtime
-contract requires `pull_policy=always`, no application `build:` blocks, one exact backend
-image shared by `migrate`, `api`, and `worker`, and one matching-version Web image.
+Both overrides must still carry the exact `SBS_RELEASE_VERSION`. Backend `migrate`,
+`api`, and `worker` must share one exact backend image. Web must use the same product
+version. Production requires `pull_policy=always` and permits no application `build:`
+fallback.
 
-Validate and start:
+## Mandatory released launcher
+
+Do not start released Production with a raw `docker compose pull/up` sequence. The
+supported entry point is:
 
 ```bash
-docker compose --profile self-hosted --env-file .env config --quiet
-docker compose --profile self-hosted --env-file .env pull
-docker compose --profile self-hosted --env-file .env \
-  up -d --wait --wait-timeout 300
+python3 scripts/self_hosted_release.py --env-file .env <operation>
 ```
 
-A registry outage or missing release image is a deployment failure. Production must not
-silently build whatever source happens to be present on the target host.
+The launcher always uses repository-root `compose.yaml` and profile `self-hosted`. Before
+it can pull, bootstrap or start anything, it renders the actual Compose configuration
+and validates the published image identity. It rejects:
 
-## Compose network and startup
+- a non-Production release env;
+- process-level environment drift away from Production;
+- missing `SBS_RELEASE_VERSION`;
+- local, branch or `latest` application images;
+- backend/Web versions that differ from `SBS_RELEASE_VERSION`;
+- backend-role image divergence;
+- application `build:` fallback;
+- disabled Production pulling.
 
-`postgres`, `migrate`, `api`, `worker`, and `web` use the same project-specific bridge
-network. The database URL deliberately resolves `postgres:5432` through Docker DNS
-rather than using container IDs, fixed Docker addresses, or published host ports.
+`deploy` additionally runs the full runtime-environment guard, including deletion
+authority and other Production-critical configuration, before pull/start.
 
-Normal Self-Hosted startup ordering is:
+Available operations are:
 
 ```text
-postgres -> migrate -> api/worker -> web
+validate
+pull
+bootstrap-deletion-authority
+deploy
 ```
 
-`migrate` must complete successfully before API and worker start. Web waits for API
-readiness.
+A registry outage or missing release image is a deployment failure. The launcher never
+falls back to a source build.
 
-`demo-init` is deliberately **not** part of normal Self-Hosted startup. It is an
-explicit Demo-only one-shot lifecycle service under profile `demo`. Public Demo
-operations intentionally activate/run that lifecycle; ordinary Self-Hosted installations
-do not seed Demo state.
+## First Production installation
 
-Useful network checks:
+### 1. Configure and pull the selected release
+
+With `SBS_ACCOUNT_DELETION_INSTANCE_ID` still blank on a brand-new installation:
 
 ```bash
-docker compose --profile self-hosted --env-file .env exec -T api python -c \
-  'import socket; print(socket.gethostbyname("postgres"))'
-
-api_id=$(docker compose --profile self-hosted --env-file .env ps -q api)
-docker inspect "$api_id" --format '{{json .NetworkSettings.Networks}}'
+python3 scripts/self_hosted_release.py --env-file .env pull
 ```
 
-A running API container with no attached Docker network is not ready.
+This performs the image-identity gate without requiring an already-created deletion
+authority.
 
-SideBySide exposes separate health signals:
+### 2. Create the deletion authority exactly once
 
-- `/api/v1/health`: API process liveness;
-- `/api/v1/health/ready`: API plus database readiness;
-- `/healthz`: Web server liveness;
-- `/.well-known/sidebyside-revision`: Web build identity.
-
-The API health responses include:
-
-```text
-X-SideBySide-Revision: <backend-build-revision>
-```
-
-A released deployment is valid only when the Web revision endpoint and API header both
-match the release manifest's source revision. This prevents a partially recreated stack
-from silently pairing stale Web and backend images.
-
-## Production configuration
-
-Start from `deploy/self-hosted-release.env.example`. Configure ordinary Production
-values first, but leave `SBS_ACCOUNT_DELETION_INSTANCE_ID` unset until the deletion
-authority has been provisioned by the explicit bootstrap command below:
-
-```dotenv
-SBS_ENVIRONMENT=production
-SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
-SBS_ACCOUNT_DELETION_INSTANCE_ID=
-SBS_PUBLIC_BASE_URL=https://your-domain.example
-SBS_ALLOWED_HOSTS=["your-domain.example"]
-TRUSTED_PROXY_IPS=...             # smallest real reverse-proxy IP/CIDR
-
-# With mail delivery:
-SBS_MAIL_TRANSPORT=smtp
-SBS_MAIL_FROM=no-reply@your-domain.example
-SBS_SMTP_HOST=smtp.your-domain.example
-
-# Or without mail delivery:
-# SBS_MAIL_TRANSPORT=none
-```
-
-If this installation has **never had an Account-deletion authority**, create the stable
-UUID and empty forward journal together exactly once:
+Only for an installation that has **never** had an Account-deletion authority:
 
 ```bash
-docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
-  python -m sidebyside.identity.deletion_bootstrap \
-  --confirm-new-installation
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  bootstrap-deletion-authority
 ```
 
-The command prints:
+The command runs the released backend image and creates the UUID plus forward journal as
+one operation. It prints:
 
 ```dotenv
 SBS_ACCOUNT_DELETION_INSTANCE_ID=<stable-instance-uuid>
 ```
 
-Store that exact emitted value in `.env` and the protected operator configuration backup
-before normal Production startup. Do not pre-generate or replace the UUID independently
-of the journal.
+Store exactly that value in `.env` and in the protected operator configuration backup.
+Do not pre-generate or replace the UUID independently of the journal.
 
-If this installation already had an authority and its journal is now missing, corrupt,
-or unavailable, **do not run bootstrap**. Recover the newest protected journal and its
-matching stable instance ID as described in
+If the installation previously had an authority and its journal is missing or damaged,
+**do not bootstrap again**. Restore the newest protected journal and matching stable
+instance ID according to
 [`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
 
-Production refuses unsafe configuration such as a missing cursor signing key, plaintext
-public base URL, or `SBS_MAIL_TRANSPORT=log`. Production also refuses normal API traffic
-until the configured Account-deletion authority is present, readable, and matches
-`SBS_ACCOUNT_DELETION_INSTANCE_ID`.
+### 3. Validate and deploy
 
-## Account deletion authority
+After recording `SBS_ACCOUNT_DELETION_INSTANCE_ID`:
 
-Self-service Account deletion has a stronger recovery requirement than ordinary
-point-in-time application data. Canonical Compose gives the API a separate private
-`deletion_journal_data` volume mounted at:
-
-```text
-/var/lib/sidebyside/deletion-journal
+```bash
+python3 scripts/self_hosted_release.py --env-file .env validate
+python3 scripts/self_hosted_release.py --env-file .env deploy
 ```
 
-The stable instance UUID in `SBS_ACCOUNT_DELETION_INSTANCE_ID` belongs to the operator
-configuration backup. It is emitted by the one-time
-`sidebyside.identity.deletion_bootstrap` command when that command creates the matching
-forward journal. Keep both authority artifacts unchanged across application upgrades and
-database/media restores. Do not reuse the Production UUID or journal for Development or
-Demo.
+`deploy` validates, pulls the selected release images, runs migrations through the
+canonical dependency graph, force-recreates runtime containers and waits for health.
 
-The forward journal must not be rolled back together with PostgreSQL or media. Protect
-the newest validated journal independently and retain it until every pre-deletion
-backup represented by its tombstones has expired. API startup replays configured
-tombstones before normal traffic so a crash after journal fsync but before the database
-fail-closed commit cannot reopen an Account.
+## Runtime topology
 
-Treat `docker compose down -v` as destructive to this safety state. Recreating an API
-container is safe because named volumes persist; deleting/changing the Compose project or
-journal volume requires an explicit migration/recovery decision.
+Normal Self-Hosted ordering is:
 
-The full operator contract, including bootstrap, upgrades that first introduce the
-authority, and post-restore replay, is in
-[`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
+```text
+postgres -> migrate -> api/worker -> web
+```
 
-## Operation without a mail server
+- `postgres` remains the upstream PostgreSQL image.
+- `migrate` is an explicit one-shot service to avoid concurrent migration races.
+- `api` and `worker` share one backend image but remain separate runtime processes.
+- `web` remains a separate static/runtime boundary.
+- `demo-init` is profile `demo` only and is not part of normal Self-Hosted startup.
 
-SMTP is not a startup requirement. With:
+All services use the project-specific bridge network. The application reaches PostgreSQL
+through Docker DNS at `postgres:5432`; do not depend on container IDs or fixed Docker IPs.
+
+## Production configuration requirements
+
+Production rejects insecure runtime settings. At minimum:
+
+- `SBS_CURSOR_SIGNING_KEY` is stable and at least 32 characters;
+- `SBS_PUBLIC_BASE_URL` uses HTTPS;
+- `SBS_ALLOWED_HOSTS` names concrete hosts and never `*`;
+- `TRUSTED_PROXY_IPS` is the smallest real proxy IP/CIDR set;
+- `SBS_ACCOUNT_DELETION_INSTANCE_ID` matches the protected forward journal;
+- `SBS_MAIL_TRANSPORT` is `smtp` or `none`, never `log`.
+
+SMTP is optional. With:
 
 ```dotenv
 SBS_MAIL_TRANSPORT=none
 ```
 
-the instance remains usable through password, Passkey/WebAuthn, and OIDC, but
-mail-dependent Magic Link, password recovery, and address verification return a clear
-unavailable response instead of pretending to send a message. An accepted Account
-deletion also continues without rollback when its best-effort confirmation mail cannot
-be sent.
+password, Passkey/WebAuthn and OIDC remain available while mail-dependent Magic Link,
+password recovery and email verification report that mail delivery is unavailable.
 
-`log` transport is for local testing only. It would put valid one-time credentials in
-logs and is therefore rejected in Production.
+## Account deletion authority
+
+Self-service Account deletion has a stronger recovery requirement than ordinary
+point-in-time application data. Canonical Compose mounts a separate private
+`deletion_journal_data` volume at:
+
+```text
+/var/lib/sidebyside/deletion-journal
+```
+
+Keep the stable instance UUID and newest validated forward journal outside ordinary
+PostgreSQL/media rollback. Retain journal tombstones until all backups that could predate
+those deletions have expired. API startup reconciles configured tombstones before normal
+traffic so an older database restore cannot resurrect a deleted Account.
+
+Treat `docker compose down -v` as destructive to this safety state. A normal application
+recreate is safe because named volumes persist; deleting/changing the project or journal
+volume requires an explicit recovery/migration decision.
 
 ## Media storage
 
-`SBS_MEDIA_STORE=local` is the default. API and worker share the private Compose
-`media_data` volume; filesystem paths are not exposed to clients.
-
-For S3-compatible private object storage:
+`SBS_MEDIA_STORE=local` uses the private Compose `media_data` volume shared by API and
+worker. For S3-compatible private object storage:
 
 ```dotenv
 SBS_MEDIA_STORE=s3
@@ -307,79 +250,60 @@ SBS_S3_REGION=eu-central-1
 SBS_S3_BUCKET=sidebyside-private
 SBS_S3_ACCESS_KEY_ID=...
 SBS_S3_SECRET_ACCESS_KEY=...
-# Optional temporary credentials only:
-# SBS_S3_SESSION_TOKEN=...
 ```
 
-The bucket must remain private. Presigned PUT/GET capabilities use the exact configured
-origin. Production/Demo require HTTPS for S3 endpoints; Development may use HTTP for
-local fixtures such as MinIO. Provider credentials need only the object operations
-required by the media lifecycle.
+The bucket stays private. Production/Demo require HTTPS S3 endpoints. Provider
+credentials should permit only the object operations needed by the media lifecycle.
+Presigned URLs, signatures, storage keys and credentials must not enter logs, analytics,
+support bundles or persistent client caches.
 
-Uploads use short-lived server-signed PUT capabilities for the generated object key. A
-provider upload does not make an Attachment `READY`; server-side finalization and
-validation remain authoritative. Reads receive short-lived server-authorized GET
-capabilities only after normal membership/parent checks.
+Development and Production must never share an S3 bucket or credential set.
 
-Presigned URLs, signatures, storage keys, and credentials must not enter logs,
-analytics, support bundles, or persistent client caches.
+## Backup, restore, upgrade and rollback
 
-Development and Production must never share an S3 bucket/credential set. Use
-`scripts/check_environment_isolation.py` before promotion when environment files are
-available to the operator.
+The binding recovery procedure is
+[`SELF-HOSTED-RECOVERY.md`](SELF-HOSTED-RECOVERY.md). For LocalMediaStore,
+`scripts/self_hosted_recovery.py` coordinates PostgreSQL and durable media while
+configuration/secrets and the forward deletion journal remain separate protected
+recovery units.
 
-## Backup, restore, upgrade, and rollback
+Before every Production upgrade:
 
-The binding recovery contract and copy-paste operator procedure are in
-[`SELF-HOSTED-RECOVERY.md`](SELF-HOSTED-RECOVERY.md). For the default
-`LocalMediaStore`, `scripts/self_hosted_recovery.py` creates/restores one coordinated
-PostgreSQL/durable-media archive while configuration/secrets and the forward
-Account-deletion journal remain independently protected recovery units.
+1. create/verify a fresh coordinated recovery point;
+2. protect the current deletion journal and operator configuration;
+3. select one exact published release/image identity;
+4. run the released launcher against the new `.env` selection;
+5. verify migration, health and revision identity.
 
-Production upgrades require:
+Application rollback selects a previous published release/image identity. It does not
+imply database rollback. For incompatible schema changes use the tested forward-fix,
+downgrade or coordinated restore path defined by #190/#375 and the recovery runbook.
 
-1. a fresh coordinated recovery point;
-2. current protected deletion-journal state;
-3. selection of the exact new published release/image identity;
-4. migration-first startup;
-5. post-start health and revision checks.
+## Initial Account registration
 
-Application rollback selects the previous published release/image identity. It does
-**not** imply database rollback. Follow #190/#375 and the recovery runbook for schema
-compatibility, forward-fix, downgrade, or restore decisions.
+An empty instance accepts its first Account only with `SBS_BOOTSTRAP_TOKEN` from the
+untracked environment.
 
-A database dump without matching media, deletion authority, and configuration/secret
-recovery material is not a complete SideBySide recovery plan.
+1. Generate a random value of at least 32 characters.
+2. Put it only in the target `.env`.
+3. Deploy and complete the first registration.
+4. Remove the bootstrap token and run the released launcher `deploy` again to recreate
+   the affected runtime with the token absent.
+5. Add further Accounts through the normal invitation flow.
 
-## One-time initial registration
-
-An empty instance accepts its first account only with `SBS_BOOTSTRAP_TOKEN` from the
-untracked environment. The value is neither persisted as product data nor logged by
-SideBySide.
-
-1. Generate a random secret with at least 32 characters.
-2. Put it only in the target environment as `SBS_BOOTSTRAP_TOKEN`.
-3. Start the stack and perform the first registration.
-4. Remove the bootstrap token and recreate the API container.
-5. Create additional accounts through the normal invitation flow.
-
-The bootstrap token must not enter repository files, shell history, screenshots, or
-support requests. Development and Production use different bootstrap secrets.
+The bootstrap token must not enter repository files, screenshots, support requests or
+shell history.
 
 ## Reverse proxy and public exposure
 
-The TLS reverse proxy is the only public endpoint. On the same public origin it routes:
+The TLS reverse proxy is the only public endpoint and routes one public origin:
 
 | Path | Internal target |
 |---|---|
-| `/api/` | SideBySide API on `API_PORT` |
-| all other paths | SideBySide Web on `WEB_PORT` |
+| `/api/` | API on `API_PORT` |
+| all other paths | Web on `WEB_PORT` |
 
-The `/api/` route goes directly to the API in Production. It must not first pass through
-the Web Nginx container, because the configured trusted TLS proxy is the authority for
-`X-Forwarded-*` handling.
-
-### Reverse proxy on the same host
+Same-host secure default:
 
 ```dotenv
 SBS_BIND_IP=127.0.0.1
@@ -387,76 +311,35 @@ API_PORT=8000
 WEB_PORT=8080
 ```
 
-### Reverse proxy on another private host
+For a proxy on another private host, bind only the intended private address and set the
+exact proxy source in `TRUSTED_PROXY_IPS`. Never use `*` for trusted proxies or Production
+allowed hosts.
 
-Bind only to the intended private address:
+The `/api/` route must go directly to the API rather than through Web Nginx, otherwise
+the trusted TLS proxy hop is lost for `X-Forwarded-*` handling.
 
-```dotenv
-SBS_BIND_IP=192.168.10.20
-API_PORT=8000
-WEB_PORT=8099
-SBS_PUBLIC_BASE_URL=https://sidebyside.example
-SBS_ALLOWED_HOSTS=["sidebyside.example","localhost","127.0.0.1"]
-TRUSTED_PROXY_IPS=192.168.10.30
-```
+## Post-deploy verification
 
-Never use `*` for trusted proxies or Production allowed hosts. Client-supplied Forwarded
-headers are not independently trusted.
-
-After proxy configuration:
-
-```bash
-curl --fail https://sidebyside.example/
-curl --fail https://sidebyside.example/.well-known/sidebyside-revision
-curl --fail https://sidebyside.example/api/v1/health/ready
-web/scripts/check_csp_header.sh https://sidebyside.example/
-```
-
-## Outgoing email
-
-For actual delivery configure a Production-specific SMTP account:
-
-```dotenv
-SBS_MAIL_TRANSPORT=smtp
-SBS_MAIL_FROM=no-reply@your-domain.example
-SBS_SMTP_HOST=smtp.your-domain.example
-SBS_SMTP_PORT=587
-SBS_SMTP_USERNAME=...
-SBS_SMTP_PASSWORD=...
-```
-
-`SBS_PUBLIC_BASE_URL` constructs application links from configuration rather than an
-untrusted request host.
-
-## Smoke verification
-
-The release smoke helper is the preferred post-deploy check:
+The release smoke helper verifies Web health/revision, API/database readiness and API
+revision:
 
 ```bash
 python3 scripts/deployment_smoke.py \
   --base-url https://sidebyside.example \
-  --expected-revision <exact-release-source-sha>
+  --expected-revision <release-source-sha>
 ```
 
-It verifies Web health, Web build identity, API/database readiness, and API build
-identity. With `SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD`, it also performs a password
-sign-in and authenticated membership read without creating product content.
+With `SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD`, it also performs a non-destructive
+password sign-in and membership read using an operator/fictional smoke Account.
 
-For host-level diagnosis:
+After a successful released deployment, raw Compose is acceptable for diagnosis only,
+for example:
 
 ```bash
-api_port=$(docker compose --profile self-hosted --env-file .env port api 8000 | awk -F: '{print $NF}')
-web_port=$(docker compose --profile self-hosted --env-file .env port web 8080 | awk -F: '{print $NF}')
-
-curl --fail "http://127.0.0.1:${api_port}/api/v1/health"
-curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
-curl --fail "http://127.0.0.1:${web_port}/healthz"
-curl --fail "http://127.0.0.1:${web_port}/.well-known/sidebyside-revision"
-
-docker compose --profile self-hosted --env-file .env exec -T api python -c \
-  'import socket; print(socket.gethostbyname("postgres"))'
+docker compose --profile self-hosted --env-file .env ps
+docker compose --profile self-hosted --env-file .env logs --tail=100 migrate api worker web
 ```
 
-A health check proves availability; the revision checks prove that the intended release
-components are actually serving traffic. Production is not accepted until both are
-true.
+Do not replace the released launcher with raw Compose for Production pull, bootstrap or
+startup. A healthy component serving a different revision than the release manifest is a
+failed promotion.
