@@ -288,7 +288,9 @@ async function captureEvidence(
 }
 
 for (const scenario of visualScenarios) {
-  test(`completed Plan continuation: ${scenario.name}`, async ({ page }, testInfo) => {
+  test(`completed Plan continuation: ${scenario.name}`, async ({
+    page,
+  }, testInfo) => {
     await prepareScenario(page, scenario);
     if (scenario.name === '390-light') await assertNoWcagViolations(page);
     await captureEvidence(page, testInfo, scenario.name);
@@ -300,9 +302,7 @@ test('completed Plan continuation preserves Memory capture semantics and Chapter
 }) => {
   await prepareScenario(page, visualScenarios[0]);
 
-  await page
-    .getByRole('button', { name: m5s3.planStory.memoryAction })
-    .click();
+  await page.getByRole('button', { name: m5s3.planStory.memoryAction }).click();
   const title = page.getByLabel(m5s3.common.title);
   const date = page.getByLabel(m5s3.plan.experiencedOn);
   const note = page.getByLabel(m5s3.planStory.noteLabel);
