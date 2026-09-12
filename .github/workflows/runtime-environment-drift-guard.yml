@@ -9,6 +9,7 @@ on:
       - deploy/persistent-development.env.example
       - deploy/self-hosted-release.env.example
       - scripts/build_self_hosted_source.py
+      - scripts/test_build_self_hosted_source.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
       - backend/src/sidebyside/identity/deletion_bootstrap.py
@@ -26,6 +27,7 @@ on:
       - deploy/persistent-development.env.example
       - deploy/self-hosted-release.env.example
       - scripts/build_self_hosted_source.py
+      - scripts/test_build_self_hosted_source.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
       - backend/src/sidebyside/identity/deletion_bootstrap.py
@@ -53,10 +55,13 @@ jobs:
           set -euo pipefail
           python3 -m py_compile \
             scripts/build_self_hosted_source.py \
+            scripts/test_build_self_hosted_source.py \
             scripts/check_runtime_environment.py \
             scripts/test_check_runtime_environment.py \
             backend/src/sidebyside/identity/deletion_bootstrap.py
-          python3 -m unittest scripts.test_check_runtime_environment
+          python3 -m unittest \
+            scripts.test_build_self_hosted_source \
+            scripts.test_check_runtime_environment
 
       - name: Account-deletion bootstrap guidance stays canonical
         run: |
