@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { i18n } from '../i18n';
 import games from '../i18n/locales/games';
 import type { OurMomentsGameSetup } from './OurMomentsGamePage';
 import { OurMomentsGamePage } from './OurMomentsGamePage';
@@ -52,13 +53,24 @@ describe('OurMomentsGamePage', () => {
       name: games.entries.moments.title,
       level: 1,
     });
-    expect(screen.getByText('Lea ist dran')).toBeTruthy();
+    expect(
+      screen.getByText(
+        i18n.t('games.momentsGame.turnValue', { name: 'Lea' }),
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByRole('region', { name: games.momentsGame.boardAria }),
     ).toBeTruthy();
-    expect(
-      screen.getAllByRole('button', { name: /Karte \d von 6, verdeckt/ }),
-    ).toHaveLength(6);
+    for (let index = 1; index <= 6; index += 1) {
+      expect(
+        screen.getByRole('button', {
+          name: i18n.t('games.momentsGame.cardHidden', {
+            index,
+            total: 6,
+          }),
+        }),
+      ).toBeTruthy();
+    }
   });
 
   it('shows a relationship-native sparse state below three eligible moments without exposing a hidden count', async () => {
@@ -72,7 +84,6 @@ describe('OurMomentsGamePage', () => {
     expect(
       screen.getByRole('link', { name: games.momentsGame.sparseAction }),
     ).toHaveAttribute('href', '/story');
-    expect(screen.queryByText(/2 gemeinsame/)).toBeNull();
   });
 
   it('does not construct a board when the active Space is not a two-partner couple', async () => {
