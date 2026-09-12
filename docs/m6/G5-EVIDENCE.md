@@ -5,7 +5,8 @@
 **Final gate decision:** #525  
 **S0 baseline:** `main` at `7564800df85f53f9f0c9a99a7414de22906ade73`  
 **2026-09-05 integrated rehearsal:** `docs/m6/G5-EVIDENCE-REPORT-2026-09-05.md` (candidate `d0a4f2030a22f775a22679f7f225117bf51e91df`)  
-**2026-09-12 post-rehearsal delta:** `docs/m6/G5-EVIDENCE-DELTA-2026-09-12.md` (baseline `735e37c26000991e0365ff360a6b8af69e691199`)
+**2026-09-12 post-rehearsal delta:** `docs/m6/G5-EVIDENCE-DELTA-2026-09-12.md` (baseline `735e37c26000991e0365ff360a6b8af69e691199`)  
+**2026-09-12 G5-07 bootstrap delta:** `docs/m6/G5-EVIDENCE-DELTA-G5-07-2026-09-12.md` (product baseline `298af42a5a8ed162b49afbbc045e89781628eb2a`)
 
 This matrix is the authoritative M6 index for **G5 — Launch-ready** evidence. It
 separates reusable repository baselines from final release-candidate proof.
@@ -14,9 +15,10 @@ A closed issue or merged PR is not, by itself, evidence that the launch topology
 passed the integrated gate.
 
 The 2026-09-05 rehearsal status column is a dated historical record. For #668 and
-#670, #525 must also consume the 2026-09-12 post-rehearsal delta. Later evidence may
-close a current requirement without rewriting what was or was not exercised during
-the historical rehearsal.
+#670, #525 must also consume the general 2026-09-12 post-rehearsal delta. For the
+specific #676/G5-07 bootstrap failure, #525 must also consume the focused G5-07
+delta. Later evidence may close a current requirement without rewriting what was or
+was not exercised during the historical rehearsal.
 
 ## 1. Status vocabulary
 
@@ -80,6 +82,14 @@ If Cloud/Managed is included in the launch scope, that environment evidence rema
 required. If it is excluded, only #525 may record the corresponding explicit
 `NOT_APPLICABLE` scope decision.
 
+Post-rehearsal #912 evidence re-exercises the exact Self-Hosted log-mail bootstrap
+path that made historical G5-07 fail under #524/#676. On product baseline
+`298af42a5a8ed162b49afbbc045e89781628eb2a`, a fresh canonical Compose stack passed
+first-account registration, fail-closed pre-verification ServerAdmin access, log-mail
+verification delivery/consumption and verified ServerAdmin access. This removes #676
+as the current G5-07 blocker without rewriting the historical `FAIL`; #525 still owns
+the final criterion decision.
+
 ## 4. G5 criteria
 
 | ID | Criterion | Required evidence / owner | S0 status | 2026-09-05 rehearsal status |
@@ -90,7 +100,7 @@ required. If it is excluded, only #525 may record the corresponding explicit
 | G5-04 | Self-Hosted backup/restore/upgrade/recovery | #190 baseline plus #524 real restore/upgrade/recovery evidence | `BLOCKED` — repository baseline available | `PASS` — real backup→fresh-target restore→migrate→smoke cycle executed, data/history integrity verified (report §4) |
 | G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #668 exact Cloud runtime/previous-known-good identity where managed launch is in scope; #524 plus later delta candidate evidence | `BLOCKED` — repository baseline available | `BLOCKED` — mechanics (migration-before-traffic, revision consistency, smoke) proven live and in CI; genuine two-host promotion needs real infrastructure (report §3) |
 | G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, #668 digest-pinned runtime/rollback identity, recovery/capacity evidence and #524 plus 2026-09-12 delta when managed launch is in scope | `BLOCKED` | `BLOCKED` — #521 topology/recipe frozen and contract-tested; no real managed cloud account available to exercise a real restore (report §11) |
-| G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence | `BLOCKED` | `FAIL` — maintenance/lockout mechanics confirmed live; documented log-mail bootstrap path is broken by over-redaction, filed as #676 (report §5) |
+| G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence; #676/#912 focused post-rehearsal log-mail bootstrap evidence | `BLOCKED` | `FAIL` — maintenance/lockout mechanics confirmed live; documented log-mail bootstrap path is broken by over-redaction, filed as #676 (report §5) |
 | G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` | `PASS` — live incident drill produced sanitized logs/correlation IDs throughout, no secret/ProtectedPayload leakage (report §6) |
 | G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` | `PASS` — full database-readiness-loss drill executed live with real timestamps (report §6) |
 | G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` | `PASS` — verified against merged code/tests when #518 closed this session; `test_space_offboarding*.py` family green in CI (report §8) |
