@@ -25,17 +25,16 @@ DOTENV_AUTHORITATIVE_KEYS = (
     "SBS_CURSOR_SIGNING_KEY",
 )
 PROFILE_RUNTIME_SERVICES = {
-    "self-hosted": frozenset({"api", "worker", "demo-init"}),
+    "self-hosted": frozenset({"api", "worker"}),
     "cloud": frozenset({"cloud-api", "cloud-worker"}),
 }
-SELF_HOSTED_BUILD_SUBDIRS = {
-    "migrate": "backend",
-    "demo-init": "backend",
-    "api": "backend",
-    "worker": "backend",
-    "web": "web",
-}
-FULL_COMMIT_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+SELF_HOSTED_BACKEND_SERVICES = ("migrate", "api", "worker")
+RELEASE_IMAGE_RE = re.compile(
+    r"^ghcr\.io/baerenmarke90/eimir-(backend|web):v"
+    r"(?P<version>0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+    r"(?:@sha256:[0-9a-f]{64})?$"
+)
 
 
 class RuntimeEnvironmentError(RuntimeError):
@@ -112,17 +111,13 @@ def check_dotenv_to_rendered(
         environment.get("SBS_ENVIRONMENT") == "production" for environment in rendered.values()
     )
     if dotenv_is_production and not dotenv.get("SBS_ACCOUNT_DELETION_INSTANCE_ID"):
-        problems.append(
-            "production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID"
-        )
+        problems.append("production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID")
     if rendered_is_production and any(
         not environment.get("SBS_ACCOUNT_DELETION_INSTANCE_ID")
         for environment in rendered.values()
         if environment.get("SBS_ENVIRONMENT") == "production"
     ):
-        problems.append(
-            "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID"
-        )
+        problems.append("rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID")
 
     for key in DOTENV_AUTHORITATIVE_KEYS:
         intended = dotenv.get(key)
@@ -134,35 +129,27 @@ def check_dotenv_to_rendered(
             continue
         for service_name in consumers:
             if rendered[service_name].get(key) != intended:
-                problems.append(
-                    f"rendered service {service_name} differs from env file for {key}"
-                )
+                problems.append(f"rendered service {service_name} differs from env file for {key}")
 
     return problems
 
 
-def _production_source_revision(context: Any, expected_subdir: str) -> str | None:
-    if not isinstance(context, str):
+def _release_image_version(reference: Any, expected_role: str) -> str | None:
+    if not isinstance(reference, str):
         return None
-    repository, separator, fragment = context.rpartition("#")
-    if not separator or not repository:
+    match = RELEASE_IMAGE_RE.fullmatch(reference)
+    if match is None or match.group(1) != expected_role:
         return None
-    revision, subdir_separator, subdir = fragment.partition(":")
-    if (
-        not subdir_separator
-        or subdir != expected_subdir
-        or FULL_COMMIT_SHA_PATTERN.fullmatch(revision) is None
-    ):
-        return None
-    return revision
+    tag = reference.split(":v", 1)[1].split("@", 1)[0]
+    return tag
 
 
-def check_production_source_identity(
+def check_production_image_identity(
     dotenv: dict[str, str],
     config: dict[str, Any],
     rendered: dict[str, dict[str, str]],
 ) -> list[str]:
-    """Require one immutable Git source revision for every Self-Hosted Production build."""
+    """Require released GHCR images and no source-build fallback in Production."""
 
     dotenv_is_production = dotenv.get("SBS_ENVIRONMENT") == "production"
     rendered_is_production = any(
@@ -173,47 +160,48 @@ def check_production_source_identity(
 
     services = config.get("services")
     if not isinstance(services, dict):
-        return ["Production source identity requires rendered Compose services"]
+        return ["Production image identity requires rendered Compose services"]
 
     problems: list[str] = []
-    accepted_revisions: list[str] = []
-    for service_name, expected_subdir in SELF_HOSTED_BUILD_SUBDIRS.items():
+    backend_images: list[str] = []
+    versions: list[str] = []
+    for service_name in SELF_HOSTED_BACKEND_SERVICES:
         service = services.get(service_name)
         if not isinstance(service, dict):
-            problems.append(f"Production source identity is missing service {service_name}")
+            problems.append(f"Production image identity is missing service {service_name}")
             continue
-        build = service.get("build")
-        if not isinstance(build, dict):
-            problems.append(f"Production service {service_name} has no rendered build configuration")
-            continue
-
-        context_revision = _production_source_revision(build.get("context"), expected_subdir)
-        if context_revision is None:
+        if "build" in service:
+            problems.append(f"Production service {service_name} must not contain build configuration")
+        image = service.get("image")
+        version = _release_image_version(image, "backend")
+        if version is None:
             problems.append(
-                f"Production service {service_name} build context must pin {expected_subdir} "
-                "to a full 40-character lowercase commit SHA"
+                f"Production service {service_name} must use the versioned eimir-backend GHCR release image"
             )
         else:
-            accepted_revisions.append(context_revision)
+            backend_images.append(str(image))
+            versions.append(version)
+        if service.get("pull_policy") != "always":
+            problems.append(f"Production service {service_name} must keep pull_policy=always")
 
-        build_args = build.get("args") or {}
-        build_revision = build_args.get("SBS_BUILD_REVISION") if isinstance(build_args, dict) else None
-        if (
-            not isinstance(build_revision, str)
-            or FULL_COMMIT_SHA_PATTERN.fullmatch(build_revision) is None
-        ):
-            problems.append(
-                f"Production service {service_name} SBS_BUILD_REVISION must be a full "
-                "40-character lowercase commit SHA"
-            )
+    web = services.get("web")
+    if not isinstance(web, dict):
+        problems.append("Production image identity is missing service web")
+    else:
+        if "build" in web:
+            problems.append("Production service web must not contain build configuration")
+        web_version = _release_image_version(web.get("image"), "web")
+        if web_version is None:
+            problems.append("Production service web must use the versioned eimir-web GHCR release image")
         else:
-            accepted_revisions.append(build_revision)
+            versions.append(web_version)
+        if web.get("pull_policy") != "always":
+            problems.append("Production service web must keep pull_policy=always")
 
-    if len(set(accepted_revisions)) > 1:
-        problems.append(
-            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA"
-        )
-
+    if len(set(backend_images)) > 1:
+        problems.append("Production api/worker/migrate must use one exact backend image identity")
+    if len(set(versions)) > 1:
+        problems.append("Production backend and Web images must use one product release version")
     return problems
 
 
@@ -226,8 +214,7 @@ def parse_container_environment(values: list[str]) -> dict[str, str]:
 
 
 def check_rendered_to_running(
-    rendered: dict[str, dict[str, str]],
-    running: dict[str, dict[str, str] | None],
+    rendered: dict[str, dict[str, str]], running: dict[str, dict[str, str] | None]
 ) -> list[str]:
     problems: list[str] = []
     for service_name, expected_environment in rendered.items():
@@ -291,9 +278,7 @@ def inspect_running_services(
         if len(container_ids) != 1:
             running[service_name] = None
             continue
-        output = run_command(
-            ["docker", "inspect", "--format", "{{json .Config.Env}}", container_ids[0]]
-        )
+        output = run_command(["docker", "inspect", "--format", "{{json .Config.Env}}", container_ids[0]])
         try:
             values = json.loads(output)
         except json.JSONDecodeError as exc:
@@ -331,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         rendered = rendered_runtime_environments(config, service_names=selected_services)
         problems = check_dotenv_to_rendered(dotenv, rendered)
         if args.profile == "self-hosted":
-            problems.extend(check_production_source_identity(dotenv, config, rendered))
+            problems.extend(check_production_image_identity(dotenv, config, rendered))
         if args.check_running:
             running = inspect_running_services(args, rendered)
             problems.extend(check_rendered_to_running(rendered, running))
