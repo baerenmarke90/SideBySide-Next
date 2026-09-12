@@ -8,12 +8,13 @@
  * rather than a client-local convention.
  */
 
-export type AppRouteId = 'today' | 'story' | 'plan' | 'more';
+export type AppRouteId = 'today' | 'story' | 'plan' | 'games' | 'more';
 
 export type AppRouteIcon =
   | 'today'
   | 'story'
   | 'plan'
+  | 'games'
   | 'more'
   | 'search'
   | 'activity'
@@ -40,13 +41,7 @@ export interface AppRouteDefinition {
   end: boolean;
 }
 
-/**
- * Primary navigation. At most five destinations, in the documented order.
- *
- * `discover` belongs here from M7 and is reserved by
- * [RESERVED_DISCOVER_ROUTE]; it is deliberately absent until its domain
- * exists, because a visible area with no Core behind it is dead navigation.
- */
+/** Primary navigation. At most five destinations, in the documented order. */
 export const APP_ROUTES = [
   {
     id: 'today',
@@ -70,6 +65,13 @@ export const APP_ROUTES = [
     end: false,
   },
   {
+    id: 'games',
+    path: '/games',
+    labelKey: 'navigation.games',
+    icon: 'games',
+    end: false,
+  },
+  {
     id: 'more',
     path: '/more',
     labelKey: 'navigation.more',
@@ -77,16 +79,6 @@ export const APP_ROUTES = [
     end: false,
   },
 ] as const satisfies readonly AppRouteDefinition[];
-
-/**
- * Reserved for the M7 Discover domain. Declared so the path and label cannot be
- * reused for anything else, and not routed until the domain exists.
- */
-export const RESERVED_DISCOVER_ROUTE = {
-  id: 'discover',
-  path: '/discover',
-  labelKey: 'navigation.discover',
-} as const;
 
 export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
 
@@ -207,6 +199,7 @@ export function activeNavigationArea(pathname: string): AppRouteId | null {
   ) {
     return 'story';
   }
+  if (pathname === '/games' || pathname.startsWith('/games/')) return 'games';
   if (
     pathname === '/more' ||
     pathname.startsWith('/more/') ||
