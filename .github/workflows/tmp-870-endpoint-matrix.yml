@@ -1,0 +1,56 @@
+name: Temporary #870 endpoint-matrix patch
+
+on:
+  push:
+    branches:
+      - feat/870-wish-moment-continuation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/870-wish-moment-continuation
+          fetch-depth: 0
+      - name: Add direct Wish completion to tenant matrix
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text()
+          needle = '''    Endpoint(
+              "POST",
+              "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",
+              body={},
+              if_match=True,
+              resource_absence="WISH_NOT_FOUND",
+          ),
+          '''
+          addition = '''    Endpoint(
+              "POST",
+              "/api/v1/spaces/{spaceId}/wishes/{wishId}/complete",
+              if_match=True,
+              resource_absence="WISH_NOT_FOUND",
+          ),
+          '''
+          if addition in text:
+              raise SystemExit('Endpoint already present; refusing duplicate insertion.')
+          if needle not in text:
+              raise SystemExit('Expected Wish-to-Plan matrix entry not found.')
+          path.write_text(text.replace(needle, addition + needle, 1))
+          PY
+          git diff --check
+          git diff -- backend/tests/integration/test_endpoint_matrix.py
+      - name: Commit matrix coverage
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/tests/integration/test_endpoint_matrix.py
+          git commit -m 'test(backend): cover direct Wish completion in tenant matrix'
+          git push origin HEAD:feat/870-wish-moment-continuation
