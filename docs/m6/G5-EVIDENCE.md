@@ -3,14 +3,20 @@
 **Readiness owner:** #437  
 **Integrated evidence owner:** #524  
 **Final gate decision:** #525  
-**S0 baseline:** `main` at `7564800df85f53f9f0c9a99a7414de22906ade73`
-**2026-09-05 integrated rehearsal:** `docs/m6/G5-EVIDENCE-REPORT-2026-09-05.md` (candidate `d0a4f2030a22f775a22679f7f225117bf51e91df`)
+**S0 baseline:** `main` at `7564800df85f53f9f0c9a99a7414de22906ade73`  
+**2026-09-05 integrated rehearsal:** `docs/m6/G5-EVIDENCE-REPORT-2026-09-05.md` (candidate `d0a4f2030a22f775a22679f7f225117bf51e91df`)  
+**2026-09-12 post-rehearsal delta:** `docs/m6/G5-EVIDENCE-DELTA-2026-09-12.md` (baseline `735e37c26000991e0365ff360a6b8af69e691199`)
 
 This matrix is the authoritative M6 index for **G5 — Launch-ready** evidence. It
 separates reusable repository baselines from final release-candidate proof.
 
 A closed issue or merged PR is not, by itself, evidence that the launch topology
 passed the integrated gate.
+
+The 2026-09-05 rehearsal status column is a dated historical record. For #668 and
+#670, #525 must also consume the 2026-09-12 post-rehearsal delta. Later evidence may
+close a current requirement without rewriting what was or was not exercised during
+the historical rehearsal.
 
 ## 1. Status vocabulary
 
@@ -62,33 +68,41 @@ These inputs reduce duplicated work but do not waive the integrated G5 checks.
 Post-rehearsal privacy hardening under #670 is part of the current G5-11 evidence
 contract: retained `SPACE_SHARED` history must expose a semantic former-member
 author state, suppress removed profile identity, and let Web/Android localize the
-neutral label without rendering the technical persistence tombstone. This updates
-the living evidence requirement only; it does not rewrite the historical
-2026-09-05 rehearsal result.
+neutral label without rendering the technical persistence tombstone. The
+2026-09-12 delta records revision-addressable automated evidence for that semantic
+requirement. This updates the living evidence requirement only; it does not rewrite
+the historical 2026-09-05 rehearsal result.
+
+Post-rehearsal deployment hardening under #668 is likewise additive. The 2026-09-12
+delta records `PASS` repository/CI evidence for digest-pinned Cloud/Managed runtime
+identity, while keeping real managed promotion/runtime/rollback evidence distinct.
+If Cloud/Managed is included in the launch scope, that environment evidence remains
+required. If it is excluded, only #525 may record the corresponding explicit
+`NOT_APPLICABLE` scope decision.
 
 ## 4. G5 criteria
 
 | ID | Criterion | Required evidence / owner | S0 status | 2026-09-05 rehearsal status |
 |---|---|---|---|---|
 | G5-01 | G4 Core Release Candidate baseline | final M5/G4 review, including #192 where applicable; exact candidate reused by M6 | `BLOCKED` — G4 must pass | `PASS` — M5 client issues (#295, #350) closed; #192 automation green in CI on this lineage |
-| G5-02 | Coherent immutable release identity and controlled Android signing/versioning | #194 baseline, #519 release manifest/artifacts, #524 release verification | `BLOCKED` | `BLOCKED` — no release published yet; needs real signing secrets + operator-approved `release-publish.yml` run (report §1) |
+| G5-02 | Coherent immutable release identity and controlled Android signing/versioning | #194 baseline, #519 release manifest/artifacts; #668 exact OCI deployment binding when Cloud/Managed is in scope; #524 plus later delta/release verification | `BLOCKED` | `BLOCKED` — no release published yet; needs real signing secrets + operator-approved `release-publish.yml` run (report §1) |
 | G5-03 | SBOM, attestations and provenance | #193 bound to exact #519 artifact/release identity; #524 verification | `BLOCKED` | `BLOCKED` — same as G5-02; mechanism contract-tested and green, nothing published to verify yet (report §2) |
 | G5-04 | Self-Hosted backup/restore/upgrade/recovery | #190 baseline plus #524 real restore/upgrade/recovery evidence | `BLOCKED` — repository baseline available | `PASS` — real backup→fresh-target restore→migrate→smoke cycle executed, data/history integrity verified (report §4) |
-| G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #524 candidate rehearsal | `BLOCKED` — repository baseline available | `BLOCKED` — mechanics (migration-before-traffic, revision consistency, smoke) proven live and in CI; genuine two-host promotion needs real infrastructure (report §3) |
-| G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, recovery/capacity evidence and #524 rehearsal if managed launch is in scope | `BLOCKED` | `BLOCKED` — #521 topology/recipe frozen and contract-tested; no real managed cloud account available to exercise a real restore (report §11) |
+| G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #668 exact Cloud runtime/previous-known-good identity where managed launch is in scope; #524 plus later delta candidate evidence | `BLOCKED` — repository baseline available | `BLOCKED` — mechanics (migration-before-traffic, revision consistency, smoke) proven live and in CI; genuine two-host promotion needs real infrastructure (report §3) |
+| G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, #668 digest-pinned runtime/rollback identity, recovery/capacity evidence and #524 plus 2026-09-12 delta when managed launch is in scope | `BLOCKED` | `BLOCKED` — #521 topology/recipe frozen and contract-tested; no real managed cloud account available to exercise a real restore (report §11) |
 | G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence | `BLOCKED` | `FAIL` — maintenance/lockout mechanics confirmed live; documented log-mail bootstrap path is broken by over-redaction, filed as #676 (report §5) |
 | G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` | `PASS` — live incident drill produced sanitized logs/correlation IDs throughout, no secret/ProtectedPayload leakage (report §6) |
 | G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` | `PASS` — full database-readiness-loss drill executed live with real timestamps (report §6) |
 | G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` | `PASS` — verified against merged code/tests when #518 closed this session; `test_space_offboarding*.py` family green in CI (report §8) |
-| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and minimal pseudonymous recovery-metadata classification; #670 semantic former-member projection for retained shared history; #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
+| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and minimal pseudonymous recovery-metadata classification; #670 semantic former-member projection and 2026-09-12 delta for retained shared history; #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
 | G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` | `PASS` — ADR-0006 + Feature Matrix v1.1 authoritative; launch channel declared (`ENTITLEMENT-BOUNDARY.md` §7.1) |
 | G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` | `PASS` for `ADMIN_GRANT` (grant/downgrade/audit exercised live end to end); `NOT_APPLICABLE` for `GOOGLE_PLAY`/`CLOUD_STRIPE`/`SELF_HOSTED_KEY` (report §7) |
 | G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` | `PASS` — live cross-tenant probe (404) and ServerAdmin content-boundary check both confirmed (report §8) |
 | G5-15 | Final release-state Accessibility acceptance | G4/#192 automation reused; #524 manual keyboard/focus/TalkBack/large-text launch-state gaps only | `BLOCKED` | `BLOCKED` — automation green in CI; manual keyboard/TalkBack spot-check of maintenance/entitlement states not performed this session (report §9) |
 | G5-16 | Launch-topology performance/capacity | #521 assumptions and #524 bounded synthetic API/worker/database/media evidence | `BLOCKED` | `PASS` — bounded single-host synthetic check recorded, explicitly not an SLA claim (report §10) |
 | G5-17 | Public Demo exposure/isolation boundary | #304 baseline plus #524 release regression for DB/media/secrets/reset/auth/Entitlement isolation | `BLOCKED` — repository baseline available | `BLOCKED` — config-layer hardening (signing key, HTTPS) confirmed fail-closed live; full live rehearsal needs a real TLS/domain (report §11) |
-| G5-18 | Integrated launch rehearsal evidence complete | #524 dated report with every criterion linked to an artifact/test/drill/decision or blocker | `BLOCKED` | `PASS` — this report and table constitute that package |
-| G5-19 | Final explicit G5 decision | #525 review of this matrix and #524 report against exact release candidate | `BLOCKED` | `BLOCKED` — reserved for #525; not decided here |
+| G5-18 | Integrated launch rehearsal evidence complete | #524 dated report with every criterion linked to an artifact/test/drill/decision or blocker; later focused delta records remain additive | `BLOCKED` | `PASS` — this report and table constitute that package |
+| G5-19 | Final explicit G5 decision | #525 review of this matrix, the #524 report and post-rehearsal delta records against the exact reviewed release candidate | `BLOCKED` | `BLOCKED` — reserved for #525; not decided here |
 
 ## 5. Evidence expectations by criterion class
 
@@ -122,6 +136,12 @@ Required where the repository cannot prove real environment facts:
 - incident response drill;
 - measured restore and capacity observations;
 - external provider outage/restore behavior for selected launch sources.
+
+For Cloud/Managed, repository-level digest validation is not a substitute for
+observing and retaining the exact digest identity used by the real/staging-equivalent
+managed runtime. When that operating mode is in scope, the evidence must bind the
+running backend/Web digests and previous-known-good rollback identity to the exact
+#519 release without retaining deployment secrets.
 
 Record the result and revision, not sensitive credentials or private data.
 
@@ -181,6 +201,10 @@ For every selected source, #524 must exercise as applicable:
 An unselected provider is not silently a blocker. It may be `NOT_APPLICABLE` only
 when #262/#525 explicitly define the launch channel scope.
 
+The commercial-source scope and operating-mode scope are independent. Selecting
+`ADMIN_GRANT` as the first-launch Entitlement source does not by itself include or
+exclude Cloud/Managed from G5.
+
 ## 8. Recovery evidence rule
 
 A backup configuration or provider claim is not sufficient. #524 must demonstrate a
@@ -216,7 +240,7 @@ Record:
 Do not use real relationship content as load-test data and do not make performance
 claims beyond the measured environment.
 
-## 10. Final #524 report
+## 10. Dated integrated report and later deltas
 
 #524 produces one dated launch-rehearsal report linked from this matrix. For every
 G5 ID it must provide:
@@ -228,15 +252,22 @@ G5 ID it must provide:
 - blocker/follow-up owner if not `PASS`;
 - `NOT_APPLICABLE` rationale when used.
 
+Later focused evidence records may add proof for requirements implemented or
+re-exercised after that rehearsal. They must identify their exact baseline and may
+not edit historical statuses to make the dated run appear greener.
+
 Failures create or reopen focused owning issues. Do not implement unrelated fixes in
 the evidence report itself.
 
 ## 11. Final #525 gate
 
-#525 reviews the exact #524 report and release candidate. G5 passes only when:
+#525 reviews the exact #524 report, applicable post-rehearsal delta records and the
+final reviewed release candidate. G5 passes only when:
 
 - every required criterion is `PASS`;
 - every `NOT_APPLICABLE` entry has an honest launch-scope rationale;
+- the final record explicitly names the certified operating mode(s), so an excluded
+  Cloud/Managed mode is not accidentally presented as launch-ready;
 - there is no unresolved launch-critical Security/Privacy/Tenant/Data-Rights,
   recovery, release, admin, observability or required Entitlement gap;
 - M7-M9 scope has not been pulled into the gate merely as optional product polish.
