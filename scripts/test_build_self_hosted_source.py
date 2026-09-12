@@ -48,6 +48,8 @@ class LocalImageTagTest(unittest.TestCase):
 
 
 class SourceBuildPlanTest(unittest.TestCase):
+    PRODUCTION_ERROR = "source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+
     def test_env_plan_uses_explicit_local_images_and_source_contexts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             env_file = Path(temp_dir) / ".env"
@@ -103,10 +105,7 @@ class SourceBuildPlanTest(unittest.TestCase):
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaisesRegex(
-                    SourceBuildError,
-                    "source builds are not allowed for SBS_ENVIRONMENT=production",
-                ):
+                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
                     plan(env_file)
 
     def test_process_environment_cannot_override_development_into_production(self) -> None:
@@ -119,10 +118,20 @@ class SourceBuildPlanTest(unittest.TestCase):
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True):
-                with self.assertRaisesRegex(
-                    SourceBuildError,
-                    "source builds are not allowed for SBS_ENVIRONMENT=production",
-                ):
+                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
+                    plan(env_file)
+
+    def test_process_development_cannot_mask_production_dotenv(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_file = Path(temp_dir) / ".env"
+            env_file.write_text(
+                "SBS_ENVIRONMENT=production\n"
+                "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local\n"
+                "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True):
+                with self.assertRaisesRegex(SourceBuildError, self.PRODUCTION_ERROR):
                     plan(env_file)
 
     def test_authenticated_git_urls_are_rejected_before_plan_output(self) -> None:
