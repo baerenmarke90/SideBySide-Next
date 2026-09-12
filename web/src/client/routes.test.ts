@@ -6,6 +6,7 @@ import {
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
+  GAMES_MOMENTS_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
   HEART_MOMENT_EDIT_ROUTE_PATTERN,
@@ -63,6 +64,7 @@ describe('primary navigation', () => {
     expect(appRoutePath('story')).toBe('/story');
     expect(appRoutePath('plan')).toBe('/plan');
     expect(appRoutePath('games')).toBe('/games');
+    expect(GAMES_MOMENTS_ROUTE).toBe('/games/our-moments');
     expect(appRoutePath('more')).toBe('/more');
   });
 

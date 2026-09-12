@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { EntitlementsApi } from '../api/generated/apis/EntitlementsApi';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
 import { Configuration } from '../api/generated/runtime';
+import { GAMES_MOMENTS_ROUTE } from '../client/routes';
 import { normalizeClientError } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -126,25 +128,43 @@ export function GamesProductArea({
           )}
 
           <section className="games-shelf" aria-label={t('games.title')}>
-            {GAME_ENTRIES.map((entry, index) => (
-              <article className="games-entry" key={entry}>
-                <div className="games-entry-index" aria-hidden="true">
-                  {String(index + 1).padStart(2, '0')}
-                </div>
-                <div className="games-entry-copy">
-                  <p className="games-entry-role">
-                    {t(`games.entries.${entry}.role`)}
-                  </p>
-                  <h2>{t(`games.entries.${entry}.title`)}</h2>
-                  <p>{t(`games.entries.${entry}.description`)}</p>
-                </div>
-                <span className="games-entry-status">
-                  {gamesUnlocked
-                    ? t('games.status.comingSoon')
-                    : t('games.status.premium')}
-                </span>
-              </article>
-            ))}
+            {GAME_ENTRIES.map((entry, index) => {
+              const content = (
+                <>
+                  <div className="games-entry-index" aria-hidden="true">
+                    {String(index + 1).padStart(2, '0')}
+                  </div>
+                  <div className="games-entry-copy">
+                    <p className="games-entry-role">
+                      {t(`games.entries.${entry}.role`)}
+                    </p>
+                    <h2>{t(`games.entries.${entry}.title`)}</h2>
+                    <p>{t(`games.entries.${entry}.description`)}</p>
+                  </div>
+                  <span className="games-entry-status">
+                    {gamesUnlocked && entry === 'moments'
+                      ? t('games.status.playNow')
+                      : gamesUnlocked
+                        ? t('games.status.comingSoon')
+                        : t('games.status.premium')}
+                  </span>
+                </>
+              );
+
+              return gamesUnlocked && entry === 'moments' ? (
+                <Link
+                  className="games-entry games-entry-link"
+                  key={entry}
+                  to={GAMES_MOMENTS_ROUTE}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <article className="games-entry" key={entry}>
+                  {content}
+                </article>
+              );
+            })}
           </section>
         </>
       )}

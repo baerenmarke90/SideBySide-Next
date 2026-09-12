@@ -194,6 +194,13 @@ describe('AppShell', () => {
     expect(compact).not.toContain('href="/games"');
   });
 
+  it('renders a nested Games route through the normal route content seam', () => {
+    const html = renderShell('/games/our-moments');
+
+    expect(html).toContain('Content fixture');
+    expect(html).not.toContain('games-product-page');
+  });
+
   it.each([
     ['/today', '/today'],
     ['/today/activity', '/today'],

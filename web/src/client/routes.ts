@@ -121,6 +121,10 @@ export const MORE_PRIVATE_ROUTE = '/more/private';
  */
 export const SERVER_ADMIN_ROUTE = '/server-admin';
 
+/* Games content ---------------------------------------------------------- */
+
+export const GAMES_MOMENTS_ROUTE = '/games/our-moments';
+
 /* Story content ---------------------------------------------------------- */
 
 export const STORY_CHAPTERS_ROUTE = '/story/chapters';
