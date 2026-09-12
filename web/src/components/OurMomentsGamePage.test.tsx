@@ -53,9 +53,9 @@ describe('OurMomentsGamePage', () => {
       name: games.entries.moments.title,
       level: 1,
     });
-    expect(
-      screen.getByText(i18n.t('games.momentsGame.turnValue', { name: 'Lea' })),
-    ).toBeTruthy();
+    await screen.findByText(
+      i18n.t('games.momentsGame.turnValue', { name: 'Lea' }),
+    );
     expect(
       screen.getByRole('region', { name: games.momentsGame.boardAria }),
     ).toBeTruthy();
