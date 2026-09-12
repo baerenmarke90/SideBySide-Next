@@ -194,6 +194,7 @@ export function WishProductPage({
   }
   const wish = wishQuery.data;
   if (!wish) return null;
+  const memoryPrefillTitle = wish.title;
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -223,7 +224,7 @@ export function WishProductPage({
   }
 
   function openMemoryComposer() {
-    const query = new URLSearchParams({ title: wish.title });
+    const query = new URLSearchParams({ title: memoryPrefillTitle });
     navigate(`${MEMORY_CREATE_ROUTE}?${query.toString()}`);
   }
 
