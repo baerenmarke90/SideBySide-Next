@@ -47,14 +47,17 @@ printing secret values.
 No new orchestrator is introduced for v1. Every Compose runtime uses the single
 repository-root `compose.yaml`.
 
-- Local/persistent Development: build local application images first with
-  `scripts/build_self_hosted_source.py`, then run `compose.yaml` profile `self-hosted`.
-- Verified source acceptance: `scripts/compose_checked.py` exports exact committed
-  source, builds local images, then runs that exported `compose.yaml`.
-- Released Self-Hosted Production: `compose.yaml` profile `self-hosted` with published
-  versioned/digest-qualified OCI images; **no application source build on target**.
-- Development database only: profile `dev-db`.
-- Cloud/Managed: profile `cloud` with immutable digest-qualified release images.
+- Local/persistent Development builds local application images first with
+  `scripts/build_self_hosted_source.py`, then runs `compose.yaml` profile `self-hosted`.
+- Verified source acceptance uses `scripts/compose_checked.py`, which exports exact
+  committed source, builds local images and runs that exported canonical manifest.
+- Released Self-Hosted Production uses published versioned/digest-qualified OCI images
+  and is operated through `scripts/self_hosted_release.py`.
+- Development database only uses profile `dev-db`.
+- Cloud/Managed uses profile `cloud` with immutable digest-qualified release images.
+
+Both source-build helpers reject Production. There is no supported target-host source
+build path for a released Self-Hosted installation.
 
 Normal Self-Hosted ordering is:
 
@@ -62,9 +65,9 @@ Normal Self-Hosted ordering is:
 postgres -> migrate -> api/worker -> web
 ```
 
-`demo-init` is profile `demo` and is not part of ordinary Self-Hosted startup.
-`migrate` must succeed before API/worker, and Web waits for API readiness. Production is
-never the first persistent environment to execute a new migration.
+`demo-init` is profile `demo` and is not part of ordinary Self-Hosted startup. `migrate`
+must succeed before API/worker, and Web waits for API readiness. Production is never the
+first persistent environment to execute a new migration.
 
 ## 4. Local and persistent Development
 
@@ -90,16 +93,17 @@ docker compose --profile self-hosted --env-file .env \
   up -d --wait --wait-timeout 300
 ```
 
-The builder creates only backend/Web images. It does not create a second Compose
-manifest and refuses to use GHCR/digest-qualified release references as source-build
-target tags.
+The builder creates backend/Web images only. It does not create another Compose manifest,
+refuses Production declared by either dotenv or process environment, rejects registry
+release identities as source-build output tags, and rejects credential/query-bearing
+remote source URLs before they can enter diagnostic output.
 
 ### 4.2 Persistent Arcane Development
 
-Create a dedicated Arcane project, e.g. `sidebyside-development`, separate from
+Create a dedicated Arcane project, for example `sidebyside-development`, separate from
 Production and Demo. Start from `deploy/persistent-development.env.example`.
 
-For normal integration it may follow `main`:
+For ordinary integration it may follow `main`:
 
 ```dotenv
 SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
@@ -136,14 +140,18 @@ Revision semantics differ by environment:
 
 Production no longer rebuilds the same Git revision. #519/#827 promote the already-built
 backend/Web archives to GHCR and publish `self-hosted-image-identity.json`. Production
-selects the published versioned image references or the digest-qualified references from
-that record.
+selects the published versioned image references or digest-qualified references from that
+record.
 
-A human-readable `vX.Y.Z` tag is part of the release identity, but the full chain is:
+The release identity chain is:
 
 ```text
 product version -> Git tag -> source SHA -> release manifest -> artifact hashes -> OCI digests
 ```
+
+The released Self-Hosted launcher validates the selected OCI image versions against
+`SBS_RELEASE_VERSION` before pull/bootstrap/start. Matching backend/Web overrides cannot
+silently select a different release version.
 
 ## 6. Deployed revision observability
 
@@ -163,7 +171,6 @@ Web exposes:
 
 For Development source images both identities derive from `SBS_BUILD_REVISION`. For a
 published release they derive from the source revision that produced the #193 archives.
-
 Release smoke requires both identities to equal the selected release/candidate source
 SHA. A healthy stale component is still a failed promotion.
 
@@ -186,7 +193,9 @@ Production promotion is allowed only when all relevant conditions are true:
 13. repository recovery gates are green;
 14. a fresh coordinated Production recovery point exists before migration;
 15. the candidate is frozen/published through the protected release workflow;
-16. Production deploys the **same published artifact identity**, not a rebuild.
+16. Production deploys the **same published artifact identity**, not a rebuild;
+17. Production is operated through the released launcher so image/version checks cannot
+    be skipped by the documented startup path.
 
 A failing Development deployment or release publication blocks Production promotion.
 
@@ -207,14 +216,15 @@ non-destructive authenticated membership read.
 Smoke credentials must be fictional/operator test credentials appropriate to that
 environment and must not be committed.
 
-For host-level inspection:
+After a successful deployment, host-level diagnosis may use raw Compose:
 
 ```bash
 docker compose --profile self-hosted --env-file .env ps
 docker compose --profile self-hosted --env-file .env logs --tail=100 migrate api worker web
 ```
 
-`migrate` must have exited successfully; API/Web must be healthy; worker must run.
+Raw Compose is diagnostic only for released Production; it is not the supported
+pull/bootstrap/start entry point.
 
 ## 9. Migration safety
 
@@ -226,7 +236,7 @@ Every new Alembic migration follows this order:
 4. affected read/write acceptance;
 5. backup and compatibility review;
 6. protected release publication;
-7. only then Production migration.
+7. only then Production migration through the released launcher.
 
 Do not describe application redeployment as a complete database rollback strategy. For
 incompatible changes, use an explicitly tested forward fix/downgrade or restore the
@@ -244,35 +254,47 @@ on `main` and execute `.github/workflows/release-publish.yml` through the protec
 `production-release` environment.
 
 The workflow produces the authoritative Git tag/GitHub Release, release manifest,
-SBOM/attestation evidence and `self-hosted-image-identity.json`.
+SBOM/attestation evidence, `self-hosted-image-identity.json`, and the small Self-Hosted
+operator bundle containing canonical Compose, the release env template, launcher and
+runtime checker.
 
-### 10.2 Self-Hosted Production
+### 10.2 First Self-Hosted Production installation
 
-Start from `deploy/self-hosted-release.env.example`. Select the exact product release:
+Extract the Self-Hosted operator bundle from the selected GitHub Release, copy the env
+template, configure instance-specific values and select the product release:
 
 ```dotenv
+SBS_ENVIRONMENT=production
 SBS_RELEASE_VERSION=X.Y.Z
 ```
 
-For strict locking, set the two digest-qualified references from the release identity
-asset:
+For strict locking, set the two digest-qualified references from the same release:
 
 ```dotenv
 SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
 SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
 ```
 
-Then:
+On a brand-new installation, leave `SBS_ACCOUNT_DELETION_INSTANCE_ID` blank initially
+and run:
 
 ```bash
-docker compose --profile self-hosted --env-file .env config --quiet
-docker compose --profile self-hosted --env-file .env pull
-docker compose --profile self-hosted --env-file .env \
-  up -d --wait --wait-timeout 300
+python3 scripts/self_hosted_release.py --env-file .env pull
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  bootstrap-deletion-authority
 ```
 
-Production must not invoke `scripts/build_self_hosted_source.py` or use
-`scripts/compose_checked.py` as a release substitute.
+Store the emitted stable deletion-authority UUID in `.env` and protected operator
+backup. Then:
+
+```bash
+python3 scripts/self_hosted_release.py --env-file .env validate
+python3 scripts/self_hosted_release.py --env-file .env deploy
+```
+
+Production must not invoke `scripts/build_self_hosted_source.py` or
+`scripts/compose_checked.py` and must not replace the launcher with raw Compose startup.
 
 After deployment, confirm migration, readiness, Web health, and both source revision
 identities against the published release manifest.
@@ -289,12 +311,12 @@ Before every Production promotion record:
 - whether application rollback is schema-compatible.
 
 If the candidate fails before an incompatible migration is committed, select the
-previous-known-good **published** application/image identity and repeat smoke verification.
+previous-known-good **published** application/image identity, update `.env`, run the
+released launcher again and repeat smoke verification.
 
-If an incompatible schema change is already applied, do not blindly start the old
-image. Choose a tested forward fix, downgrade migration, or coordinated restore per
-#190/#375. Media compatibility is reviewed separately when formats/storage semantics
-changed.
+If an incompatible schema change is already applied, do not blindly start the old image.
+Choose a tested forward fix, downgrade migration, or coordinated restore per #190/#375.
+Media compatibility is reviewed separately when formats/storage semantics changed.
 
 ## 12. Demo relationship
 
@@ -308,15 +330,14 @@ Local / PR -> Development -> published release -> Production
 ```
 
 Demo can receive an approved artifact for demonstration, but its health is not a
-substitute for Development acceptance. Demo data/storage is never promoted to
-Production.
+substitute for Development acceptance. Demo data/storage is never promoted to Production.
 
 ## 13. CI versus operator responsibility
 
 CI owns deterministic repository checks: tests, migration/schema drift,
 OpenAPI/client drift, security/privacy/reuse/supply-chain rules, Compose rendering,
-source-build helper boundaries, release-publication contracts, revision parity, and the
-deployment/recovery guards.
+source-build helper boundaries, released-launcher contracts, release-publication
+contracts, revision parity, and deployment/recovery guards.
 
 Operators own facts CI cannot prove from source alone: actual secret separation,
 persistent Development health, external TLS/ingress, offsite backup/key availability,
@@ -330,7 +351,8 @@ operational evidence must bind one exact candidate/release through:
 
 ```text
 candidate source -> persistent Development -> migrate/smoke/accept -> protected release
-publication -> exact published OCI identity -> Production -> post-deploy smoke
+publication -> exact published OCI identity -> released launcher -> Production ->
+post-deploy smoke
 ```
 
 Record the Development/Production source SHA, published release identity, image identity,
