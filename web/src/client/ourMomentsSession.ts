@@ -196,7 +196,7 @@ export function createLocalOurMomentsSession(
     }
 
     const selectedCard = snapshot.cards.find((card) => card.id === cardId);
-    if (!selectedCard || selectedCard.state !== 'hidden') return;
+    if (selectedCard?.state !== 'hidden') return;
 
     const previouslyRevealed = snapshot.cards.filter(
       (card) => card.state === 'revealed',

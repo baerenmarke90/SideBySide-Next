@@ -26,6 +26,22 @@
   gap: var(--space-1);
 }
 
+.our-moments-score strong {
+  color: var(--color-text);
+}
+
+.our-moments-card-context strong {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 4vw, 1.25rem);
+  line-height: 1.15;
+}
+
+.our-moments-card-context span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
 .our-moments-turn > div > span {
   color: var(--color-text-secondary);
   font-size: 0.85rem;
@@ -45,10 +61,6 @@
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 0.9rem;
-}
-
-.our-moments-score strong {
-  color: var(--color-text);
 }
 
 .our-moments-board {
@@ -126,7 +138,7 @@
   height: 1.8rem;
   border: 2px solid var(--color-brand-text);
   border-radius: 50%;
-  content: '';
+  content: "";
   opacity: 0.78;
 }
 
@@ -161,18 +173,6 @@
       transparent 44%
     ),
     var(--color-surface-raised);
-}
-
-.our-moments-card-context strong {
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: clamp(1rem, 4vw, 1.25rem);
-  line-height: 1.15;
-}
-
-.our-moments-card-context span {
-  color: var(--color-text-secondary);
-  font-size: 0.85rem;
 }
 
 .our-moments-card-matched {

@@ -197,8 +197,9 @@ function OurMomentsSessionView({
             })}
           </strong>
         </div>
-        <p
+        <div
           className="our-moments-score"
+          role="group"
           aria-label={t('games.momentsGame.scoreAria')}
         >
           <span>
@@ -208,7 +209,7 @@ function OurMomentsSessionView({
           <span>
             {participants[1].displayName} <strong>{snapshot.scores[1]}</strong>
           </span>
-        </p>
+        </div>
       </section>
 
       {snapshot.status === 'match-reveal' && snapshot.revealedMatch ? (

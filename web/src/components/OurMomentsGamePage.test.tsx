@@ -54,9 +54,7 @@ describe('OurMomentsGamePage', () => {
       level: 1,
     });
     expect(
-      screen.getByText(
-        i18n.t('games.momentsGame.turnValue', { name: 'Lea' }),
-      ),
+      screen.getByText(i18n.t('games.momentsGame.turnValue', { name: 'Lea' })),
     ).toBeTruthy();
     expect(
       screen.getByRole('region', { name: games.momentsGame.boardAria }),
