@@ -158,7 +158,7 @@
   width: 100%;
 }
 
-.story-year-page .story-card-meta time {
+.story-year-page .story-card-link .story-card-footer time {
   color: var(--color-text-secondary);
 }
 
