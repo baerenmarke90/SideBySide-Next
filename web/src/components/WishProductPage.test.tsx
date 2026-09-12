@@ -107,7 +107,7 @@ describe('WishProductPage direct completion', () => {
       expect(completeWish).toHaveBeenCalledWith({
         spaceId: 'space-1',
         wishId: OPEN_WISH.id,
-        ifMatch: '"1"',
+        ifMatch: '1',
       });
     });
 
