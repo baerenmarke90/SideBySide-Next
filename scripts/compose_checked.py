@@ -122,6 +122,15 @@ def dotenv_value(path: Path, key: str) -> str | None:
     return None
 
 
+def reject_production_environment(env_file: Path) -> None:
+    dotenv_environment = (dotenv_value(env_file, "SBS_ENVIRONMENT") or "").strip().lower()
+    process_environment = os.environ.get("SBS_ENVIRONMENT", "").strip().lower()
+    if dotenv_environment == "production" or process_environment == "production":
+        raise CheckoutError(
+            "verified source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+        )
+
+
 def require_self_hosted_secrets(env_file: Path) -> None:
     for key in REQUIRED_SELF_HOSTED_ENV:
         value = os.environ.get(key)
@@ -200,6 +209,7 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
         raise CheckoutError("a Docker Compose command is required")
     reject_compose_source_overrides(compose_args)
     env_file = root / ".env"
+    reject_production_environment(env_file)
     require_self_hosted_secrets(env_file)
     project_name = compose_project_name(root, env_file)
 
