@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Run canonical Compose from an immutable snapshot of a clean Git checkout.
+"""Run explicit source-build Compose from an immutable clean Git snapshot.
 
-Direct ``docker compose`` remains the convenient local/test path and deliberately
-reports ``unverified-local-checkout``. Release-candidate and Production
-complete-checkout deployments use this wrapper. It derives the revision from Git
-and exports Compose plus the backend/Web build contexts from that committed tree,
-so ignored, untracked, or index-hidden working-tree changes cannot become verified
-orchestration/source.
+Released Self-Hosted deployment consumes published OCI images from ``compose.yaml``
+and does not use this helper. Developers, CI and exceptional verified-source testing
+may intentionally build a clean checkout through this wrapper. It exports the
+canonical Compose file, the explicit source-build override and backend/Web source
+from the same committed tree, so ignored, untracked or index-hidden worktree changes
+cannot become verified orchestration/source.
 """
 
 from __future__ import annotations
@@ -23,17 +23,14 @@ from pathlib import Path
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
-# compose.yaml itself defaults these to blank so `docker compose config`
-# keeps succeeding for every profile, including when self-hosted is inactive
-# (a hard `${VAR:?...}` there would break that independence, since Compose
-# interpolates the whole file regardless of which --profile is selected).
-# This wrapper always drives self-hosted, so it is where the fail-closed
-# guarantee for the database credentials actually belongs.
+# compose.yaml defaults database interpolation so every inactive profile remains
+# renderable. This wrapper always drives the source-built self-hosted profile, so
+# the fail-closed database credential check belongs here.
 REQUIRED_SELF_HOSTED_ENV = ("POSTGRES_USER", "POSTGRES_PASSWORD")
 
 
 class CheckoutError(RuntimeError):
-    """The checkout cannot be used as a verified deployment source."""
+    """The checkout cannot be used as a verified source-build deployment."""
 
 
 def run_git(root: Path, *args: str) -> str:
@@ -80,7 +77,7 @@ def verified_revision(root: Path, expected: str | None) -> str:
 
 
 def export_verified_snapshot(root: Path, revision: str, target: Path) -> None:
-    """Export committed Compose/backend/Web files without trusting the worktree."""
+    """Export committed Compose/source-build/backend/Web files only."""
     archive_path = target / "source.tar"
     try:
         with archive_path.open("wb") as archive_file:
@@ -91,6 +88,7 @@ def export_verified_snapshot(root: Path, revision: str, target: Path) -> None:
                     "--format=tar",
                     revision,
                     "compose.yaml",
+                    "deploy/compose.source-build.yaml",
                     "backend",
                     "web",
                 ],
@@ -151,11 +149,7 @@ def dotenv_value(path: Path, key: str) -> str | None:
 
 
 def require_self_hosted_secrets(env_file: Path) -> None:
-    """Refuse a verified deployment with an unset/blank database password.
-
-    An operator-provided value in the process environment takes precedence
-    over ``.env``, matching Compose's own interpolation precedence.
-    """
+    """Refuse a verified source build with unset/blank database credentials."""
     for key in REQUIRED_SELF_HOSTED_ENV:
         value = os.environ.get(key)
         if value is None:
@@ -222,12 +216,17 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
             ]
             if env_file.is_file():
                 command.extend(["--env-file", str(env_file)])
-            command.extend(["-f", str(snapshot_root / "compose.yaml"), *compose_args])
+            command.extend(
+                [
+                    "-f",
+                    str(snapshot_root / "compose.yaml"),
+                    "-f",
+                    str(snapshot_root / "deploy/compose.source-build.yaml"),
+                    *compose_args,
+                ]
+            )
 
             compose_env = dict(os.environ)
-            # The verified wrapper always drives the canonical Self-Hosted
-            # profile. Build contexts and revision are injected as environment
-            # values instead of generating a second Compose override file.
             compose_env["COMPOSE_PROFILES"] = "self-hosted"
             compose_env["SBS_BACKEND_BUILD_CONTEXT"] = str(snapshot_root / "backend")
             compose_env["SBS_WEB_BUILD_CONTEXT"] = str(snapshot_root / "web")
