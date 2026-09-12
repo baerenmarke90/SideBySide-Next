@@ -136,8 +136,15 @@ def ensure_capability(
     session: Session,
     space_id: UUID,
     capability: str,
+    *,
+    lock_grants: bool = True,
 ) -> None:
-    """Verify and lock the commercial grant state for a protected write."""
+    """Verify a commercial capability for a protected operation.
+
+    Protected writes keep the default row lock so concurrent revocation cannot
+    race an already-authorized mutation. Read-only product seams may disable
+    locking while retaining the same centralized entitlement authority.
+    """
     from sidebyside.core.errors import PremiumEntitlementRequiredError
     from sidebyside.entitlements import service as entitlement_service
 
@@ -145,6 +152,6 @@ def ensure_capability(
         session,
         space_id,
         capability,
-        lock_grants=True,
+        lock_grants=lock_grants,
     ):
         raise PremiumEntitlementRequiredError(capability)
