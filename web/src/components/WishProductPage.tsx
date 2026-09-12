@@ -1,4 +1,9 @@
-import { type FormEvent, useState } from 'react';
+import {
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
@@ -6,7 +11,7 @@ import type { WishDetail } from '../api/generated/models/WishDetail';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
-import { appRoutePath } from '../client/routes';
+import { appRoutePath, MEMORY_CREATE_ROUTE } from '../client/routes';
 import {
   loadAllPlaces,
   planningIfMatch,
@@ -42,7 +47,15 @@ export function WishProductPage({
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showCompletionContinuation, setShowCompletionContinuation] =
+    useState(false);
+  const completionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const backLinkRef = useRef<HTMLAnchorElement>(null);
   const key = authorSummaryQueryKeys.wishDetail(spaceId, wishId);
+
+  useEffect(() => {
+    if (showCompletionContinuation) completionHeadingRef.current?.focus();
+  }, [showCompletionContinuation]);
 
   const wishQuery = useQuery({
     queryKey: key,
@@ -78,6 +91,29 @@ export function WishProductPage({
       });
       setIsEditing(false);
       setConfirmDelete(false);
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (wish: WishDetail) =>
+      apiCall(() =>
+        apis.wishes.completeWish({
+          spaceId,
+          wishId: wish.id,
+          ifMatch: planningIfMatch(wish),
+        }),
+      ),
+    onSuccess: async (completedWish) => {
+      queryClient.setQueryData(key, completedWish);
+      setIsEditing(false);
+      setConfirmDelete(false);
+      setShowCompletionContinuation(true);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'wishes', spaceId],
+        }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
     },
   });
 
@@ -186,6 +222,16 @@ export function WishProductPage({
     });
   }
 
+  function openMemoryComposer() {
+    const query = new URLSearchParams({ title: wish.title });
+    navigate(`${MEMORY_CREATE_ROUTE}?${query.toString()}`);
+  }
+
+  function dismissCompletionContinuation() {
+    backLinkRef.current?.focus();
+    setShowCompletionContinuation(false);
+  }
+
   return (
     <div className="page planning-page">
       {isEditing ? (
@@ -199,7 +245,7 @@ export function WishProductPage({
       ) : null}
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
+          <Link ref={backLinkRef} className="back-link" to={appRoutePath('plan')}>
             {t('m5s3.common.back')}
           </Link>
         }
@@ -231,7 +277,35 @@ export function WishProductPage({
       />
 
       <div className="planning-detail-grid">
-        {wish.status === 'COMPLETED' ? (
+        {wish.status === 'COMPLETED' && showCompletionContinuation ? (
+          <section
+            className="planning-subsection sbs-motion-reveal"
+            aria-labelledby="wish-completion-heading"
+          >
+            <h2
+              id="wish-completion-heading"
+              ref={completionHeadingRef}
+              tabIndex={-1}
+            >
+              {t('m5s3.wish.completionTitle')}
+            </h2>
+            <p>{t('m5s3.wish.completionIntro')}</p>
+            <div className="form-actions">
+              <button type="button" onClick={openMemoryComposer}>
+                {t('m5s3.wish.createMemory')}
+              </button>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={dismissCompletionContinuation}
+              >
+                {t('m5s3.wish.completionDone')}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {wish.status === 'COMPLETED' && !showCompletionContinuation ? (
           <section className="planning-subsection">
             <p>{t('m5s3.wish.completedBody')}</p>
           </section>
@@ -317,6 +391,28 @@ export function WishProductPage({
                   </section>
                 )}
               </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {wish.status === 'OPEN' && wish.capabilities.canEdit ? (
+          <section className="planning-subsection">
+            <h2>{t('m5s3.wish.completeHeading')}</h2>
+            <p>{t('m5s3.wish.completeIntro')}</p>
+            <button
+              type="button"
+              onClick={() => completeMutation.mutate(wish)}
+              disabled={completeMutation.isPending}
+            >
+              {completeMutation.isPending
+                ? t('m5s3.wish.completing')
+                : t('m5s3.wish.complete')}
+            </button>
+            {completeMutation.error ? (
+              <ProblemState
+                error={completeMutation.error}
+                onRetry={() => void wishQuery.refetch()}
+              />
             ) : null}
           </section>
         ) : null}
