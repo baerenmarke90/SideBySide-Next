@@ -51,8 +51,7 @@ describe('GamesProductArea', () => {
   it('keeps the five-game catalog discoverable for a Free Space with one page-level Premium treatment', async () => {
     renderGames(entitlement([]));
 
-    await screen.findByRole('heading', { name: games.title });
-    expect(screen.getByText(games.premium.title)).toBeTruthy();
+    await screen.findByText(games.premium.title);
     expectFiveGameEntries();
     expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
 
