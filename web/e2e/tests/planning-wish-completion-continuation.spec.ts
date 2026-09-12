@@ -17,7 +17,11 @@ async function installMocks(page: Page): Promise<void> {
     const request = route.request();
     const method = request.method();
     const pathname = new URL(request.url()).pathname;
-    const fulfillJson = async (body: unknown, status = 200, headers?: Record<string, string>) =>
+    const fulfillJson = async (
+      body: unknown,
+      status = 200,
+      headers?: Record<string, string>,
+    ) =>
       route.fulfill({
         status,
         contentType: 'application/json',
@@ -338,9 +342,11 @@ test('fulfilled Wish opens canonical Memory create with title-only prefill', asy
 
   await page.getByRole('button', { name: m5s3.wish.createMemory }).click();
 
-  await expect(page).toHaveURL(
-    new RegExp(`/story/memories/new\\?title=${encodeURIComponent(WISH_TITLE)}$`),
-  );
+  await expect(page).toHaveURL(/\/story\/memories\/new\?title=/);
+  const target = new URL(page.url());
+  expect(target.pathname).toBe('/story/memories/new');
+  expect(target.searchParams.get('title')).toBe(WISH_TITLE);
+  expect([...target.searchParams.keys()]).toEqual(['title']);
 });
 
 test('Done dismisses the transient continuation and restores focus without offering it after reload', async ({
