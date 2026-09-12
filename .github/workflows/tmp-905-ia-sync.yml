@@ -1,0 +1,102 @@
+name: Temporary #905 IA Sync
+
+on:
+  push:
+    branches:
+      - fix/905-games-under-more
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: ${{ !contains(github.event.head_commit.message, '[905-ia-sync]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/905-games-under-more
+          fetch-depth: 0
+      - name: Synchronize binding information architecture
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/INFORMATION-ARCHITECTURE.md')
+          raw = path.read_bytes()
+          newline = '\r\n' if b'\r\n' in raw else '\n'
+          text = raw.decode('utf-8').replace('\r\n', '\n')
+
+          replacements = [
+              ('**Version:** 1.4  \n**Effective from:** September 1, 2026  ',
+               '**Version:** 1.5  \n**Effective from:** September 12, 2026  '),
+              ('**Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`\n**Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`',
+               '**Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`  \n**Games placement decided by:** `decisions/0010-games-secondary-navigation-under-more.md`  \n**Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`'),
+              ('''| `plan` | Planen | wishes and concrete plans; shopping later | now |
+| `discover` | Entdecken | curated inspiration for shared time | **M7** |
+| `more` | Mehr | people, places, shared lists, private area, and settings | now |
+
+`discover` depends on the Discover domain, which `docs/ROADMAP.md` places in
+M7. Its route ID, label and position in the order are reserved from now, and it
+is not rendered before its domain exists: a reserved route is not dead
+navigation, but a visible empty area would be. Until M7 the primary navigation
+therefore carries four destinations.
+
+The label *Entdecken* is reserved for this area and must not be reused for a
+navigation group, a section heading, or any other surface.
+''',
+               '''| `plan` | Planen | wishes and concrete plans; shopping later | now |
+| `more` | Mehr | games plus secondary shared, private, and account-adjacent areas | now |
+
+The previous top-level `discover` reservation is superseded by Decision 0009.
+Discovery experiences remain product behavior inside `Momente`; they do not
+consume a persistent primary-navigation slot.
+
+`Spielen` is a first-class product area with the stable route ID `games` and
+canonical path `/games`, but Decision 0010 deliberately places its entry under
+`Mehr`. It is therefore not a fifth persistent primary destination. When a
+user is inside `/games` or `/games/...`, `Mehr` remains the active primary area.
+'''),
+              ('''├── Entdecken (M7)
+│   ├── feed
+│   ├── filters
+│   ├── recommendation
+│   └── convert into wish or plan
+└── Mehr
+    ├── Menschen (related people and important dates)
+''',
+               '''└── Mehr
+    ├── Spielen (relationship-native games; canonical route `/games`)
+    ├── Menschen (related people and important dates)
+'''),
+              ('Wishes and plans must not appear as isolated data worlds. Converting a wish\ninto a plan is a visible, understandable state transition. Discover does not\ncreate a fourth copy of content; it can adopt a recommendation as a wish or\nplan.\n',
+               'Wishes and plans must not appear as isolated data worlds. Converting a wish\ninto a plan is a visible, understandable state transition. Discovery behavior\ninside Momente does not create a fourth copy of content; it may adopt a\nrecommendation as a wish or plan where that product flow exists.\n'),
+              ('''| Shopping reserved for later domain | `/plan/shopping` |
+| Discover, reserved for M7 | `/discover` |
+| Open recommendation, reserved for M7 | `/discover/:recommendationId` |
+| More | `/more` |
+''',
+               '''| Shopping reserved for later domain | `/plan/shopping` |
+| Games hub (Spielen, entry under Mehr) | `/games` |
+| More | `/more` |
+'''),
+              ('| Discover | feed + detail screen | feed + detail | grid/feed + detail pane |\n',
+               '| Games | hub or gameplay | hub or gameplay | hub or gameplay |\n'),
+              ('- [ ] Every feature belongs to exactly one primary area or a documented\n      utility/account surface.\n',
+               '- [ ] Every feature belongs to exactly one primary area or a documented\n      secondary/utility/account surface.\n'),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected IA text not found: {old[:100]!r}')
+              text = text.replace(old, new, 1)
+
+          path.write_bytes(text.replace('\n', newline).encode('utf-8'))
+          PY
+      - name: Commit IA sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/INFORMATION-ARCHITECTURE.md
+          git commit -m "docs(ia): place Games under More (#905) [905-ia-sync]"
+          git push origin HEAD:fix/905-games-under-more
