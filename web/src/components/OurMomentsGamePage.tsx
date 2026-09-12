@@ -197,11 +197,7 @@ function OurMomentsSessionView({
             })}
           </strong>
         </div>
-        <div
-          className="our-moments-score"
-          role="group"
-          aria-label={t('games.momentsGame.scoreAria')}
-        >
+        <div className="our-moments-score">
           <span>
             {participants[0].displayName} <strong>{snapshot.scores[0]}</strong>
           </span>
