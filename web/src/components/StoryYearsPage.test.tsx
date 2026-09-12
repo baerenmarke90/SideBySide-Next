@@ -8,6 +8,7 @@ import {
   storyCacheResourceId,
   type StoryFilters,
 } from '../client/storyProduct';
+import de from '../i18n/locales/de';
 import { StoryProductPage } from './StoryProductPage';
 import { StoryYearDetailPage, StoryYearsIndexPage } from './StoryYearsPage';
 
@@ -158,7 +159,7 @@ describe('Story annual archive (#868)', () => {
       nextCursor: null,
     });
 
-    expect(html).toContain('Dieses Jahr ist noch leer');
+    expect(html).toContain(de.storyYears.unavailableTitle);
     expect(html).not.toContain('story-year-month');
   });
 
