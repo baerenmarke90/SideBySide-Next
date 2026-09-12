@@ -232,6 +232,7 @@ jobs:
       name: production-release
     permissions:
       contents: write
+      packages: write
       id-token: write
       attestations: write
     steps:
@@ -516,6 +517,138 @@ jobs:
             --artifact-root release-evidence \
             --require-signed-android
 
+      - name: Publish exact build-once runtime images to GHCR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          backend_repo="ghcr.io/${owner}/eimir-backend"
+          web_repo="ghcr.io/${owner}/eimir-web"
+          version_tag="v${RELEASE_VERSION}"
+          source_tag="sha-${SOURCE_REVISION}"
+
+          publish_archive() {
+            local archive="$1"
+            local source_image="$2"
+            local repository="$3"
+            local result_file="$4"
+
+            docker load --input "$archive" >/dev/null
+            local local_id
+            local_id=$(docker image inspect "$source_image" --format '{{.Id}}')
+            test -n "$local_id"
+
+            local source_ref="${repository}:${source_tag}"
+            local version_ref="${repository}:${version_tag}"
+
+            if docker manifest inspect "$source_ref" >/dev/null 2>&1; then
+              docker pull "$source_ref" >/dev/null
+              remote_id=$(docker image inspect "$source_ref" --format '{{.Id}}')
+              if [ "$remote_id" != "$local_id" ]; then
+                echo "Existing immutable source tag ${source_ref} points to different image bytes." >&2
+                exit 1
+              fi
+            else
+              docker tag "$source_image" "$source_ref"
+              docker push "$source_ref"
+              docker pull "$source_ref" >/dev/null
+            fi
+
+            source_digest_ref=$(docker image inspect "$source_ref" \
+              --format '{{range .RepoDigests}}{{println .}}{{end}}' \
+              | grep -F "${repository}@sha256:" | head -n 1)
+            test -n "$source_digest_ref"
+            digest="${source_digest_ref#*@}"
+
+            if docker manifest inspect "$version_ref" >/dev/null 2>&1; then
+              docker pull "$version_ref" >/dev/null
+              version_digest_ref=$(docker image inspect "$version_ref" \
+                --format '{{range .RepoDigests}}{{println .}}{{end}}' \
+                | grep -F "${repository}@sha256:" | head -n 1)
+              if [ "$version_digest_ref" != "$source_digest_ref" ]; then
+                echo "Version tag ${version_ref} already exists with a different digest." >&2
+                exit 1
+              fi
+            else
+              docker tag "$source_ref" "$version_ref"
+              docker push "$version_ref"
+              docker pull "$version_ref" >/dev/null
+              version_digest_ref=$(docker image inspect "$version_ref" \
+                --format '{{range .RepoDigests}}{{println .}}{{end}}' \
+                | grep -F "${repository}@sha256:" | head -n 1)
+              test "$version_digest_ref" = "$source_digest_ref"
+            fi
+
+            printf '%s@%s\n' "$version_ref" "$digest" > "$result_file"
+          }
+
+          publish_archive \
+            release-evidence/backend-runtime.image.tar \
+            "sidebyside-backend:evidence-${SOURCE_REVISION}" \
+            "$backend_repo" \
+            "$RUNNER_TEMP/backend-image-ref"
+          publish_archive \
+            release-evidence/web-runtime.image.tar \
+            "sidebyside-web:evidence-${SOURCE_REVISION}" \
+            "$web_repo" \
+            "$RUNNER_TEMP/web-image-ref"
+
+          export BACKEND_IMAGE_REF WEB_IMAGE_REF
+          BACKEND_IMAGE_REF=$(cat "$RUNNER_TEMP/backend-image-ref")
+          WEB_IMAGE_REF=$(cat "$RUNNER_TEMP/web-image-ref")
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(
+              Path("release-evidence/sidebyside-release-manifest.json").read_text(encoding="utf-8")
+          )
+          artifacts = {item["id"]: item for item in manifest["artifacts"]}
+
+          def image_record(reference: str, artifact_id: str, roles: list[str]) -> dict[str, object]:
+              if "@sha256:" not in reference:
+                  raise SystemExit(f"Published {artifact_id} image is not digest-qualified")
+              return {
+                  "reference": reference,
+                  "digest": reference.split("@", 1)[1],
+                  "releaseArtifactSha256": artifacts[artifact_id]["sha256"],
+                  "roles": roles,
+              }
+
+          identity = {
+              "schemaVersion": 1,
+              "kind": "sidebyside-self-hosted-image-identity",
+              "product": manifest["product"],
+              "sourceRevision": manifest["sourceRevision"],
+              "releaseManifest": "sidebyside-release-manifest.json",
+              "images": {
+                  "backend": image_record(
+                      os.environ["BACKEND_IMAGE_REF"],
+                      "backend-runtime",
+                      ["api", "worker", "migrate"],
+                  ),
+                  "web": image_record(
+                      os.environ["WEB_IMAGE_REF"],
+                      "web-runtime",
+                      ["web"],
+                  ),
+              },
+          }
+          Path("release-evidence/self-hosted-image-identity.json").write_text(
+              json.dumps(identity, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          docker logout ghcr.io >/dev/null
+
       - name: Write human-readable release notes
         shell: bash
         env:
@@ -539,6 +672,10 @@ jobs:
           This is one immutable build-once release set. Backend API, worker and migrate
           share one runtime artifact; Web and final signed Android artifacts are bound
           to the same source revision by \`sidebyside-release-manifest.json\`.
+
+          The exact backend and Web archives were loaded without rebuild and published
+          as versioned GHCR images. \`self-hosted-image-identity.json\` records the
+          digest-qualified references and binds them back to the #519 archive hashes.
 
           Android publication uses Google Play App Signing with a distinct upload key.
           The upload key is supplied only by the protected \`production-release\`
@@ -607,10 +744,14 @@ jobs:
           gh release download "$tag" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern sidebyside-release-manifest.json \
+            --pattern self-hosted-image-identity.json \
             --dir "$RUNNER_TEMP/published-release"
           cmp --silent \
             release-evidence/sidebyside-release-manifest.json \
             "$RUNNER_TEMP/published-release/sidebyside-release-manifest.json"
+          cmp --silent \
+            release-evidence/self-hosted-image-identity.json \
+            "$RUNNER_TEMP/published-release/self-hosted-image-identity.json"
 
       - name: Upload final release evidence snapshot
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
