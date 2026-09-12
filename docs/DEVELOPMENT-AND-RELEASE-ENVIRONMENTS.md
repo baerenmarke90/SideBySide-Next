@@ -1,222 +1,198 @@
 # Development and Release Environments
 
-**Status:** authoritative operations contract for persistent Development and production promotion  
+**Status:** authoritative operations contract for persistent Development and Production promotion  
 **Scope:** Self-Hosted / Arcane / Docker Compose  
-**Related:** #375, #304
+**Related:** #375, #519, #827, #304
 
 This document defines how SideBySide remains continuously developable after a real
-production instance exists. It is the binding environment and promotion contract;
-`ARCANE.md`, `SELF-HOSTING.md`, and environment templates must point here rather
-than defining competing release rules.
+Production instance exists. `ARCANE.md`, `SELF-HOSTING.md`, and environment templates
+must point here rather than defining competing release rules.
 
 ## 1. Environment topology
 
-SideBySide has four distinct operational purposes:
-
-| Environment | Purpose | Data | Source revision |
+| Environment | Purpose | Data | Runtime identity |
 |---|---|---|---|
-| Local / PR | developer feedback and automated validation | disposable/generated | feature branch or PR commit |
-| Development | persistent integration, migration and release-candidate verification | fictional/test only | `main` or an exact candidate commit |
-| Demo | public product demonstration and manual QA | canonical fictional demo data | independently deployed |
-| Production | supported service with real user data | real | exact immutable commit SHA |
+| Local / PR | developer feedback and automated validation | disposable/generated | feature/PR source, local image tags |
+| Development | persistent integration, migration and release-candidate verification | fictional/test only | `main` or exact candidate SHA, source-built local images |
+| Demo | public product demonstration and manual QA | canonical fictional demo data | independently deployed approved artifact |
+| Production | supported service with real user data | real | exact published release/image identity |
 
-The public Demo from #304 is **not** a staging environment and is not a production
-release gate. Development may use the canonical fictional scenario as test data,
-but Development, Demo, and Production never share PostgreSQL volumes, media
-volumes/buckets, secrets, sessions, signing keys, or Compose/Arcane projects.
+The public Demo from #304 is **not** staging and is not a substitute for Development.
+Development, Demo and Production never share PostgreSQL/media stores, secrets, sessions,
+signing keys, authentication callbacks, provider credentials, or Compose projects.
 
 ## 2. Non-negotiable isolation
 
-A persistent Development deployment must have its own:
+Persistent Development has its own:
 
-- Arcane/Compose project name;
+- Compose/Arcane project name;
 - PostgreSQL volume and credentials;
 - media volume or S3 bucket/prefix and credentials;
 - cursor signing key;
 - bootstrap/admin credentials;
 - authentication callback configuration;
 - provider credentials;
-- session state and user accounts.
+- session state and fictional user accounts.
 
-Production data is not a development fixture. Do not routinely copy a production
-database or production media into Development. Incident-specific use of
-production-derived data requires a separate minimization/anonymization and privacy
-review; it is not part of this workflow.
+Production data is not a Development fixture. Routine copying of Production database or
+media into Development is prohibited. Any incident-specific use of Production-derived
+data requires a separate minimization/anonymization and privacy review.
 
-Before production promotion, operators should run
-`scripts/check_environment_isolation.py` against the Development and Production
-environment files. The check fails without printing secret values when it detects
-obvious reuse of project names, public origins, database URLs, cursor keys, or
-storage credentials/buckets.
+Before promotion, use `scripts/check_environment_isolation.py` where both environment
+files are available. The check compares isolation-sensitive configuration without
+printing secret values.
 
-## 3. Supported deployment primitive
+## 3. One canonical Compose manifest
 
-No new orchestrator is introduced for v1. Every Docker Compose path uses the
-single repository-root `compose.yaml`.
+No new orchestrator is introduced for v1. Every Compose runtime uses the single
+repository-root `compose.yaml`.
 
-- Complete Self-Hosted checkout: `compose.yaml` with profile `self-hosted`.
-- Verified release-candidate/Production deployment from a complete checkout:
-  `scripts/compose_checked.py`, which wraps the same canonical manifest.
-- Arcane / remote Git workspace: the same `compose.yaml` + `self-hosted` profile,
-  with Backend/Web build contexts supplied through environment configuration.
-- Development database only for source-code work: `compose.yaml` with profile
-  `dev-db`.
-- Cloud/Managed: `compose.yaml` with profile `cloud` and immutable release-image
-  references.
-- Persistent Development: the complete `self-hosted` profile with a dedicated
-  Arcane project and `deploy/persistent-development.env.example`.
+- Local/persistent Development: build local application images first with
+  `scripts/build_self_hosted_source.py`, then run `compose.yaml` profile `self-hosted`.
+- Verified source acceptance: `scripts/compose_checked.py` exports exact committed
+  source, builds local images, then runs that exported `compose.yaml`.
+- Released Self-Hosted Production: `compose.yaml` profile `self-hosted` with published
+  versioned/digest-qualified OCI images; **no application source build on target**.
+- Development database only: profile `dev-db`.
+- Cloud/Managed: profile `cloud` with immutable digest-qualified release images.
 
-The complete Self-Hosted stack keeps one dependency order:
+Normal Self-Hosted ordering is:
 
 ```text
-postgres -> migrate -> demo-init(no-op outside Demo) -> api/worker -> web
+postgres -> migrate -> api/worker -> web
 ```
 
-The `migrate` service must succeed before API/worker start, and Web waits for API
-readiness. Production is never the first persistent environment to execute a new
-migration.
+`demo-init` is profile `demo` and is not part of ordinary Self-Hosted startup.
+`migrate` must succeed before API/worker, and Web waits for API readiness. Production is
+never the first persistent environment to execute a new migration.
 
-### 3.1 Raw Compose is not a release identity
+## 4. Local and persistent Development
 
-Direct `docker compose` from a complete checkout remains the convenient local/test
-path. Its backend and Web images deliberately report:
+### 4.1 Source image build boundary
 
-```text
-unverified-local-checkout
-```
+Development may build from the local checkout or remote Git contexts, but Compose itself
+remains image-only for application services.
 
-That marker cannot be replaced through `.env`. Therefore a dirty checkout or an
-operator-selected value cannot impersonate an approved commit.
-
-A complete-checkout release candidate or Production deployment must use
-`scripts/compose_checked.py`. The wrapper:
-
-- derives the exact 40-character revision from Git `HEAD`;
-- refuses a checkout with tracked or untracked changes;
-- optionally requires `--expected-revision` to match `HEAD` exactly;
-- injects that derived revision into backend **and** Web build arguments;
-- refuses alternate Compose files/project directories or profile overrides that
-  could detach the proof from the canonical checkout.
-
-Arcane does not use this wrapper because its build contexts and build identity are
-configured to the same Git revision through `SBS_BACKEND_BUILD_CONTEXT`,
-`SBS_WEB_BUILD_CONTEXT`, and `SBS_BUILD_REVISION`.
-
-## 4. Persistent Development
-
-### 4.1 Recommended Arcane setup
-
-Create a dedicated Arcane project, for example `sidebyside-development`, separate
-from any Production or Demo project.
-
-Use repository-root `compose.yaml` and start from
-`deploy/persistent-development.env.example`. The template selects:
+The local template uses:
 
 ```dotenv
-COMPOSE_PROFILES=self-hosted
-SBS_ENVIRONMENT=development
+SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local
+SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local
+SBS_SELF_HOSTED_PULL_POLICY=never
+SBS_BUILD_REVISION=unverified-local-checkout
+```
+
+Build then start:
+
+```bash
+python3 scripts/build_self_hosted_source.py --env-file .env
+docker compose --profile self-hosted --env-file .env \
+  up -d --wait --wait-timeout 300
+```
+
+The builder creates only backend/Web images. It does not create a second Compose
+manifest and refuses to use GHCR/digest-qualified release references as source-build
+target tags.
+
+### 4.2 Persistent Arcane Development
+
+Create a dedicated Arcane project, e.g. `sidebyside-development`, separate from
+Production and Demo. Start from `deploy/persistent-development.env.example`.
+
+For normal integration it may follow `main`:
+
+```dotenv
 SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
 SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
 SBS_BUILD_REVISION=main
+SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-development
+SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-development
+SBS_SELF_HOSTED_PULL_POLICY=never
 ```
 
-Replace every secret placeholder with a Development-only value. Never import the
-Production environment wholesale and edit only the hostname.
+Run `scripts/build_self_hosted_source.py` in the workspace/build environment, then start
+canonical `compose.yaml`. For release-candidate verification, pin both build contexts and
+`SBS_BUILD_REVISION` to the same exact candidate SHA before rebuilding the Development
+images.
 
-Development may follow `main` for ordinary integration. For release-candidate
-verification, pin all three source identity values to the exact same candidate
-commit SHA, rebuild/recreate the complete stack, and perform the promotion gates
-below against that exact candidate.
+### 4.3 Exposure policy
 
-### 4.2 Exposure policy
+Persistent Development is private/internal by default. Accepted exposure models are:
 
-`SBS_ENVIRONMENT=development` intentionally has less public-runtime hardening than
-Production. Therefore persistent Development is private/internal by default.
+1. loopback plus SSH/VPN;
+2. a controlled private management/test network;
+3. a protected TLS reverse proxy that is not an unrestricted public service.
 
-Accepted exposure models are:
+Do not publish unrestricted Development merely for device testing.
 
-1. loopback only plus SSH/VPN access;
-2. a private network address reachable only from a controlled management/test
-   network;
-3. a TLS reverse proxy protected by access control and not publicly discoverable.
+## 5. Revision and artifact policy
 
-Do not publish an unrestricted Development instance to the Internet merely to make
-Android testing convenient. If Android must reach it, provide a controlled private
-network/VPN path or a protected TLS origin.
+Revision semantics differ by environment:
 
-## 5. Source revision policy
+- PR/local: branch or PR source; not a published release;
+- ordinary Development: `main` may float;
+- release-candidate Development: exact candidate commit SHA;
+- Production: exact **published release** identity.
 
-The revision policy is intentionally different by environment:
+Production no longer rebuilds the same Git revision. #519/#827 promote the already-built
+backend/Web archives to GHCR and publish `self-hosted-image-identity.json`. Production
+selects the published versioned image references or the digest-qualified references from
+that record.
 
-- PR/local: branch or PR commit; raw Compose remains explicitly unverified;
-- normal Development: `main` may float;
-- release-candidate Development: exact commit SHA;
-- Production: exact immutable commit SHA only.
+A human-readable `vX.Y.Z` tag is part of the release identity, but the full chain is:
 
-A human-readable release tag may point to the production commit, but Arcane
-Production must pin both Git build contexts and `SBS_BUILD_REVISION` to the
-resolved 40-character commit SHA. This avoids relying on a movable tag during
-deployment.
-
-For v1, Self-Hosted/Arcane continues to support Git/BuildKit builds rather than
-introducing a container registry solely for promotion. Development and Production
-may rebuild the same immutable source; the invariant is **same verified source
-revision for all application components**, not byte-identical image layers.
-Cloud/Managed uses immutable release images through the `cloud` profile.
+```text
+product version -> Git tag -> source SHA -> release manifest -> artifact hashes -> OCI digests
+```
 
 ## 6. Deployed revision observability
 
-Backend and Web carry independent build identities so a mixed-version deployment
-cannot pass release smoke.
+Backend and Web carry source build identities so mixed releases cannot pass smoke.
 
-The API returns the backend identity on both health endpoints as:
+API health responses include:
 
 ```text
-X-SideBySide-Revision: <revision>
+X-SideBySide-Revision: <source-revision>
 ```
 
-The Web image exposes its build identity at:
+Web exposes:
 
 ```text
 /.well-known/sidebyside-revision
 ```
 
-For Arcane, both identities are derived from the same pinned revision through the
-two Git build contexts plus `SBS_BUILD_REVISION`. For a verified complete checkout,
-`scripts/compose_checked.py` injects the exact clean Git `HEAD` into both builds.
+For Development source images both identities derive from `SBS_BUILD_REVISION`. For a
+published release they derive from the source revision that produced the #193 archives.
 
-A release smoke check must require **both** Web and API identities to equal the
-expected candidate/Production commit. A healthy component serving the wrong
-revision, or a stale Web image paired with a new backend, is a failed promotion.
+Release smoke requires both identities to equal the selected release/candidate source
+SHA. A healthy stale component is still a failed promotion.
 
 ## 7. Promotion gates
 
-Production promotion is allowed only when all of the following are true for the
-candidate commit:
+Production promotion is allowed only when all relevant conditions are true:
 
-1. repository CI is green;
+1. repository CI/security/privacy/reuse/supply-chain gates are green;
 2. migration/schema-drift checks are green;
-3. OpenAPI and generated clients are consistent when affected;
-4. security/privacy/reuse/supply-chain/engineering-language gates are green;
-5. candidate commit is deployed to persistent Development;
-6. Development migration succeeds;
-7. API readiness and Web health succeed;
-8. Web and API deployment identities both equal the candidate commit;
-9. authenticated sign-in and one authenticated core read succeed;
-10. affected manual acceptance paths are exercised where automated coverage is
-    insufficient;
-11. worker/job behavior is checked when the release changes asynchronous work;
-12. media read/write behavior is checked in Development when the release changes
-    media;
-13. rollback/forward-fix implications of every new migration are known;
-14. the repository recovery gate is green and Production has a fresh coordinated
-    recovery point according to `SELF-HOSTED-RECOVERY.md` before migration.
+3. OpenAPI/generated clients are consistent when affected;
+4. exact candidate source is deployed to persistent Development;
+5. Development migration succeeds;
+6. API readiness and Web health succeed;
+7. Web/API source identities match the candidate SHA;
+8. authenticated sign-in and one authenticated core read succeed;
+9. affected manual paths are accepted where automation is insufficient;
+10. worker behavior is checked when asynchronous work changed;
+11. media read/write is checked when media behavior changed;
+12. rollback/forward-fix implications of migrations are known;
+13. repository recovery gates are green;
+14. a fresh coordinated Production recovery point exists before migration;
+15. the candidate is frozen/published through the protected release workflow;
+16. Production deploys the **same published artifact identity**, not a rebuild.
 
-A failing Development deployment blocks ordinary Production promotion.
+A failing Development deployment or release publication blocks Production promotion.
 
 ## 8. Smoke verification
 
-The non-destructive network smoke helper is:
+Use:
 
 ```bash
 python3 scripts/deployment_smoke.py \
@@ -224,171 +200,138 @@ python3 scripts/deployment_smoke.py \
   --expected-revision <candidate-sha>
 ```
 
-It verifies:
+It verifies Web health/revision, API/database readiness and API revision. With
+`SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD`, it also performs password sign-in and a
+non-destructive authenticated membership read.
 
-- Web `/healthz`;
-- Web `/.well-known/sidebyside-revision`;
-- API `/api/v1/health/ready` and database readiness;
-- API `X-SideBySide-Revision`;
-- exact equality of both component identities with the requested revision;
-- optionally, password sign-in plus `GET /api/v1/auth/memberships` when
-  `SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD` are provided.
+Smoke credentials must be fictional/operator test credentials appropriate to that
+environment and must not be committed.
 
-Smoke credentials must belong to a fictional Development/operator smoke account
-appropriate for the target environment and must not be committed. Do not use a
-real user's credentials as an automated test secret.
-
-The remote smoke helper deliberately does not create or modify product content.
-When a release affects worker jobs or media writes, exercise those paths in
-Development with fictional data and verify the worker remains healthy. Production
-post-deploy smoke should remain non-destructive unless a separately approved
-operator test account and cleanup procedure exist.
-
-For a host with Compose access, additionally verify:
+For host-level inspection:
 
 ```bash
-docker compose --profile self-hosted ps
-docker compose --profile self-hosted logs --tail=100 migrate api worker web
+docker compose --profile self-hosted --env-file .env ps
+docker compose --profile self-hosted --env-file .env logs --tail=100 migrate api worker web
 ```
 
-`migrate` must have exited successfully; API and Web must be healthy; worker must
-be running.
+`migrate` must have exited successfully; API/Web must be healthy; worker must run.
 
 ## 9. Migration safety
 
 Every new Alembic migration follows this order:
 
-1. CI migration and schema-drift validation;
+1. CI migration/schema-drift validation;
 2. candidate deployment to persistent Development;
-3. `migrate` succeeds against Development's persistent database;
-4. affected read/write path is exercised;
-5. backup requirement and downgrade compatibility are reviewed;
-6. only then may Production run the migration.
+3. migration against Development's persistent database;
+4. affected read/write acceptance;
+5. backup and compatibility review;
+6. protected release publication;
+7. only then Production migration.
 
-Do not describe `git checkout` as a complete rollback strategy. If a migration is
-not safely reversible, the recovery plan is normally a forward fix or restore from
-a verified pre-change backup plus a compatible application revision.
+Do not describe application redeployment as a complete database rollback strategy. For
+incompatible changes, use an explicitly tested forward fix/downgrade or restore the
+verified pre-change recovery point with a compatible application release.
 
-High-risk schema changes require a confirmed Production backup/restore point before
-promotion.
-
-The complete PostgreSQL, LocalMediaStore, configuration/secret, and S3 consistency
-contract is defined in `SELF-HOSTED-RECOVERY.md`. A database-only dump is not a
-complete recovery point when the instance stores media.
+`SELF-HOSTED-RECOVERY.md` defines the PostgreSQL, LocalMediaStore,
+configuration/secret and deletion-journal recovery contract.
 
 ## 10. Release and Production promotion
 
-After CI and Development acceptance, resolve and record the immutable candidate:
+### 10.1 Freeze and publish
 
-```bash
-CANDIDATE=$(git rev-parse <candidate-ref>^{commit})
-git tag -a vX.Y.Z "$CANDIDATE" -m "SidebySide vX.Y.Z"
-git push origin vX.Y.Z
-```
+Do not manually create launch tags as a substitute for #519. Freeze the exact candidate
+on `main` and execute `.github/workflows/release-publish.yml` through the protected
+`production-release` environment.
 
-A tag is the human release name; `$CANDIDATE` is the deployment identity.
+The workflow produces the authoritative Git tag/GitHub Release, release manifest,
+SBOM/attestation evidence and `self-hosted-image-identity.json`.
 
-### 10.1 Arcane Production
+### 10.2 Self-Hosted Production
 
-Use repository-root `compose.yaml`, set `COMPOSE_PROFILES=self-hosted`, and pin:
+Start from `deploy/self-hosted-release.env.example`. Select the exact product release:
 
 ```dotenv
-SBS_ENVIRONMENT=production
-SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#<CANDIDATE>:backend
-SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#<CANDIDATE>:web
-SBS_BUILD_REVISION=<CANDIDATE>
+SBS_RELEASE_VERSION=X.Y.Z
 ```
 
-Rebuild/recreate the complete Arcane stack and run the smoke helper with exactly
-that candidate SHA.
+For strict locking, set the two digest-qualified references from the release identity
+asset:
 
-### 10.2 Complete-checkout Production
+```dotenv
+SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
+SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
+```
 
-Use a trusted checkout at the candidate, verify it is clean, and deploy only
-through the checked wrapper:
+Then:
 
 ```bash
-git checkout "$CANDIDATE"
-git status --short
-python3 scripts/compose_checked.py \
-  --expected-revision "$CANDIDATE" \
-  up -d --build --force-recreate --wait --wait-timeout 300
+docker compose --profile self-hosted --env-file .env config --quiet
+docker compose --profile self-hosted --env-file .env pull
+docker compose --profile self-hosted --env-file .env \
+  up -d --wait --wait-timeout 300
 ```
 
-The wrapper refuses dirty or mismatched source before Docker Compose runs. Do not
-replace this release command with raw `docker compose`; raw Compose intentionally
-reports `unverified-local-checkout` and cannot satisfy a commit-specific smoke.
+Production must not invoke `scripts/build_self_hosted_source.py` or use
+`scripts/compose_checked.py` as a release substitute.
 
-After either deployment path, confirm migrations, readiness, Web health, and both
-revision identities before declaring the release complete.
+After deployment, confirm migration, readiness, Web health, and both source revision
+identities against the published release manifest.
 
 ## 11. Rollback and recovery
 
 Before every Production promotion record:
 
-- current Production commit SHA;
-- candidate commit SHA;
-- latest verified coordinated database/media backup plus separately protected
-  configuration and secrets;
-- migrations introduced between the two commits;
+- current published Production release/version/source SHA and OCI identity;
+- candidate release/version/source SHA and OCI identity;
+- latest verified coordinated database/media recovery point;
+- separately protected configuration/secrets/deletion journal;
+- migrations introduced between releases;
 - whether application rollback is schema-compatible.
 
-If the candidate fails before an incompatible migration is committed, redeploy the
-previous known-good commit SHA and repeat smoke verification. Arcane pins all three
-build identity values back to the previous SHA; a complete checkout uses the same
-verified wrapper against a clean checkout at the old SHA.
+If the candidate fails before an incompatible migration is committed, select the
+previous-known-good **published** application/image identity and repeat smoke verification.
 
-If the candidate has already applied a schema change that is not backward
-compatible, do **not** blindly redeploy old code. Choose one of:
-
-- forward-fix application/schema;
-- explicitly tested downgrade migration;
-- restore the pre-change database backup and redeploy the previous revision.
-
-Media compatibility must be reviewed separately when the release changes media
-formats, storage keys, or lifecycle semantics.
+If an incompatible schema change is already applied, do not blindly start the old
+image. Choose a tested forward fix, downgrade migration, or coordinated restore per
+#190/#375. Media compatibility is reviewed separately when formats/storage semantics
+changed.
 
 ## 12. Demo relationship
 
 The public Demo remains independent:
 
 ```text
-Local / PR -> Development -> Production
+Local / PR -> Development -> published release -> Production
                   X
                   |
                 Demo
 ```
 
-Demo can receive its own chosen revision for product demonstrations, but its health
-is not a substitute for Development acceptance. Demo data/storage must not be
-promoted into Production.
+Demo can receive an approved artifact for demonstration, but its health is not a
+substitute for Development acceptance. Demo data/storage is never promoted to
+Production.
 
 ## 13. CI versus operator responsibility
 
-CI owns deterministic repository checks: tests, migrations from clean schemas,
+CI owns deterministic repository checks: tests, migration/schema drift,
 OpenAPI/client drift, security/privacy/reuse/supply-chain rules, Compose rendering,
-verified-checkout refusal behavior, Web/API revision parity, and the deployment
-guard.
+source-build helper boundaries, release-publication contracts, revision parity, and the
+deployment/recovery guards.
 
-Operators own environment facts CI cannot prove from the repository: actual secret
-separation, persistent Development health, external reverse proxy/TLS behavior,
-offsite archive/key availability, real restore drills and timing, provider-specific
-S3 consistency, manual release acceptance, and the final Production promotion.
+Operators own facts CI cannot prove from source alone: actual secret separation,
+persistent Development health, external TLS/ingress, offsite backup/key availability,
+real restore timing, provider-specific storage behavior, protected signing environment
+configuration, release approval, and final Production promotion.
 
-## 14. Completion evidence for #375
+## 14. Completion evidence
 
-Repository-side implementation is complete when this runbook, the persistent
-Development template, revision reporting, smoke helper, isolation check, and CI
-coverage are merged.
-
-The final operational acceptance criterion for #375 requires one real end-to-end
-exercise on the intended infrastructure:
+Repository implementation does not prove infrastructure promotion by itself. The final
+operational evidence must bind one exact candidate/release through:
 
 ```text
-candidate -> persistent Development -> migrate/smoke/accept -> immutable commit ->
-Production -> post-deploy smoke
+candidate source -> persistent Development -> migrate/smoke/accept -> protected release
+publication -> exact published OCI identity -> Production -> post-deploy smoke
 ```
 
-Do not mark that infrastructure exercise complete merely because CI passed. Record
-the Development and Production revision SHAs and the successful smoke result in the
-issue/PR when the exercise is actually performed.
+Record the Development/Production source SHA, published release identity, image identity,
+and successful smoke result when the exercise is actually performed.
