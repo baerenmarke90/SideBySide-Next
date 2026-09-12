@@ -541,6 +541,94 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     await expect(links.nth(3)).toHaveAttribute('aria-current', 'page');
   });
 
+  test('Our Moments child route stays under More and reflows without exposing sparse counts', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installApiMocks(page);
+
+    await page.route(`**/api/v1/spaces/${SPACE_ID}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: SPACE_ID,
+          createdAt: TEST_NOW,
+          partners: [
+            { id: ACCOUNT_ID, displayName: 'Anna' },
+            {
+              id: '44444444-4444-4444-8444-444444444444',
+              displayName: 'Alex',
+            },
+          ],
+        }),
+      });
+    });
+    await page.route(
+      `**/api/v1/spaces/${SPACE_ID}/games/moments/candidates`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: [
+              {
+                memoryId: '55555555-5555-4555-8555-555555555555',
+                title: 'Shared memory A',
+                effectiveDate: '2026-05-01',
+                imageAttachmentId: '66666666-6666-4666-8666-666666666666',
+              },
+              {
+                memoryId: '77777777-7777-4777-8777-777777777777',
+                title: 'Shared memory B',
+                effectiveDate: '2026-06-01',
+                imageAttachmentId: '88888888-8888-4888-8888-888888888888',
+              },
+            ],
+          }),
+        });
+      },
+    );
+
+    await page.goto('/login');
+    await signIn(page);
+    await page.waitForURL('**/today');
+    await page.goto('/games/our-moments');
+
+    await expect(
+      page.getByRole('heading', {
+        name: games.entries.moments.title,
+        level: 1,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(games.momentsGame.sparseTitle)).toBeVisible();
+
+    const links = page.locator('.mobile-bottom-nav a.shell-nav-link');
+    await expect(links.nth(3)).toHaveClass(/shell-nav-link-active/);
+    await expect(links.nth(3)).toHaveAttribute('aria-current', 'page');
+
+    const axe390 = await new AxeBuilder({ page })
+      .include('.our-moments-page')
+      .analyze();
+    expect(axe390.violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath('our-moments-sparse-390.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 320, height: 640 });
+    await expectNoHorizontalOverflow(page);
+    await expect(page.getByText(games.momentsGame.sparseTitle)).toBeVisible();
+    const axe320 = await new AxeBuilder({ page })
+      .include('.our-moments-page')
+      .analyze();
+    expect(axe320.violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath('our-moments-sparse-320.png'),
+      fullPage: true,
+    });
+  });
+
   test('scroll clearance: Memory Create actions scroll fully clear of floating navigation', async ({
     page,
   }) => {
