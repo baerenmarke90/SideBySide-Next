@@ -12,11 +12,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+LOCAL_TAG_COMPONENT_RE = re.compile(r"^[a-z0-9_][a-z0-9_.-]{0,127}$")
 
 
 class SourceBuildError(RuntimeError):
@@ -46,28 +48,61 @@ def effective(values: dict[str, str], key: str, default: str = "") -> str:
     return values.get(key, default)
 
 
-def require_local_tag(reference: str, label: str) -> str:
-    if not reference or "@" in reference or reference.startswith("ghcr.io/"):
-        raise SourceBuildError(f"{label} must be a local non-registry image tag")
-    if ":" not in reference.rsplit("/", 1)[-1]:
-        raise SourceBuildError(f"{label} must include an explicit local tag")
+def require_local_tag(reference: str, label: str, repository: str) -> str:
+    """Accept only an unqualified SideBySide-local repository and explicit tag.
+
+    This is intentionally an allowlist rather than a blacklist for registry URLs.
+    Source-build output must never target a registry/digest identity or a different
+    repository name; publication is owned exclusively by the protected release job.
+    """
+
+    prefix = f"{repository}:"
+    if not reference.startswith(prefix):
+        raise SourceBuildError(f"{label} must use local repository {repository}")
+    tag = reference[len(prefix) :]
+    if not LOCAL_TAG_COMPONENT_RE.fullmatch(tag):
+        raise SourceBuildError(f"{label} must contain a safe explicit local tag")
     return reference
 
 
-def plan(env_file: Path, *, backend_context: str | None = None, web_context: str | None = None,
-         revision: str | None = None, backend_image: str | None = None,
-         web_image: str | None = None) -> dict[str, object]:
+def plan(
+    env_file: Path,
+    *,
+    backend_context: str | None = None,
+    web_context: str | None = None,
+    revision: str | None = None,
+    backend_image: str | None = None,
+    web_image: str | None = None,
+) -> dict[str, object]:
     values = read_dotenv(env_file)
-    resolved_revision = revision or effective(values, "SBS_BUILD_REVISION", "unverified-local-checkout")
-    resolved_backend_context = backend_context or effective(values, "SBS_BACKEND_BUILD_CONTEXT", str(ROOT / "backend"))
-    resolved_web_context = web_context or effective(values, "SBS_WEB_BUILD_CONTEXT", str(ROOT / "web"))
+    resolved_revision = revision or effective(
+        values, "SBS_BUILD_REVISION", "unverified-local-checkout"
+    )
+    resolved_backend_context = backend_context or effective(
+        values, "SBS_BACKEND_BUILD_CONTEXT", str(ROOT / "backend")
+    )
+    resolved_web_context = web_context or effective(
+        values, "SBS_WEB_BUILD_CONTEXT", str(ROOT / "web")
+    )
     resolved_backend_image = require_local_tag(
-        backend_image or effective(values, "SBS_SELF_HOSTED_BACKEND_IMAGE", "sidebyside-backend:source-local"),
+        backend_image
+        or effective(
+            values,
+            "SBS_SELF_HOSTED_BACKEND_IMAGE",
+            "sidebyside-backend:source-local",
+        ),
         "SBS_SELF_HOSTED_BACKEND_IMAGE",
+        "sidebyside-backend",
     )
     resolved_web_image = require_local_tag(
-        web_image or effective(values, "SBS_SELF_HOSTED_WEB_IMAGE", "sidebyside-web:source-local"),
+        web_image
+        or effective(
+            values,
+            "SBS_SELF_HOSTED_WEB_IMAGE",
+            "sidebyside-web:source-local",
+        ),
         "SBS_SELF_HOSTED_WEB_IMAGE",
+        "sidebyside-web",
     )
     return {
         "revision": resolved_revision,
@@ -79,8 +114,12 @@ def plan(env_file: Path, *, backend_context: str | None = None, web_context: str
             "VITE_SBS_API_BASE_URL": "",
             "VITE_SBS_DEMO_MODE": effective(values, "SBS_DEMO_MODE", "false"),
             "VITE_SBS_DEMO_URL": effective(values, "SBS_DEMO_PUBLIC_URL", ""),
-            "VITE_SBS_DEMO_RESET_TIMER": effective(values, "SBS_DEMO_MODE_RESET_TIMER", "false"),
-            "VITE_SBS_DEMO_RESET_INTERVAL": effective(values, "SBS_DEMO_MODE_RESET_INTERVAL", "6h"),
+            "VITE_SBS_DEMO_RESET_TIMER": effective(
+                values, "SBS_DEMO_MODE_RESET_TIMER", "false"
+            ),
+            "VITE_SBS_DEMO_RESET_INTERVAL": effective(
+                values, "SBS_DEMO_MODE_RESET_INTERVAL", "6h"
+            ),
         },
     }
 
@@ -88,15 +127,20 @@ def plan(env_file: Path, *, backend_context: str | None = None, web_context: str
 def run_build(build_plan: dict[str, object]) -> None:
     revision = str(build_plan["revision"])
     backend = [
-        "docker", "build",
-        "--build-arg", f"SBS_BUILD_REVISION={revision}",
-        "--tag", str(build_plan["backendImage"]),
+        "docker",
+        "build",
+        "--build-arg",
+        f"SBS_BUILD_REVISION={revision}",
+        "--tag",
+        str(build_plan["backendImage"]),
         str(build_plan["backendContext"]),
     ]
     web = ["docker", "build", "--build-arg", f"SBS_BUILD_REVISION={revision}"]
     for key, value in dict(build_plan["webBuildArgs"]).items():
         web.extend(["--build-arg", f"{key}={value}"])
-    web.extend(["--tag", str(build_plan["webImage"]), str(build_plan["webContext"])])
+    web.extend(
+        ["--tag", str(build_plan["webImage"]), str(build_plan["webContext"])]
+    )
     try:
         subprocess.run(backend, cwd=ROOT, check=True)
         subprocess.run(web, cwd=ROOT, check=True)
