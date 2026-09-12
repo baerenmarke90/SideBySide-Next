@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import '../i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
@@ -102,9 +108,15 @@ describe('PlanStoryContinuation', () => {
       }),
     );
 
-    const title = screen.getByLabelText(i18n.t('m5s3.common.title')) as HTMLInputElement;
-    const date = screen.getByLabelText(i18n.t('m5s3.plan.experiencedOn')) as HTMLInputElement;
-    const note = screen.getByLabelText(i18n.t('m5s3.planStory.noteLabel')) as HTMLTextAreaElement;
+    const title = screen.getByLabelText(
+      i18n.t('m5s3.common.title'),
+    ) as HTMLInputElement;
+    const date = screen.getByLabelText(
+      i18n.t('m5s3.plan.experiencedOn'),
+    ) as HTMLInputElement;
+    const note = screen.getByLabelText(
+      i18n.t('m5s3.planStory.noteLabel'),
+    ) as HTMLTextAreaElement;
 
     expect(title.value).toBe('Picnic in the park');
     expect(date.value).toBe('2026-09-14');
@@ -132,10 +144,14 @@ describe('PlanStoryContinuation', () => {
     ) as HTMLSelectElement;
     fireEvent.change(chapterChoice, { target: { value: 'chapter-1' } });
     fireEvent.click(
-      screen.getByRole('button', { name: i18n.t('m5s3.planStory.chapterLink') }),
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.planStory.chapterLink'),
+      }),
     );
 
-    await waitFor(() => expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(1),
+    );
     expect(mocks.linkChapterMemory).toHaveBeenCalledWith({
       spaceId: 'space-1',
       chapterId: 'chapter-1',
@@ -173,7 +189,9 @@ describe('PlanStoryContinuation', () => {
     ) as HTMLSelectElement;
     fireEvent.change(chapterChoice, { target: { value: 'chapter-1' } });
     fireEvent.click(
-      screen.getByRole('button', { name: i18n.t('m5s3.planStory.chapterLink') }),
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.planStory.chapterLink'),
+      }),
     );
 
     await waitFor(() =>
@@ -222,7 +240,9 @@ describe('PlanStoryContinuation', () => {
     );
 
     await waitFor(() => expect(mocks.createChapter).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(1),
+    );
 
     fireEvent.click(
       await screen.findByRole('button', {
@@ -230,7 +250,9 @@ describe('PlanStoryContinuation', () => {
       }),
     );
 
-    await waitFor(() => expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mocks.linkChapterMemory).toHaveBeenCalledTimes(2),
+    );
     expect(mocks.createMemory).toHaveBeenCalledTimes(1);
     expect(mocks.createChapter).toHaveBeenCalledTimes(1);
   });

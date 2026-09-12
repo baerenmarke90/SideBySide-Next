@@ -203,13 +203,17 @@ function ChapterContinuation({
               value={choice}
               onChange={(event) => setChoice(event.target.value)}
             >
-              <option value="">{t('m5s3.planStory.chapterChoicePlaceholder')}</option>
+              <option value="">
+                {t('m5s3.planStory.chapterChoicePlaceholder')}
+              </option>
               {chaptersQuery.data.map((chapter) => (
                 <option key={chapter.id} value={chapter.id}>
                   {chapter.title}
                 </option>
               ))}
-              <option value={NEW_CHAPTER}>{t('m5s3.planStory.chapterNew')}</option>
+              <option value={NEW_CHAPTER}>
+                {t('m5s3.planStory.chapterNew')}
+              </option>
             </select>
             {choice && choice !== NEW_CHAPTER ? (
               <button type="submit" disabled={linkMutation.isPending}>
@@ -234,7 +238,9 @@ function ChapterContinuation({
               />
               <button
                 type="submit"
-                disabled={createChapterMutation.isPending || linkMutation.isPending}
+                disabled={
+                  createChapterMutation.isPending || linkMutation.isPending
+                }
               >
                 {createdChapterId
                   ? t('m5s3.planStory.chapterRetryLink')
@@ -434,7 +440,9 @@ export function PlanStoryContinuation({
             maxLength={200}
             defaultValue={plan.title}
           />
-          <label htmlFor="plan-story-date">{t('m5s3.plan.experiencedOn')}</label>
+          <label htmlFor="plan-story-date">
+            {t('m5s3.plan.experiencedOn')}
+          </label>
           <input
             id="plan-story-date"
             name="happenedOn"
@@ -442,7 +450,9 @@ export function PlanStoryContinuation({
             required
             defaultValue={dateOnlyInput(plan.experiencedOn)}
           />
-          <label htmlFor="plan-story-body">{t('m5s3.planStory.noteLabel')}</label>
+          <label htmlFor="plan-story-body">
+            {t('m5s3.planStory.noteLabel')}
+          </label>
           <textarea
             id="plan-story-body"
             name="body"
@@ -467,7 +477,9 @@ export function PlanStoryContinuation({
               {t('common.cancel')}
             </button>
           </div>
-          {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
+          {createMutation.error ? (
+            <ProblemState error={createMutation.error} />
+          ) : null}
         </form>
       ) : null}
 

@@ -105,7 +105,8 @@ const m5s3 = {
     },
   },
   planStory: {
-    intro: 'Möchtet ihr diesen Moment in eurer gemeinsamen Geschichte festhalten?',
+    intro:
+      'Möchtet ihr diesen Moment in eurer gemeinsamen Geschichte festhalten?',
     memoryAction: 'Erinnerung festhalten',
     milestoneAction: 'Meilenstein festhalten',
     chapterAction: 'Zu einem Kapitel hinzufügen',
