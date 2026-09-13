@@ -30,11 +30,7 @@ def _components() -> dict[str, dict]:
 
 
 def _wish_paths() -> set[str]:
-    return {
-        path
-        for path in _paths()
-        if path == COLLECTION or path.startswith(f"{COLLECTION}/")
-    }
+    return {path for path in _paths() if path == COLLECTION or path.startswith(f"{COLLECTION}/")}
 
 
 def test_wish_routes_have_frozen_operation_ids() -> None:
