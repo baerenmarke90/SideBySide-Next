@@ -196,6 +196,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
             '"deploy/self-hosted-release.env.example"',
             '"scripts/self_hosted_release.py"',
             '"scripts/check_runtime_environment.py"',
+            '"docs/SELF-HOSTING.md"',
         ):
             with self.subTest(path=path):
                 self.assertIn(path, self.workflow)
