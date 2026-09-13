@@ -32,8 +32,7 @@ export interface WishDetectiveGameSetup {
   rounds: readonly WishDetectiveCandidate[];
 }
 
-const HIDDEN_ROUND_STORAGE_PREFIX =
-  'sidebyside:wish-detective:hidden-round';
+const HIDDEN_ROUND_STORAGE_PREFIX = 'sidebyside:wish-detective:hidden-round';
 
 function wishDetectiveHiddenRoundStorageKey(
   spaceId: string,
