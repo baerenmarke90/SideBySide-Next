@@ -163,7 +163,7 @@ GitHub repository -> Settings -> Releases -> Enable release immutability
 
 If that setting is missing, the workflow publishes through a draft, detects that the
 final Release is not immutable, attempts cleanup of the just-created mutable Release/tag,
-and fails closed regardless of cleanup outcome.
+reports any cleanup failure explicitly, and fails closed regardless.
 
 ## Mandatory released launcher
 
