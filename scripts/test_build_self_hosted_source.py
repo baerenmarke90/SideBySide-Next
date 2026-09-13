@@ -100,6 +100,29 @@ class SourceBuildPlanTest(unittest.TestCase):
         ):
             plan(env_file)
 
+    def test_export_prefixed_production_dotenv_is_rejected(self) -> None:
+        temporary, env_file = self.write_env(
+            "export SBS_ENVIRONMENT=production",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
+
+    def test_last_duplicate_environment_assignment_wins(self) -> None:
+        temporary, env_file = self.write_env(
+            "SBS_ENVIRONMENT=development",
+            "SBS_ENVIRONMENT=production",
+            "SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local",
+            "SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local",
+        )
+        with temporary, patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            SourceBuildError, self.PRODUCTION_ERROR
+        ):
+            plan(env_file)
+
     def test_production_with_compose_inline_comment_is_rejected(self) -> None:
         temporary, env_file = self.write_env(
             "SBS_ENVIRONMENT=production # deployed",
