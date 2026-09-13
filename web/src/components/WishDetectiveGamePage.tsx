@@ -1,11 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { GamesApi } from '../api/generated/apis/GamesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
@@ -140,11 +134,11 @@ function WishDetectiveSessionView({
   const clueGroupId = useId();
   const [guess, setGuess] = useState('');
   const [validationAttempted, setValidationAttempted] = useState(false);
-  const session = useMemo(() => {
+  const [session] = useState(() => {
     const next = createLocalWishDetectiveSession();
     next.start(setup.rounds, setup.participants);
     return next;
-  }, [setup.participants, setup.rounds]);
+  });
 
   useEffect(() => () => session.dispose(), [session]);
 
@@ -189,7 +183,7 @@ function WishDetectiveSessionView({
         </p>
         <p className="wish-detective-finish-score">
           {participants[0].displayName} {snapshot.scores[0]} ·{' '}
-          {participants[1].displayName} {snapshot.scores[1]}
+          {participants[1].displayName} <strong>{snapshot.scores[1]}</strong>
         </p>
         <div className="wish-detective-actions">
           <button
@@ -436,7 +430,7 @@ export function WishDetectiveGamePage({
     hasWishDetectiveHiddenRoundMarker(hiddenRoundStorageKey),
   );
   const setupQuery = useQuery({
-    queryKey: ['games', 'wish-detective', 'setup', spaceId],
+    queryKey: ['games', 'wish-detective', 'setup', spaceId, currentAccountId],
     queryFn: async () => {
       try {
         return loadSetup
