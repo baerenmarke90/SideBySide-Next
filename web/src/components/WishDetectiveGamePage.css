@@ -79,13 +79,13 @@
 .wish-detective-reveal-correct {
   border-color: color-mix(
     in srgb,
-    var(--color-success-text) 30%,
+    var(--color-success) 30%,
     var(--color-border-subtle)
   );
   background:
     radial-gradient(
       circle at 88% 8%,
-      var(--color-success-surface),
+      var(--color-shared-surface),
       transparent 46%
     ),
     var(--color-surface-raised);
@@ -94,7 +94,7 @@
 .wish-detective-reveal-incorrect {
   border-color: color-mix(
     in srgb,
-    var(--color-error-text) 24%,
+    var(--color-error) 24%,
     var(--color-border-subtle)
   );
 }
@@ -176,11 +176,11 @@
 }
 
 .wish-detective-clue-field input[aria-invalid="true"] {
-  border-color: var(--color-error-text);
+  border-color: var(--color-error);
 }
 
 .wish-detective-clue-field .field-error {
-  color: var(--color-error-text);
+  color: var(--color-error);
   font-size: 0.9rem;
 }
 
