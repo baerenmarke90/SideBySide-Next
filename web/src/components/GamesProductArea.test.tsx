@@ -5,7 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
-import { GAMES_MOMENTS_ROUTE } from '../client/routes';
+import {
+  GAMES_MOMENTS_ROUTE,
+  GAMES_WISH_DETECTIVE_ROUTE,
+} from '../client/routes';
 import games from '../i18n/locales/games';
 import { GAMES_COUPLE_CAPABILITY, GamesProductArea } from './GamesProductArea';
 
@@ -73,7 +76,7 @@ describe('GamesProductArea', () => {
     expect(detailsButton.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('opens Our Moments for the centralized Games capability while later games remain unavailable', async () => {
+  it('opens the implemented sofa games while later games remain unavailable', async () => {
     renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
 
     await waitFor(() => {
@@ -81,12 +84,18 @@ describe('GamesProductArea', () => {
     });
     expect(screen.queryByText(games.premium.title)).toBeNull();
     expectFiveGameEntries();
-    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(4);
+    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(3);
 
     const momentsLink = screen.getByRole('link', {
       name: new RegExp(games.entries.moments.title),
     });
     expect(momentsLink.textContent).toContain(games.status.playNow);
     expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
+
+    const wishesLink = screen.getByRole('link', {
+      name: new RegExp(games.entries.wishes.title),
+    });
+    expect(wishesLink.textContent).toContain(games.status.playNow);
+    expect(wishesLink.getAttribute('href')).toBe(GAMES_WISH_DETECTIVE_ROUTE);
   });
 });

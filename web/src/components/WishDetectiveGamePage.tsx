@@ -96,10 +96,7 @@ function WishDetectiveSessionView({
   setup,
 }: {
   setup: WishDetectiveGameSetup & {
-    participants: readonly [
-      WishDetectiveParticipant,
-      WishDetectiveParticipant,
-    ];
+    participants: readonly [WishDetectiveParticipant, WishDetectiveParticipant];
   };
 }) {
   const { t } = useTranslation();
@@ -192,9 +189,7 @@ function WishDetectiveSessionView({
               name: giver.displayName,
             })}
           </p>
-          <h2 id="wish-detective-clue-title">
-            {snapshot.currentWish.title}
-          </h2>
+          <h2 id="wish-detective-clue-title">{snapshot.currentWish.title}</h2>
           <p className="wish-detective-private-note">
             {t('games.wishDetective.cluePrivate')}
           </p>
@@ -321,9 +316,7 @@ function WishDetectiveSessionView({
             <button
               type="button"
               disabled={!guess.trim()}
-              onClick={() =>
-                session.dispatch({ type: 'SUBMIT_GUESS', guess })
-              }
+              onClick={() => session.dispatch({ type: 'SUBMIT_GUESS', guess })}
             >
               {t('games.wishDetective.submitGuess')}
             </button>

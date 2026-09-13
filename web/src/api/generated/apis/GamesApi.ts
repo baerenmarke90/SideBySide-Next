@@ -19,12 +19,21 @@ import {
     GameMemoryCandidateSetToJSON,
 } from '../models/GameMemoryCandidateSet';
 import {
+    type GameWishCandidateSet,
+    GameWishCandidateSetFromJSON,
+    GameWishCandidateSetToJSON,
+} from '../models/GameWishCandidateSet';
+import {
     type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 
 export interface GetGameMomentCandidatesRequest {
+    spaceId: string;
+}
+
+export interface GetGameWishCandidatesRequest {
     spaceId: string;
 }
 
@@ -77,6 +86,53 @@ export class GamesApi extends runtime.BaseAPI {
      */
     async getGameMomentCandidates(requestParameters: GetGameMomentCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GameMemoryCandidateSet> {
         const response = await this.getGameMomentCandidatesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getGameWishCandidates without sending the request
+     */
+    async getGameWishCandidatesRequestOpts(requestParameters: GetGameWishCandidatesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling getGameWishCandidates().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/games/wishes/candidates`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return Premium-authorized OPEN shared Wishes for #864.
+     * Get Game Wish Candidates
+     */
+    async getGameWishCandidatesRaw(requestParameters: GetGameWishCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GameWishCandidateSet>> {
+        const requestOptions = await this.getGameWishCandidatesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GameWishCandidateSetFromJSON(jsonValue));
+    }
+
+    /**
+     * Return Premium-authorized OPEN shared Wishes for #864.
+     * Get Game Wish Candidates
+     */
+    async getGameWishCandidates(requestParameters: GetGameWishCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GameWishCandidateSet> {
+        const response = await this.getGameWishCandidatesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -32,10 +32,9 @@ export interface WishDetectiveReveal {
 
 export interface WishDetectiveSessionSnapshot {
   phase: WishDetectivePhase;
-  participants: readonly [
-    WishDetectiveParticipant,
-    WishDetectiveParticipant,
-  ] | null;
+  participants:
+    | readonly [WishDetectiveParticipant, WishDetectiveParticipant]
+    | null;
   currentRoundIndex: number;
   totalRounds: number;
   roundsPlayed: number;
@@ -64,10 +63,7 @@ export type WishDetectiveSessionAction =
 export interface WishDetectiveSession {
   start(
     rounds: readonly WishDetectiveCandidate[],
-    participants: readonly [
-      WishDetectiveParticipant,
-      WishDetectiveParticipant,
-    ],
+    participants: readonly [WishDetectiveParticipant, WishDetectiveParticipant],
   ): void;
   restart(): void;
   dispatch(action: WishDetectiveSessionAction): void;
@@ -152,18 +148,19 @@ function shuffled<T>(items: readonly T[], random: () => number): T[] {
 
 export function selectWishDetectiveRounds(
   candidates: readonly WishDetectiveCandidate[],
-  participants: readonly [
-    WishDetectiveParticipant,
-    WishDetectiveParticipant,
-  ],
+  participants: readonly [WishDetectiveParticipant, WishDetectiveParticipant],
   random: () => number = Math.random,
 ): WishDetectiveCandidate[] {
   const first = shuffled(
-    candidates.filter((candidate) => candidate.createdBy === participants[0].id),
+    candidates.filter(
+      (candidate) => candidate.createdBy === participants[0].id,
+    ),
     random,
   );
   const second = shuffled(
-    candidates.filter((candidate) => candidate.createdBy === participants[1].id),
+    candidates.filter(
+      (candidate) => candidate.createdBy === participants[1].id,
+    ),
     random,
   );
   const roundsPerPartner = Math.min(
@@ -241,10 +238,7 @@ export function isWishDetectiveGuessCorrect(
 
 function playerIndexes(
   wish: WishDetectiveCandidate,
-  participants: readonly [
-    WishDetectiveParticipant,
-    WishDetectiveParticipant,
-  ],
+  participants: readonly [WishDetectiveParticipant, WishDetectiveParticipant],
 ): readonly [0 | 1, 0 | 1] {
   const giverIndex: 0 | 1 = wish.createdBy === participants[0].id ? 0 : 1;
   return [giverIndex, giverIndex === 0 ? 1 : 0];
@@ -377,16 +371,17 @@ export function createLocalWishDetectiveSession(): WishDetectiveSession {
     start(rounds, participants) {
       if (disposed) return;
       sourceRounds = rounds.map((round) => ({ ...round }));
-      sourceParticipants = [
-        { ...participants[0] },
-        { ...participants[1] },
-      ];
-      const participantIds = new Set(participants.map((participant) => participant.id));
+      sourceParticipants = [{ ...participants[0] }, { ...participants[1] }];
+      const participantIds = new Set(
+        participants.map((participant) => participant.id),
+      );
       if (
         participantIds.size !== 2 ||
         sourceRounds.some((round) => !participantIds.has(round.createdBy))
       ) {
-        throw new Error('Wish Detective requires two stable participant identities.');
+        throw new Error(
+          'Wish Detective requires two stable participant identities.',
+        );
       }
       beginGame();
     },

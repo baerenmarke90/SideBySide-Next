@@ -17,6 +17,7 @@ from sidebyside.attachments.binding import MemoryAttachment
 from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
 from sidebyside.authorization import AuthorizationContext, readable
 from sidebyside.memories.models import Memory
+from sidebyside.wishes.models import Wish, WishStatus
 
 MAX_MEMORY_CANDIDATES = 24
 """Maximum useful candidate pool returned to one local sofa-mode round client.
@@ -25,6 +26,10 @@ The query is not based on a Story page. It scans the authorized photo-backed
 Memory set until this many usable candidates have been collected, so sparse
 state cannot be inferred merely from one paginated timeline page.
 """
+
+
+MAX_WISH_CANDIDATES = 32
+"""Maximum useful Wish candidate pool returned to one sofa-mode client."""
 
 
 @dataclass(frozen=True)
@@ -104,4 +109,49 @@ def read_memory_candidates(
         if len(candidates) >= limit:
             break
 
+    return candidates
+
+
+@dataclass(frozen=True)
+class WishCandidate:
+    wish_id: UUID
+    created_by: UUID
+    title: str
+
+
+def read_wish_candidates(
+    session: Session,
+    context: AuthorizationContext,
+    *,
+    limit: int = MAX_WISH_CANDIDATES,
+) -> list[WishCandidate]:
+    """Return bounded OPEN Wishes eligible for #864 Wunschdetektiv.
+
+    Normal Wish authorization remains authoritative through ``readable()``.
+    ``owner_id`` is the existing stable ``createdBy`` attribution used to bind
+    each round to its giver. GiftIdea is a separate OWNER_ONLY domain and is
+    structurally outside this query.
+    """
+    if limit <= 0:
+        return []
+
+    statement = (
+        readable(Wish, context)
+        .where(Wish.status == WishStatus.OPEN.value)
+        .order_by(Wish.created_at.desc(), Wish.id.desc())
+    )
+    candidates: list[WishCandidate] = []
+    for wish in session.execute(statement).scalars().yield_per(100):
+        title = wish.payload.title.strip()
+        if not title:
+            continue
+        candidates.append(
+            WishCandidate(
+                wish_id=wish.id,
+                created_by=wish.owner_id,
+                title=title,
+            )
+        )
+        if len(candidates) >= limit:
+            break
     return candidates

@@ -84,9 +84,7 @@ def _candidates(client, couple, *, token=None, space_id=None):  # type: ignore[n
     )
 
 
-def test_wish_candidates_require_games_capability(
-    client, session: Session, couple
-) -> None:  # type: ignore[no-untyped-def]
+def test_wish_candidates_require_games_capability(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]
     _wish(
         session,
         space_id=couple["space"].id,
@@ -175,9 +173,7 @@ def test_wish_candidate_set_is_identical_for_both_partners_and_tenant_guarded(
     assert outsider.json()["code"] == "SPACE_NOT_FOUND"
 
 
-def test_wish_candidate_pool_is_bounded_without_total(
-    client, session: Session, couple
-) -> None:  # type: ignore[no-untyped-def]
+def test_wish_candidate_pool_is_bounded_without_total(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]
     _grant_games(session, couple)
     for index in range(MAX_WISH_CANDIDATES + 5):
         _wish(

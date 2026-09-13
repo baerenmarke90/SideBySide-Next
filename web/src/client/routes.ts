@@ -124,6 +124,7 @@ export const SERVER_ADMIN_ROUTE = '/server-admin';
 /* Games content ---------------------------------------------------------- */
 
 export const GAMES_MOMENTS_ROUTE = '/games/our-moments';
+export const GAMES_WISH_DETECTIVE_ROUTE = '/games/wish-detective';
 
 /* Story content ---------------------------------------------------------- */
 

@@ -59,6 +59,8 @@ export * from './EntitlementTier';
 export * from './ExportStatus';
 export * from './GameMemoryCandidate';
 export * from './GameMemoryCandidateSet';
+export * from './GameWishCandidate';
+export * from './GameWishCandidateSet';
 export * from './GiftIdeaCreate';
 export * from './GiftIdeaDetail';
 export * from './GiftIdeaPage';
