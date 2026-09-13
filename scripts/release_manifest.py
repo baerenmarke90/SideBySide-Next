@@ -65,6 +65,10 @@ def require_semver(version: str) -> None:
         raise ManifestError(
             "Product version must not include SemVer build metadata because immutable OCI release tags do not permit '+'"
         )
+    if len(f"v{version}") > 128:
+        raise ManifestError(
+            "Product version is too long for the immutable OCI release tag"
+        )
 
 
 def require_digest_image_reference(value: object, *, label: str) -> tuple[str, str]:
