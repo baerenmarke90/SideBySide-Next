@@ -153,6 +153,15 @@ class ReleaseManifestTest(unittest.TestCase):
         with self.assertRaises(release_manifest.ManifestError):
             release_manifest.validate_evidence(self.evidence, "0.1.0")
 
+    def test_semver_build_metadata_is_rejected_before_publication(self) -> None:
+        self.evidence["android"]["versionName"] = "1.2.3+build.7"
+        with self.assertRaisesRegex(release_manifest.ManifestError, "build metadata"):
+            release_manifest.validate_evidence(self.evidence, "1.2.3+build.7")
+
+    def test_semver_prerelease_without_build_metadata_remains_valid(self) -> None:
+        self.evidence["android"]["versionName"] = "1.2.3-rc.1"
+        release_manifest.validate_evidence(self.evidence, "1.2.3-rc.1")
+
     def test_backend_roles_cannot_split_release_identity(self) -> None:
         self.evidence["artifacts"][0]["roles"] = ["api"]
         with self.assertRaises(release_manifest.ManifestError):
