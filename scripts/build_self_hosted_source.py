@@ -67,6 +67,8 @@ def read_dotenv(path: Path) -> dict[str, str]:
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
         key, value = line.split("=", 1)
         key = key.strip()
         if not key:
