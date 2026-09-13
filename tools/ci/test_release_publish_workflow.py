@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/release-publish.yml"
+WORKFLOW_DIR = ROOT / ".github/workflows"
 
 EXTERNAL_ACTION_PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -44,6 +45,13 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", self.workflow)
         self.assertEqual(self.workflow.count("packages: write"), 1)
 
+    def test_release_publish_is_only_workflow_with_contents_write(self) -> None:
+        writers: list[str] = []
+        for path in sorted((*WORKFLOW_DIR.glob("*.yml"), *WORKFLOW_DIR.glob("*.yaml"))):
+            if "contents: write" in path.read_text(encoding="utf-8"):
+                writers.append(path.name)
+        self.assertEqual(writers, ["release-publish.yml"])
+
     def test_protected_publication_is_globally_serialized(self) -> None:
         self.assertIn(
             "group: publish-release-${{ github.event_name == 'workflow_dispatch' && 'protected' || github.ref }}",
@@ -59,7 +67,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
 
     def test_release_identity_is_immutable_and_not_overwritten(self) -> None:
         self.assertGreaterEqual(self.workflow.count("git ls-remote --exit-code --tags"), 2)
-        self.assertGreaterEqual(self.workflow.count("gh release view"), 4)
+        self.assertGreaterEqual(self.workflow.count("gh release view"), 5)
         self.assertIn('--target "$GITHUB_SHA"', self.workflow)
         self.assertIn("--draft", self.workflow)
         self.assertIn('gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false', self.workflow)
@@ -70,7 +78,30 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("manual cleanup is required", self.workflow)
         self.assertIn('gh release verify "$tag" --repo "$GITHUB_REPOSITORY"', self.workflow)
         self.assertIn('git rev-list -n 1 "$tag"', self.workflow)
-        self.assertIn("cmp --silent", self.workflow)
+
+    def test_complete_draft_asset_set_is_verified_before_publish(self) -> None:
+        stage = self.workflow.split("Stage and publish immutable GitHub Release", 1)[1].split(
+            "Verify published immutable identity", 1
+        )[0]
+        verify_marker = "python3 scripts/verify_release_asset_set.py"
+        publish_marker = 'gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false'
+        self.assertIn("staged-release-assets.json", stage)
+        self.assertIn("--json databaseId,isDraft", stage)
+        self.assertIn("releases/${release_id}/assets?per_page=100", stage)
+        self.assertIn(verify_marker, stage)
+        self.assertLess(stage.index(verify_marker), stage.index(publish_marker))
+        self.assertIn("cleanup_draft_on_failure()", stage)
+        self.assertIn("draft_active=true", stage)
+
+    def test_complete_immutable_asset_set_is_reverified_after_publish(self) -> None:
+        verify = self.workflow.split("Verify published immutable identity", 1)[1].split(
+            "Upload final release evidence snapshot", 1
+        )[0]
+        self.assertIn("published-release-assets.json", verify)
+        self.assertIn("releases/${release_id}/assets?per_page=100", verify)
+        self.assertIn("python3 scripts/verify_release_asset_set.py", verify)
+        self.assertIn("--expected-root release-evidence", verify)
+        self.assertIn('gh release verify "$tag" --repo "$GITHUB_REPOSITORY"', verify)
 
     def test_runtime_images_load_exact_evidence_archives_without_rebuild(self) -> None:
         publish_step = self.workflow.split(
@@ -154,21 +185,31 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("registry digest resolves to a multi-platform index", publish_step)
         self.assertIn("not a supported single-image manifest", publish_step)
 
-    def test_public_self_hosted_images_are_verified_anonymously(self) -> None:
+    def test_public_self_hosted_images_are_clean_pulled_anonymously(self) -> None:
         step = self.workflow.split("Verify anonymous GHCR consumption", 1)[1].split(
             "Build deterministic Self-Hosted operator bundle", 1
         )[0]
         self.assertIn('printf \'{"auths":{}}\\n\'', step)
-        self.assertIn('docker --config "$anonymous_config" manifest inspect "$ref"', step)
-        self.assertIn("not anonymously readable", step)
+        self.assertIn("sudo dockerd", step)
+        self.assertIn('--data-root="$anonymous_data"', step)
+        self.assertIn('--storage-driver=vfs', step)
+        self.assertIn('--bridge=none', step)
+        self.assertIn('DOCKER_HOST="unix://${anonymous_socket}"', step)
+        self.assertIn('DOCKER_CONFIG="$anonymous_config"', step)
+        self.assertIn('docker pull "$ref"', step)
+        self.assertIn('docker image inspect "$ref"', step)
+        self.assertIn("cannot be anonymously pulled from a clean daemon", step)
         self.assertIn("set package visibility to Public and rerun", step)
+        self.assertNotIn("manifest inspect", step)
         self.assertNotIn("docker login", step)
 
     def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
         self.assertIn("self-hosted-image-identity.json", self.workflow)
-        self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
         self.assertIn("release-evidence/self-hosted-image-identity.json", self.workflow)
         self.assertIn("authoritative digest-qualified", self.workflow)
+        self.assertGreaterEqual(
+            self.workflow.count("python3 scripts/verify_release_asset_set.py"), 2
+        )
 
     def test_self_hosted_operator_bundle_is_minimal_deterministic_and_reverified(self) -> None:
         bundle_step = self.workflow.split(
@@ -187,9 +228,7 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("expected-self-hosted-bundle.txt", bundle_step)
         self.assertNotIn("backend/", bundle_step)
         self.assertNotIn("web/", bundle_step)
-        self.assertIn('--pattern "$bundle"', self.workflow)
-        self.assertIn('"release-evidence/$bundle"', self.workflow)
-        self.assertIn('"$RUNNER_TEMP/published-release/$bundle"', self.workflow)
+        self.assertIn("verify_release_asset_set.py", self.workflow)
 
     def test_release_workflow_tracks_operator_bundle_inputs(self) -> None:
         for path in (
@@ -197,6 +236,8 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
             '"deploy/self-hosted-release.env.example"',
             '"scripts/self_hosted_release.py"',
             '"scripts/check_runtime_environment.py"',
+            '"scripts/verify_release_asset_set.py"',
+            '"tools/ci/test_verify_release_asset_set.py"',
             '"docs/SELF-HOSTING.md"',
         ):
             with self.subTest(path=path):
