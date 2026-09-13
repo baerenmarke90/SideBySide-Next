@@ -541,7 +541,6 @@ jobs:
             local ref="$1"
             local output
             local status
-            local manifest_kind
 
             set +e
             output=$(docker manifest inspect "$ref" 2>&1)
@@ -549,34 +548,6 @@ jobs:
             set -e
 
             if [ "$status" -eq 0 ]; then
-              if ! manifest_kind=$(MANIFEST_JSON="$output" python3 - <<'PY'
-              import json
-              import os
-
-              manifest = json.loads(os.environ["MANIFEST_JSON"])
-              media_type = manifest.get("mediaType")
-              index_types = {
-                  "application/vnd.oci.image.index.v1+json",
-                  "application/vnd.docker.distribution.manifest.list.v2+json",
-              }
-              is_index = isinstance(manifest.get("manifests"), list) or media_type in index_types
-              if is_index:
-                  print("index")
-              elif isinstance(manifest.get("config"), dict) and isinstance(manifest.get("layers"), list):
-                  print("single")
-              else:
-                  print("unsupported")
-              PY
-              ); then
-                echo "Unable to parse registry manifest for ${ref}; refusing publication." >&2
-                return 1
-              fi
-
-              if [ "$manifest_kind" != "single" ]; then
-                echo "Registry reference ${ref} is not a single-image manifest; refusing publication." >&2
-                return 1
-              fi
-
               printf '%s\n' exists
               return 0
             fi
@@ -589,6 +560,108 @@ jobs:
             return 1
           }
 
+          require_single_manifest() {
+            local digest_ref="$1"
+            local output
+            local status
+
+            set +e
+            output=$(docker manifest inspect "$digest_ref" 2>&1)
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to inspect resolved registry digest ${digest_ref}; refusing publication." >&2
+              return 1
+            fi
+
+            if ! MANIFEST_JSON="$output" python3 - <<'PY'
+          import json
+          import os
+
+          manifest = json.loads(os.environ["MANIFEST_JSON"])
+          index_types = {
+              "application/vnd.oci.image.index.v1+json",
+              "application/vnd.docker.distribution.manifest.list.v2+json",
+          }
+          single_types = {
+              "application/vnd.oci.image.manifest.v1+json",
+              "application/vnd.docker.distribution.manifest.v2+json",
+          }
+          if not isinstance(manifest, dict):
+              raise SystemExit("registry digest did not resolve to one manifest object")
+          media_type = manifest.get("mediaType")
+          if isinstance(manifest.get("manifests"), list) or media_type in index_types:
+              raise SystemExit("registry digest resolves to a multi-platform index")
+          if media_type not in single_types:
+              raise SystemExit(f"unsupported registry manifest media type: {media_type!r}")
+          if not isinstance(manifest.get("config"), dict) or not isinstance(manifest.get("layers"), list):
+              raise SystemExit("registry digest is not a single image manifest")
+          PY
+            then
+              echo "Registry digest ${digest_ref} is not a supported single-image manifest; refusing publication." >&2
+              return 1
+            fi
+          }
+
+          extract_registry_digest() {
+            local output="$1"
+            local digest
+            digest=$(printf '%s\n' "$output" \
+              | grep -Eo 'sha256:[0-9a-f]{64}' \
+              | tail -n 1 || true)
+            if [ -z "$digest" ]; then
+              echo "Docker did not report a registry digest; refusing publication." >&2
+              return 1
+            fi
+            printf '%s\n' "$digest"
+          }
+
+          pull_single_digest() {
+            local ref="$1"
+            local repository="$2"
+            local output
+            local status
+            local digest
+            local digest_ref
+
+            set +e
+            output=$(docker pull "$ref" 2>&1)
+            status=$?
+            set -e
+            printf '%s\n' "$output" >&2
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to pull registry reference ${ref}; refusing publication." >&2
+              return 1
+            fi
+            digest=$(extract_registry_digest "$output") || return 1
+            digest_ref="${repository}@${digest}"
+            require_single_manifest "$digest_ref" || return 1
+            printf '%s\n' "$digest_ref"
+          }
+
+          push_single_digest() {
+            local ref="$1"
+            local repository="$2"
+            local output
+            local status
+            local digest
+            local digest_ref
+
+            set +e
+            output=$(docker push "$ref" 2>&1)
+            status=$?
+            set -e
+            printf '%s\n' "$output" >&2
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to push registry reference ${ref}; refusing publication." >&2
+              return 1
+            fi
+            digest=$(extract_registry_digest "$output") || return 1
+            digest_ref="${repository}@${digest}"
+            require_single_manifest "$digest_ref" || return 1
+            printf '%s\n' "$digest_ref"
+          }
+
           publish_archive() {
             local archive="$1"
             local source_image="$2"
@@ -597,6 +670,10 @@ jobs:
 
             docker load --input "$archive" >/dev/null
             local local_id
+            local remote_id
+            local source_digest_ref
+            local version_digest_ref
+            local digest
             local_id=$(docker image inspect "$source_image" --format '{{.Id}}')
             test -n "$local_id"
 
@@ -607,8 +684,7 @@ jobs:
 
             source_state=$(manifest_state "$source_ref")
             if [ "$source_state" = "exists" ]; then
-              docker pull "$source_ref" >/dev/null
-              local remote_id
+              source_digest_ref=$(pull_single_digest "$source_ref" "$repository")
               remote_id=$(docker image inspect "$source_ref" --format '{{.Id}}')
               if [ "$remote_id" != "$local_id" ]; then
                 echo "Existing immutable source tag ${source_ref} points to different image bytes." >&2
@@ -616,37 +692,35 @@ jobs:
               fi
             elif [ "$source_state" = "absent" ]; then
               docker tag "$source_image" "$source_ref"
-              docker push "$source_ref"
-              docker pull "$source_ref" >/dev/null
+              source_digest_ref=$(push_single_digest "$source_ref" "$repository")
+              docker pull "$source_digest_ref" >/dev/null
+              remote_id=$(docker image inspect "$source_digest_ref" --format '{{.Id}}')
+              if [ "$remote_id" != "$local_id" ]; then
+                echo "Published immutable source tag ${source_ref} does not resolve to the release image bytes." >&2
+                exit 1
+              fi
             else
               echo "Unexpected registry identity state for ${source_ref}." >&2
               exit 1
             fi
 
-            source_digest_ref=$(docker image inspect "$source_ref" \
-              --format '{{range .RepoDigests}}{{println .}}{{end}}' \
-              | grep -F "${repository}@sha256:" | head -n 1)
             test -n "$source_digest_ref"
             digest="${source_digest_ref#*@}"
 
             version_state=$(manifest_state "$version_ref")
             if [ "$version_state" = "exists" ]; then
-              docker pull "$version_ref" >/dev/null
-              version_digest_ref=$(docker image inspect "$version_ref" \
-                --format '{{range .RepoDigests}}{{println .}}{{end}}' \
-                | grep -F "${repository}@sha256:" | head -n 1)
+              version_digest_ref=$(pull_single_digest "$version_ref" "$repository")
               if [ "$version_digest_ref" != "$source_digest_ref" ]; then
                 echo "Version tag ${version_ref} already exists with a different digest." >&2
                 exit 1
               fi
             elif [ "$version_state" = "absent" ]; then
-              docker tag "$source_ref" "$version_ref"
-              docker push "$version_ref"
-              docker pull "$version_ref" >/dev/null
-              version_digest_ref=$(docker image inspect "$version_ref" \
-                --format '{{range .RepoDigests}}{{println .}}{{end}}' \
-                | grep -F "${repository}@sha256:" | head -n 1)
-              test "$version_digest_ref" = "$source_digest_ref"
+              docker tag "$source_image" "$version_ref"
+              version_digest_ref=$(push_single_digest "$version_ref" "$repository")
+              if [ "$version_digest_ref" != "$source_digest_ref" ]; then
+                echo "Version tag ${version_ref} published with a different digest." >&2
+                exit 1
+              fi
             else
               echo "Unexpected registry identity state for ${version_ref}." >&2
               exit 1
