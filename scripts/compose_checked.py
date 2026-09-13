@@ -135,18 +135,21 @@ def dotenv_value(path: Path, key: str) -> str | None:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError as exc:
         raise CheckoutError("the deployment .env file could not be read") from exc
+    found: str | None = None
     for lineno, raw_line in enumerate(lines, start=1):
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
         candidate, value = line.split("=", 1)
         if candidate.strip() != key:
             continue
         try:
-            return compose_dotenv_value(value)
+            found = compose_dotenv_value(value)
         except CheckoutError as exc:
             raise CheckoutError(f"invalid dotenv value for {key} on line {lineno}") from exc
-    return None
+    return found
 
 
 def reject_production_environment(env_file: Path) -> None:
