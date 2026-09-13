@@ -162,6 +162,19 @@ class ReleaseManifestTest(unittest.TestCase):
         self.evidence["android"]["versionName"] = "1.2.3-rc.1"
         release_manifest.validate_evidence(self.evidence, "1.2.3-rc.1")
 
+    def test_oci_release_tag_accepts_exact_128_character_boundary(self) -> None:
+        version = "1.2.3-" + "a" * 121
+        self.assertEqual(len(f"v{version}"), 128)
+        self.evidence["android"]["versionName"] = version
+        release_manifest.validate_evidence(self.evidence, version)
+
+    def test_oci_release_tag_rejects_129_character_boundary(self) -> None:
+        version = "1.2.3-" + "a" * 122
+        self.assertEqual(len(f"v{version}"), 129)
+        self.evidence["android"]["versionName"] = version
+        with self.assertRaisesRegex(release_manifest.ManifestError, "too long"):
+            release_manifest.validate_evidence(self.evidence, version)
+
     def test_backend_roles_cannot_split_release_identity(self) -> None:
         self.evidence["artifacts"][0]["roles"] = ["api"]
         with self.assertRaises(release_manifest.ManifestError):
