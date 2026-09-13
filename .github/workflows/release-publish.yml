@@ -10,8 +10,10 @@ on:
       - "scripts/self_hosted_release.py"
       - "scripts/check_runtime_environment.py"
       - "scripts/release_manifest.py"
+      - "scripts/verify_release_asset_set.py"
       - "tools/ci/test_release_manifest.py"
       - "tools/ci/test_release_publish_workflow.py"
+      - "tools/ci/test_verify_release_asset_set.py"
       - "docs/SELF-HOSTING.md"
       - "docs/m6/IMMUTABLE-RELEASES.md"
   workflow_dispatch:
@@ -63,6 +65,7 @@ jobs:
         run: |
           python3 tools/ci/test_release_manifest.py
           python3 tools/ci/test_release_publish_workflow.py
+          python3 tools/ci/test_verify_release_asset_set.py
 
   evidence:
     name: Build and attest one source revision
@@ -803,16 +806,68 @@ jobs:
           set -euo pipefail
           backend_ref=$(cat "$RUNNER_TEMP/backend-image-ref")
           web_ref=$(cat "$RUNNER_TEMP/web-image-ref")
-          anonymous_config=$(mktemp -d)
-          trap 'rm -rf "$anonymous_config"' EXIT
+          anonymous_root=$(mktemp -d)
+          anonymous_config="$anonymous_root/client"
+          anonymous_data="$anonymous_root/data"
+          anonymous_exec="$anonymous_root/exec"
+          anonymous_socket="$anonymous_root/docker.sock"
+          anonymous_pid="$anonymous_root/docker.pid"
+          anonymous_log="$anonymous_root/dockerd.log"
+          mkdir -p "$anonymous_config" "$anonymous_data" "$anonymous_exec"
           printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          unset DOCKER_CONTEXT DOCKER_CERT_PATH DOCKER_TLS_VERIFY
+
+          cleanup_anonymous_docker() {
+            set +e
+            if [ -s "$anonymous_pid" ]; then
+              sudo kill "$(cat "$anonymous_pid")" >/dev/null 2>&1 || true
+              for _ in $(seq 1 20); do
+                if ! sudo kill -0 "$(cat "$anonymous_pid")" >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 1
+              done
+            fi
+            sudo rm -rf "$anonymous_root"
+          }
+          trap cleanup_anonymous_docker EXIT
+
+          sudo dockerd \
+            --host="unix://${anonymous_socket}" \
+            --data-root="$anonymous_data" \
+            --exec-root="$anonymous_exec" \
+            --pidfile="$anonymous_pid" \
+            --storage-driver=vfs \
+            --iptables=false \
+            --bridge=none \
+            --ip-forward=false \
+            --ip-masq=false \
+            > "$anonymous_log" 2>&1 &
+
+          ready=false
+          for _ in $(seq 1 60); do
+            if DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker info >/dev/null 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            echo "Isolated anonymous Docker daemon did not become ready." >&2
+            tail -n 100 "$anonymous_log" >&2 || true
+            exit 1
+          fi
 
           for ref in "$backend_ref" "$web_ref"; do
-            if ! docker --config "$anonymous_config" manifest inspect "$ref" >/dev/null 2>&1; then
-              echo "Released GHCR image ${ref%%@*} is not anonymously readable." >&2
+            if ! DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker pull "$ref"; then
+              echo "Released GHCR image ${ref%%@*} cannot be anonymously pulled from a clean daemon." >&2
               echo "Official Self-Hosted publication requires public eimir-backend/eimir-web packages; set package visibility to Public and rerun." >&2
               exit 1
             fi
+            DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker image inspect "$ref" >/dev/null
           done
 
       - name: Build deterministic Self-Hosted operator bundle
@@ -947,7 +1002,40 @@ jobs:
             --notes-file release-evidence/RELEASE-NOTES.md \
             --draft \
             --verify-tag=false
+
+          draft_active=true
+          cleanup_draft_on_failure() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ] && [ "$draft_active" = "true" ]; then
+              set +e
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+              cleanup_status=$?
+              set -e
+              if [ "$cleanup_status" -ne 0 ]; then
+                echo "Automatic cleanup of failed draft Release ${tag} failed; manual cleanup is required." >&2
+              fi
+            fi
+            exit "$status"
+          }
+          trap cleanup_draft_on_failure EXIT
+
+          release_id=$(gh release view "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json databaseId,isDraft \
+            --jq 'select(.isDraft == true) | .databaseId')
+          test -n "$release_id"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+            > "$RUNNER_TEMP/staged-release-assets.json"
+          python3 scripts/verify_release_asset_set.py \
+            --expected-root release-evidence \
+            --assets-json "$RUNNER_TEMP/staged-release-assets.json"
+
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          draft_active=false
+          trap - EXIT
 
           immutable=$(gh release view "$tag" \
             --repo "$GITHUB_REPOSITORY" \
@@ -972,27 +1060,23 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${RELEASE_VERSION}"
-          bundle="eimir-self-hosted-v${RELEASE_VERSION}.tar.gz"
           test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isImmutable --jq '.isImmutable')" = "true"
           gh release verify "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null
           git fetch --force --tags origin
           test "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA"
-          mkdir -p "$RUNNER_TEMP/published-release"
-          gh release download "$tag" \
+
+          release_id=$(gh release view "$tag" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern sidebyside-release-manifest.json \
-            --pattern self-hosted-image-identity.json \
-            --pattern "$bundle" \
-            --dir "$RUNNER_TEMP/published-release"
-          cmp --silent \
-            release-evidence/sidebyside-release-manifest.json \
-            "$RUNNER_TEMP/published-release/sidebyside-release-manifest.json"
-          cmp --silent \
-            release-evidence/self-hosted-image-identity.json \
-            "$RUNNER_TEMP/published-release/self-hosted-image-identity.json"
-          cmp --silent \
-            "release-evidence/$bundle" \
-            "$RUNNER_TEMP/published-release/$bundle"
+            --json databaseId,isDraft \
+            --jq 'select(.isDraft == false) | .databaseId')
+          test -n "$release_id"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+            > "$RUNNER_TEMP/published-release-assets.json"
+          python3 scripts/verify_release_asset_set.py \
+            --expected-root release-evidence \
+            --assets-json "$RUNNER_TEMP/published-release-assets.json"
 
       - name: Upload final release evidence snapshot
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
