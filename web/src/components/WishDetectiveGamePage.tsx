@@ -295,15 +295,14 @@ function WishDetectiveSessionView({
           <h2 id="wish-detective-guess-title">
             {t('games.wishDetective.guessTitle')}
           </h2>
-          <div
+          <ul
             className="wish-detective-clue-chips"
-            role="group"
             aria-label={t('games.wishDetective.cluesAria')}
           >
             {snapshot.clues.map((clue) => (
-              <span key={clue}>{clue}</span>
+              <li key={clue}>{clue}</li>
             ))}
-          </div>
+          </ul>
           <label htmlFor="wish-detective-guess-input">
             {t('games.wishDetective.guessLabel', { name: giver.displayName })}
           </label>
