@@ -205,7 +205,7 @@ Immediately before publication the workflow rechecks tag/Release absence. It the
 2. publishes the draft;
 3. requires `gh release view --json isImmutable` to report exactly `true`;
 4. if immutability is not active, attempts cleanup of the just-created mutable Release
-   and tag, then fails closed regardless of cleanup outcome;
+   and tag, reports any cleanup failure explicitly, and fails closed regardless;
 5. verifies the published release attestation with `gh release verify`;
 6. rechecks the Git tag target and re-downloads the release manifest, image identity and
    operator bundle to prove the published bytes equal the locally validated copies.
