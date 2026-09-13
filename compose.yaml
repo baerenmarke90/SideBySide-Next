@@ -1,18 +1,21 @@
 # Canonical Docker Compose contract for every SideBySide Compose deployment.
 #
 # Profiles:
-#   self-hosted  complete checkout, Arcane/remote-source builds, and Demo
+#   self-hosted  released Self-Hosted runtime using versioned OCI images
+#   demo         explicit Demo-only initialization lifecycle step
 #   cloud        Cloud/Managed runtime using immutable release images
 #   dev-db       PostgreSQL-only database for local source development/tests
 #
-# Exactly this file is supported. Environment-specific behavior belongs in
-# environment/configuration and these narrowly scoped profiles.
+# Normal released Self-Hosted deployment is image-only. Developers and CI may
+# intentionally build local source images with scripts/build_self_hosted_source.py,
+# then point this same canonical manifest at those local image tags. No second
+# tracked Compose topology exists.
 
 x-self-hosted-database-environment: &self-hosted-database-environment
   SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
 
 # Keys every profile agrees on, so a change to one profile cannot silently
-# diverge from the other the way three separate Compose files once did.
+# diverge from the other the way separate deployment manifests once did.
 x-shared-runtime-environment: &shared-runtime-environment
   SBS_CURSOR_SIGNING_KEY: "${SBS_CURSOR_SIGNING_KEY:-}"
   SBS_SERVER_ADMIN_EMAILS: '${SBS_SERVER_ADMIN_EMAILS:-[]}'
@@ -58,24 +61,19 @@ x-cloud-runtime-environment: &cloud-runtime-environment
   SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-}"
   SBS_MAIL_TRANSPORT: "${SBS_MAIL_TRANSPORT:-none}"
 
-x-self-hosted-backend-build: &self-hosted-backend-build
-  build:
-    context: "${SBS_BACKEND_BUILD_CONTEXT:-./backend}"
-    args:
-      SBS_BUILD_REVISION: "${SBS_BUILD_REVISION:-unverified-local-checkout}"
-  pull_policy: build
+# Released Self-Hosted consumes first-class release images. The SemVer default is
+# the repository's current product version; operators may use the exact digest-
+# qualified references recorded with the GitHub Release via the two override
+# variables below for a fully locked deployment. `always` is the released safe
+# default; local source development deliberately sets `never` after building its
+# local tags with scripts/build_self_hosted_source.py.
+x-self-hosted-backend-image: &self-hosted-backend-image
+  image: "${SBS_SELF_HOSTED_BACKEND_IMAGE:-ghcr.io/baerenmarke90/eimir-backend:v${SBS_RELEASE_VERSION:-0.1.0}}"
+  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
 
-x-self-hosted-web-build: &self-hosted-web-build
-  build:
-    context: "${SBS_WEB_BUILD_CONTEXT:-./web}"
-    args:
-      SBS_BUILD_REVISION: "${SBS_BUILD_REVISION:-unverified-local-checkout}"
-      VITE_SBS_API_BASE_URL: ""
-      VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
-      VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"
-      VITE_SBS_DEMO_RESET_TIMER: "${SBS_DEMO_MODE_RESET_TIMER:-false}"
-      VITE_SBS_DEMO_RESET_INTERVAL: "${SBS_DEMO_MODE_RESET_INTERVAL:-6h}"
-  pull_policy: build
+x-self-hosted-web-image: &self-hosted-web-image
+  image: "${SBS_SELF_HOSTED_WEB_IMAGE:-ghcr.io/baerenmarke90/eimir-web:v${SBS_RELEASE_VERSION:-0.1.0}}"
+  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
 
 # Cloud/Managed intentionally has image-only process services. The sentinel
 # defaults keep inactive profiles renderable; the Cloud env contract and CI
@@ -119,7 +117,7 @@ services:
 
   migrate:
     profiles: ["self-hosted"]
-    <<: *self-hosted-backend-build
+    <<: *self-hosted-backend-image
     restart: "no"
     command: ["alembic", "upgrade", "head"]
     environment:
@@ -130,9 +128,12 @@ services:
       postgres:
         condition: service_healthy
 
+  # Demo initialization is deliberately not part of normal Self-Hosted startup.
+  # Activate profiles self-hosted,demo and run this one-shot service explicitly
+  # only for the isolated public Demo lifecycle.
   demo-init:
-    profiles: ["self-hosted"]
-    <<: *self-hosted-backend-build
+    profiles: ["demo"]
+    <<: *self-hosted-backend-image
     restart: "no"
     command: ["python", "-m", "scripts.demo_space", "ensure"]
     environment:
@@ -147,7 +148,7 @@ services:
 
   api:
     profiles: ["self-hosted"]
-    <<: [*self-hosted-backend-build, *api-healthcheck]
+    <<: [*self-hosted-backend-image, *api-healthcheck]
     restart: unless-stopped
     environment:
       <<: *self-hosted-runtime-environment
@@ -165,12 +166,12 @@ services:
         host_ip: "${SBS_BIND_IP:-127.0.0.1}"
         protocol: tcp
     depends_on:
-      demo-init:
+      migrate:
         condition: service_completed_successfully
 
   worker:
     profiles: ["self-hosted"]
-    <<: *self-hosted-backend-build
+    <<: *self-hosted-backend-image
     restart: unless-stopped
     command: ["python", "-m", "sidebyside.jobs.runner"]
     environment:
@@ -180,12 +181,12 @@ services:
     networks:
       - app
     depends_on:
-      demo-init:
+      migrate:
         condition: service_completed_successfully
 
   web:
     profiles: ["self-hosted"]
-    <<: *self-hosted-web-build
+    <<: *self-hosted-web-image
     restart: unless-stopped
     environment:
       SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:-}"

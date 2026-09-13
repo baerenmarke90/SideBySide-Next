@@ -3,19 +3,27 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.check_runtime_environment import (
     check_dotenv_to_rendered,
-    check_production_source_identity,
+    check_production_image_identity,
+    check_published_release_image_identity,
     check_rendered_to_running,
     parse_container_environment,
+    parse_dotenv,
 )
 
 INSTANCE_ID = "11111111-2222-4333-8444-555555555555"
-REVISION = "1234567890abcdef1234567890abcdef12345678"
-OTHER_REVISION = "abcdef1234567890abcdef1234567890abcdef12"
-REPOSITORY = "https://github.com/baerenmarke90/SideBySide-Next.git"
+SOURCE_REVISION = "0123456789abcdef0123456789abcdef01234567"
+BACKEND = "ghcr.io/baerenmarke90/eimir-backend:v0.1.0"
+WEB = "ghcr.io/baerenmarke90/eimir-web:v0.1.0"
+BACKEND_DIGEST = "a" * 64
+WEB_DIGEST = "b" * 64
+BACKEND_PINNED = f"{BACKEND}@sha256:{BACKEND_DIGEST}"
+WEB_PINNED = f"{WEB}@sha256:{WEB_DIGEST}"
 
 
 def rendered(
@@ -28,38 +36,77 @@ def rendered(
         "SBS_PUBLIC_BASE_URL": "https://example.invalid",
         "SBS_CURSOR_SIGNING_KEY": "not-printed-secret",
     }
-    return {
-        "api": dict(common),
-        "worker": dict(common),
-        "demo-init": dict(common),
-    }
+    return {"api": dict(common), "worker": dict(common)}
 
 
-def source_config(
-    revision: str = REVISION,
+def image_config(
     *,
-    backend_ref: str | None = None,
-    web_ref: str | None = None,
-    build_revision: str | None = None,
+    backend: str = BACKEND,
+    web: str = WEB,
+    worker: str | None = None,
+    migrate: str | None = None,
+    pull_policy: str = "always",
+    build: bool = False,
 ) -> dict[str, object]:
-    backend_ref = revision if backend_ref is None else backend_ref
-    web_ref = revision if web_ref is None else web_ref
-    build_revision = revision if build_revision is None else build_revision
+    def service(image: str) -> dict[str, object]:
+        value: dict[str, object] = {"image": image, "pull_policy": pull_policy}
+        if build:
+            value["build"] = {"context": "./backend"}
+        return value
 
-    def build(subdir: str, ref: str) -> dict[str, object]:
-        context = f"{REPOSITORY}#{ref}:{subdir}" if ref else f"./{subdir}"
-        return {"context": context, "args": {"SBS_BUILD_REVISION": build_revision}}
-
-    backend_build = build("backend", backend_ref)
     return {
         "services": {
-            "migrate": {"build": dict(backend_build)},
-            "demo-init": {"build": dict(backend_build)},
-            "api": {"build": dict(backend_build)},
-            "worker": {"build": dict(backend_build)},
-            "web": {"build": build("web", web_ref)},
+            "migrate": service(migrate or backend),
+            "api": service(backend),
+            "worker": service(worker or backend),
+            "web": service(web),
         }
     }
+
+
+def release_identity(
+    *,
+    version: str = "0.1.0",
+    backend: str = BACKEND_PINNED,
+    web: str = WEB_PINNED,
+) -> dict[str, object]:
+    return {
+        "schemaVersion": 1,
+        "kind": "sidebyside-self-hosted-image-identity",
+        "product": {"version": version, "tag": f"v{version}"},
+        "sourceRevision": SOURCE_REVISION,
+        "releaseManifest": "sidebyside-release-manifest.json",
+        "images": {
+            "backend": {
+                "reference": backend,
+                "digest": backend.split("@", 1)[1],
+                "releaseArtifactSha256": "c" * 64,
+                "roles": ["api", "worker", "migrate"],
+            },
+            "web": {
+                "reference": web,
+                "digest": web.split("@", 1)[1],
+                "releaseArtifactSha256": "d" * 64,
+                "roles": ["web"],
+            },
+        },
+    }
+
+
+class DotenvParsingTest(unittest.TestCase):
+    def test_compose_inline_comments_are_removed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / ".env"
+            path.write_text(
+                "SBS_ENVIRONMENT=production # deployed\n"
+                'SBS_RELEASE_VERSION="0.1.0" # selected\n'
+                "TOKEN=value#literal\n",
+                encoding="utf-8",
+            )
+            values = parse_dotenv(path)
+        self.assertEqual(values["SBS_ENVIRONMENT"], "production")
+        self.assertEqual(values["SBS_RELEASE_VERSION"], "0.1.0")
+        self.assertEqual(values["TOKEN"], "value#literal")
 
 
 class DotenvToRenderedTest(unittest.TestCase):
@@ -76,7 +123,7 @@ class DotenvToRenderedTest(unittest.TestCase):
             "SBS_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
         }
         problems = check_dotenv_to_rendered(dotenv, rendered(instance_id=""))
-        self.assertEqual(len(problems), 4)
+        self.assertEqual(len(problems), 3)
         self.assertTrue(all("SBS_ACCOUNT_DELETION_INSTANCE_ID" in p for p in problems))
         self.assertTrue(all(INSTANCE_ID not in p for p in problems))
 
@@ -109,73 +156,142 @@ class DotenvToRenderedTest(unittest.TestCase):
         )
         self.assertEqual(
             sum("differs from env file for SBS_ENVIRONMENT" in problem for problem in problems),
-            3,
+            2,
         )
 
 
-class ProductionSourceIdentityTest(unittest.TestCase):
-    def test_accepts_one_full_sha_for_all_production_builds(self) -> None:
-        problems = check_production_source_identity(
-            {"SBS_ENVIRONMENT": "production"}, source_config(), rendered()
+class ProductionImageIdentityTest(unittest.TestCase):
+    def test_accepts_one_versioned_release_for_production(self) -> None:
+        self.assertEqual(
+            check_production_image_identity(
+                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+                image_config(),
+                rendered(),
+            ),
+            [],
         )
-        self.assertEqual(problems, [])
 
-    def test_development_may_use_main(self) -> None:
-        problems = check_production_source_identity(
+    def test_accepts_digest_qualified_release_refs(self) -> None:
+        self.assertEqual(
+            check_production_image_identity(
+                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+                image_config(backend=BACKEND_PINNED, web=WEB_PINNED),
+                rendered(),
+            ),
+            [],
+        )
+
+    def test_development_may_use_local_source_images(self) -> None:
+        problems = check_production_image_identity(
             {"SBS_ENVIRONMENT": "development"},
-            source_config(backend_ref="main", web_ref="main", build_revision="main"),
+            image_config(
+                backend="sidebyside-backend:source-local",
+                web="sidebyside-web:source-local",
+                pull_policy="never",
+            ),
             rendered(environment="development"),
         )
         self.assertEqual(problems, [])
 
-    def test_rendered_production_override_still_requires_immutable_source(self) -> None:
-        problems = check_production_source_identity(
-            {"SBS_ENVIRONMENT": "development"},
-            source_config(backend_ref="main", web_ref="main", build_revision="main"),
-            rendered(environment="production"),
-        )
-        self.assertGreater(len(problems), 0)
-
-    def test_rejects_mutable_or_incomplete_source_refs(self) -> None:
-        for ref in ("main", "release/1.0", "v1.0.0", REVISION[:12], ""):
-            with self.subTest(ref=ref or "blank/default"):
-                problems = check_production_source_identity(
-                    {"SBS_ENVIRONMENT": "production"},
-                    source_config(backend_ref=ref, web_ref=ref, build_revision=ref),
-                    rendered(),
+    def test_rejects_mutable_or_local_refs(self) -> None:
+        for backend, web in (
+            ("ghcr.io/baerenmarke90/eimir-backend:latest", WEB),
+            ("ghcr.io/baerenmarke90/eimir-backend:main", WEB),
+            ("sidebyside-backend:source-local", "sidebyside-web:source-local"),
+        ):
+            with self.subTest(backend=backend):
+                self.assertGreater(
+                    len(
+                        check_production_image_identity(
+                            {"SBS_ENVIRONMENT": "production"},
+                            image_config(backend=backend, web=web),
+                            rendered(),
+                        )
+                    ),
+                    0,
                 )
-                self.assertGreater(len(problems), 0)
 
-    def test_rejects_mismatched_backend_and_web_refs(self) -> None:
-        problems = check_production_source_identity(
+    def test_rejects_backend_role_divergence(self) -> None:
+        problems = check_production_image_identity(
             {"SBS_ENVIRONMENT": "production"},
-            source_config(web_ref=OTHER_REVISION),
+            image_config(worker="ghcr.io/baerenmarke90/eimir-backend:v0.1.1"),
             rendered(),
         )
         self.assertIn(
-            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA",
+            "Production api/worker/migrate must use one exact backend image identity",
             problems,
         )
 
-    def test_rejects_mismatched_declared_revision(self) -> None:
-        problems = check_production_source_identity(
+    def test_rejects_backend_web_version_divergence(self) -> None:
+        problems = check_production_image_identity(
             {"SBS_ENVIRONMENT": "production"},
-            source_config(build_revision=OTHER_REVISION),
+            image_config(web="ghcr.io/baerenmarke90/eimir-web:v0.1.1"),
             rendered(),
+        )
+        self.assertIn("Production backend and Web images must use one product release version", problems)
+
+    def test_rejects_joint_image_override_that_disagrees_with_declared_release(self) -> None:
+        problems = check_production_image_identity(
+            {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+            image_config(
+                backend="ghcr.io/baerenmarke90/eimir-backend:v0.1.1",
+                web="ghcr.io/baerenmarke90/eimir-web:v0.1.1",
+            ),
+            rendered(),
+        )
+        self.assertIn("Production application images must match SBS_RELEASE_VERSION", problems)
+
+    def test_rejects_build_fallback_or_never_pull(self) -> None:
+        problems = check_production_image_identity(
+            {"SBS_ENVIRONMENT": "production"},
+            image_config(build=True, pull_policy="never"),
+            rendered(),
+        )
+        self.assertTrue(any("must not contain build configuration" in problem for problem in problems))
+        self.assertTrue(any("pull_policy=always" in problem for problem in problems))
+
+
+class PublishedReleaseIdentityTest(unittest.TestCase):
+    def test_accepts_exact_published_digest_identity(self) -> None:
+        problems = check_published_release_image_identity(
+            {"SBS_RELEASE_VERSION": "0.1.0"},
+            image_config(backend=BACKEND_PINNED, web=WEB_PINNED),
+            release_identity(),
+        )
+        self.assertEqual(problems, [])
+
+    def test_rejects_same_version_with_unpublished_backend_digest(self) -> None:
+        alternate = f"{BACKEND}@sha256:{'e' * 64}"
+        problems = check_published_release_image_identity(
+            {"SBS_RELEASE_VERSION": "0.1.0"},
+            image_config(backend=alternate, web=WEB_PINNED),
+            release_identity(),
         )
         self.assertIn(
-            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA",
+            "Production service migrate does not match published backend image identity",
+            problems,
+        )
+        self.assertIn(
+            "Production service api does not match published backend image identity",
+            problems,
+        )
+        self.assertIn(
+            "Production service worker does not match published backend image identity",
             problems,
         )
 
-    def test_rejects_uppercase_sha(self) -> None:
-        uppercase = REVISION.upper()
-        problems = check_production_source_identity(
-            {"SBS_ENVIRONMENT": "production"},
-            source_config(backend_ref=uppercase, web_ref=uppercase, build_revision=uppercase),
-            rendered(),
+    def test_rejects_identity_from_another_release_version(self) -> None:
+        other_backend = f"ghcr.io/baerenmarke90/eimir-backend:v0.1.1@sha256:{BACKEND_DIGEST}"
+        other_web = f"ghcr.io/baerenmarke90/eimir-web:v0.1.1@sha256:{WEB_DIGEST}"
+        problems = check_published_release_image_identity(
+            {"SBS_RELEASE_VERSION": "0.1.0"},
+            image_config(backend=other_backend, web=other_web),
+            release_identity(version="0.1.1", backend=other_backend, web=other_web),
         )
-        self.assertGreater(len(problems), 0)
+        self.assertIn(
+            "Self-Hosted release image identity does not match SBS_RELEASE_VERSION",
+            problems,
+        )
 
 
 class RenderedToRunningTest(unittest.TestCase):
@@ -191,10 +307,7 @@ class RenderedToRunningTest(unittest.TestCase):
         problems = check_rendered_to_running(expected, running)
         self.assertEqual(
             problems,
-            [
-                "running service api differs from rendered Compose for "
-                "SBS_ACCOUNT_DELETION_INSTANCE_ID"
-            ],
+            ["running service api differs from rendered Compose for SBS_ACCOUNT_DELETION_INSTANCE_ID"],
         )
         self.assertNotIn(INSTANCE_ID, problems[0])
 

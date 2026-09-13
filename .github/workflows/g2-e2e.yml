@@ -6,6 +6,7 @@ on:
       - ".github/workflows/g2-e2e.yml"
       - ".env.example"
       - "compose.yaml"
+      - "scripts/build_self_hosted_source.py"
       - "backend/Dockerfile"
       - "backend/.python-version"
       - "backend/pyproject.toml"
@@ -66,10 +67,12 @@ jobs:
 
       - name: Reuse self-hosted stack for the gate harness
         run: |
+          set -euo pipefail
           cp .env.example .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=g2-e2e-db-only/' .env
           printf '\nSBS_BOOTSTRAP_TOKEN=%s\n' "$G2_E2E_BOOTSTRAP_TOKEN" >> .env
           docker compose config --quiet
+          python3 scripts/build_self_hosted_source.py --env-file .env
 
       - name: Start real API, worker, PostgreSQL and LocalMediaStore
         run: docker compose up -d --wait --wait-timeout 300

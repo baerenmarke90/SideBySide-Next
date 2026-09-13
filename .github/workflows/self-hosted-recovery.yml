@@ -72,6 +72,11 @@ jobs:
     if: needs.changes.outputs.recovery == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      SBS_SELF_HOSTED_BACKEND_IMAGE: sidebyside-backend:source-recovery
+      SBS_SELF_HOSTED_WEB_IMAGE: sidebyside-web:source-recovery
+      SBS_SELF_HOSTED_PULL_POLICY: never
+      SBS_BUILD_REVISION: unverified-local-checkout
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,6 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile \
+            scripts/build_self_hosted_source.py \
             scripts/self_hosted_recovery.py \
             scripts/self_hosted_deletion_reconcile.py \
             scripts/self_hosted_recovery_acceptance.py \
@@ -91,6 +97,9 @@ jobs:
           python3 -m unittest \
             scripts.test_self_hosted_recovery \
             scripts.test_self_hosted_deletion_reconcile
+
+      - name: Build local source images for recovery acceptance
+        run: python3 scripts/build_self_hosted_source.py
 
       - name: Fresh restore and prior-schema upgrade acceptance
         run: python3 scripts/self_hosted_recovery_acceptance.py

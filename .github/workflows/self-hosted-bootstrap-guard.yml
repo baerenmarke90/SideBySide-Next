@@ -6,6 +6,7 @@ on:
       - ".github/workflows/self-hosted-bootstrap-guard.yml"
       - ".env.example"
       - "compose.yaml"
+      - "scripts/build_self_hosted_source.py"
       - "backend/Dockerfile"
       - "backend/pyproject.toml"
       - "backend/uv.lock"
@@ -23,6 +24,7 @@ on:
       - ".github/workflows/self-hosted-bootstrap-guard.yml"
       - ".env.example"
       - "compose.yaml"
+      - "scripts/build_self_hosted_source.py"
       - "backend/Dockerfile"
       - "backend/pyproject.toml"
       - "backend/uv.lock"
@@ -80,8 +82,9 @@ jobs:
             >> .env
 
           docker compose --profile self-hosted --env-file .env config --quiet
+          python3 scripts/build_self_hosted_source.py --env-file .env
           docker compose --profile self-hosted --env-file .env \
-            up -d --build --wait --wait-timeout 300
+            up -d --wait --wait-timeout 300
 
           registration_payload=$(jq -nc \
             --arg email "$G5_BOOTSTRAP_EMAIL" \

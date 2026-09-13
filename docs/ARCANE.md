@@ -1,105 +1,171 @@
 # Arcane Deployment
 
-These notes supplement `SELF-HOSTING.md` for installations where Arcane manages
-the SideBySide stack and a separate TLS reverse proxy sits in front of it.
+These notes supplement `SELF-HOSTING.md` for installations where Arcane manages the
+SideBySide stack and a separate TLS reverse proxy sits in front of it.
 
-For persistent Development, release-candidate verification, Production promotion,
-and rollback, the authoritative workflow is
+For persistent Development, release-candidate verification, Production promotion and
+rollback, the authoritative workflow is
 [`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`](DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md).
-This document defines Arcane mechanics; it does not create a competing release
-policy.
+This document defines Arcane mechanics; it does not create a competing release policy.
 
 ## One Compose file
 
-SideBySide supports exactly one Docker Compose manifest: repository-root
+SideBySide supports exactly one tracked Docker Compose manifest: repository-root
 `compose.yaml`.
 
-Arcane uses the same `self-hosted` profile as a complete repository checkout.
-The only source-specific difference is the build context:
+Arcane uses that same manifest and the `self-hosted` profile. The distinction between
+Development and released Production is **image origin and entry point**, not a second
+topology:
 
-- complete checkout: defaults to local `./backend` and `./web`;
-- Arcane / remote workspace: set Git/BuildKit URLs through
-  `SBS_BACKEND_BUILD_CONTEXT` and `SBS_WEB_BUILD_CONTEXT`.
+- Development may build local images from Git with
+  `scripts/build_self_hosted_source.py` and use local tags with pull disabled;
+- released Production consumes published versioned/digest-qualified GHCR images and is
+  validated/operated through `scripts/self_hosted_release.py`;
+- services, volumes, networks, health checks and startup dependencies remain one
+  canonical contract.
 
-This keeps services, volumes, networks, runtime settings, health checks and
-startup dependencies in one contract instead of duplicating the stack.
+Normal Self-Hosted ordering is:
 
-## Configure Arcane
+```text
+postgres -> migrate -> api/worker -> web
+```
 
-1. Create a dedicated SideBySide project in Arcane.
-2. Select repository-root `compose.yaml` as the Compose file.
-3. Set `COMPOSE_PROFILES=self-hosted`.
-4. Import the remaining values from `.env.example` or, for persistent
-   Development, `deploy/persistent-development.env.example`.
-5. Set at least `POSTGRES_PASSWORD` and any environment-specific secrets.
-6. Configure the two remote build contexts and one matching revision value.
-7. Start the deployment. `migrate` must complete before `demo-init`; API and
-   worker wait for initialization, and Web waits for API readiness.
+`demo-init` is an explicit Demo-only lifecycle service and is not part of normal
+Self-Hosted startup.
 
-For ordinary Development integration on `main`:
+## Persistent Development in Arcane
+
+Create a dedicated Arcane project, for example `sidebyside-development`, separate from
+any Production or Demo project. Start from:
+
+```text
+deploy/persistent-development.env.example
+```
+
+For ordinary integration on `main`:
 
 ```dotenv
+COMPOSE_PROFILES=self-hosted
+SBS_ENVIRONMENT=development
+SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-development
+SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-development
+SBS_SELF_HOSTED_PULL_POLICY=never
 SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
 SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
 SBS_BUILD_REVISION=main
 ```
 
-Before release acceptance, replace `main` in **all three values** with exactly
-the candidate commit SHA. Production uses only the exact approved commit SHA.
-Never point Backend, Web and the declared build revision at different refs.
+The build workspace/runner executes:
 
-The API exposes `SBS_BUILD_REVISION` through `X-SideBySide-Revision`; the Web
-image exposes it through `/.well-known/sidebyside-revision`. Release smoke
-requires both values to equal the expected commit.
+```bash
+python3 scripts/build_self_hosted_source.py \
+  --env-file deploy/persistent-development.env.example
+```
+
+Then Arcane starts/recreates canonical `compose.yaml`. The helper builds backend/Web
+images only; it does not create another Compose manifest and refuses Production.
+
+Before release acceptance, replace `main` in both source contexts and
+`SBS_BUILD_REVISION` with the exact candidate commit SHA, rebuild Development images and
+recreate the stack. API/Web source revision endpoints must both equal that SHA.
+
+Development remains a separate project with unique database credentials, volumes/media,
+cursor signing key, bootstrap/admin state, callbacks and provider credentials. Do not
+import the Production environment wholesale.
+
+## Released Production in Arcane
+
+Released Production must **not** use remote Git build contexts as its deployment
+identity and must not build backend/Web source on the Docker host.
+
+Use the Self-Hosted operator bundle attached to the selected GitHub Release. It contains:
+
+- `compose.yaml`;
+- `deploy/self-hosted-release.env.example`;
+- `scripts/self_hosted_release.py`;
+- `scripts/check_runtime_environment.py`.
+
+Copy the release env template to `.env` and select the published product version:
+
+```dotenv
+COMPOSE_PROFILES=self-hosted
+SBS_ENVIRONMENT=production
+SBS_RELEASE_VERSION=X.Y.Z
+```
+
+The canonical manifest resolves the matching versioned images. For exact transport
+locking, use the digest-qualified references from the same release asset
+`self-hosted-image-identity.json`:
+
+```dotenv
+SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
+SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
+```
+
+Both overrides must still match `SBS_RELEASE_VERSION`. Production keeps pull enabled. A
+missing registry image is a deployment failure, not permission to compile local source.
+
+### Production entry point
+
+Do not configure Arcane to replace the release validation with a raw Compose startup.
+The supported Production sequence is executed from the extracted release bundle:
+
+```bash
+python3 scripts/self_hosted_release.py --env-file .env validate
+python3 scripts/self_hosted_release.py --env-file .env deploy
+```
+
+For a brand-new installation, the deletion authority must first be created through the
+same launcher; see the next section.
+
+Arcane may use its task/command facility to run the launcher on the Docker host before
+or as the deployment action, but that facility must preserve the exact `.env`, project
+name, Docker context and release-bundle files. The launcher's image/version guard is a
+required part of Production promotion, not an optional diagnostic.
+
+After deployment, run `scripts/deployment_smoke.py` against the public origin with the
+exact source SHA from the published release manifest.
 
 ## Account-deletion authority bootstrap
 
-Arcane does not have a separate bootstrap manifest. It uses the same root
-`compose.yaml`, `self-hosted` profile, and named `deletion_journal_data` volume as
-the normal Self-Hosted path.
-
-For an Arcane project that has **never had an Account-deletion authority**, leave
-`SBS_ACCOUNT_DELETION_INSTANCE_ID` unset and run exactly one bootstrap against
-that project's `api` service before normal Production traffic is allowed:
+For an Arcane Production project that has **never had an Account-deletion authority**,
+leave `SBS_ACCOUNT_DELETION_INSTANCE_ID` unset and run:
 
 ```bash
-docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
-  python -m sidebyside.identity.deletion_bootstrap \
-  --confirm-new-installation
+python3 scripts/self_hosted_release.py --env-file .env pull
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  bootstrap-deletion-authority
 ```
 
-The command creates the forward journal and prints the stable
-`SBS_ACCOUNT_DELETION_INSTANCE_ID`. Store that exact emitted value in the Arcane
-project environment and in the protected operator configuration backup, then
-force-recreate the affected containers. Never generate the UUID independently.
+The launcher first validates the selected release-image identity and pulls the released
+API image. The bootstrap command then creates the forward journal and prints the stable
+`SBS_ACCOUNT_DELETION_INSTANCE_ID`.
 
-The command must run with the **same Arcane project environment** that owns the
-Production volumes and remote build contexts. If Arcane keeps project variables
-outside the checked-in/project `.env`, use Arcane's one-off/exec environment (or
-otherwise supply those exact project variables) instead of running host-side
-Compose with incomplete defaults. In particular, do not let the command fall back
-to local `./backend`/`./web` contexts or a different `COMPOSE_PROJECT_NAME`.
+Store exactly that emitted value in the Arcane project environment and protected
+operator configuration backup. Never generate the UUID independently. After updating
+`.env`, run:
 
-If the project already had an authority and the journal is missing/corrupt, this
-is a recovery failure, not a bootstrap opportunity. Do not clear the instance ID
-or initialize a replacement journal; follow
-`ACCOUNT-DELETION-SELF-HOSTED.md` and recover the newest protected journal.
+```bash
+python3 scripts/self_hosted_release.py --env-file .env deploy
+```
+
+If the project already had an authority and its journal is missing/corrupt, this is a
+recovery failure, not a bootstrap opportunity. Do not clear the instance ID or initialize
+a replacement journal; follow `ACCOUNT-DELETION-SELF-HOSTED.md` and recover the newest
+protected journal.
 
 ## Runtime environment and container recreation
 
-Compose interpolation has an important precedence rule: an explicitly defined
-process variable, including an explicitly empty value, overrides the value in the
-project `.env` file. Arcane project variables therefore must not contain stale or
-blank duplicates of non-empty runtime settings from `.env`.
+Compose interpolation precedence matters: an explicitly defined process variable,
+including an empty value, overrides `.env`. Arcane project variables must therefore not
+contain stale/blank duplicates of non-empty runtime settings.
 
-`SBS_ACCOUNT_DELETION_INSTANCE_ID` is recovery-critical. The Production `.env`
-file is the operator-backed source for that stable authority identifier. A blank
-Arcane/process override must be treated as deployment failure; do not weaken API
-startup or re-bootstrap the deletion journal to work around it.
+The released launcher refuses a process `SBS_ENVIRONMENT` that drifts away from the
+Production dotenv and validates application image identity before pull/start.
 
-From a complete SideBySide checkout, the shared guard can verify the rendered
-Compose contract before a deployment. Point it at the Arcane project's actual
-Compose directory and Compose project name:
+The shared runtime guard can additionally inspect rendered/running configuration from a
+checkout or extracted release bundle:
 
 ```bash
 ARCANE_PROJECT_DIR=/path/to/arcane-project
@@ -112,17 +178,16 @@ python3 scripts/check_runtime_environment.py \
   --project-name "$ARCANE_COMPOSE_PROJECT"
 ```
 
-The check fails without printing secret values when a non-empty deletion-authority
-ID in `.env` is rendered differently, or when Production omits the authority.
+For Production it rejects unsafe application image identity such as `latest`,
+branch/local source tags, missing/mismatched `SBS_RELEASE_VERSION`, backend-role
+divergence, application `build:` fallback or disabled pulling.
 
-After changing any runtime environment setting, **recreate the affected
-containers**. In Arcane use the deployment option that force-recreates containers;
-a plain Restart is not sufficient because Docker fixes container environment at
-container creation time. Do **not** enable any option that recreates or deletes
-named volumes. In particular, `deletion_journal_data`, `postgres_data`, and
-`media_data` must survive a normal configuration update.
+After changing runtime settings, use the released launcher `deploy`; it force-recreates
+affected runtime containers without deleting named volumes. Do not use an Arcane option
+that removes `deletion_journal_data`, `postgres_data`, or `media_data` during an ordinary
+configuration/application update.
 
-After Arcane has recreated the stack, run the same guard with runtime inspection:
+After recreation, runtime inspection remains available:
 
 ```bash
 python3 scripts/check_runtime_environment.py \
@@ -133,85 +198,34 @@ python3 scripts/check_runtime_environment.py \
   --check-running
 ```
 
-This compares selected critical settings from the canonical Compose render with
-the resulting `api`, `worker`, and other consuming Compose containers. It reports
-only variable names/service names, never the compared values.
-
-If a full checkout is not available on the Docker host, the minimum incident
-check for the deletion authority can be run directly inside the Arcane project
-directory without printing the UUID:
-
-```bash
-cd /path/to/arcane-project
-
-expected=$(grep '^SBS_ACCOUNT_DELETION_INSTANCE_ID=' .env | cut -d= -f2-)
-rendered=$(docker compose --profile self-hosted --env-file .env config --format json \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["environment"].get("SBS_ACCOUNT_DELETION_INSTANCE_ID", ""))')
-container=$(docker compose --profile self-hosted --env-file .env ps -aq api | head -n1)
-running=$(docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
-  | sed -n 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=//p')
-
-test -n "$expected" && test "$expected" = "$rendered" && test "$rendered" = "$running"
-```
-
-Interpret failures as follows:
-
-- `.env` differs from the rendered Compose value: inspect Arcane/project process
-  environment for an override, especially an explicitly blank duplicate;
-- rendered Compose differs from the container: the container is stale or was
-  created from different deployment environment; correct the project environment
-  and force-recreate the affected containers;
-- journal validation still fails with matching rendered/runtime values: stop and
-  follow the Account-deletion recovery procedure. Never synthesize a replacement
-  journal for an established authority.
-
-## Persistent Development in Arcane
-
-A long-lived Development instance is a separate Arcane project, not a mode of
-the Production project. Start from `deploy/persistent-development.env.example`.
-It already selects `COMPOSE_PROFILES=self-hosted` and contains remote Git build
-contexts for `main`.
-
-Use a unique `COMPOSE_PROJECT_NAME`, database password, cursor signing key,
-bootstrap state and media storage. Before Production promotion:
-
-1. resolve the candidate commit SHA;
-2. pin both build-context URLs and `SBS_BUILD_REVISION` to that SHA;
-3. rebuild/recreate the complete Development stack;
-4. verify migrations, API/Web health, both revision identities, authenticated
-   smoke, and the affected product path;
-5. configure Production to the same exact commit SHA only after acceptance.
-
-Use `scripts/check_environment_isolation.py` before promotion when Development
-and Production dotenv files are available. Use `scripts/deployment_smoke.py`
-for the non-destructive network smoke.
+The guard reports variable/service names, never compared secret values.
 
 ## Public and private repositories
 
-Docker/BuildKit can load a public Git build context directly. Private
-repositories require Git authentication supplied by the operator or Arcane to
-the build environment. Do not embed credentials or tokens in Git URLs,
-`compose.yaml`, or checked-in env templates.
+Remote Git contexts used for **Development source builds** may require BuildKit/Arcane Git
+authentication for private repositories. Do not embed credentials/tokens in Git URLs,
+`compose.yaml`, or checked-in env templates. The source builder rejects credential- and
+query-bearing source URLs before they can enter plan/log output.
 
-If the Arcane/BuildKit setup cannot authenticate remote Git contexts, configure
-that capability first or use a verified complete checkout. Do not create another
-Compose manifest as a workaround.
+Production pulls the released package identity instead of Git contexts. If registry
+authentication is required, configure it in Docker/Arcane registry credentials; do not
+add registry tokens to Compose, `.env`, release evidence, or support bundles.
 
-## Target architecture with a reverse proxy
+Do not create another Compose manifest as an authentication or deployment workaround.
 
-The reverse proxy is the only public TLS endpoint. On the same public origin it
-routes to two internal targets:
+## Reverse proxy architecture
+
+The reverse proxy is the only public TLS endpoint. On one public origin it routes:
 
 | Path | Internal target |
 |---|---|
 | `/api/` | SideBySide API on `API_PORT` |
 | all other paths | SideBySide Web on `WEB_PORT` |
 
-The `/api/` route must go directly to the API. In Production it must not first
-pass through the Web Nginx container because that would lose the trusted TLS
-proxy hop for `X-Forwarded-Proto`.
+The `/api/` route goes directly to the API. In Production it must not first pass through
+Web Nginx because that would lose the trusted TLS proxy hop for `X-Forwarded-Proto`.
 
-### Reverse proxy on the same host
+Same-host secure default:
 
 ```dotenv
 SBS_BIND_IP=127.0.0.1
@@ -219,34 +233,12 @@ API_PORT=8000
 WEB_PORT=8080
 ```
 
-### Reverse proxy on another host
-
-Bind only the private Docker/Arcane host address, not an unnecessarily broad
-`0.0.0.0` listener:
-
-```dotenv
-SBS_BIND_IP=192.168.10.20
-API_PORT=8000
-WEB_PORT=8099
-SBS_ENVIRONMENT=production
-SBS_PUBLIC_BASE_URL=https://sidebyside.example
-SBS_ALLOWED_HOSTS=["sidebyside.example","localhost","127.0.0.1"]
-TRUSTED_PROXY_IPS=192.168.10.30,192.168.10.31
-```
-
-`TRUSTED_PROXY_IPS` contains only the addresses or smallest CIDR range from
-which the reverse proxy actually reaches the API. Never use `*`.
-
-## Web Space context
-
-The Web client does not accept an operator-provided Space UUID. After
-authentication it discovers the account's active Memberships through the API
-and uses only a server-authorized Space. Arcane therefore needs no
-Space-specific Web build argument or environment value.
+For a reverse proxy on another private host, bind only the intended private address and
+set `TRUSTED_PROXY_IPS` to the exact proxy source IP/CIDR. Never use `*`.
 
 ## Post-deployment verification
 
-From the reverse-proxy host or the same private network:
+From the reverse-proxy host/private network:
 
 ```bash
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
@@ -254,18 +246,12 @@ curl --fail http://<docker-host>:<WEB_PORT>/.well-known/sidebyside-revision
 curl --fail --include https://sidebyside.example/api/v1/health/ready
 ```
 
-The normal API readiness response is:
-
-```json
-{"status":"ok","database":"ok"}
-```
-
-For release acceptance prefer the shared helper:
+For release acceptance prefer:
 
 ```bash
 python3 scripts/deployment_smoke.py \
   --base-url https://sidebyside.example \
-  --expected-revision <expected-commit-sha>
+  --expected-revision <release-source-sha>
 ```
 
-Both Web and API must report the expected commit SHA.
+Both Web and API must report the exact published source SHA.

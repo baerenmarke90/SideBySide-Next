@@ -1,311 +1,354 @@
 # M6 immutable release engineering
 
-**Owner:** #519  
+**Owner:** #519, #827  
 **Depends on:** #190, #193, #194, #375  
 **Gate:** G4 is already passed; G5 consumes the final release evidence.
 
-This document records the #519 release-engineering and Android publication decisions.
-It deliberately keeps release identity, signing custody and rollback selection separate
-from database recovery.
+This document records the release-engineering, OCI publication and Android publication
+contract. Release identity, signing custody, application rollback and database recovery
+remain separate concerns.
 
 ## Decision: build once, publish immutable artifacts
 
-For launch, SideBySide uses **build-once release artifacts** while keeping #375's exact
-commit SHA as the source identity.
+SideBySide/eimir. uses **build-once release artifacts** while preserving the exact Git
+commit SHA as source identity.
 
-The v1 packaging boundary is:
+The launch artifact set is:
 
-- one backend image archive shared by API, worker and migrate;
-- one Web image archive;
-- final signed Android APK/AAB for the selected distribution channel;
+- one backend runtime archive shared by API, worker and migrate;
+- one Web runtime archive;
+- GHCR backend/Web images loaded from those exact archives without rebuild;
+- one Self-Hosted image-identity record containing authoritative digest-qualified registry references;
+- one small Self-Hosted operator bundle containing canonical Compose, release env
+  template, mandatory Production launcher and runtime checker;
+- final signed Android APK/AAB;
 - SPDX 2.3 JSON SBOMs and GitHub Artifact Attestations from #193;
 - one machine-readable release manifest plus checksums;
 - one Git tag `v<product-version>` pointing to the exact release commit;
-- one GitHub Release containing the complete immutable artifact/evidence set.
+- one **immutable** GitHub Release containing the complete artifact/evidence set.
 
-Cloud/Managed may later load the exact released image archives and push them to a
-registry, recording immutable registry digests as additional transport identities.
-The product is not rebuilt for that promotion. Self-Hosted retains the #375 verified
-source path and the released image-archive path. Neither mode identifies Production
-by mutable `main`.
+The protected publication workflow promotes the already-built #193 runtime archives to
+GHCR. For operator discovery it may create aliases such as:
 
-An OCI/Docker **tag is not immutable identity**, even when its spelling looks like an
-immutable product version such as `v1.0.0`: a registry can move a tag to different
-content. Cloud/Managed Production therefore uses a digest-qualified registry reference
-(`registry/repository@sha256:<digest>`) as its transport/deployment identity. A tag may
-remain before the `@sha256:` suffix for operator readability, but a tag alone is never
-sufficient. This registry digest supplements the #519 release identity; it does not
-create a second product release identity.
+```text
+ghcr.io/baerenmarke90/eimir-backend:sha-<source-sha>
+ghcr.io/baerenmarke90/eimir-backend:v<product-version>
+ghcr.io/baerenmarke90/eimir-web:sha-<source-sha>
+ghcr.io/baerenmarke90/eimir-web:v<product-version>
+```
+
+**Those tags are not release identity.** GHCR does not provide server-side immutable
+tags, so publication integrity must never depend on a check-then-push tag sequence. The
+workflow first pushes the exact build-once image under a run-unique transport alias,
+captures the digest reported by the actual push, validates that exact digest as a single
+image manifest, and verifies that it resolves to the loaded release bytes. Only then are
+human-friendly source/version aliases reconciled as non-authoritative discovery names.
+A concurrent or later alias move cannot change the digest recorded for the release.
+
+Existing aliases are still checked fail-closed. An alias that already resolves to a
+different digest aborts publication; authentication, rate-limit, network, server or
+unclassified registry errors also abort. Protected release dispatches are globally
+serialized as defense in depth, but serialization is not the trust primitive.
+
+`self-hosted-image-identity.json` records the exact digest-qualified references
+(`repository:vX.Y.Z@sha256:<digest>`) together with the SHA-256 of the original #519
+runtime archive that was promoted. The tag component is descriptive; the digest after
+`@sha256:` is authoritative.
+
+Official Self-Hosted images are public distribution artifacts. Before a GitHub Release
+can be published, the protected workflow performs a **full anonymous pull** of both
+backend and Web digest-qualified images through a fresh isolated Docker daemon with its
+own empty client configuration and data root. This proves that manifests, image config
+and all layers are actually consumable without GHCR credentials or a warm local cache.
+A private or partially unreadable package therefore stops the release instead of
+producing an installer that later needs an undocumented token.
+
+Cloud/Managed keeps the stronger #668 rule: a running managed deployment must itself use
+and retain digest-qualified runtime identity. Self-Hosted publication evidence and
+managed deployment evidence are related but distinct.
 
 ## Version policy
 
-Launch versions use SemVer and have exactly two human-facing representations:
+Launch versions use SemVer:
 
-- product version / Android `versionName`: `MAJOR.MINOR.PATCH` with an intentional
-  SemVer prerelease/build suffix only when needed;
+- product version / Android `versionName`: `MAJOR.MINOR.PATCH`, optionally with an
+  intentional prerelease suffix;
 - Git tag: `v<product-version>`.
 
-`android/app/build.gradle.kts` remains authoritative for `versionName` per #194. A
-release fails when the requested product version differs from that value.
+Build metadata (`+...`) is rejected for release publication because the product version
+is also used as an OCI discovery tag. The common release preflight additionally rejects
+a `v<version>` value longer than the OCI 128-character tag limit.
 
-Android `versionCode` is a positive monotonically increasing integer supplied by the
-publishing workflow. It is not derived from SemVer and is not a second product
-version.
+`android/app/build.gradle.kts` remains authoritative for `versionName`. Android
+`versionCode` is a positive monotonically increasing integer supplied by publication.
 
-## Release identity
+For Self-Hosted Production, `SBS_RELEASE_VERSION` is mandatory. Versioned or
+digest-qualified image references must still carry exactly that same release version.
+The Production launcher validates this before pull/bootstrap/start.
 
-`scripts/release_manifest.py` consumes the exact #193 `evidence-index.json` and
-creates one schema-v1 release manifest. It rejects:
+## Release manifest and image identity
 
-- a non-SemVer product version;
-- a non-immutable source SHA;
-- a backend artifact that does not jointly cover API, worker and migrate;
-- a missing/mixed backend, Web, APK or AAB set;
-- Android application IDs other than `de.sidebyside.app`;
-- Android `versionName` differing from the product version;
-- unsafe artifact paths or invalid digests;
-- final-publication verification when Android is not `signed-release`.
+`scripts/release_manifest.py` consumes the exact #193 `evidence-index.json` and creates
+one schema-v1 release manifest. It rejects invalid product/source/artifact/Android
+identity and final publication when Android is not `signed-release`.
 
-The manifest contains no credential, token, signing key, `.env` value, user content or
-provider secret.
+The release manifest contains no credentials, signing key, `.env` values, user content,
+tokens, receipts, provider payloads or storage secrets.
 
-## Previous known-good release
+`self-hosted-image-identity.json` records only:
 
-The previous-known-good identity is never a free-form operator SHA. For every
-non-initial release, the workflow downloads `sidebyside-release-manifest.json` from an
-explicitly selected previous GitHub Release and records:
+- product version/tag and source revision;
+- exact backend/Web digest-qualified GHCR references;
+- #519 backend/Web archive SHA-256 values;
+- backend role mapping (`api`, `worker`, `migrate`) and the Web role;
+- canonical release-manifest filename.
 
-- previous product version;
-- previous release tag;
-- previous immutable source revision;
-- SHA-256 of the previous manifest.
+Registry manifest digests and `docker save` archive hashes identify different transport
+representations and are recorded side by side. The invariant is that the already
+verified archive is loaded and pushed without rebuild; the registry-reported digest from
+the actual push becomes the exact pull identity.
 
-The final publication path accepts only a previously published release as the rollback
-reference. G5 must not treat an unsigned release candidate as known-good Production.
+## Previous known-good release and rollback boundary
 
-## Database rollback boundary
+For every non-initial release, the workflow downloads the previous published
+`sidebyside-release-manifest.json` and records its product version, release tag, immutable
+source revision and manifest hash. A free-form operator SHA is not accepted as known-good.
 
-Every release manifest states:
-
-- application release selection is independent from database recovery;
-- database rollback is **not implied**;
-- schema compatibility review is required;
-- #190 and #375 remain authoritative for forward-fix, downgrade and restore choices.
-
-An operator must not start an old application merely because its release assets are
-available. If the current schema is not backward-compatible, use the explicitly tested
-forward-fix/downgrade path or restore the coordinated recovery point according to
-#190/#375.
+Application rollback does **not** imply database rollback. Schema compatibility remains
+under #190/#375: use the tested forward-fix/downgrade path where appropriate or restore a
+coordinated recovery point. Do not start an old image merely because it remains pullable.
 
 ## Candidate workflow
 
-`.github/workflows/release-candidate.yml` remains the unprivileged immutable candidate
-workflow. It is manual-only for real candidates and has no `contents: write`
-permission.
-
-It:
-
-1. calls the #193 reusable evidence workflow;
-2. builds backend/Web and unsigned Android release candidates from one exact SHA;
-3. produces SPDX SBOMs and attestations;
-4. binds version, source SHA, artifact digests and previous-known-good identity into a
-   candidate manifest;
-5. verifies all artifact/SBOM digests;
-6. uploads an immutable candidate bundle.
+`.github/workflows/release-candidate.yml` remains the unprivileged candidate workflow.
+It builds backend/Web and unsigned Android candidates from one exact SHA, produces
+SBOMs/attestations, binds identity into a candidate manifest and uploads an immutable
+candidate bundle. It has no package-write permission and does not publish OCI packages.
 
 An unsigned Android candidate is never a launch/store artifact.
 
-## Android signing and Play decision
+## Android signing custody
 
-The release-owner decision is now fixed for the first launch.
+Google Play App Signing owns the production application-signing key. SideBySide release
+automation uses a distinct upload key supplied only by the protected GitHub Actions
+environment:
 
-### App-signing model
+```text
+production-release
+```
 
-- **Google Play App Signing is enabled** for the production application-signing key.
-- SideBySide release automation uses a **distinct upload key**.
-- The application-signing key is not stored in GitHub, the repository or operator
-  backups; Google Play owns that key boundary.
-- The upload key is the only Android private key consumed by SideBySide release
-  automation.
+Required environment secrets are:
 
-### Online custody
-
-The approved online custody point is the protected GitHub Actions environment:
-
-`production-release`
-
-For the first launch, environment approval/use is restricted to the repository release
-owner. Additional approvers may be added only deliberately as release responsibility
-is delegated.
-
-The environment supplies exactly these signing secrets:
-
-- `SBS_RELEASE_KEYSTORE_BASE64` — base64-encoded upload keystore;
+- `SBS_RELEASE_KEYSTORE_BASE64`;
 - `SBS_RELEASE_KEYSTORE_PASSWORD`;
 - `SBS_RELEASE_KEY_ALIAS`;
 - `SBS_RELEASE_KEY_PASSWORD`.
 
-Repository-level secrets are not the approved custody point for these values. The
-workflow materializes the keystore only under `$RUNNER_TEMP`, uses it for the Gradle
-release-signing step and removes it when that step exits. No signing secret is copied
-into release evidence, artifacts, logs, SBOMs, manifests or release notes.
+The workflow materializes the keystore only under `$RUNNER_TEMP`, removes it after use,
+and never copies signing material into evidence/logs/SBOMs/manifests/registry metadata.
+GHCR authentication uses the ephemeral Actions token; only the protected publication job
+has `packages: write`.
 
-The GitHub environment itself and its secret values are operator configuration and are
-not represented in repository files. Before the first real publication, G5/#524 must
-verify that the environment is protected, the expected approver policy is active and
-all four secrets are present.
-
-### Offline recovery / escrow
-
-The human release owner keeps one encrypted offline recovery copy of the **upload
-key**, plus the alias and recovery procedure, in a location independent from GitHub.
-Passwords protecting that copy must not be stored next to an unencrypted keystore.
-
-If the online upload key is lost but the offline copy is intact, restore the protected
-GitHub environment from that copy and rotate credentials afterward if exposure is
-suspected.
-
-If the upload key is lost or compromised and no trustworthy copy remains, use Google
-Play's supported upload-key reset/rotation process. Do not replace the package identity
-or create a second Play application as an ad-hoc recovery mechanism.
-
-Loss/rotation of the Google-held application-signing key follows Google Play App
-Signing's platform recovery/support process; SideBySide does not invent a second key
-escrow mechanism for it.
+Before the first real publication, #914 must verify the protected environment, approval
+policy and signing-secret presence. The release owner separately keeps one encrypted
+offline recovery copy of the upload key.
 
 ## Protected final publication workflow
 
-`.github/workflows/release-publish.yml` is the only repository workflow allowed to
-turn a candidate source revision into a final launch release.
-
-The workflow is fail-closed and uses three boundaries before publication:
+`.github/workflows/release-publish.yml` is the only repository workflow that may turn a
+candidate source revision into a final GitHub Release and released runtime packages. It
+is also the only repository workflow allowed `contents: write`; the release contract
+checks that exclusivity so no second automation can mutate a staged Release.
+All `workflow_dispatch` publication runs share one non-cancelling concurrency group, so
+two protected release publications cannot execute concurrently. Release maintainers must
+not manually modify the draft while protected publication is in progress.
 
 ### 1. Unprivileged preflight
 
-Before requesting access to signing material, it verifies:
+It verifies:
 
-- explicit `confirm_publish=true` operator intent;
-- the exact source SHA is reachable from `main`;
-- existing CI/security checks for that SHA are completed without failure;
-- the requested tag and GitHub Release do not already exist;
-- product version matches the frozen Android `versionName`;
-- previous-known-good selection is valid, or the operator explicitly marks the initial
-  release;
-- #193 artifact transport checksums are intact.
+- `confirm_publish=true`;
+- exact source SHA reachable from `main`;
+- pre-existing CI/security checks completed green;
+- requested tag/Release unused;
+- requested version matches Android `versionName`;
+- valid initial/previous-known-good choice;
+- #193 transport checksums intact.
 
-### 2. Protected signing and final evidence
+### 2. Protected signing and OCI promotion
 
-Only after preflight succeeds does the `production-release` job start.
+After protected environment approval it:
 
-It:
+1. signs/verifies final Android APK/AAB from the same `github.sha`;
+2. regenerates signed-byte SBOMs and attestations;
+3. builds/verifies the final signed release manifest;
+4. loads exact #193 backend/Web archives with `docker load`;
+5. pushes each image under a run-unique transport alias and captures the digest reported
+   by the actual push;
+6. validates the exact digest-qualified image as a supported single-image manifest and
+   confirms it resolves to the loaded release bytes;
+7. reconciles `sha-<source>` and `v<version>` as non-authoritative discovery aliases,
+   failing if an existing alias points elsewhere or lookup is uncertain;
+8. writes `self-hosted-image-identity.json` from the authoritative push digests;
+9. logs out of GHCR and fully pulls both digest-qualified runtime images through a fresh,
+   isolated, credential-free Docker daemon with an empty data root;
+10. creates a deterministic Self-Hosted operator bundle containing only:
+    - `compose.yaml`;
+    - `deploy/self-hosted-release.env.example`;
+    - `scripts/self_hosted_release.py`;
+    - `scripts/check_runtime_environment.py`;
+11. writes/verifies final checksums and release notes.
 
-1. materializes the upload keystore only in `$RUNNER_TEMP`;
-2. builds APK and AAB from the same `github.sha` and supplied monotonic `versionCode`;
-3. verifies APK/AAB signatures and checks APK application ID, `versionName` and
-   `versionCode`;
-4. removes the unsigned Android candidate from the final evidence set;
-5. regenerates Android SPDX SBOMs for the **signed bytes**;
-6. replaces Android digests in `evidence-index.json` and marks signing as
-   `signed-release`;
-7. discards unsigned Android attestation bundles and creates fresh provenance/SBOM
-   attestations for the signed APK/AAB;
-8. re-verifies retained backend/Web attestations and the new signed Android
-   attestations;
-9. builds and verifies the final release manifest with
-   `--require-signed-android`;
-10. writes and verifies final checksums and human-readable release notes.
+The bundle contains no backend/Web application source and no credentials. It is the
+supported installation surface for a clean Self-Hosted target host.
 
-Backend/Web are not rebuilt in the protected job; the exact #193 build-once artifacts
-are retained. Only Android must be rebuilt because signing changes its final bytes.
+### 3. Immutable GitHub publication
 
-### 3. Immutable publication
+Immediately before publication the workflow rechecks tag/Release absence. It then:
 
-Immediately before write access is used, the workflow rechecks that the release tag
-and GitHub Release are still unused. It then:
+1. creates the GitHub Release as a **draft** and uploads the complete evidence set;
+2. queries every staged asset and compares the complete flat asset-name set, byte size
+   and GitHub-computed SHA-256 digest with every locally validated release file; any
+   missing, unexpected, duplicate-name or byte-mismatched asset aborts before publish;
+3. publishes the already-verified draft;
+4. requires `gh release view --json isImmutable` to report exactly `true`;
+5. if immutability is not active, attempts cleanup of the just-created mutable Release
+   and tag, reports any cleanup failure explicitly, and fails closed regardless;
+6. verifies the published release attestation with `gh release verify`;
+7. rechecks the Git tag target and re-verifies the **complete immutable asset name/size/
+   SHA-256 set** against the same local release evidence.
 
-- creates `v<version>` at exactly `github.sha`;
-- publishes the complete release-evidence directory as GitHub Release assets;
-- downloads the published release manifest again;
-- confirms the tag resolves to the original source SHA and the published manifest is
-  byte-identical to the locally verified one.
+`scripts/verify_release_asset_set.py` performs both complete-set comparisons. A selected
+subset is never sufficient: APK/AAB, SBOMs, provenance bundles, checksums, manifests,
+operator artifacts and every other staged asset are part of the freeze boundary.
 
-The workflow never overwrites an existing release identity.
+`self-hosted-image-identity.json` is trusted only as an asset of an immutable GitHub
+Release. Merely comparing an asset once is not sufficient because a mutable release asset
+could otherwise be replaced after the workflow completed.
 
-## GitHub environment setup before first publication
+A retry after partial registry publication is allowed only when existing discovery
+aliases resolve to the exact expected digest. The authoritative digest itself is
+content-addressed and is not derived by re-resolving an alias.
 
-This repository intentionally cannot create or populate signing secrets itself. The
-release owner must configure GitHub before the first production run:
+## Released Self-Hosted runtime contract
 
-1. create/protect the `production-release` environment;
-2. require explicit deployment approval by the release owner;
-3. add the four environment secrets listed above;
-4. generate/store the encrypted offline upload-key recovery copy independently;
-5. enable Google Play App Signing and register the matching upload certificate in the
-   Play Console;
-6. execute the first publication only through `Publish Immutable Release` after normal
-   launch gates are green.
+Repository-root `compose.yaml` is the **only tracked Compose runtime manifest**. Released
+application services contain no `build:` fallback:
 
-If any of these conditions is absent, the workflow must fail rather than falling back
-to debug signing, unsigned publication or a repository secret.
+- `api`, `worker`, `migrate` consume one backend image identity;
+- `web` consumes one Web image identity;
+- `postgres` remains the upstream image;
+- `demo-init` is not part of normal `self-hosted` startup.
+
+The release env template selects `SBS_RELEASE_VERSION`; digest-qualified references carry
+that version for operator readability but are bound by their digest.
+
+### Mandatory Production launcher
+
+Released Production is operated through:
+
+```bash
+python3 scripts/self_hosted_release.py --env-file .env <operation>
+```
+
+The launcher is part of the release bundle and provides `validate`, `pull`,
+`bootstrap-deletion-authority`, and `deploy` operations. Before pull/bootstrap/start it
+renders canonical Compose and validates the selected release identity. `deploy` also
+requires the complete Production runtime-environment contract.
+
+Raw Compose is not the supported Production pull/bootstrap/start path. It is acceptable
+for post-deploy diagnostics only. A registry outage, version mismatch or invalid image
+identity fails rather than falling back to source.
+
+## Development and verified-source boundary
+
+Development/CI may build local images through `scripts/build_self_hosted_source.py` and
+then run canonical Compose with pull disabled. The builder:
+
+- rejects Production declared by dotenv **or** process environment;
+- accepts only local SideBySide image repositories/tags as build targets;
+- rejects credential/query-bearing remote source URLs before they reach plan output.
+
+`scripts/compose_checked.py` exports one exact clean Git snapshot, builds verified local
+images and runs canonical Compose against those images. It likewise rejects Production
+from either configuration source.
+
+These are Development/CI evidence paths, never released Production fallbacks.
+
+## Demo initialization
+
+`demo-init` uses profile `demo`, not `self-hosted`. Normal Self-Hosted startup does not
+execute Demo seeding. Public Demo operators intentionally run that one-shot lifecycle.
+
+## GitHub and GHCR setup before first publication
+
+Before the first Production publication, the release owner must:
+
+1. protect `production-release` with explicit release-owner approval;
+2. configure the four Android upload-key secrets;
+3. retain encrypted offline upload-key recovery independently;
+4. enable Google Play App Signing/register the upload certificate;
+5. enable **Settings -> Releases -> Enable release immutability** for the repository;
+6. allow repository Actions package publication;
+7. ensure `eimir-backend` and `eimir-web` are Public GHCR packages before a final release
+   can pass the anonymous-consumption gate;
+8. execute final publication only after launch gates are green.
+
+On the very first GHCR publication the packages may be created as Private. In that case
+the workflow intentionally stops **before GitHub Release publication** after pushing the
+content-addressed images. A package administrator changes both package visibilities to
+Public and reruns the same protected publication. Normal Self-Hosted operators are never
+asked for a GHCR PAT or publication credential.
+
+No missing condition may fall back to debug signing, unsigned publication,
+source-building Production, mutable GitHub Release assets or authenticated-only public
+Self-Hosted image distribution.
 
 ## Cloud/Managed deployment binding
 
-Cloud registry promotion happens **after** the final #519 release exists. It therefore
-does not rewrite or extend the published release manifest. Instead,
-`scripts/release_manifest.py cloud-deployment` consumes that exact final manifest and
-the resolved canonical `cloud` Compose configuration and emits a small deployment
-identity record containing only:
+The same exact #519 backend/Web archives are promoted to GHCR. Cloud/Managed may consume
+those bytes, but #668 requires separate managed runtime/deployment identity evidence.
+`scripts/release_manifest.py cloud-deployment` rejects mutable tag-only identities,
+missing images, `build:` fallback, backend-role divergence, non-final manifests and
+invalid previous-known-good linkage.
 
-- product version/tag, source revision and SHA-256 of the exact #519 release manifest;
-- the existing #519 `backend-runtime` and `web-runtime` archive SHA-256 values;
-- the exact digest-qualified backend and Web registry references/digests actually
-  selected by Compose;
-- backend roles (`api`, `worker`, `migrate`) as one shared image identity;
-- the exact previous-known-good Cloud deployment identity for a non-initial release.
+Both operating models consume one product release chain:
 
-The command rejects tag-only references (`latest`, `main`, `v1.0.0`, arbitrary branch
-or custom tags), missing images, any `build:` fallback, backend-role image divergence,
-an unsigned/non-final #519 manifest, and a previous deployment identity that does not
-match the canonical #519 `previousKnownGood` record. The output is deployment evidence,
-not another release manifest, and contains no Compose environment or secret values.
+```text
+product version -> Git tag -> immutable source SHA -> release manifest -> artifact hashes
+```
 
-Because registry manifest digests and `docker save` archive digests identify different
-representations, they are recorded side by side rather than incorrectly compared for
-string equality. The invariant is: the already verified #519 archive is loaded and
-pushed without rebuild; the registry-reported digest of that promoted image becomes the
-exact pull identity used by Production.
-
-## Self-Hosted and Cloud/Managed
-
-Both operating models consume the same release identity:
-
-`product version -> Git tag -> immutable source SHA -> release manifest -> artifact digests`
-
-Self-Hosted may deploy the released archives directly or use the verified-source path
-from #375. Cloud/Managed promotes the exact archives to an OCI registry, records the
-registry digests as transport/deployment identity, and deploys only digest-qualified
-references. It must not rebuild them. Commercial entitlement state is unrelated to
-artifact identity.
+Self-Hosted uses the immutable GitHub Release image-identity asset and digest-qualified
+OCI references through the released launcher. Cloud/Managed uses digest-qualified
+references only and separately records the actual managed deployment identity. Neither
+builds application source on a Production target.
 
 ## Focused test contract
 
-`tools/ci/test_release_manifest.py` covers release-manifest invariants plus the #668
-Cloud deployment binding, digest-only OCI identity and previous-known-good linkage.
+`tools/ci/test_release_manifest.py` covers release-manifest and Cloud deployment identity
+invariants.
 
-`tools/ci/test_release_publish_workflow.py` covers the privileged publication boundary,
-including:
+`tools/ci/test_release_publish_workflow.py` and
+`tools/ci/test_verify_release_asset_set.py` cover:
 
-- no privileged `pull_request_target` path;
-- protected environment and least-privilege permissions;
-- explicit publish confirmation and source-on-main requirement;
-- CI/tag/release preflight;
-- environment-only ephemeral signing material;
-- signed Android identity verification;
-- fresh SBOM/attestation generation for signed bytes;
-- final `--require-signed-android` verification;
-- immutable GitHub Release/tag publication;
-- immutable pins for external Actions and the Syft binary.
+- protected/least-privilege publication, sole automated `contents: write` ownership and
+  global dispatch serialization;
+- package-write only in protected publication;
+- source-on-main and green-check preflight;
+- ephemeral environment-only Android signing material;
+- signed Android identity/SBOM/attestation regeneration;
+- exact runtime archive loading with no backend/Web rebuild;
+- fail-closed GHCR alias handling while release identity comes from the actual push digest;
+- single-image manifest enforcement on the exact digest;
+- clean-daemon full anonymous pulls of released Self-Hosted images;
+- digest-qualified Self-Hosted image evidence;
+- deterministic Self-Hosted operator bundle contents;
+- complete staged and immutable GitHub Release asset name/size/SHA-256 equivalence;
+- draft-to-published GitHub Release flow with mandatory `isImmutable=true` and release verification;
+- immutable external Action/Syft pins.
 
-Normal repository CI/security/privacy/reuse/supply-chain gates remain authoritative for
-the application revision. G5/#524 performs the real operator rehearsal and captures
-the protected-environment/publication evidence.
+Deployment/runtime guards additionally cover one-manifest topology, Production launcher
+safety, Development source-build boundaries, release-version/image binding and real
+Self-Hosted startup/recovery behavior.
+
+#914 performs the real protected publication and captures G5-02/G5-03 evidence.

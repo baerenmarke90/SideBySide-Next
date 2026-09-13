@@ -5,9 +5,16 @@ on:
     paths:
       - ".github/workflows/release-publish.yml"
       - ".github/actions/attest-release-artifact/**"
+      - "compose.yaml"
+      - "deploy/self-hosted-release.env.example"
+      - "scripts/self_hosted_release.py"
+      - "scripts/check_runtime_environment.py"
       - "scripts/release_manifest.py"
+      - "scripts/verify_release_asset_set.py"
       - "tools/ci/test_release_manifest.py"
       - "tools/ci/test_release_publish_workflow.py"
+      - "tools/ci/test_verify_release_asset_set.py"
+      - "docs/SELF-HOSTING.md"
       - "docs/m6/IMMUTABLE-RELEASES.md"
   workflow_dispatch:
     inputs:
@@ -38,7 +45,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-release-${{ inputs.release_version || github.ref }}
+  group: publish-release-${{ github.event_name == 'workflow_dispatch' && 'protected' || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -58,6 +65,7 @@ jobs:
         run: |
           python3 tools/ci/test_release_manifest.py
           python3 tools/ci/test_release_publish_workflow.py
+          python3 tools/ci/test_verify_release_asset_set.py
 
   evidence:
     name: Build and attest one source revision
@@ -232,6 +240,7 @@ jobs:
       name: production-release
     permissions:
       contents: write
+      packages: write
       id-token: write
       attestations: write
     steps:
@@ -516,6 +525,394 @@ jobs:
             --artifact-root release-evidence \
             --require-signed-android
 
+      - name: Publish exact build-once runtime images to GHCR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          backend_repo="ghcr.io/${owner}/eimir-backend"
+          web_repo="ghcr.io/${owner}/eimir-web"
+          version_tag="v${RELEASE_VERSION}"
+          source_tag="sha-${SOURCE_REVISION}"
+          transport_tag="publish-${SOURCE_REVISION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          # GHCR does not provide server-side immutable tags. The sha-/v aliases below
+          # are discoverability only and are never trusted as release identity. The
+          # exact digest from the actual push is the authority recorded in the immutable
+          # GitHub Release asset and consumed by Production.
+          manifest_state() {
+            local ref="$1"
+            local output
+            local status
+
+            set +e
+            output=$(docker manifest inspect "$ref" 2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -eq 0 ]; then
+              printf '%s\n' exists
+              return 0
+            fi
+            if printf '%s\n' "$output" | grep -qiE 'manifest unknown|no such manifest'; then
+              printf '%s\n' absent
+              return 0
+            fi
+
+            echo "Unable to verify registry alias for ${ref}; refusing publication." >&2
+            return 1
+          }
+
+          require_single_manifest() {
+            local digest_ref="$1"
+            local output
+            local status
+
+            set +e
+            output=$(docker manifest inspect "$digest_ref" 2>&1)
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to inspect resolved registry digest ${digest_ref}; refusing publication." >&2
+              return 1
+            fi
+
+            if ! MANIFEST_JSON="$output" python3 - <<'PY'
+          import json
+          import os
+
+          manifest = json.loads(os.environ["MANIFEST_JSON"])
+          index_types = {
+              "application/vnd.oci.image.index.v1+json",
+              "application/vnd.docker.distribution.manifest.list.v2+json",
+          }
+          single_types = {
+              "application/vnd.oci.image.manifest.v1+json",
+              "application/vnd.docker.distribution.manifest.v2+json",
+          }
+          if not isinstance(manifest, dict):
+              raise SystemExit("registry digest did not resolve to one manifest object")
+          media_type = manifest.get("mediaType")
+          if isinstance(manifest.get("manifests"), list) or media_type in index_types:
+              raise SystemExit("registry digest resolves to a multi-platform index")
+          if media_type not in single_types:
+              raise SystemExit(f"unsupported registry manifest media type: {media_type!r}")
+          if not isinstance(manifest.get("config"), dict) or not isinstance(manifest.get("layers"), list):
+              raise SystemExit("registry digest is not a single image manifest")
+          PY
+            then
+              echo "Registry digest ${digest_ref} is not a supported single-image manifest; refusing publication." >&2
+              return 1
+            fi
+          }
+
+          extract_registry_digest() {
+            local output="$1"
+            local digest
+            digest=$(printf '%s\n' "$output" \
+              | grep -Eo 'sha256:[0-9a-f]{64}' \
+              | tail -n 1 || true)
+            if [ -z "$digest" ]; then
+              echo "Docker did not report a registry digest; refusing publication." >&2
+              return 1
+            fi
+            printf '%s\n' "$digest"
+          }
+
+          pull_single_digest() {
+            local ref="$1"
+            local repository="$2"
+            local output
+            local status
+            local digest
+            local digest_ref
+
+            set +e
+            output=$(docker pull "$ref" 2>&1)
+            status=$?
+            set -e
+            printf '%s\n' "$output" >&2
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to pull registry reference ${ref}; refusing publication." >&2
+              return 1
+            fi
+            digest=$(extract_registry_digest "$output") || return 1
+            digest_ref="${repository}@${digest}"
+            require_single_manifest "$digest_ref" || return 1
+            printf '%s\n' "$digest_ref"
+          }
+
+          push_single_digest() {
+            local ref="$1"
+            local repository="$2"
+            local output
+            local status
+            local digest
+            local digest_ref
+
+            set +e
+            output=$(docker push "$ref" 2>&1)
+            status=$?
+            set -e
+            printf '%s\n' "$output" >&2
+            if [ "$status" -ne 0 ]; then
+              echo "Unable to push registry reference ${ref}; refusing publication." >&2
+              return 1
+            fi
+            digest=$(extract_registry_digest "$output") || return 1
+            digest_ref="${repository}@${digest}"
+            require_single_manifest "$digest_ref" || return 1
+            printf '%s\n' "$digest_ref"
+          }
+
+          ensure_alias_matches() {
+            local alias_ref="$1"
+            local repository="$2"
+            local expected_digest_ref="$3"
+            local state
+            local actual_digest_ref
+
+            state=$(manifest_state "$alias_ref")
+            if [ "$state" = "exists" ]; then
+              actual_digest_ref=$(pull_single_digest "$alias_ref" "$repository")
+              if [ "$actual_digest_ref" != "$expected_digest_ref" ]; then
+                echo "Registry alias ${alias_ref} already points to a different digest." >&2
+                exit 1
+              fi
+              return 0
+            fi
+            if [ "$state" != "absent" ]; then
+              echo "Unexpected registry alias state for ${alias_ref}." >&2
+              exit 1
+            fi
+
+            # Alias creation is intentionally not an integrity primitive: GHCR tags can
+            # be moved by another package writer. Verify the digest reported by this
+            # push, then rely only on expected_digest_ref for release identity.
+            docker tag "$expected_digest_ref" "$alias_ref"
+            actual_digest_ref=$(push_single_digest "$alias_ref" "$repository")
+            if [ "$actual_digest_ref" != "$expected_digest_ref" ]; then
+              echo "Registry alias ${alias_ref} published with a different digest." >&2
+              exit 1
+            fi
+          }
+
+          publish_archive() {
+            local archive="$1"
+            local source_image="$2"
+            local repository="$3"
+            local result_file="$4"
+
+            docker load --input "$archive" >/dev/null
+            local local_id
+            local remote_id
+            local transport_ref
+            local transport_digest_ref
+            local source_ref
+            local version_ref
+            local digest
+            local_id=$(docker image inspect "$source_image" --format '{{.Id}}')
+            test -n "$local_id"
+
+            transport_ref="${repository}:${transport_tag}"
+            docker tag "$source_image" "$transport_ref"
+            transport_digest_ref=$(push_single_digest "$transport_ref" "$repository")
+            docker pull "$transport_digest_ref" >/dev/null
+            remote_id=$(docker image inspect "$transport_digest_ref" --format '{{.Id}}')
+            if [ "$remote_id" != "$local_id" ]; then
+              echo "Published registry digest does not resolve to the release image bytes." >&2
+              exit 1
+            fi
+
+            source_ref="${repository}:${source_tag}"
+            version_ref="${repository}:${version_tag}"
+            ensure_alias_matches "$source_ref" "$repository" "$transport_digest_ref"
+            ensure_alias_matches "$version_ref" "$repository" "$transport_digest_ref"
+
+            digest="${transport_digest_ref#*@}"
+            printf '%s@%s\n' "$version_ref" "$digest" > "$result_file"
+          }
+
+          publish_archive \
+            release-evidence/backend-runtime.image.tar \
+            "sidebyside-backend:evidence-${SOURCE_REVISION}" \
+            "$backend_repo" \
+            "$RUNNER_TEMP/backend-image-ref"
+          publish_archive \
+            release-evidence/web-runtime.image.tar \
+            "sidebyside-web:evidence-${SOURCE_REVISION}" \
+            "$web_repo" \
+            "$RUNNER_TEMP/web-image-ref"
+
+          export BACKEND_IMAGE_REF WEB_IMAGE_REF
+          BACKEND_IMAGE_REF=$(cat "$RUNNER_TEMP/backend-image-ref")
+          WEB_IMAGE_REF=$(cat "$RUNNER_TEMP/web-image-ref")
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(
+              Path("release-evidence/sidebyside-release-manifest.json").read_text(encoding="utf-8")
+          )
+          artifacts = {item["id"]: item for item in manifest["artifacts"]}
+
+          def image_record(reference: str, artifact_id: str, roles: list[str]) -> dict[str, object]:
+              if "@sha256:" not in reference:
+                  raise SystemExit(f"Published {artifact_id} image is not digest-qualified")
+              return {
+                  "reference": reference,
+                  "digest": reference.split("@", 1)[1],
+                  "releaseArtifactSha256": artifacts[artifact_id]["sha256"],
+                  "roles": roles,
+              }
+
+          identity = {
+              "schemaVersion": 1,
+              "kind": "sidebyside-self-hosted-image-identity",
+              "product": manifest["product"],
+              "sourceRevision": manifest["sourceRevision"],
+              "releaseManifest": "sidebyside-release-manifest.json",
+              "images": {
+                  "backend": image_record(
+                      os.environ["BACKEND_IMAGE_REF"],
+                      "backend-runtime",
+                      ["api", "worker", "migrate"],
+                  ),
+                  "web": image_record(
+                      os.environ["WEB_IMAGE_REF"],
+                      "web-runtime",
+                      ["web"],
+                  ),
+              },
+          }
+          Path("release-evidence/self-hosted-image-identity.json").write_text(
+              json.dumps(identity, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          docker logout ghcr.io >/dev/null
+
+      - name: Verify anonymous GHCR consumption
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend_ref=$(cat "$RUNNER_TEMP/backend-image-ref")
+          web_ref=$(cat "$RUNNER_TEMP/web-image-ref")
+          anonymous_root=$(mktemp -d)
+          anonymous_config="$anonymous_root/client"
+          anonymous_data="$anonymous_root/data"
+          anonymous_exec="$anonymous_root/exec"
+          anonymous_socket="$anonymous_root/docker.sock"
+          anonymous_pid="$anonymous_root/docker.pid"
+          anonymous_log="$anonymous_root/dockerd.log"
+          mkdir -p "$anonymous_config" "$anonymous_data" "$anonymous_exec"
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          unset DOCKER_CONTEXT DOCKER_CERT_PATH DOCKER_TLS_VERIFY
+
+          cleanup_anonymous_docker() {
+            set +e
+            if [ -s "$anonymous_pid" ]; then
+              sudo kill "$(cat "$anonymous_pid")" >/dev/null 2>&1 || true
+              for _ in $(seq 1 20); do
+                if ! sudo kill -0 "$(cat "$anonymous_pid")" >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 1
+              done
+            fi
+            sudo rm -rf "$anonymous_root"
+          }
+          trap cleanup_anonymous_docker EXIT
+
+          sudo dockerd \
+            --host="unix://${anonymous_socket}" \
+            --data-root="$anonymous_data" \
+            --exec-root="$anonymous_exec" \
+            --pidfile="$anonymous_pid" \
+            --storage-driver=vfs \
+            --iptables=false \
+            --bridge=none \
+            --ip-forward=false \
+            --ip-masq=false \
+            > "$anonymous_log" 2>&1 &
+
+          ready=false
+          for _ in $(seq 1 60); do
+            if DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker info >/dev/null 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            echo "Isolated anonymous Docker daemon did not become ready." >&2
+            tail -n 100 "$anonymous_log" >&2 || true
+            exit 1
+          fi
+
+          for ref in "$backend_ref" "$web_ref"; do
+            if ! DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker pull "$ref"; then
+              echo "Released GHCR image ${ref%%@*} cannot be anonymously pulled from a clean daemon." >&2
+              echo "Official Self-Hosted publication requires public eimir-backend/eimir-web packages; set package visibility to Public and rerun." >&2
+              exit 1
+            fi
+            DOCKER_HOST="unix://${anonymous_socket}" DOCKER_CONFIG="$anonymous_config" \
+              docker image inspect "$ref" >/dev/null
+          done
+
+      - name: Build deterministic Self-Hosted operator bundle
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          bundle_name="eimir-self-hosted-v${RELEASE_VERSION}"
+          bundle_root="$RUNNER_TEMP/$bundle_name"
+          rm -rf "$bundle_root"
+          mkdir -p "$bundle_root/deploy" "$bundle_root/scripts"
+
+          cp -- compose.yaml "$bundle_root/compose.yaml"
+          cp -- deploy/self-hosted-release.env.example \
+            "$bundle_root/deploy/self-hosted-release.env.example"
+          cp -- scripts/self_hosted_release.py \
+            "$bundle_root/scripts/self_hosted_release.py"
+          cp -- scripts/check_runtime_environment.py \
+            "$bundle_root/scripts/check_runtime_environment.py"
+
+          cat > "$RUNNER_TEMP/expected-self-hosted-bundle.txt" <<EOF
+          ${bundle_name}/
+          ${bundle_name}/compose.yaml
+          ${bundle_name}/deploy/
+          ${bundle_name}/deploy/self-hosted-release.env.example
+          ${bundle_name}/scripts/
+          ${bundle_name}/scripts/check_runtime_environment.py
+          ${bundle_name}/scripts/self_hosted_release.py
+          EOF
+
+          tar --sort=name \
+            --mtime='UTC 1970-01-01' \
+            --owner=0 --group=0 --numeric-owner \
+            -cf "$RUNNER_TEMP/${bundle_name}.tar" \
+            -C "$RUNNER_TEMP" "$bundle_name"
+          gzip -n -c "$RUNNER_TEMP/${bundle_name}.tar" \
+            > "release-evidence/${bundle_name}.tar.gz"
+
+          tar -tzf "release-evidence/${bundle_name}.tar.gz" \
+            > "$RUNNER_TEMP/actual-self-hosted-bundle.txt"
+          diff -u \
+            "$RUNNER_TEMP/expected-self-hosted-bundle.txt" \
+            "$RUNNER_TEMP/actual-self-hosted-bundle.txt"
+
       - name: Write human-readable release notes
         shell: bash
         env:
@@ -539,6 +936,16 @@ jobs:
           This is one immutable build-once release set. Backend API, worker and migrate
           share one runtime artifact; Web and final signed Android artifacts are bound
           to the same source revision by \`sidebyside-release-manifest.json\`.
+
+          The exact backend and Web archives were loaded without rebuild and published
+          as versioned GHCR images. GHCR version/source tags are discovery aliases only;
+          \`self-hosted-image-identity.json\` records the authoritative digest-qualified
+          references and binds them back to the #519 archive hashes.
+
+          \`eimir-self-hosted-v${RELEASE_VERSION}.tar.gz\` is the deterministic
+          source-free operator bundle for released Self-Hosted installation. It contains
+          canonical Compose, the release env template, mandatory Production launcher and
+          runtime identity checker; application source is not included or built on target.
 
           Android publication uses Google Play App Signing with a distinct upload key.
           The upload key is supplied only by the protected \`production-release\`
@@ -578,7 +985,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish immutable GitHub Release
+      - name: Stage and publish immutable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.release_version }}
@@ -587,12 +994,64 @@ jobs:
           set -euo pipefail
           tag="v${RELEASE_VERSION}"
           mapfile -d '' assets < <(find release-evidence -type f -print0 | sort -z)
+
           gh release create "$tag" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "SideBySide v${RELEASE_VERSION}" \
             --notes-file release-evidence/RELEASE-NOTES.md \
+            --draft \
             --verify-tag=false
+
+          draft_active=true
+          cleanup_draft_on_failure() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ] && [ "$draft_active" = "true" ]; then
+              set +e
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+              cleanup_status=$?
+              set -e
+              if [ "$cleanup_status" -ne 0 ]; then
+                echo "Automatic cleanup of failed draft Release ${tag} failed; manual cleanup is required." >&2
+              fi
+            fi
+            exit "$status"
+          }
+          trap cleanup_draft_on_failure EXIT
+
+          release_id=$(gh release view "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json databaseId,isDraft \
+            --jq 'select(.isDraft == true) | .databaseId')
+          test -n "$release_id"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+            > "$RUNNER_TEMP/staged-release-assets.json"
+          python3 scripts/verify_release_asset_set.py \
+            --expected-root release-evidence \
+            --assets-json "$RUNNER_TEMP/staged-release-assets.json"
+
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          draft_active=false
+          trap - EXIT
+
+          immutable=$(gh release view "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json isImmutable \
+            --jq '.isImmutable')
+          if [ "$immutable" != "true" ]; then
+            echo "GitHub Release ${tag} was published without release immutability; refusing publication." >&2
+            set +e
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            cleanup_status=$?
+            set -e
+            if [ "$cleanup_status" -ne 0 ]; then
+              echo "Automatic cleanup of mutable Release ${tag} failed; manual cleanup is required." >&2
+            fi
+            exit 1
+          fi
 
       - name: Verify published immutable identity
         env:
@@ -601,16 +1060,23 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${RELEASE_VERSION}"
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isImmutable --jq '.isImmutable')" = "true"
+          gh release verify "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null
           git fetch --force --tags origin
           test "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA"
-          mkdir -p "$RUNNER_TEMP/published-release"
-          gh release download "$tag" \
+
+          release_id=$(gh release view "$tag" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern sidebyside-release-manifest.json \
-            --dir "$RUNNER_TEMP/published-release"
-          cmp --silent \
-            release-evidence/sidebyside-release-manifest.json \
-            "$RUNNER_TEMP/published-release/sidebyside-release-manifest.json"
+            --json databaseId,isDraft \
+            --jq 'select(.isDraft == false) | .databaseId')
+          test -n "$release_id"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?per_page=100" \
+            > "$RUNNER_TEMP/published-release-assets.json"
+          python3 scripts/verify_release_asset_set.py \
+            --expected-root release-evidence \
+            --assets-json "$RUNNER_TEMP/published-release-assets.json"
 
       - name: Upload final release evidence snapshot
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
