@@ -20,7 +20,9 @@ REFERENCE_DATE = date(2026, 9, 13)
 DEMO_PASSWORD = "canonical-demo-wish-detective-test-password"
 
 
-def _open_titles(session: Session, *, space_id, owner_id) -> set[str]:  # type: ignore[no-untyped-def]
+def _open_titles(
+    session: Session, *, space_id, owner_id
+) -> set[str]:  # type: ignore[no-untyped-def]
     return {
         wish.payload.title
         for wish in session.execute(
@@ -34,12 +36,14 @@ def _open_titles(session: Session, *, space_id, owner_id) -> set[str]:  # type: 
 
 
 def _assert_playable(session: Session, result) -> None:  # type: ignore[no-untyped-def]
-    assert len(
-        _open_titles(session, space_id=result.space_id, owner_id=result.lea_id)
-    ) >= MIN_OPEN_WISHES_PER_PARTNER
-    assert len(
-        _open_titles(session, space_id=result.space_id, owner_id=result.alex_id)
-    ) >= MIN_OPEN_WISHES_PER_PARTNER
+    assert (
+        len(_open_titles(session, space_id=result.space_id, owner_id=result.lea_id))
+        >= MIN_OPEN_WISHES_PER_PARTNER
+    )
+    assert (
+        len(_open_titles(session, space_id=result.space_id, owner_id=result.alex_id))
+        >= MIN_OPEN_WISHES_PER_PARTNER
+    )
 
 
 def test_canonical_demo_keeps_wish_detective_playable_across_ensure_and_reset(
