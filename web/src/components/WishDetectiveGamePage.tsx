@@ -183,7 +183,7 @@ function WishDetectiveSessionView({
         </p>
         <p className="wish-detective-finish-score">
           {participants[0].displayName} {snapshot.scores[0]} ·{' '}
-          {participants[1].displayName} <strong>{snapshot.scores[1]}</strong>
+          {participants[1].displayName} {snapshot.scores[1]}
         </p>
         <div className="wish-detective-actions">
           <button
