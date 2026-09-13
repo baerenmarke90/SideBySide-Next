@@ -26,8 +26,8 @@ DEFAULT_IMAGE_IDENTITY = ROOT / "self-hosted-image-identity.json"
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 DIGEST_REF_RE = re.compile(
     r"^ghcr\.io/baerenmarke90/eimir-(backend|web):v"
-    r"(?P<version>0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
-    r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+    r"(?P<version>(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)"
     r"@sha256:[0-9a-f]{64}$"
 )
 
