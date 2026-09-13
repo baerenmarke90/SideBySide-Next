@@ -12,11 +12,11 @@ The repository has one tracked runtime topology: `compose.yaml`.
 | | local source test | released Production |
 |---|---|---|
 | `SBS_ENVIRONMENT` | `development` | `production` |
-| application images | local images built before Compose | published GHCR release images |
+| application images | local images built before Compose | public digest-qualified GHCR release images |
 | application `build:` in Compose | none | none |
 | pull policy | `never` for intentional local tags | `always` |
 | supported start entry point | raw Compose after local prebuild | `scripts/self_hosted_release.py` |
-| release identity | non-release local tag | release version + source SHA + OCI digest |
+| release identity | non-release local tag | immutable GitHub Release + source SHA + OCI digest |
 | mail | `log`, `smtp`, or `none` | `smtp` or `none`; never `log` |
 | public origin | HTTP localhost allowed | HTTPS required |
 
@@ -46,15 +46,32 @@ Git snapshot, build local backend/Web images and run canonical Compose against t
 local tags. That wrapper also refuses Production. It proves source; it does not create a
 published release.
 
-## Released Production files
+## Released Production files and trust boundary
 
 A released Self-Hosted installation requires **both** matching GitHub Release assets:
 
 - `eimir-self-hosted-v<release-version>.tar.gz` — the deterministic source-free operator bundle;
-- `self-hosted-image-identity.json` — the immutable digest-qualified image identity for that same release.
+- `self-hosted-image-identity.json` — the digest-qualified image identity for that same release.
 
-Download both assets from the same release, extract the operator bundle, and place the
-identity file at the extracted bundle root before running any release operation:
+The GitHub Release itself must be marked **Immutable**. Do not trust an image-identity
+asset copied from a draft or mutable Release: a mutable asset can be replaced after its
+initial publication. The protected publication workflow refuses to complete unless
+GitHub reports `isImmutable=true` for the published Release and the Release attestation
+verifies.
+
+The backend and Web GHCR images referenced by the identity file are official public
+Self-Hosted distribution artifacts. They must be anonymously pullable by digest. Normal
+Self-Hosted installation does **not** require a GHCR PAT, package-admin token or the
+publication workflow credential.
+
+GHCR `v<version>` and `sha-<source>` tags are discovery aliases only. GHCR does not offer
+server-side immutable tags. The authoritative image identity is the digest after
+`@sha256:` in `self-hosted-image-identity.json`; Production never relies on re-resolving a
+tag to decide which bytes to run.
+
+Download both assets from the same immutable release, extract the operator bundle, and
+place the identity file at the extracted bundle root before running any release
+operation:
 
 ```bash
 RELEASE_VERSION=0.1.0
@@ -80,7 +97,7 @@ The resulting installation directory contains:
 - `deploy/self-hosted-release.env.example`;
 - `scripts/self_hosted_release.py`;
 - `scripts/check_runtime_environment.py`;
-- `self-hosted-image-identity.json` from the matching GitHub Release.
+- `self-hosted-image-identity.json` from the matching immutable GitHub Release.
 
 The protected release workflow publishes these operator artifacts together. The target
 host does **not** need backend/Web source and never builds application images.
@@ -102,19 +119,43 @@ SBS_ALLOWED_HOSTS=["sidebyside.example"]
 SBS_CURSOR_SIGNING_KEY=<stable-random-value-at-least-32-characters>
 ```
 
-Do not independently select Production image bytes from a mutable-looking version tag.
-The mandatory `self-hosted-image-identity.json` supplies the exact digest-qualified
-backend and Web references published for `SBS_RELEASE_VERSION`, for example:
+Do not independently select Production image bytes from a mutable version tag. The
+mandatory `self-hosted-image-identity.json` supplies the exact digest-qualified backend
+and Web references published for `SBS_RELEASE_VERSION`, for example:
 
 ```text
 ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:<digest>
 ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:<digest>
 ```
 
-The launcher verifies that both references carry the exact `SBS_RELEASE_VERSION`, that
-the stored digests match the references, and that backend `migrate`, `api`, and `worker`
-share one exact backend image. Production requires `pull_policy=always` and permits no
-application `build:` fallback.
+The `v0.1.0` portion is operator-readable metadata; Docker's digest-qualified pull is
+bound by `<digest>`. The launcher verifies that both references carry the exact
+`SBS_RELEASE_VERSION`, that the stored digests match the references, and that backend
+`migrate`, `api`, and `worker` share one exact backend image. Production requires
+`pull_policy=always` and permits no application `build:` fallback.
+
+## First publication note for package visibility
+
+GitHub Container Registry may create a newly published package as Private. The protected
+release workflow therefore performs an anonymous digest inspection after GHCR promotion
+and **before** GitHub Release publication. If either `eimir-backend` or `eimir-web` is not
+public, the workflow stops intentionally.
+
+For the first publication only, a package administrator may need to open the two newly
+created GHCR packages, change their visibility to **Public**, and rerun the same protected
+release workflow. The already pushed content-addressed digest is then reused and
+verified. Do not work around this gate by documenting a user PAT or embedding registry
+credentials in `.env`.
+
+Repository release immutability must also be enabled before the first final publication:
+
+```text
+GitHub repository -> Settings -> Releases -> Enable release immutability
+```
+
+If that setting is missing, the workflow publishes through a draft, detects that the
+final Release is not immutable, removes the just-created mutable Release/tag where safe,
+and fails closed.
 
 ## Mandatory released launcher
 
@@ -155,8 +196,8 @@ bootstrap-deletion-authority
 deploy
 ```
 
-A registry outage, missing identity asset, or missing release image is a deployment
-failure. The launcher never falls back to a source build.
+A registry outage, non-public released package, missing identity asset, or missing
+release image is a deployment failure. The launcher never falls back to a source build.
 
 ## First Production installation
 
