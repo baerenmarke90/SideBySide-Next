@@ -42,7 +42,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-release-${{ inputs.release_version || github.ref }}
+  group: publish-release-${{ github.event_name == 'workflow_dispatch' && 'protected' || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -536,7 +536,12 @@ jobs:
           web_repo="ghcr.io/${owner}/eimir-web"
           version_tag="v${RELEASE_VERSION}"
           source_tag="sha-${SOURCE_REVISION}"
+          transport_tag="publish-${SOURCE_REVISION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
+          # GHCR does not provide server-side immutable tags. The sha-/v aliases below
+          # are discoverability only and are never trusted as release identity. The
+          # exact digest from the actual push is the authority recorded in the immutable
+          # GitHub Release asset and consumed by Production.
           manifest_state() {
             local ref="$1"
             local output
@@ -556,7 +561,7 @@ jobs:
               return 0
             fi
 
-            echo "Unable to verify registry identity for ${ref}; refusing publication." >&2
+            echo "Unable to verify registry alias for ${ref}; refusing publication." >&2
             return 1
           }
 
@@ -662,6 +667,39 @@ jobs:
             printf '%s\n' "$digest_ref"
           }
 
+          ensure_alias_matches() {
+            local alias_ref="$1"
+            local repository="$2"
+            local source_image="$3"
+            local expected_digest_ref="$4"
+            local state
+            local actual_digest_ref
+
+            state=$(manifest_state "$alias_ref")
+            if [ "$state" = "exists" ]; then
+              actual_digest_ref=$(pull_single_digest "$alias_ref" "$repository")
+              if [ "$actual_digest_ref" != "$expected_digest_ref" ]; then
+                echo "Registry alias ${alias_ref} already points to a different digest." >&2
+                exit 1
+              fi
+              return 0
+            fi
+            if [ "$state" != "absent" ]; then
+              echo "Unexpected registry alias state for ${alias_ref}." >&2
+              exit 1
+            fi
+
+            # Alias creation is intentionally not an integrity primitive: GHCR tags can
+            # be moved by another package writer. Verify the digest reported by this
+            # push, then rely only on expected_digest_ref for release identity.
+            docker tag "$source_image" "$alias_ref"
+            actual_digest_ref=$(push_single_digest "$alias_ref" "$repository")
+            if [ "$actual_digest_ref" != "$expected_digest_ref" ]; then
+              echo "Registry alias ${alias_ref} published with a different digest." >&2
+              exit 1
+            fi
+          }
+
           publish_archive() {
             local archive="$1"
             local source_image="$2"
@@ -671,61 +709,30 @@ jobs:
             docker load --input "$archive" >/dev/null
             local local_id
             local remote_id
-            local source_digest_ref
-            local version_digest_ref
+            local transport_ref
+            local transport_digest_ref
+            local source_ref
+            local version_ref
             local digest
             local_id=$(docker image inspect "$source_image" --format '{{.Id}}')
             test -n "$local_id"
 
-            local source_ref="${repository}:${source_tag}"
-            local version_ref="${repository}:${version_tag}"
-            local source_state
-            local version_state
-
-            source_state=$(manifest_state "$source_ref")
-            if [ "$source_state" = "exists" ]; then
-              source_digest_ref=$(pull_single_digest "$source_ref" "$repository")
-              remote_id=$(docker image inspect "$source_ref" --format '{{.Id}}')
-              if [ "$remote_id" != "$local_id" ]; then
-                echo "Existing immutable source tag ${source_ref} points to different image bytes." >&2
-                exit 1
-              fi
-            elif [ "$source_state" = "absent" ]; then
-              docker tag "$source_image" "$source_ref"
-              source_digest_ref=$(push_single_digest "$source_ref" "$repository")
-              docker pull "$source_digest_ref" >/dev/null
-              remote_id=$(docker image inspect "$source_digest_ref" --format '{{.Id}}')
-              if [ "$remote_id" != "$local_id" ]; then
-                echo "Published immutable source tag ${source_ref} does not resolve to the release image bytes." >&2
-                exit 1
-              fi
-            else
-              echo "Unexpected registry identity state for ${source_ref}." >&2
+            transport_ref="${repository}:${transport_tag}"
+            docker tag "$source_image" "$transport_ref"
+            transport_digest_ref=$(push_single_digest "$transport_ref" "$repository")
+            docker pull "$transport_digest_ref" >/dev/null
+            remote_id=$(docker image inspect "$transport_digest_ref" --format '{{.Id}}')
+            if [ "$remote_id" != "$local_id" ]; then
+              echo "Published registry digest does not resolve to the release image bytes." >&2
               exit 1
             fi
 
-            test -n "$source_digest_ref"
-            digest="${source_digest_ref#*@}"
+            source_ref="${repository}:${source_tag}"
+            version_ref="${repository}:${version_tag}"
+            ensure_alias_matches "$source_ref" "$repository" "$source_image" "$transport_digest_ref"
+            ensure_alias_matches "$version_ref" "$repository" "$source_image" "$transport_digest_ref"
 
-            version_state=$(manifest_state "$version_ref")
-            if [ "$version_state" = "exists" ]; then
-              version_digest_ref=$(pull_single_digest "$version_ref" "$repository")
-              if [ "$version_digest_ref" != "$source_digest_ref" ]; then
-                echo "Version tag ${version_ref} already exists with a different digest." >&2
-                exit 1
-              fi
-            elif [ "$version_state" = "absent" ]; then
-              docker tag "$source_image" "$version_ref"
-              version_digest_ref=$(push_single_digest "$version_ref" "$repository")
-              if [ "$version_digest_ref" != "$source_digest_ref" ]; then
-                echo "Version tag ${version_ref} published with a different digest." >&2
-                exit 1
-              fi
-            else
-              echo "Unexpected registry identity state for ${version_ref}." >&2
-              exit 1
-            fi
-
+            digest="${transport_digest_ref#*@}"
             printf '%s@%s\n' "$version_ref" "$digest" > "$result_file"
           }
 
@@ -789,6 +796,24 @@ jobs:
           PY
 
           docker logout ghcr.io >/dev/null
+
+      - name: Verify anonymous GHCR consumption
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend_ref=$(cat "$RUNNER_TEMP/backend-image-ref")
+          web_ref=$(cat "$RUNNER_TEMP/web-image-ref")
+          anonymous_config=$(mktemp -d)
+          trap 'rm -rf "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+
+          for ref in "$backend_ref" "$web_ref"; do
+            if ! docker --config "$anonymous_config" manifest inspect "$ref" >/dev/null 2>&1; then
+              echo "Released GHCR image ${ref%%@*} is not anonymously readable." >&2
+              echo "Official Self-Hosted publication requires public eimir-backend/eimir-web packages; set package visibility to Public and rerun." >&2
+              exit 1
+            fi
+          done
 
       - name: Build deterministic Self-Hosted operator bundle
         shell: bash
@@ -858,8 +883,9 @@ jobs:
           to the same source revision by \`sidebyside-release-manifest.json\`.
 
           The exact backend and Web archives were loaded without rebuild and published
-          as versioned GHCR images. \`self-hosted-image-identity.json\` records the
-          digest-qualified references and binds them back to the #519 archive hashes.
+          as versioned GHCR images. GHCR version/source tags are discovery aliases only;
+          \`self-hosted-image-identity.json\` records the authoritative digest-qualified
+          references and binds them back to the #519 archive hashes.
 
           \`eimir-self-hosted-v${RELEASE_VERSION}.tar.gz\` is the deterministic
           source-free operator bundle for released Self-Hosted installation. It contains
@@ -904,7 +930,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish immutable GitHub Release
+      - name: Stage and publish immutable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.release_version }}
@@ -913,12 +939,25 @@ jobs:
           set -euo pipefail
           tag="v${RELEASE_VERSION}"
           mapfile -d '' assets < <(find release-evidence -type f -print0 | sort -z)
+
           gh release create "$tag" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "SideBySide v${RELEASE_VERSION}" \
             --notes-file release-evidence/RELEASE-NOTES.md \
+            --draft \
             --verify-tag=false
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+
+          immutable=$(gh release view "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json isImmutable \
+            --jq '.isImmutable')
+          if [ "$immutable" != "true" ]; then
+            echo "GitHub Release ${tag} was published without release immutability; removing it and refusing publication." >&2
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+            exit 1
+          fi
 
       - name: Verify published immutable identity
         env:
@@ -928,6 +967,8 @@ jobs:
           set -euo pipefail
           tag="v${RELEASE_VERSION}"
           bundle="eimir-self-hosted-v${RELEASE_VERSION}.tar.gz"
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isImmutable --jq '.isImmutable')" = "true"
+          gh release verify "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null
           git fetch --force --tags origin
           test "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA"
           mkdir -p "$RUNNER_TEMP/published-release"
