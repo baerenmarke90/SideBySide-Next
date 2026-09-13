@@ -44,6 +44,13 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("permissions:\n  contents: read", self.workflow)
         self.assertEqual(self.workflow.count("packages: write"), 1)
 
+    def test_protected_publication_is_globally_serialized(self) -> None:
+        self.assertIn(
+            "group: publish-release-${{ github.event_name == 'workflow_dispatch' && 'protected' || github.ref }}",
+            self.workflow,
+        )
+        self.assertIn("cancel-in-progress: false", self.workflow)
+
     def test_publish_requires_explicit_confirmation_and_merged_main_source(self) -> None:
         self.assertIn("confirm_publish:", self.workflow)
         self.assertIn('if [ "$CONFIRM_PUBLISH" != "true" ]', self.workflow)
@@ -52,15 +59,21 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
 
     def test_release_identity_is_immutable_and_not_overwritten(self) -> None:
         self.assertGreaterEqual(self.workflow.count("git ls-remote --exit-code --tags"), 2)
-        self.assertGreaterEqual(self.workflow.count("gh release view"), 2)
+        self.assertGreaterEqual(self.workflow.count("gh release view"), 4)
         self.assertIn('--target "$GITHUB_SHA"', self.workflow)
+        self.assertIn("--draft", self.workflow)
+        self.assertIn('gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false', self.workflow)
+        self.assertIn("--json isImmutable", self.workflow)
+        self.assertIn('if [ "$immutable" != "true" ]', self.workflow)
+        self.assertIn("--cleanup-tag --yes", self.workflow)
+        self.assertIn('gh release verify "$tag" --repo "$GITHUB_REPOSITORY"', self.workflow)
         self.assertIn('git rev-list -n 1 "$tag"', self.workflow)
         self.assertIn("cmp --silent", self.workflow)
 
     def test_runtime_images_load_exact_evidence_archives_without_rebuild(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
+        )[1].split("Verify anonymous GHCR consumption", 1)[0]
         self.assertIn("docker load --input", publish_step)
         self.assertIn("release-evidence/backend-runtime.image.tar", publish_step)
         self.assertIn("release-evidence/web-runtime.image.tar", publish_step)
@@ -70,9 +83,12 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("ghcr.io/${owner}/eimir-web", publish_step)
         self.assertIn('source_tag="sha-${SOURCE_REVISION}"', publish_step)
         self.assertIn('version_tag="v${RELEASE_VERSION}"', publish_step)
-        self.assertIn("docker manifest inspect", publish_step)
-        self.assertIn("different image bytes", publish_step)
-        self.assertIn("different digest", publish_step)
+        self.assertIn(
+            'transport_tag="publish-${SOURCE_REVISION}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"',
+            publish_step,
+        )
+        self.assertIn("GHCR does not provide server-side immutable tags", publish_step)
+        self.assertIn("discoverability only", publish_step)
         self.assertIn("self-hosted-image-identity.json", publish_step)
         self.assertIn("releaseArtifactSha256", publish_step)
         self.assertNotIn("docker build", publish_step)
@@ -81,22 +97,22 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
     def test_registry_identity_lookup_fails_closed_on_uncertainty(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
+        )[1].split("Verify anonymous GHCR consumption", 1)[0]
         self.assertIn("manifest_state()", publish_step)
         self.assertIn("manifest unknown|no such manifest", publish_step)
-        self.assertIn("Unable to verify registry identity", publish_step)
-        self.assertIn('source_state=$(manifest_state "$source_ref")', publish_step)
-        self.assertIn('version_state=$(manifest_state "$version_ref")', publish_step)
+        self.assertIn("Unable to verify registry alias", publish_step)
+        self.assertIn('state=$(manifest_state "$alias_ref")', publish_step)
         self.assertNotIn('if docker manifest inspect "$source_ref"', publish_step)
         self.assertNotIn('if docker manifest inspect "$version_ref"', publish_step)
 
-    def test_registry_collision_check_is_bound_to_actual_pull_or_push_digest(self) -> None:
+    def test_registry_identity_is_bound_to_actual_push_digest_not_tag_atomicity(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
+        )[1].split("Verify anonymous GHCR consumption", 1)[0]
         self.assertIn("require_single_manifest()", publish_step)
         self.assertIn("pull_single_digest()", publish_step)
         self.assertIn("push_single_digest()", publish_step)
+        self.assertIn("ensure_alias_matches()", publish_step)
         self.assertIn('output=$(docker pull "$ref" 2>&1)', publish_step)
         self.assertIn('output=$(docker push "$ref" 2>&1)', publish_step)
         self.assertIn('digest=$(extract_registry_digest "$output")', publish_step)
@@ -105,26 +121,24 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
             publish_step.count('require_single_manifest "$digest_ref"'), 2
         )
         self.assertIn(
-            'source_digest_ref=$(pull_single_digest "$source_ref" "$repository")',
+            'transport_digest_ref=$(push_single_digest "$transport_ref" "$repository")',
             publish_step,
         )
         self.assertIn(
-            'source_digest_ref=$(push_single_digest "$source_ref" "$repository")',
+            'ensure_alias_matches "$source_ref" "$repository" "$source_image" "$transport_digest_ref"',
             publish_step,
         )
         self.assertIn(
-            'version_digest_ref=$(pull_single_digest "$version_ref" "$repository")',
+            'ensure_alias_matches "$version_ref" "$repository" "$source_image" "$transport_digest_ref"',
             publish_step,
         )
-        self.assertIn(
-            'version_digest_ref=$(push_single_digest "$version_ref" "$repository")',
-            publish_step,
-        )
+        self.assertIn("Alias creation is intentionally not an integrity primitive", publish_step)
+        self.assertIn('digest="${transport_digest_ref#*@}"', publish_step)
 
     def test_resolved_registry_digest_rejects_multi_platform_indexes(self) -> None:
         publish_step = self.workflow.split(
             "Publish exact build-once runtime images to GHCR", 1
-        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
+        )[1].split("Verify anonymous GHCR consumption", 1)[0]
         self.assertIn("application/vnd.oci.image.index.v1+json", publish_step)
         self.assertIn(
             "application/vnd.docker.distribution.manifest.list.v2+json", publish_step
@@ -137,11 +151,21 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("registry digest resolves to a multi-platform index", publish_step)
         self.assertIn("not a supported single-image manifest", publish_step)
 
+    def test_public_self_hosted_images_are_verified_anonymously(self) -> None:
+        step = self.workflow.split("Verify anonymous GHCR consumption", 1)[1].split(
+            "Build deterministic Self-Hosted operator bundle", 1
+        )[0]
+        self.assertIn('printf \'{"auths":{}}\\n\'', step)
+        self.assertIn('docker --config "$anonymous_config" manifest inspect "$ref"', step)
+        self.assertIn("not anonymously readable", step)
+        self.assertIn("set package visibility to Public and rerun", step)
+        self.assertNotIn("docker login", step)
+
     def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
         self.assertIn("self-hosted-image-identity.json", self.workflow)
         self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
         self.assertIn("release-evidence/self-hosted-image-identity.json", self.workflow)
-        self.assertIn("digest-qualified references", self.workflow)
+        self.assertIn("authoritative digest-qualified", self.workflow)
 
     def test_self_hosted_operator_bundle_is_minimal_deterministic_and_reverified(self) -> None:
         bundle_step = self.workflow.split(
