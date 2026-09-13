@@ -66,6 +66,8 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("--json isImmutable", self.workflow)
         self.assertIn('if [ "$immutable" != "true" ]', self.workflow)
         self.assertIn("--cleanup-tag --yes", self.workflow)
+        self.assertIn('cleanup_status=$?', self.workflow)
+        self.assertIn("manual cleanup is required", self.workflow)
         self.assertIn('gh release verify "$tag" --repo "$GITHUB_REPOSITORY"', self.workflow)
         self.assertIn('git rev-list -n 1 "$tag"', self.workflow)
         self.assertIn("cmp --silent", self.workflow)
