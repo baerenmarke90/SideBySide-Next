@@ -9,7 +9,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from scripts.self_hosted_release import ReleaseOperationError, require_release_environment
+from scripts.self_hosted_release import (
+    ReleaseOperationError,
+    read_dotenv,
+    require_release_environment,
+)
 
 
 class ReleaseEnvironmentTest(unittest.TestCase):
@@ -24,35 +28,42 @@ class ReleaseEnvironmentTest(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _require_release_environment(self) -> None:
+        require_release_environment(read_dotenv(self.env_file))
+
     def test_accepts_production_with_no_process_override(self) -> None:
         self._write("production")
         with mock.patch.dict(os.environ, {}, clear=True):
-            require_release_environment(self.env_file)
+            self._require_release_environment()
 
     def test_rejects_development_dotenv(self) -> None:
         self._write("development")
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
-            ReleaseOperationError, "requires SBS_ENVIRONMENT=production"
+            ReleaseOperationError, "requires exact SBS_ENVIRONMENT=production"
         ):
-            require_release_environment(self.env_file)
+            self._require_release_environment()
 
     def test_rejects_process_override_away_from_production(self) -> None:
         self._write("production")
-        with mock.patch.dict(os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True), self.assertRaisesRegex(
-            ReleaseOperationError, "must be unset or production"
+        with mock.patch.dict(
+            os.environ, {"SBS_ENVIRONMENT": "development"}, clear=True
+        ), self.assertRaisesRegex(
+            ReleaseOperationError, "must be unset or exactly production"
         ):
-            require_release_environment(self.env_file)
+            self._require_release_environment()
 
     def test_accepts_explicit_production_process_environment(self) -> None:
         self._write("production")
-        with mock.patch.dict(os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True):
-            require_release_environment(self.env_file)
+        with mock.patch.dict(
+            os.environ, {"SBS_ENVIRONMENT": "production"}, clear=True
+        ):
+            self._require_release_environment()
 
     def test_rejects_missing_env_file(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
             ReleaseOperationError, "does not exist"
         ):
-            require_release_environment(self.env_file)
+            self._require_release_environment()
 
 
 if __name__ == "__main__":
