@@ -12,6 +12,7 @@ on:
       - "scripts/release_manifest.py"
       - "tools/ci/test_release_manifest.py"
       - "tools/ci/test_release_publish_workflow.py"
+      - "docs/SELF-HOSTING.md"
       - "docs/m6/IMMUTABLE-RELEASES.md"
   workflow_dispatch:
     inputs:
@@ -148,9 +149,9 @@ jobs:
               and item.get("conclusion") not in {"success", "neutral", "skipped"}
           ]
           if pending:
-              raise SystemExit("Release source still has pending checks: " + ", ".join(sorted(pending)))
+            raise SystemExit("Release source still has pending checks: " + ", ".join(sorted(pending)))
           if failed:
-              raise SystemExit("Release source has non-green checks: " + ", ".join(sorted(failed)))
+            raise SystemExit("Release source has non-green checks: " + ", ".join(sorted(failed)))
           print(f"Verified {len(checks)} pre-existing checks for release source")
           PY
 
