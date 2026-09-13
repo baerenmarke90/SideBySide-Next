@@ -48,15 +48,42 @@ published release.
 
 ## Released Production files
 
-A released Self-Hosted installation needs the release bundle files plus Docker/Compose:
+A released Self-Hosted installation requires **both** matching GitHub Release assets:
+
+- `eimir-self-hosted-v<release-version>.tar.gz` — the deterministic source-free operator bundle;
+- `self-hosted-image-identity.json` — the immutable digest-qualified image identity for that same release.
+
+Download both assets from the same release, extract the operator bundle, and place the
+identity file at the extracted bundle root before running any release operation:
+
+```bash
+RELEASE_VERSION=0.1.0
+
+gh release download "v${RELEASE_VERSION}" \
+  --repo baerenmarke90/SideBySide-Next \
+  --pattern "eimir-self-hosted-v${RELEASE_VERSION}.tar.gz" \
+  --pattern "self-hosted-image-identity.json"
+
+tar -xzf "eimir-self-hosted-v${RELEASE_VERSION}.tar.gz"
+cp -- self-hosted-image-identity.json \
+  "eimir-self-hosted-v${RELEASE_VERSION}/self-hosted-image-identity.json"
+cd "eimir-self-hosted-v${RELEASE_VERSION}"
+test -s self-hosted-image-identity.json
+```
+
+The same layout may be created with an equivalent authenticated/manual GitHub Release
+download, but mixing assets from different releases is invalid.
+
+The resulting installation directory contains:
 
 - `compose.yaml`;
 - `deploy/self-hosted-release.env.example`;
 - `scripts/self_hosted_release.py`;
-- `scripts/check_runtime_environment.py`.
+- `scripts/check_runtime_environment.py`;
+- `self-hosted-image-identity.json` from the matching GitHub Release.
 
-The protected release workflow packages these operator files with the published release.
-The target host does **not** need backend/Web source and never builds application images.
+The protected release workflow publishes these operator artifacts together. The target
+host does **not** need backend/Web source and never builds application images.
 
 Start from the release template:
 
@@ -75,39 +102,38 @@ SBS_ALLOWED_HOSTS=["sidebyside.example"]
 SBS_CURSOR_SIGNING_KEY=<stable-random-value-at-least-32-characters>
 ```
 
-The default application images are the matching GHCR version tags:
+Do not independently select Production image bytes from a mutable-looking version tag.
+The mandatory `self-hosted-image-identity.json` supplies the exact digest-qualified
+backend and Web references published for `SBS_RELEASE_VERSION`, for example:
 
 ```text
-ghcr.io/baerenmarke90/eimir-backend:v<release-version>
-ghcr.io/baerenmarke90/eimir-web:v<release-version>
+ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:<digest>
+ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:<digest>
 ```
 
-For byte-level locking, use the digest-qualified references from the same GitHub
-Release's `self-hosted-image-identity.json`:
-
-```dotenv
-SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:<digest>
-SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:<digest>
-```
-
-Both overrides must still carry the exact `SBS_RELEASE_VERSION`. Backend `migrate`,
-`api`, and `worker` must share one exact backend image. Web must use the same product
-version. Production requires `pull_policy=always` and permits no application `build:`
-fallback.
+The launcher verifies that both references carry the exact `SBS_RELEASE_VERSION`, that
+the stored digests match the references, and that backend `migrate`, `api`, and `worker`
+share one exact backend image. Production requires `pull_policy=always` and permits no
+application `build:` fallback.
 
 ## Mandatory released launcher
 
 Do not start released Production with a raw `docker compose pull/up` sequence. The
-supported entry point is:
+supported entry point explicitly binds the env file and the matching published image
+identity:
 
 ```bash
-python3 scripts/self_hosted_release.py --env-file .env <operation>
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  --image-identity self-hosted-image-identity.json \
+  <operation>
 ```
 
 The launcher always uses repository-root `compose.yaml` and profile `self-hosted`. Before
 it can pull, bootstrap or start anything, it renders the actual Compose configuration
 and validates the published image identity. It rejects:
 
+- a missing, malformed, or release-mismatched image identity;
 - a non-Production release env;
 - process-level environment drift away from Production;
 - missing `SBS_RELEASE_VERSION`;
@@ -129,8 +155,8 @@ bootstrap-deletion-authority
 deploy
 ```
 
-A registry outage or missing release image is a deployment failure. The launcher never
-falls back to a source build.
+A registry outage, missing identity asset, or missing release image is a deployment
+failure. The launcher never falls back to a source build.
 
 ## First Production installation
 
@@ -139,7 +165,10 @@ falls back to a source build.
 With `SBS_ACCOUNT_DELETION_INSTANCE_ID` still blank on a brand-new installation:
 
 ```bash
-python3 scripts/self_hosted_release.py --env-file .env pull
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  --image-identity self-hosted-image-identity.json \
+  pull
 ```
 
 This performs the image-identity gate without requiring an already-created deletion
@@ -152,6 +181,7 @@ Only for an installation that has **never** had an Account-deletion authority:
 ```bash
 python3 scripts/self_hosted_release.py \
   --env-file .env \
+  --image-identity self-hosted-image-identity.json \
   bootstrap-deletion-authority
 ```
 
@@ -175,8 +205,14 @@ instance ID according to
 After recording `SBS_ACCOUNT_DELETION_INSTANCE_ID`:
 
 ```bash
-python3 scripts/self_hosted_release.py --env-file .env validate
-python3 scripts/self_hosted_release.py --env-file .env deploy
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  --image-identity self-hosted-image-identity.json \
+  validate
+python3 scripts/self_hosted_release.py \
+  --env-file .env \
+  --image-identity self-hosted-image-identity.json \
+  deploy
 ```
 
 `deploy` validates, pulls the selected release images, runs migrations through the
