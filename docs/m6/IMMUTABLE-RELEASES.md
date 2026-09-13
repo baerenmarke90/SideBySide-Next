@@ -56,10 +56,12 @@ runtime archive that was promoted. The tag component is descriptive; the digest 
 `@sha256:` is authoritative.
 
 Official Self-Hosted images are public distribution artifacts. Before a GitHub Release
-can be published, the protected workflow verifies the backend and Web **digest-qualified
-references anonymously** using a fresh Docker client configuration with no GHCR login.
-A private package therefore stops the release instead of producing an installer that
-later needs an undocumented token.
+can be published, the protected workflow performs a **full anonymous pull** of both
+backend and Web digest-qualified images through a fresh isolated Docker daemon with its
+own empty client configuration and data root. This proves that manifests, image config
+and all layers are actually consumable without GHCR credentials or a warm local cache.
+A private or partially unreadable package therefore stops the release instead of
+producing an installer that later needs an undocumented token.
 
 Cloud/Managed keeps the stronger #668 rule: a running managed deployment must itself use
 and retain digest-qualified runtime identity. Self-Hosted publication evidence and
@@ -154,9 +156,12 @@ offline recovery copy of the upload key.
 ## Protected final publication workflow
 
 `.github/workflows/release-publish.yml` is the only repository workflow that may turn a
-candidate source revision into a final GitHub Release and released runtime packages.
+candidate source revision into a final GitHub Release and released runtime packages. It
+is also the only repository workflow allowed `contents: write`; the release contract
+checks that exclusivity so no second automation can mutate a staged Release.
 All `workflow_dispatch` publication runs share one non-cancelling concurrency group, so
-two protected release publications cannot execute concurrently.
+two protected release publications cannot execute concurrently. Release maintainers must
+not manually modify the draft while protected publication is in progress.
 
 ### 1. Unprivileged preflight
 
@@ -185,8 +190,8 @@ After protected environment approval it:
 7. reconciles `sha-<source>` and `v<version>` as non-authoritative discovery aliases,
    failing if an existing alias points elsewhere or lookup is uncertain;
 8. writes `self-hosted-image-identity.json` from the authoritative push digests;
-9. logs out of GHCR and proves both digest-qualified runtime images are anonymously
-   readable with a fresh empty Docker config;
+9. logs out of GHCR and fully pulls both digest-qualified runtime images through a fresh,
+   isolated, credential-free Docker daemon with an empty data root;
 10. creates a deterministic Self-Hosted operator bundle containing only:
     - `compose.yaml`;
     - `deploy/self-hosted-release.env.example`;
@@ -202,13 +207,20 @@ supported installation surface for a clean Self-Hosted target host.
 Immediately before publication the workflow rechecks tag/Release absence. It then:
 
 1. creates the GitHub Release as a **draft** and uploads the complete evidence set;
-2. publishes the draft;
-3. requires `gh release view --json isImmutable` to report exactly `true`;
-4. if immutability is not active, attempts cleanup of the just-created mutable Release
+2. queries every staged asset and compares the complete flat asset-name set, byte size
+   and GitHub-computed SHA-256 digest with every locally validated release file; any
+   missing, unexpected, duplicate-name or byte-mismatched asset aborts before publish;
+3. publishes the already-verified draft;
+4. requires `gh release view --json isImmutable` to report exactly `true`;
+5. if immutability is not active, attempts cleanup of the just-created mutable Release
    and tag, reports any cleanup failure explicitly, and fails closed regardless;
-5. verifies the published release attestation with `gh release verify`;
-6. rechecks the Git tag target and re-downloads the release manifest, image identity and
-   operator bundle to prove the published bytes equal the locally validated copies.
+6. verifies the published release attestation with `gh release verify`;
+7. rechecks the Git tag target and re-verifies the **complete immutable asset name/size/
+   SHA-256 set** against the same local release evidence.
+
+`scripts/verify_release_asset_set.py` performs both complete-set comparisons. A selected
+subset is never sufficient: APK/AAB, SBOMs, provenance bundles, checksums, manifests,
+operator artifacts and every other staged asset are part of the freeze boundary.
 
 `self-hosted-image-identity.json` is trusted only as an asset of an immutable GitHub
 Release. Merely comparing an asset once is not sufficient because a mutable release asset
@@ -316,9 +328,11 @@ builds application source on a Production target.
 `tools/ci/test_release_manifest.py` covers release-manifest and Cloud deployment identity
 invariants.
 
-`tools/ci/test_release_publish_workflow.py` covers:
+`tools/ci/test_release_publish_workflow.py` and
+`tools/ci/test_verify_release_asset_set.py` cover:
 
-- protected/least-privilege publication and global dispatch serialization;
+- protected/least-privilege publication, sole automated `contents: write` ownership and
+  global dispatch serialization;
 - package-write only in protected publication;
 - source-on-main and green-check preflight;
 - ephemeral environment-only Android signing material;
@@ -326,9 +340,10 @@ invariants.
 - exact runtime archive loading with no backend/Web rebuild;
 - fail-closed GHCR alias handling while release identity comes from the actual push digest;
 - single-image manifest enforcement on the exact digest;
-- anonymous external consumption of released Self-Hosted images;
+- clean-daemon full anonymous pulls of released Self-Hosted images;
 - digest-qualified Self-Hosted image evidence;
 - deterministic Self-Hosted operator bundle contents;
+- complete staged and immutable GitHub Release asset name/size/SHA-256 equivalence;
 - draft-to-published GitHub Release flow with mandatory `isImmutable=true` and release verification;
 - immutable external Action/Syft pins.
 
