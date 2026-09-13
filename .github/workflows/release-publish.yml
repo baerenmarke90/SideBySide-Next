@@ -954,8 +954,14 @@ jobs:
             --json isImmutable \
             --jq '.isImmutable')
           if [ "$immutable" != "true" ]; then
-            echo "GitHub Release ${tag} was published without release immutability; removing it and refusing publication." >&2
-            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+            echo "GitHub Release ${tag} was published without release immutability; refusing publication." >&2
+            set +e
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            cleanup_status=$?
+            set -e
+            if [ "$cleanup_status" -ne 0 ]; then
+              echo "Automatic cleanup of mutable Release ${tag} failed; manual cleanup is required." >&2
+            fi
             exit 1
           fi
 
