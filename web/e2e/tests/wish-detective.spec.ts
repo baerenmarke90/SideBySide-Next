@@ -8,6 +8,14 @@ const PARTNER_ID = '44444444-4444-4444-8444-444444444444';
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 const TEST_NOW = '2026-09-13T10:00:00Z';
+const SECRET_WISH_TITLE = 'Stargazing in the garden';
+
+function localized(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce(
+    (text, [key, value]) => text.replace(`{{${key}}}`, String(value)),
+    template,
+  );
+}
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const dimensions = await page.evaluate(() => ({
@@ -161,22 +169,22 @@ async function installApiMocks(page: Page): Promise<void> {
           {
             wishId: '50000000-0000-4000-8000-000000000001',
             createdBy: ACCOUNT_ID,
-            title: 'Sterne gucken im Garten',
+            title: SECRET_WISH_TITLE,
           },
           {
             wishId: '50000000-0000-4000-8000-000000000002',
             createdBy: PARTNER_ID,
-            title: 'Wochenende am Meer',
+            title: 'Weekend by the sea',
           },
           {
             wishId: '50000000-0000-4000-8000-000000000003',
             createdBy: ACCOUNT_ID,
-            title: 'Picknick am See',
+            title: 'Picnic by the lake',
           },
           {
             wishId: '50000000-0000-4000-8000-000000000004',
             createdBy: PARTNER_ID,
-            title: 'Konzert in Berlin',
+            title: 'Concert in Berlin',
           },
         ],
       });
@@ -222,7 +230,7 @@ async function signIn(page: Page): Promise<void> {
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
 }
 
-test.describe('Wunschdetektiv Product Reference (#864)', () => {
+test.describe('Wish Detective Product Reference (#864)', () => {
   test('390/320 handoff keeps the secret hidden and stays accessible', async ({
     page,
   }, testInfo) => {
@@ -238,11 +246,10 @@ test.describe('Wunschdetektiv Product Reference (#864)', () => {
         level: 1,
       }),
     ).toBeVisible();
-    await expect(page.getByText('Sterne gucken im Garten')).toBeVisible();
-    await expect(page.locator('.mobile-bottom-nav a.shell-nav-link').nth(3)).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    await expect(page.getByText(SECRET_WISH_TITLE)).toBeVisible();
+    await expect(
+      page.locator('.mobile-bottom-nav a.shell-nav-link').nth(3),
+    ).toHaveAttribute('aria-current', 'page');
 
     const axeClue = await new AxeBuilder({ page })
       .include('.wish-detective-page')
@@ -253,14 +260,24 @@ test.describe('Wunschdetektiv Product Reference (#864)', () => {
       fullPage: true,
     });
 
-    await page.getByLabel('Hinweis 1').fill('Nacht');
-    await page.getByLabel('Hinweis 2').fill('Decke');
-    await page.getByLabel('Hinweis 3').fill('Warm');
-    await page.getByRole('button', { name: 'Gerät weitergeben' }).click();
+    await page
+      .getByLabel(localized(games.wishDetective.clueLabel, { index: 1 }))
+      .fill('Night');
+    await page
+      .getByLabel(localized(games.wishDetective.clueLabel, { index: 2 }))
+      .fill('Blanket');
+    await page
+      .getByLabel(localized(games.wishDetective.clueLabel, { index: 3 }))
+      .fill('Warm');
+    await page
+      .getByRole('button', { name: games.wishDetective.startHandoff })
+      .click();
 
-    await expect(page.getByText('Sterne gucken im Garten')).toHaveCount(0);
+    await expect(page.getByText(SECRET_WISH_TITLE)).toHaveCount(0);
     await expect(
-      page.getByRole('heading', { name: 'Gerät an Alex reichen' }),
+      page.getByRole('heading', {
+        name: localized(games.wishDetective.handoffTitle, { name: 'Alex' }),
+      }),
     ).toBeVisible();
     const axeHandoff = await new AxeBuilder({ page })
       .include('.wish-detective-page')
@@ -280,9 +297,15 @@ test.describe('Wunschdetektiv Product Reference (#864)', () => {
       fullPage: true,
     });
 
-    await page.getByRole('button', { name: 'Alex: Ich habe es' }).click();
-    await expect(page.getByText('Sterne gucken im Garten')).toHaveCount(0);
-    const guessInput = page.getByLabel('Welchen Wunsch meint Anna?');
+    await page
+      .getByRole('button', {
+        name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
+      })
+      .click();
+    await expect(page.getByText(SECRET_WISH_TITLE)).toHaveCount(0);
+    const guessInput = page.getByLabel(
+      localized(games.wishDetective.guessLabel, { name: 'Anna' }),
+    );
     await expect(guessInput).toBeVisible();
     expect(
       await guessInput.evaluate((element) => document.activeElement === element),
