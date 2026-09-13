@@ -140,8 +140,6 @@ function WishDetectiveSessionView({
     return next;
   });
 
-  useEffect(() => () => session.dispose(), [session]);
-
   const snapshot = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,

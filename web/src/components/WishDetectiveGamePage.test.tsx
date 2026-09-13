@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import games from '../i18n/locales/games';
 import type { WishDetectiveGameSetup } from './WishDetectiveGamePage';
@@ -40,17 +41,19 @@ function renderPage(setup: WishDetectiveGameSetup) {
   });
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/games/wish-detective']}>
-        <WishDetectiveGamePage
-          apiBaseUrl="http://api.example.test"
-          accessToken="test-token"
-          spaceId={SPACE_ID}
-          currentAccountId="lea"
-          loadSetup={async () => setup}
-        />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/games/wish-detective']}>
+          <WishDetectiveGamePage
+            apiBaseUrl="http://api.example.test"
+            accessToken="test-token"
+            spaceId={SPACE_ID}
+            currentAccountId="lea"
+            loadSetup={async () => setup}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </StrictMode>,
   );
 }
 

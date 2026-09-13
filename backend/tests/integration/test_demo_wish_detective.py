@@ -20,9 +20,7 @@ REFERENCE_DATE = date(2026, 9, 13)
 DEMO_PASSWORD = "canonical-demo-wish-detective-test-password"
 
 
-def _open_titles(
-    session: Session, *, space_id, owner_id
-) -> set[str]:  # type: ignore[no-untyped-def]
+def _open_titles(session: Session, *, space_id, owner_id) -> set[str]:  # type: ignore[no-untyped-def]
     return {
         wish.payload.title
         for wish in session.execute(
