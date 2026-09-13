@@ -28,4 +28,4 @@ export const WISH_DETECTIVE_GERMAN_STOP_WORDS = [
   'zu',
   'zum',
   'zur',
-] as const;
+];
