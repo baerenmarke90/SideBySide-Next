@@ -92,7 +92,7 @@ const games = {
     sparseTitle: 'Für eine faire Runde fehlen noch gemeinsame Wünsche.',
     sparseBody:
       'Sobald ihr beide mindestens zwei offene Wünsche festgehalten habt, kann eure erste Runde starten. Private Geschenkideen werden dafür niemals verwendet.',
-    sparseAction: 'Zu euren Wünschen',
+    sparseAction: 'Wünsche ergänzen',
     interruptedEyebrow: 'Runde unterbrochen',
     interruptedTitle: 'Der Wunsch bleibt verborgen.',
     interruptedBody:
