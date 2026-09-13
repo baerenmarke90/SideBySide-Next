@@ -9,7 +9,10 @@ import { WishDetectiveGamePage } from './WishDetectiveGamePage';
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const SECRET_WISH_TITLE = 'Stargazing in the garden';
 
-function localized(template: string, values: Record<string, string | number>): string {
+function localized(
+  template: string,
+  values: Record<string, string | number>,
+): string {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replace(`{{${key}}}`, String(value)),
     template,

@@ -102,10 +102,7 @@ describe('Wish Detective text rules', () => {
     ).toEqual(['oneWord', 'duplicate', 'duplicate']);
 
     expect(
-      validateWishDetectiveClues(
-        ['garden', 'star', 'Warm'],
-        SECRET_WISH_TITLE,
-      ),
+      validateWishDetectiveClues(['garden', 'star', 'Warm'], SECRET_WISH_TITLE),
     ).toEqual(['wishWord', 'wishWord', null]);
   });
 

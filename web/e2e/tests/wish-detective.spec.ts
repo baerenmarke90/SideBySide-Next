@@ -14,7 +14,10 @@ const POSSIBLE_ACCOUNT_WISH_TITLES = [
   'Picnic by the lake',
 ] as const;
 
-function localized(template: string, values: Record<string, string | number>): string {
+function localized(
+  template: string,
+  values: Record<string, string | number>,
+): string {
   return Object.entries(values).reduce(
     (text, [key, value]) => text.replace(`{{${key}}}`, String(value)),
     template,
@@ -26,7 +29,9 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
   }));
-  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(
+    dimensions.clientWidth + 1,
+  );
 }
 
 async function installApiMocks(page: Page): Promise<void> {
@@ -117,7 +122,10 @@ async function installApiMocks(page: Page): Promise<void> {
       await fulfillJson({ items: [] });
       return;
     }
-    if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`) {
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
+    ) {
       await fulfillJson({
         recentShared: [],
         relationshipDuration: null,
@@ -252,7 +260,8 @@ test.describe('Wish Detective Product Reference (#864)', () => {
     ).toBeVisible();
     const secretWishHeading = page.locator('#wish-detective-clue-title');
     await expect(secretWishHeading).toBeVisible();
-    const secretWishTitle = (await secretWishHeading.textContent())?.trim() ?? '';
+    const secretWishTitle =
+      (await secretWishHeading.textContent())?.trim() ?? '';
     expect(POSSIBLE_ACCOUNT_WISH_TITLES).toContain(secretWishTitle);
     await expect(
       page.locator('.mobile-bottom-nav a.shell-nav-link').nth(3),
@@ -280,7 +289,9 @@ test.describe('Wish Detective Product Reference (#864)', () => {
       .getByRole('button', { name: games.wishDetective.startHandoff })
       .click();
 
-    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(
+      0,
+    );
     await expect(
       page.getByRole('heading', {
         name: localized(games.wishDetective.handoffTitle, { name: 'Alex' }),
@@ -309,13 +320,17 @@ test.describe('Wish Detective Product Reference (#864)', () => {
         name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
       })
       .click();
-    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(
+      0,
+    );
     const guessInput = page.getByLabel(
       localized(games.wishDetective.guessLabel, { name: 'Anna' }),
     );
     await expect(guessInput).toBeVisible();
     expect(
-      await guessInput.evaluate((element) => document.activeElement === element),
+      await guessInput.evaluate(
+        (element) => document.activeElement === element,
+      ),
     ).toBe(false);
 
     await page.setViewportSize({ width: 320, height: 640 });
