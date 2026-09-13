@@ -7,6 +7,14 @@ import type { WishDetectiveGameSetup } from './WishDetectiveGamePage';
 import { WishDetectiveGamePage } from './WishDetectiveGamePage';
 
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
+const SECRET_WISH_TITLE = 'Stargazing in the garden';
+
+function localized(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce(
+    (text, [key, value]) => text.replace(`{{${key}}}`, String(value)),
+    template,
+  );
+}
 
 function playableSetup(): WishDetectiveGameSetup {
   return {
@@ -15,10 +23,10 @@ function playableSetup(): WishDetectiveGameSetup {
       { id: 'alex', displayName: 'Alex' },
     ],
     rounds: [
-      { wishId: 'l1', createdBy: 'lea', title: 'Sterne gucken im Garten' },
-      { wishId: 'a1', createdBy: 'alex', title: 'Wochenende am Meer' },
-      { wishId: 'l2', createdBy: 'lea', title: 'Picknick am See' },
-      { wishId: 'a2', createdBy: 'alex', title: 'Konzert in Berlin' },
+      { wishId: 'l1', createdBy: 'lea', title: SECRET_WISH_TITLE },
+      { wishId: 'a1', createdBy: 'alex', title: 'Weekend by the sea' },
+      { wishId: 'l2', createdBy: 'lea', title: 'Picnic by the lake' },
+      { wishId: 'a2', createdBy: 'alex', title: 'Concert in Berlin' },
     ],
   };
 }
@@ -51,54 +59,90 @@ describe('WishDetectiveGamePage', () => {
       name: games.entries.wishes.title,
       level: 1,
     });
-    expect(screen.getByText('Sterne gucken im Garten')).toBeTruthy();
+    expect(screen.getByText(SECRET_WISH_TITLE)).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText('Hinweis 1'), {
-      target: { value: 'Nacht' },
-    });
-    fireEvent.change(screen.getByLabelText('Hinweis 2'), {
-      target: { value: 'Decke' },
-    });
-    fireEvent.change(screen.getByLabelText('Hinweis 3'), {
-      target: { value: 'Warm' },
-    });
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 1 }),
+      ),
+      { target: { value: 'Night' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 2 }),
+      ),
+      { target: { value: 'Blanket' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 3 }),
+      ),
+      { target: { value: 'Warm' } },
+    );
 
-    expect(screen.getByText('Sterne gucken im Garten')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Gerät weitergeben' }));
+    expect(screen.getByText(SECRET_WISH_TITLE)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: games.wishDetective.startHandoff,
+      }),
+    );
 
-    expect(screen.queryByText('Sterne gucken im Garten')).toBeNull();
+    expect(screen.queryByText(SECRET_WISH_TITLE)).toBeNull();
     expect(
-      screen.getByRole('heading', { name: 'Gerät an Alex reichen' }),
+      screen.getByRole('heading', {
+        name: localized(games.wishDetective.handoffTitle, { name: 'Alex' }),
+      }),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alex: Ich habe es' }));
-    expect(screen.queryByText('Sterne gucken im Garten')).toBeNull();
-    expect(screen.getByText('Nacht')).toBeTruthy();
-    expect(screen.getByText('Decke')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
+      }),
+    );
+    expect(screen.queryByText(SECRET_WISH_TITLE)).toBeNull();
+    expect(screen.getByText('Night')).toBeTruthy();
+    expect(screen.getByText('Blanket')).toBeTruthy();
     expect(screen.getByText('Warm')).toBeTruthy();
-    expect(screen.getByLabelText('Welchen Wunsch meint Lea?')).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        localized(games.wishDetective.guessLabel, { name: 'Lea' }),
+      ),
+    ).toBeTruthy();
   });
 
   it('shows validation feedback instead of silently accepting invalid clues', async () => {
     renderPage(playableSetup());
-    await screen.findByText('Sterne gucken im Garten');
+    await screen.findByText(SECRET_WISH_TITLE);
 
-    fireEvent.change(screen.getByLabelText('Hinweis 1'), {
-      target: { value: 'romantischer Abend' },
-    });
-    fireEvent.change(screen.getByLabelText('Hinweis 2'), {
-      target: { value: 'Garten' },
-    });
-    fireEvent.change(screen.getByLabelText('Hinweis 3'), {
-      target: { value: 'Garten' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Gerät weitergeben' }));
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 1 }),
+      ),
+      { target: { value: 'romantic evening' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 2 }),
+      ),
+      { target: { value: 'garden' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 3 }),
+      ),
+      { target: { value: 'garden' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: games.wishDetective.startHandoff,
+      }),
+    );
 
-    expect(screen.getByText('Bitte genau ein Wort verwenden.')).toBeTruthy();
+    expect(screen.getByText(games.wishDetective.errors.oneWord)).toBeTruthy();
     expect(
-      screen.getAllByText('Nimm für jeden Hinweis ein anderes Wort.'),
+      screen.getAllByText(games.wishDetective.errors.duplicate),
     ).toHaveLength(2);
-    expect(screen.getByText('Sterne gucken im Garten')).toBeTruthy();
+    expect(screen.getByText(SECRET_WISH_TITLE)).toBeTruthy();
   });
 
   it('shows the sparse state without exposing hidden candidate totals', async () => {
@@ -119,6 +163,6 @@ describe('WishDetectiveGamePage', () => {
     renderPage({ participants: null, rounds: [] });
 
     await screen.findByText(games.wishDetective.coupleRequiredTitle);
-    expect(screen.queryByText('Sterne gucken im Garten')).toBeNull();
+    expect(screen.queryByText(SECRET_WISH_TITLE)).toBeNull();
   });
 });
