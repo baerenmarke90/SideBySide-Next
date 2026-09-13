@@ -62,7 +62,7 @@ describe('WishDetectiveGamePage', () => {
       name: games.entries.wishes.title,
       level: 1,
     });
-    expect(screen.getByText(SECRET_WISH_TITLE)).toBeTruthy();
+    expect(await screen.findByText(SECRET_WISH_TITLE)).toBeTruthy();
 
     fireEvent.change(
       screen.getByLabelText(
