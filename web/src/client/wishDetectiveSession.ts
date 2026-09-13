@@ -1,3 +1,5 @@
+import { WISH_DETECTIVE_GERMAN_STOP_WORDS } from '../i18n/locales/wishDetectiveRules';
+
 export interface WishDetectiveParticipant {
   id: string;
   displayName: string;
@@ -77,38 +79,7 @@ const MIN_ROUNDS_PER_PARTNER = 2;
 const MAX_ROUNDS_PER_PARTNER = 4;
 const WORD_PATTERN = /^[\p{L}\p{M}]+(?:[-'’][\p{L}\p{M}]+)?$/u;
 const TOKEN_PATTERN = /[\p{L}\p{M}]+(?:[-'’][\p{L}\p{M}]+)?/gu;
-
-const GUESS_STOP_WORDS = new Set([
-  'am',
-  'an',
-  'auf',
-  'aus',
-  'bei',
-  'das',
-  'dem',
-  'den',
-  'der',
-  'des',
-  'die',
-  'ein',
-  'eine',
-  'einem',
-  'einen',
-  'einer',
-  'eines',
-  'für',
-  'im',
-  'in',
-  'ins',
-  'mit',
-  'oder',
-  'und',
-  'vom',
-  'von',
-  'zu',
-  'zum',
-  'zur',
-]);
+const GUESS_STOP_WORDS = new Set(WISH_DETECTIVE_GERMAN_STOP_WORDS);
 
 const EMPTY_CLUES: readonly [string, string, string] = ['', '', ''];
 const EMPTY_ERRORS: readonly [null, null, null] = [null, null, null];
