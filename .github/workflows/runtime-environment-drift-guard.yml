@@ -163,8 +163,51 @@ jobs:
           sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-image-guard
           sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-image-guard
 
+          identity=.runtime-drift-image-identity.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          values = {}
+          for raw_line in Path(".env-production-image-guard").read_text(encoding="utf-8").splitlines():
+              line = raw_line.strip()
+              if not line or line.startswith("#") or "=" not in line:
+                  continue
+              key, value = line.split("=", 1)
+              values[key.strip()] = value.strip()
+
+          version = values["SBS_RELEASE_VERSION"]
+
+          def image_record(role: str, digit: str, roles: list[str]) -> dict[str, object]:
+              digest = "sha256:" + digit * 64
+              return {
+                  "reference": f"ghcr.io/baerenmarke90/eimir-{role}:v{version}@{digest}",
+                  "digest": digest,
+                  "roles": roles,
+              }
+
+          identity = {
+              "schemaVersion": 1,
+              "kind": "sidebyside-self-hosted-image-identity",
+              "product": {"version": version, "tag": f"v{version}"},
+              "sourceRevision": os.environ["GITHUB_SHA"],
+              "images": {
+                  "backend": image_record(
+                      "backend", "a", ["api", "worker", "migrate"]
+                  ),
+                  "web": image_record("web", "b", ["web"]),
+              },
+          }
+          Path(".runtime-drift-image-identity.json").write_text(
+              json.dumps(identity, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
           python3 scripts/self_hosted_release.py \
             --env-file .env-production-image-guard \
+            --image-identity "$identity" \
             validate
 
           expect_rejected() {
@@ -172,6 +215,7 @@ jobs:
             shift
             if env "$@" python3 scripts/self_hosted_release.py \
               --env-file .env-production-image-guard \
+              --image-identity "$identity" \
               validate; then
               echo "Released launcher accepted unsafe Production identity: $label"
               exit 1
@@ -196,7 +240,9 @@ jobs:
           cp .env-production-image-guard /tmp/no-release-version.env
           sed -i 's/^SBS_RELEASE_VERSION=.*/SBS_RELEASE_VERSION=/' /tmp/no-release-version.env
           if python3 scripts/self_hosted_release.py \
-            --env-file /tmp/no-release-version.env validate; then
+            --env-file /tmp/no-release-version.env \
+            --image-identity "$identity" \
+            validate; then
             echo 'Released launcher accepted Production without SBS_RELEASE_VERSION.'
             exit 1
           fi
