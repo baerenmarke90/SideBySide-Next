@@ -29,6 +29,14 @@ def _components() -> dict[str, dict]:
     return _schema()["components"]["schemas"]  # type: ignore[index,return-value]
 
 
+def _wish_paths() -> set[str]:
+    return {
+        path
+        for path in _paths()
+        if path == COLLECTION or path.startswith(f"{COLLECTION}/")
+    }
+
+
 def test_wish_routes_have_frozen_operation_ids() -> None:
     paths = _paths()
     assert paths[COLLECTION]["post"]["operationId"] == "createWish"
@@ -42,7 +50,7 @@ def test_wish_routes_have_frozen_operation_ids() -> None:
 
 def test_the_contract_carries_exactly_the_decided_wish_surface() -> None:
     """Wish lifecycle commands are explicit rather than generic status writes."""
-    wish_paths = {path for path in _paths() if "/wishes" in path}
+    wish_paths = _wish_paths()
     assert wish_paths == {COLLECTION, DETAIL, COMPLETE, PLAN}
 
 
@@ -52,7 +60,7 @@ def test_wish_status_has_no_generic_mutation_route() -> None:
     Generic status/reopen endpoints would reopen the state machine and bypass
     the Plan-owned transitions, so they remain forbidden.
     """
-    wish_paths = {path for path in _paths() if "/wishes" in path}
+    wish_paths = _wish_paths()
     for forbidden in ("plan-status", "status", "reopen"):
         assert not any(path.endswith(f"/{forbidden}") for path in wish_paths), forbidden
 
