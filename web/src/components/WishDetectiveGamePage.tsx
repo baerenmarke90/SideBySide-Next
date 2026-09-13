@@ -144,7 +144,7 @@ function WishDetectiveSessionView({
     const next = createLocalWishDetectiveSession();
     next.start(setup.rounds, setup.participants);
     return next;
-  }, [setup]);
+  }, [setup.participants, setup.rounds]);
 
   useEffect(() => () => session.dispose(), [session]);
 
