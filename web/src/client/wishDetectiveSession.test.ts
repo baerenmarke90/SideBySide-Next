@@ -23,18 +23,19 @@ function candidate(
   return { wishId, createdBy, title };
 }
 
+const SECRET_WISH_TITLE = 'Stargazing in the garden';
 const FOUR_ROUNDS: WishDetectiveCandidate[] = [
-  candidate('lea-1', 'lea', 'Sterne gucken im Garten'),
-  candidate('alex-1', 'alex', 'Wochenende am Meer'),
-  candidate('lea-2', 'lea', 'Picknick am See'),
-  candidate('alex-2', 'alex', 'Konzert in Berlin'),
+  candidate('lea-1', 'lea', SECRET_WISH_TITLE),
+  candidate('alex-1', 'alex', 'Weekend by the sea'),
+  candidate('lea-2', 'lea', 'Picnic by the lake'),
+  candidate('alex-2', 'alex', 'Concert in Berlin'),
 ];
 
 function setValidClues(
   session: ReturnType<typeof createLocalWishDetectiveSession>,
 ): void {
-  session.dispatch({ type: 'SET_CLUE', index: 0, value: 'Nacht' });
-  session.dispatch({ type: 'SET_CLUE', index: 1, value: 'Decke' });
+  session.dispatch({ type: 'SET_CLUE', index: 0, value: 'Night' });
+  session.dispatch({ type: 'SET_CLUE', index: 1, value: 'Blanket' });
   session.dispatch({ type: 'SET_CLUE', index: 2, value: 'Warm' });
 }
 
@@ -95,29 +96,28 @@ describe('Wish Detective text rules', () => {
   it('validates one-word clues with duplicate and wish-word feedback', () => {
     expect(
       validateWishDetectiveClues(
-        ['romantischer Abend', 'Nacht', 'Nacht'],
-        'Sterne gucken im Garten',
+        ['romantic evening', 'Night', 'Night'],
+        SECRET_WISH_TITLE,
       ),
     ).toEqual(['oneWord', 'duplicate', 'duplicate']);
 
     expect(
       validateWishDetectiveClues(
-        ['Garten', 'Stern', 'Warm'],
-        'Sterne gucken im Garten',
+        ['garden', 'star', 'Warm'],
+        SECRET_WISH_TITLE,
       ),
     ).toEqual(['wishWord', 'wishWord', null]);
   });
 
   it('accepts exact or two complete meaningful target tokens but never arbitrary substrings', () => {
-    const title = 'Sterne gucken im Garten';
+    const title = SECRET_WISH_TITLE;
     expect(isWishDetectiveGuessCorrect(title, title)).toBe(true);
-    expect(isWishDetectiveGuessCorrect('Sterne gucken', title)).toBe(true);
-    expect(isWishDetectiveGuessCorrect('Sterne Garten', title)).toBe(true);
-    expect(isWishDetectiveGuessCorrect('Sterne', title)).toBe(false);
-    expect(isWishDetectiveGuessCorrect('Garten', title)).toBe(false);
-    expect(isWishDetectiveGuessCorrect('tern', title)).toBe(false);
-    expect(isWishDetectiveGuessCorrect('meer', 'Meer')).toBe(true);
-    expect(isWishDetectiveGuessCorrect('me', 'Meer')).toBe(false);
+    expect(isWishDetectiveGuessCorrect('Stargazing garden', title)).toBe(true);
+    expect(isWishDetectiveGuessCorrect('Stargazing', title)).toBe(false);
+    expect(isWishDetectiveGuessCorrect('garden', title)).toBe(false);
+    expect(isWishDetectiveGuessCorrect('targ', title)).toBe(false);
+    expect(isWishDetectiveGuessCorrect('Seaside', 'Seaside')).toBe(true);
+    expect(isWishDetectiveGuessCorrect('Sea', 'Seaside')).toBe(false);
   });
 });
 
@@ -128,12 +128,10 @@ describe('local Wish Detective session', () => {
 
     setValidClues(session);
     expect(session.getSnapshot().phase).toBe('clue');
-    expect(session.getSnapshot().currentWish?.title).toBe(
-      'Sterne gucken im Garten',
-    );
+    expect(session.getSnapshot().currentWish?.title).toBe(SECRET_WISH_TITLE);
 
-    session.dispatch({ type: 'SET_CLUE', index: 1, value: 'Kissen' });
-    expect(session.getSnapshot().clues[1]).toBe('Kissen');
+    session.dispatch({ type: 'SET_CLUE', index: 1, value: 'Pillow' });
+    expect(session.getSnapshot().clues[1]).toBe('Pillow');
     expect(session.getSnapshot().phase).toBe('clue');
 
     session.dispatch({ type: 'START_HANDOFF' });
@@ -151,12 +149,12 @@ describe('local Wish Detective session', () => {
     setValidClues(session);
     session.dispatch({ type: 'START_HANDOFF' });
     session.dispatch({ type: 'CONFIRM_HANDOFF' });
-    session.dispatch({ type: 'SUBMIT_GUESS', guess: 'Sterne gucken' });
+    session.dispatch({ type: 'SUBMIT_GUESS', guess: 'Stargazing garden' });
 
     const snapshot = session.getSnapshot();
     expect(snapshot.phase).toBe('reveal');
     expect(snapshot.reveal?.result).toBe('correct');
-    expect(snapshot.currentWish?.title).toBe('Sterne gucken im Garten');
+    expect(snapshot.currentWish?.title).toBe(SECRET_WISH_TITLE);
     expect(snapshot.scores).toEqual([0, 1]);
     expect(snapshot.correctGuesses).toBe(1);
     expect(snapshot.roundsPlayed).toBe(1);
@@ -168,7 +166,7 @@ describe('local Wish Detective session', () => {
     setValidClues(session);
     session.dispatch({ type: 'START_HANDOFF' });
     session.dispatch({ type: 'CONFIRM_HANDOFF' });
-    session.dispatch({ type: 'SUBMIT_GUESS', guess: 'Falsch geraten' });
+    session.dispatch({ type: 'SUBMIT_GUESS', guess: 'Wrong answer' });
 
     expect(session.getSnapshot().roundsPlayed).toBe(1);
     expect(session.getSnapshot().scores).toEqual([0, 0]);
@@ -214,12 +212,12 @@ describe('local Wish Detective session', () => {
     const before = session.getSnapshot();
     const cluesBefore = before.clues;
 
-    session.dispatch({ type: 'SET_CLUE', index: 0, value: 'Nacht' });
+    session.dispatch({ type: 'SET_CLUE', index: 0, value: 'Night' });
     const after = session.getSnapshot();
 
     expect(after).not.toBe(before);
     expect(after.clues).not.toBe(cluesBefore);
     expect(before.clues[0]).toBe('');
-    expect(after.clues[0]).toBe('Nacht');
+    expect(after.clues[0]).toBe('Night');
   });
 });
