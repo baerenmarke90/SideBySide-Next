@@ -90,6 +90,18 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertNotIn('if docker manifest inspect "$source_ref"', publish_step)
         self.assertNotIn('if docker manifest inspect "$version_ref"', publish_step)
 
+    def test_registry_collision_check_rejects_multi_platform_indexes(self) -> None:
+        publish_step = self.workflow.split(
+            "Publish exact build-once runtime images to GHCR", 1
+        )[1].split("Build deterministic Self-Hosted operator bundle", 1)[0]
+        self.assertIn("application/vnd.oci.image.index.v1+json", publish_step)
+        self.assertIn(
+            "application/vnd.docker.distribution.manifest.list.v2+json", publish_step
+        )
+        self.assertIn('isinstance(manifest.get("manifests"), list)', publish_step)
+        self.assertIn('manifest_kind" != "single"', publish_step)
+        self.assertIn("is not a single-image manifest", publish_step)
+
     def test_published_runtime_identity_is_release_asset_and_reverified(self) -> None:
         self.assertIn("self-hosted-image-identity.json", self.workflow)
         self.assertIn("--pattern self-hosted-image-identity.json", self.workflow)
