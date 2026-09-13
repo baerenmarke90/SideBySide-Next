@@ -53,11 +53,17 @@ A released Self-Hosted installation requires **both** matching GitHub Release as
 - `eimir-self-hosted-v<release-version>.tar.gz` — the deterministic source-free operator bundle;
 - `self-hosted-image-identity.json` — the digest-qualified image identity for that same release.
 
-The GitHub Release itself must be marked **Immutable**. Do not trust an image-identity
-asset copied from a draft or mutable Release: a mutable asset can be replaced after its
-initial publication. The protected publication workflow refuses to complete unless
-GitHub reports `isImmutable=true` for the published Release and the Release attestation
-verifies.
+The GitHub Release itself must be marked **Immutable**. Verify it before treating the
+release assets as trusted:
+
+```bash
+gh release verify "v${RELEASE_VERSION}" --repo baerenmarke90/SideBySide-Next
+```
+
+Do not trust an image-identity asset copied from a draft or mutable Release: a mutable
+asset can be replaced after its initial publication. The protected publication workflow
+refuses to complete unless GitHub reports `isImmutable=true` for the published Release
+and the Release attestation verifies.
 
 The backend and Web GHCR images referenced by the identity file are official public
 Self-Hosted distribution artifacts. They must be anonymously pullable by digest. Normal
@@ -75,6 +81,8 @@ operation:
 
 ```bash
 RELEASE_VERSION=0.1.0
+
+gh release verify "v${RELEASE_VERSION}" --repo baerenmarke90/SideBySide-Next
 
 gh release download "v${RELEASE_VERSION}" \
   --repo baerenmarke90/SideBySide-Next \
@@ -154,8 +162,8 @@ GitHub repository -> Settings -> Releases -> Enable release immutability
 ```
 
 If that setting is missing, the workflow publishes through a draft, detects that the
-final Release is not immutable, removes the just-created mutable Release/tag where safe,
-and fails closed.
+final Release is not immutable, attempts cleanup of the just-created mutable Release/tag,
+and fails closed regardless of cleanup outcome.
 
 ## Mandatory released launcher
 
