@@ -541,6 +541,7 @@ jobs:
             local ref="$1"
             local output
             local status
+            local manifest_kind
 
             set +e
             output=$(docker manifest inspect "$ref" 2>&1)
@@ -548,6 +549,34 @@ jobs:
             set -e
 
             if [ "$status" -eq 0 ]; then
+              if ! manifest_kind=$(MANIFEST_JSON="$output" python3 - <<'PY'
+              import json
+              import os
+
+              manifest = json.loads(os.environ["MANIFEST_JSON"])
+              media_type = manifest.get("mediaType")
+              index_types = {
+                  "application/vnd.oci.image.index.v1+json",
+                  "application/vnd.docker.distribution.manifest.list.v2+json",
+              }
+              is_index = isinstance(manifest.get("manifests"), list) or media_type in index_types
+              if is_index:
+                  print("index")
+              elif isinstance(manifest.get("config"), dict) and isinstance(manifest.get("layers"), list):
+                  print("single")
+              else:
+                  print("unsupported")
+              PY
+              ); then
+                echo "Unable to parse registry manifest for ${ref}; refusing publication." >&2
+                return 1
+              fi
+
+              if [ "$manifest_kind" != "single" ]; then
+                echo "Registry reference ${ref} is not a single-image manifest; refusing publication." >&2
+                return 1
+              fi
+
               printf '%s\n' exists
               return 0
             fi
