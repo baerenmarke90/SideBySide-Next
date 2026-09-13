@@ -127,13 +127,14 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
             publish_step,
         )
         self.assertIn(
-            'ensure_alias_matches "$source_ref" "$repository" "$source_image" "$transport_digest_ref"',
+            'ensure_alias_matches "$source_ref" "$repository" "$transport_digest_ref"',
             publish_step,
         )
         self.assertIn(
-            'ensure_alias_matches "$version_ref" "$repository" "$source_image" "$transport_digest_ref"',
+            'ensure_alias_matches "$version_ref" "$repository" "$transport_digest_ref"',
             publish_step,
         )
+        self.assertIn('docker tag "$expected_digest_ref" "$alias_ref"', publish_step)
         self.assertIn("Alias creation is intentionally not an integrity primitive", publish_step)
         self.assertIn('digest="${transport_digest_ref#*@}"', publish_step)
 
