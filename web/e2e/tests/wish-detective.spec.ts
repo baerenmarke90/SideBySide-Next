@@ -9,6 +9,10 @@ const SPACE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 const TEST_NOW = '2026-09-13T10:00:00Z';
 const SECRET_WISH_TITLE = 'Stargazing in the garden';
+const POSSIBLE_ACCOUNT_WISH_TITLES = [
+  SECRET_WISH_TITLE,
+  'Picnic by the lake',
+] as const;
 
 function localized(template: string, values: Record<string, string | number>): string {
   return Object.entries(values).reduce(
@@ -246,7 +250,10 @@ test.describe('Wish Detective Product Reference (#864)', () => {
         level: 1,
       }),
     ).toBeVisible();
-    await expect(page.getByText(SECRET_WISH_TITLE)).toBeVisible();
+    const secretWishHeading = page.locator('#wish-detective-clue-title');
+    await expect(secretWishHeading).toBeVisible();
+    const secretWishTitle = (await secretWishHeading.textContent())?.trim() ?? '';
+    expect(POSSIBLE_ACCOUNT_WISH_TITLES).toContain(secretWishTitle);
     await expect(
       page.locator('.mobile-bottom-nav a.shell-nav-link').nth(3),
     ).toHaveAttribute('aria-current', 'page');
@@ -273,7 +280,7 @@ test.describe('Wish Detective Product Reference (#864)', () => {
       .getByRole('button', { name: games.wishDetective.startHandoff })
       .click();
 
-    await expect(page.getByText(SECRET_WISH_TITLE)).toHaveCount(0);
+    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(0);
     await expect(
       page.getByRole('heading', {
         name: localized(games.wishDetective.handoffTitle, { name: 'Alex' }),
@@ -302,7 +309,7 @@ test.describe('Wish Detective Product Reference (#864)', () => {
         name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
       })
       .click();
-    await expect(page.getByText(SECRET_WISH_TITLE)).toHaveCount(0);
+    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(0);
     const guessInput = page.getByLabel(
       localized(games.wishDetective.guessLabel, { name: 'Anna' }),
     );

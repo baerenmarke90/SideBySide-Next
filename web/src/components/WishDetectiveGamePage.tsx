@@ -297,6 +297,7 @@ function WishDetectiveSessionView({
           </h2>
           <div
             className="wish-detective-clue-chips"
+            role="group"
             aria-label={t('games.wishDetective.cluesAria')}
           >
             {snapshot.clues.map((clue) => (
