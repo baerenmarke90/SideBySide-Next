@@ -13,13 +13,8 @@ from sidebyside.wishes.models import Wish, WishStatus
 
 MIN_OPEN_WISHES_PER_PARTNER = 2
 
-LEA_WISH_DETECTIVE_EXAMPLES = (
-    "Sterne gucken im Garten",
-)
-ALEX_WISH_DETECTIVE_EXAMPLES = (
-    "Mit dem Nachtzug ans Meer",
-    "Frühstück am See",
-)
+LEA_WISH_DETECTIVE_EXAMPLES = ("Sterne gucken im Garten",)
+ALEX_WISH_DETECTIVE_EXAMPLES = ("Mit dem Nachtzug ans Meer", "Frühstück am See")
 
 
 def _ensure_open_wishes(
