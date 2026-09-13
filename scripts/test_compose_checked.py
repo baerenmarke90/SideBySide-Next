@@ -89,6 +89,25 @@ class RejectProductionEnvironmentTest(unittest.TestCase):
         ):
             reject_production_environment(self.env_file)
 
+    def test_rejects_export_prefixed_production_dotenv(self) -> None:
+        self.env_file.write_text(
+            "export SBS_ENVIRONMENT=production\n", encoding="utf-8"
+        )
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            CheckoutError, "verified source builds are not allowed"
+        ):
+            reject_production_environment(self.env_file)
+
+    def test_last_duplicate_environment_assignment_wins(self) -> None:
+        self.env_file.write_text(
+            "SBS_ENVIRONMENT=development\nSBS_ENVIRONMENT=production\n",
+            encoding="utf-8",
+        )
+        with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
+            CheckoutError, "verified source builds are not allowed"
+        ):
+            reject_production_environment(self.env_file)
+
     def test_rejects_production_with_inline_comment(self) -> None:
         self._write_env("production # deployed")
         with mock.patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(
