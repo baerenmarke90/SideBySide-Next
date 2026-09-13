@@ -343,5 +343,17 @@ test.describe('Wish Detective Product Reference (#864)', () => {
       path: testInfo.outputPath('wish-detective-guess-320-dark.png'),
       fullPage: true,
     });
+
+    await page.goBack();
+    await page.goForward();
+    await expect(
+      page.getByRole('heading', {
+        name: games.wishDetective.interruptedTitle,
+        level: 2,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(
+      0,
+    );
   });
 });

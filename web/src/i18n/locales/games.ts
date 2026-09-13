@@ -93,6 +93,10 @@ const games = {
     sparseBody:
       'Sobald ihr beide mindestens zwei offene Wünsche festgehalten habt, kann eure erste Runde starten. Private Geschenkideen werden dafür niemals verwendet.',
     sparseAction: 'Zu euren Wünschen',
+    interruptedEyebrow: 'Runde unterbrochen',
+    interruptedTitle: 'Der Wunsch bleibt verborgen.',
+    interruptedBody:
+      'Ihr habt die Runde während der Übergabe oder beim Raten verlassen. Gebt das Gerät zurück und startet von „Gemeinsam spielen“ eine neue Runde.',
     round: 'Runde {{current}} von {{total}}',
     clueEyebrow: '{{name}}, dein Wunsch',
     cluePrivate: 'Nicht zeigen – dein Partner rät gleich.',

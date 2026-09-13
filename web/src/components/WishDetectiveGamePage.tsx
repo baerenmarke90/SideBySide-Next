@@ -32,6 +32,42 @@ export interface WishDetectiveGameSetup {
   rounds: readonly WishDetectiveCandidate[];
 }
 
+const HIDDEN_ROUND_STORAGE_PREFIX =
+  'sidebyside:wish-detective:hidden-round';
+
+function wishDetectiveHiddenRoundStorageKey(
+  spaceId: string,
+  currentAccountId: string,
+): string {
+  return `${HIDDEN_ROUND_STORAGE_PREFIX}:${spaceId}:${currentAccountId}`;
+}
+
+function hasWishDetectiveHiddenRoundMarker(storageKey: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(storageKey) === 'hidden';
+  } catch {
+    return false;
+  }
+}
+
+function setWishDetectiveHiddenRoundMarker(
+  storageKey: string,
+  hidden: boolean,
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (hidden) {
+      window.sessionStorage.setItem(storageKey, 'hidden');
+    } else {
+      window.sessionStorage.removeItem(storageKey);
+    }
+  } catch {
+    // Storage may be unavailable in hardened browser contexts. The active
+    // in-memory session still keeps the secret out of HANDOFF/GUESS snapshots.
+  }
+}
+
 function orderParticipants(
   partners: readonly PartnerView[],
   currentAccountId: string,
@@ -94,10 +130,12 @@ function clueErrorKey(error: ClueValidationError): string {
 
 function WishDetectiveSessionView({
   setup,
+  hiddenRoundStorageKey,
 }: {
   setup: WishDetectiveGameSetup & {
     participants: readonly [WishDetectiveParticipant, WishDetectiveParticipant];
   };
+  hiddenRoundStorageKey: string;
 }) {
   const { t } = useTranslation();
   const clueGroupId = useId();
@@ -116,6 +154,14 @@ function WishDetectiveSessionView({
     session.getSnapshot,
     session.getSnapshot,
   );
+
+  useEffect(() => {
+    setWishDetectiveHiddenRoundMarker(
+      hiddenRoundStorageKey,
+      snapshot.phase === 'handoff' || snapshot.phase === 'guess',
+    );
+  }, [hiddenRoundStorageKey, snapshot.phase]);
+
   const participants = snapshot.participants;
   if (!participants) return null;
 
@@ -383,6 +429,13 @@ export function WishDetectiveGamePage({
   loadSetup?: () => Promise<WishDetectiveGameSetup>;
 }) {
   const { t } = useTranslation();
+  const hiddenRoundStorageKey = wishDetectiveHiddenRoundStorageKey(
+    spaceId,
+    currentAccountId,
+  );
+  const [interruptedHiddenRound] = useState(() =>
+    hasWishDetectiveHiddenRoundMarker(hiddenRoundStorageKey),
+  );
   const setupQuery = useQuery({
     queryKey: ['games', 'wish-detective', 'setup', spaceId],
     queryFn: async () => {
@@ -401,6 +454,7 @@ export function WishDetectiveGamePage({
     },
     retry: false,
     gcTime: 0,
+    enabled: !interruptedHiddenRound,
   });
 
   return (
@@ -417,7 +471,29 @@ export function WishDetectiveGamePage({
         className="wish-detective-heading"
       />
 
-      {setupQuery.isPending ? (
+      {interruptedHiddenRound ? (
+        <section
+          className="wish-detective-sparse"
+          aria-labelledby="wish-detective-interrupted-title"
+        >
+          <p className="eyebrow">
+            {t('games.wishDetective.interruptedEyebrow')}
+          </p>
+          <h2 id="wish-detective-interrupted-title">
+            {t('games.wishDetective.interruptedTitle')}
+          </h2>
+          <p>{t('games.wishDetective.interruptedBody')}</p>
+          <Link
+            className="button-link"
+            to={appRoutePath('games')}
+            onClick={() =>
+              setWishDetectiveHiddenRoundMarker(hiddenRoundStorageKey, false)
+            }
+          >
+            {t('games.wishDetective.backToGames')}
+          </Link>
+        </section>
+      ) : setupQuery.isPending ? (
         <UiState
           kind="loading"
           title={t('games.wishDetective.loadingTitle')}
@@ -454,6 +530,7 @@ export function WishDetectiveGamePage({
             participants: setupQuery.data.participants,
             rounds: setupQuery.data.rounds,
           }}
+          hiddenRoundStorageKey={hiddenRoundStorageKey}
         />
       )}
     </div>

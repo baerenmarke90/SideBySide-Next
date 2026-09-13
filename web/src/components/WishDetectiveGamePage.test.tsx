@@ -55,6 +55,10 @@ function renderPage(setup: WishDetectiveGameSetup) {
 }
 
 describe('WishDetectiveGamePage', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
   it('keeps the wish visible during clue entry and hides it for handoff and guessing', async () => {
     renderPage(playableSetup());
 
@@ -111,6 +115,50 @@ describe('WishDetectiveGamePage', () => {
         localized(games.wishDetective.guessLabel, { name: 'Lea' }),
       ),
     ).toBeTruthy();
+  });
+
+  it('does not reveal the secret when a hidden phase is remounted', async () => {
+    const firstRender = renderPage(playableSetup());
+    await screen.findByText(SECRET_WISH_TITLE);
+
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 1 }),
+      ),
+      { target: { value: 'Night' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 2 }),
+      ),
+      { target: { value: 'Blanket' } },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        localized(games.wishDetective.clueLabel, { index: 3 }),
+      ),
+      { target: { value: 'Warm' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: games.wishDetective.startHandoff,
+      }),
+    );
+    expect(screen.queryByText(SECRET_WISH_TITLE)).toBeNull();
+
+    firstRender.unmount();
+    renderPage(playableSetup());
+
+    await screen.findByRole('heading', {
+      name: games.wishDetective.interruptedTitle,
+      level: 2,
+    });
+    expect(screen.queryByText(SECRET_WISH_TITLE)).toBeNull();
+    expect(
+      screen
+        .getByRole('link', { name: games.wishDetective.backToGames })
+        .getAttribute('href'),
+    ).toBe('/games');
   });
 
   it('shows validation feedback instead of silently accepting invalid clues', async () => {
