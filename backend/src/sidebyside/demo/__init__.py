@@ -16,7 +16,12 @@ from sidebyside.demo.service import reset_demo_space as _reset_demo_space
 from sidebyside.demo.wish_detective import ensure_wish_detective_examples
 
 
-def _ensure_product_examples(session: Session, result: DemoSeedResult, *, reference_date: date) -> None:
+def _ensure_product_examples(
+    session: Session,
+    result: DemoSeedResult,
+    *,
+    reference_date: date,
+) -> None:
     normalize_demo_content(session, result)
     if result.created:
         ensure_story_structure(session, result)
