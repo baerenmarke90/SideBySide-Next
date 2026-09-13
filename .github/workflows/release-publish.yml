@@ -149,9 +149,9 @@ jobs:
               and item.get("conclusion") not in {"success", "neutral", "skipped"}
           ]
           if pending:
-            raise SystemExit("Release source still has pending checks: " + ", ".join(sorted(pending)))
+              raise SystemExit("Release source still has pending checks: " + ", ".join(sorted(pending)))
           if failed:
-            raise SystemExit("Release source has non-green checks: " + ", ".join(sorted(failed)))
+              raise SystemExit("Release source has non-green checks: " + ", ".join(sorted(failed)))
           print(f"Verified {len(checks)} pre-existing checks for release source")
           PY
 
@@ -671,8 +671,7 @@ jobs:
           ensure_alias_matches() {
             local alias_ref="$1"
             local repository="$2"
-            local source_image="$3"
-            local expected_digest_ref="$4"
+            local expected_digest_ref="$3"
             local state
             local actual_digest_ref
 
@@ -693,7 +692,7 @@ jobs:
             # Alias creation is intentionally not an integrity primitive: GHCR tags can
             # be moved by another package writer. Verify the digest reported by this
             # push, then rely only on expected_digest_ref for release identity.
-            docker tag "$source_image" "$alias_ref"
+            docker tag "$expected_digest_ref" "$alias_ref"
             actual_digest_ref=$(push_single_digest "$alias_ref" "$repository")
             if [ "$actual_digest_ref" != "$expected_digest_ref" ]; then
               echo "Registry alias ${alias_ref} published with a different digest." >&2
@@ -730,8 +729,8 @@ jobs:
 
             source_ref="${repository}:${source_tag}"
             version_ref="${repository}:${version_tag}"
-            ensure_alias_matches "$source_ref" "$repository" "$source_image" "$transport_digest_ref"
-            ensure_alias_matches "$version_ref" "$repository" "$source_image" "$transport_digest_ref"
+            ensure_alias_matches "$source_ref" "$repository" "$transport_digest_ref"
+            ensure_alias_matches "$version_ref" "$repository" "$transport_digest_ref"
 
             digest="${transport_digest_ref#*@}"
             printf '%s@%s\n' "$version_ref" "$digest" > "$result_file"
