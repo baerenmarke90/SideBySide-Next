@@ -68,6 +68,7 @@ const stylesCss = readSource('./styles.css');
 const themeTs = readSource('./theme.ts');
 const themeBootstrapJs = readSource('../public/theme-bootstrap.js');
 const indexHtml = readSource('../index.html');
+const nginxConfig = readSource('../nginx.conf');
 
 const compatibilityLight = cssBlock(stylesCss, ':root');
 const explicitLight = cssBlock(themeCss, ':root');
@@ -112,17 +113,42 @@ describe('design token authority and drift enforcement', () => {
     expect(tokensJson.meta.status).toBe('foundation');
   });
 
-  it('keeps browser theme-color sources in sync with the explicit schemes', () => {
+  it('keeps every browser theme-color boundary tied to the authoritative tokens', () => {
     const lightBg = normalizeHex(
       tokensJson.color.scheme.light.background.$value,
     );
     const darkBg = normalizeHex(tokensJson.color.scheme.dark.background.$value);
 
-    expect(themeTs).toContain(`light: '${lightBg}'`);
-    expect(themeTs).toContain(`dark: '${darkBg}'`);
     expect(themeBootstrapJs).toContain(`light: '${lightBg}'`);
     expect(themeBootstrapJs).toContain(`dark: '${darkBg}'`);
     expect(indexHtml).toContain(`name="theme-color" content="${lightBg}"`);
+    expect(normalizeHex(cssVariable(explicitLight, 'color-background'))).toBe(
+      lightBg,
+    );
+    expect(normalizeHex(cssVariable(explicitDark, 'color-background'))).toBe(
+      darkBg,
+    );
+
+    expect(themeTs).not.toMatch(/#[0-9a-f]{3,8}/i);
+    expect(themeTs).toContain("getPropertyValue('--color-background')");
+  });
+
+  it('keeps the synchronous external bootstrap before the React entry point', () => {
+    const bootstrap = '<script src="/theme-bootstrap.js"></script>';
+    const reactEntry = '<script type="module" src="/src/main.tsx"></script>';
+
+    expect(indexHtml).toContain(bootstrap);
+    expect(indexHtml).toContain(reactEntry);
+    expect(indexHtml.indexOf(bootstrap)).toBeLessThan(
+      indexHtml.indexOf(reactEntry),
+    );
+    expect(indexHtml).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/i);
+  });
+
+  it('keeps the restrictive script CSP unchanged', () => {
+    expect(nginxConfig).toContain("script-src 'self'");
+    expect(nginxConfig).toContain("script-src-attr 'none'");
+    expect(nginxConfig).not.toContain("'unsafe-inline'");
   });
 
   it('keeps styles.css compatibility fallbacks aligned with semantic defaults', () => {
