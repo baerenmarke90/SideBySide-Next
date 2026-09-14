@@ -65,6 +65,7 @@ import {
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
   GAMES_MOMENTS_ROUTE,
+  GAMES_WISH_DETECTIVE_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
   HEART_MOMENT_EDIT_ROUTE_PATTERN,
@@ -120,6 +121,7 @@ import {
 } from './components/M4ProductPages';
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { OurMomentsGamePage } from './components/OurMomentsGamePage';
+import { WishDetectiveGamePage } from './components/WishDetectiveGamePage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
 import { PageHeader } from './components/PageHeader';
@@ -705,6 +707,17 @@ function AuthenticatedApp({
             path={GAMES_MOMENTS_ROUTE}
             element={
               <OurMomentsGamePage
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                spaceId={spaceId}
+                currentAccountId={account.id}
+              />
+            }
+          />
+          <Route
+            path={GAMES_WISH_DETECTIVE_ROUTE}
+            element={
+              <WishDetectiveGamePage
                 apiBaseUrl={apiBaseUrl}
                 accessToken={tokens.accessToken}
                 spaceId={spaceId}

@@ -1773,6 +1773,49 @@
         "title": "GameMemoryCandidateSet",
         "type": "object"
       },
+      "GameWishCandidate": {
+        "description": "Minimal authorized OPEN Wish context required by Wunschdetektiv.",
+        "properties": {
+          "createdBy": {
+            "format": "uuid",
+            "title": "Createdby",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "wishId": {
+            "format": "uuid",
+            "title": "Wishid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "wishId",
+          "createdBy",
+          "title"
+        ],
+        "title": "GameWishCandidate",
+        "type": "object"
+      },
+      "GameWishCandidateSet": {
+        "description": "Bounded Wish pool without private-derived totals.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GameWishCandidate"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GameWishCandidateSet",
+        "type": "object"
+      },
       "GiftIdeaCreate": {
         "additionalProperties": false,
         "properties": {
@@ -14588,6 +14631,69 @@
           }
         },
         "summary": "Get Game Moment Candidates",
+        "tags": [
+          "games"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/games/wishes/candidates": {
+      "get": {
+        "description": "Return Premium-authorized OPEN shared Wishes for #864.",
+        "operationId": "getGameWishCandidates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameWishCandidateSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Game Wish Candidates",
         "tags": [
           "games"
         ]

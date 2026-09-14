@@ -65,3 +65,46 @@ def get_game_moment_candidates(
             for candidate in service.read_memory_candidates(session, authorization)
         ]
     )
+
+
+class GameWishCandidate(ApiModel):
+    """Minimal authorized OPEN Wish context required by Wunschdetektiv."""
+
+    wish_id: UUID
+    created_by: UUID
+    title: str
+
+
+class GameWishCandidateSet(ApiModel):
+    """Bounded Wish pool without private-derived totals."""
+
+    items: list[GameWishCandidate]
+
+
+@router.get(
+    "/spaces/{spaceId}/games/wishes/candidates",
+    response_model=GameWishCandidateSet,
+    operation_id="getGameWishCandidates",
+    responses=problem_responses(401, 403, 404),
+)
+def get_game_wish_candidates(
+    authorization: Authorization,
+    session: DbSession,
+) -> GameWishCandidateSet:
+    """Return Premium-authorized OPEN shared Wishes for #864."""
+    ensure_capability(
+        session,
+        authorization.space_id,
+        Capability.GAMES_COUPLE.value,
+        lock_grants=False,
+    )
+    return GameWishCandidateSet(
+        items=[
+            GameWishCandidate(
+                wish_id=candidate.wish_id,
+                created_by=candidate.created_by,
+                title=candidate.title,
+            )
+            for candidate in service.read_wish_candidates(session, authorization)
+        ]
+    )

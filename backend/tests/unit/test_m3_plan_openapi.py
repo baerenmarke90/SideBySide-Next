@@ -6,7 +6,8 @@ from sidebyside.main import create_app
 
 COLLECTION = "/api/v1/spaces/{spaceId}/plans"
 DETAIL = "/api/v1/spaces/{spaceId}/plans/{planId}"
-WISH_DETAIL = "/api/v1/spaces/{spaceId}/wishes/{wishId}"
+WISH_COLLECTION = "/api/v1/spaces/{spaceId}/wishes"
+WISH_DETAIL = f"{WISH_COLLECTION}/{{wishId}}"
 WISH_COMPLETE = f"{WISH_DETAIL}/complete"
 CONVERT = f"{WISH_DETAIL}/plan"
 LIFECYCLE = (
@@ -29,6 +30,14 @@ def _components() -> dict[str, dict]:
     return _schema()["components"]["schemas"]  # type: ignore[index,return-value]
 
 
+def _wish_paths() -> set[str]:
+    return {
+        path
+        for path in _paths()
+        if path == WISH_COLLECTION or path.startswith(f"{WISH_COLLECTION}/")
+    }
+
+
 def test_plan_routes_have_frozen_operation_ids() -> None:
     paths = _paths()
     assert paths[COLLECTION]["post"]["operationId"] == "createPlan"
@@ -45,10 +54,10 @@ def test_plan_routes_have_frozen_operation_ids() -> None:
 
 
 def test_the_decided_wish_and_plan_surface_is_now_complete() -> None:
-    wish_paths = {path for path in _paths() if "/wishes" in path}
+    wish_paths = _wish_paths()
     plan_paths = {path for path in _paths() if "/plans" in path}
     assert wish_paths == {
-        "/api/v1/spaces/{spaceId}/wishes",
+        WISH_COLLECTION,
         WISH_DETAIL,
         WISH_COMPLETE,
         CONVERT,

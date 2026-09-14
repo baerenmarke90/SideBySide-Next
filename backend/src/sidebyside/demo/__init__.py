@@ -13,6 +13,25 @@ from sidebyside.demo.reminders import ensure_reminder_examples
 from sidebyside.demo.service import DemoSeedResult
 from sidebyside.demo.service import create_demo_space as _create_demo_space
 from sidebyside.demo.service import reset_demo_space as _reset_demo_space
+from sidebyside.demo.wish_detective import ensure_wish_detective_examples
+
+
+def _ensure_product_examples(
+    session: Session,
+    result: DemoSeedResult,
+    *,
+    reference_date: date,
+) -> None:
+    normalize_demo_content(session, result)
+    if result.created:
+        ensure_story_structure(session, result)
+    ensure_reminder_examples(session, result, reference_date=reference_date)
+    ensure_wish_detective_examples(
+        session,
+        space_id=result.space_id,
+        lea_id=result.lea_id,
+        alex_id=result.alex_id,
+    )
 
 
 def create_demo_space(
@@ -23,7 +42,7 @@ def create_demo_space(
     alex_password: str,
     reference_date: date,
 ) -> DemoSeedResult:
-    """Create the complete canonical demo dataset, including stable M4-C examples."""
+    """Create the complete canonical demo dataset, including stable product examples."""
     result = _create_demo_space(
         session,
         environment=environment,
@@ -31,10 +50,7 @@ def create_demo_space(
         alex_password=alex_password,
         reference_date=reference_date,
     )
-    normalize_demo_content(session, result)
-    if result.created:
-        ensure_story_structure(session, result)
-    ensure_reminder_examples(session, result, reference_date=reference_date)
+    _ensure_product_examples(session, result, reference_date=reference_date)
     return result
 
 
@@ -50,9 +66,7 @@ def reset_demo_space(
         environment=environment,
         reference_date=reference_date,
     )
-    normalize_demo_content(session, result)
-    ensure_story_structure(session, result)
-    ensure_reminder_examples(session, result, reference_date=reference_date)
+    _ensure_product_examples(session, result, reference_date=reference_date)
     return result
 
 

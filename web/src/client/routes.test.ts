@@ -7,6 +7,7 @@ import {
   COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
   GAMES_MOMENTS_ROUTE,
+  GAMES_WISH_DETECTIVE_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
   HEART_MOMENT_EDIT_ROUTE_PATTERN,
@@ -65,6 +66,7 @@ describe('primary navigation', () => {
     expect(appRoutePath('plan')).toBe('/plan');
     expect(appRoutePath('games')).toBe('/games');
     expect(GAMES_MOMENTS_ROUTE).toBe('/games/our-moments');
+    expect(GAMES_WISH_DETECTIVE_ROUTE).toBe('/games/wish-detective');
     expect(appRoutePath('more')).toBe('/more');
   });
 
@@ -169,6 +171,7 @@ describe('content deep links', () => {
     expect(activeNavigationArea('/plan/chapters/c1')).toBe('story');
     expect(activeNavigationArea('/games')).toBe('more');
     expect(activeNavigationArea('/games/our-moments')).toBe('more');
+    expect(activeNavigationArea('/games/wish-detective')).toBe('more');
     expect(activeNavigationArea('/more')).toBe('more');
     expect(activeNavigationArea('/more/places')).toBe('more');
     expect(activeNavigationArea('/plan/places/p1')).toBe('more');

@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom';
 import { EntitlementsApi } from '../api/generated/apis/EntitlementsApi';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
 import { Configuration } from '../api/generated/runtime';
-import { GAMES_MOMENTS_ROUTE } from '../client/routes';
+import {
+  GAMES_MOMENTS_ROUTE,
+  GAMES_WISH_DETECTIVE_ROUTE,
+} from '../client/routes';
 import { normalizeClientError } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -20,6 +23,12 @@ const GAME_ENTRIES = [
   'happiness',
   'timeTravel',
 ] as const;
+
+function gameRoute(entry: (typeof GAME_ENTRIES)[number]): string | null {
+  if (entry === 'moments') return GAMES_MOMENTS_ROUTE;
+  if (entry === 'wishes') return GAMES_WISH_DETECTIVE_ROUTE;
+  return null;
+}
 
 export function GamesProductArea({
   apiBaseUrl,
@@ -129,6 +138,7 @@ export function GamesProductArea({
 
           <section className="games-shelf" aria-label={t('games.title')}>
             {GAME_ENTRIES.map((entry, index) => {
+              const route = gamesUnlocked ? gameRoute(entry) : null;
               const content = (
                 <>
                   <div className="games-entry-index" aria-hidden="true">
@@ -142,7 +152,7 @@ export function GamesProductArea({
                     <p>{t(`games.entries.${entry}.description`)}</p>
                   </div>
                   <span className="games-entry-status">
-                    {gamesUnlocked && entry === 'moments'
+                    {route
                       ? t('games.status.playNow')
                       : gamesUnlocked
                         ? t('games.status.comingSoon')
@@ -151,11 +161,11 @@ export function GamesProductArea({
                 </>
               );
 
-              return gamesUnlocked && entry === 'moments' ? (
+              return route ? (
                 <Link
                   className="games-entry games-entry-link"
                   key={entry}
-                  to={GAMES_MOMENTS_ROUTE}
+                  to={route}
                 >
                   {content}
                 </Link>

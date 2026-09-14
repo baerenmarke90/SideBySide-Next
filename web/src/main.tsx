@@ -17,6 +17,7 @@ import './demo.css';
 import './components/CommentsPanel.css';
 import './components/GamesProductArea.css';
 import './components/OurMomentsGamePage.css';
+import './components/WishDetectiveGamePage.css';
 import './components/HeartMomentCreateReference.css';
 import './components/LoginExperience.css';
 import './components/MediaGallery.css';
