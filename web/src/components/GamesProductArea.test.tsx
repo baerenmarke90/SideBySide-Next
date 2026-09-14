@@ -163,4 +163,70 @@ describe('GamesProductArea', () => {
       }),
     ).toBeTruthy();
   });
+
+  it('marks the reveal card with a neutral same/different outcome, never a score', async () => {
+    renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
+
+    async function answerRound(
+      firstResponder: WhoOfUsParticipant,
+      firstChoiceName: string,
+      secondResponder: WhoOfUsParticipant,
+      secondChoiceName: string,
+    ): Promise<void> {
+      await screen.findByText(games.whoOfUs.choosePrompt);
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: games.whoOfUs.choiceAria
+            .replace('{{responder}}', firstResponder.displayName)
+            .replace('{{choice}}', firstChoiceName),
+        }),
+      );
+
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: games.whoOfUs.handoffConfirm.replace(
+            '{{name}}',
+            secondResponder.displayName,
+          ),
+        }),
+      );
+
+      await screen.findByText(games.whoOfUs.choosePrompt);
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: games.whoOfUs.choiceAria
+            .replace('{{responder}}', secondResponder.displayName)
+            .replace('{{choice}}', secondChoiceName),
+        }),
+      );
+    }
+
+    const [lea, alex] = PARTICIPANTS;
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(games.entries.perspective.title),
+      }),
+    );
+
+    // Round 1: Lea answers first. Both pick Lea -> agreement.
+    await answerRound(lea, lea.displayName, alex, lea.displayName);
+    await screen.findByText(games.whoOfUs.sameTitle);
+    expect(
+      document.querySelector('.who-of-us-reveal')?.getAttribute('data-outcome'),
+    ).toBe('same');
+    expect(screen.queryByText(games.whoOfUs.differentTitle)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: games.whoOfUs.continue }),
+    );
+
+    // Round 2: responders alternate, so Alex answers first this time.
+    await answerRound(alex, alex.displayName, lea, lea.displayName);
+    await screen.findByText(games.whoOfUs.differentTitle);
+    expect(
+      document.querySelector('.who-of-us-reveal')?.getAttribute('data-outcome'),
+    ).toBe('different');
+    expect(screen.queryByText(games.whoOfUs.sameTitle)).toBeNull();
+  });
 });
