@@ -60,13 +60,20 @@ function expectFiveGameEntries(): void {
   expect(screen.getByText(games.entries.timeTravel.title)).toBeTruthy();
 }
 
+function expectGameStatus(status: string, count: number): void {
+  const matchingStatuses = [
+    ...document.querySelectorAll<HTMLElement>('.games-entry-status'),
+  ].filter((element) => element.textContent === status);
+  expect(matchingStatuses).toHaveLength(count);
+}
+
 describe('GamesProductArea', () => {
   it('keeps the catalog discoverable for a Free Space without a page-level Premium upsell', async () => {
     renderGames(entitlement([]));
 
     await screen.findByText(games.entries.moments.title);
     expectFiveGameEntries();
-    expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
+    expectGameStatus(games.status.premium, 5);
     expect(document.querySelector('.games-access-panel')).toBeNull();
     expect(screen.queryByText('Premium ansehen')).toBeNull();
     expect(
@@ -89,8 +96,8 @@ describe('GamesProductArea', () => {
     });
     expectFiveGameEntries();
     expect(document.querySelector('.games-access-panel')).toBeNull();
-    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(2);
-    expect(screen.getAllByText(games.status.playNow)).toHaveLength(3);
+    expectGameStatus(games.status.comingSoon, 2);
+    expectGameStatus(games.status.playNow, 3);
 
     expect(momentsLink.textContent).toContain(games.status.playNow);
     expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
