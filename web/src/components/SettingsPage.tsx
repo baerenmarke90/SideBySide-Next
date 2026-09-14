@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { DashboardApi } from '../api/generated/apis/DashboardApi';
 import { RulesApi } from '../api/generated/apis/RulesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
@@ -48,6 +48,22 @@ export function SettingsPage(props: SettingsPageProps) {
     [configuration],
   );
   const demoMode = isDemoModeConfigured();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) return;
+    const targetId = location.hash.replace(/^#/, '');
+    const element = document.getElementById(targetId);
+    if (element) {
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      element.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    }
+  }, [location.hash]);
 
   return (
     <div className="page settings-page">

@@ -56,6 +56,7 @@ import {
   loadAuthorizedImage,
   loadAuthorizedMedia,
 } from './client/referenceFlow';
+import { loadInstanceAccessStatus } from './client/instanceStatus';
 import { createServerAdminApis } from './client/serverAdmin';
 import {
   ACTIVITY_ROUTE,
@@ -111,6 +112,7 @@ import { CollectionProductPage } from './components/CollectionProductPage';
 import { CollectionsOverviewPage } from './components/CollectionsOverviewPage';
 import { DemoEntry } from './components/DemoEntry';
 import { AddIcon, DestinationIcon } from './components/DestinationIcon';
+import { FirstSpaceGate } from './components/FirstSpaceGate';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
@@ -880,6 +882,7 @@ function AuthenticatedApp({
 export function App({ demoMode = false }: { demoMode?: boolean }) {
   const config = useMemo(loadReferenceClientConfig, []);
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [entryToken, setEntryToken] = useState(() =>
@@ -1008,6 +1011,12 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
     },
     enabled: !isRestoring && tokens !== null && account !== null,
     retry: false,
+  });
+
+  const instanceStatusQuery = useQuery({
+    queryKey: ['instance-status', config.apiBaseUrl],
+    queryFn: () => loadInstanceAccessStatus(config.apiBaseUrl),
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -1169,6 +1178,41 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
     membershipsQuery.error ||
     memberships.length === 0
   ) {
+    if (
+      !membershipsQuery.isPending &&
+      !membershipsQuery.error &&
+      memberships.length === 0
+    ) {
+      if (instanceStatusQuery.isPending) {
+        return (
+          <>
+            <ThemeControl />
+            <SpaceContextGate
+              loading
+              error={null}
+              onRetry={() => void membershipsQuery.refetch()}
+            />
+          </>
+        );
+      }
+
+      if (instanceStatusQuery.data?.accountCreation === 'self_service') {
+        return (
+          <>
+            <ThemeControl />
+            <FirstSpaceGate
+              apiBaseUrl={config.apiBaseUrl}
+              accessToken={tokens.accessToken}
+              onSpaceReady={async () => {
+                navigate(`${MORE_SETTINGS_ROUTE}#settings-connection`);
+                await membershipsQuery.refetch();
+              }}
+            />
+          </>
+        );
+      }
+    }
+
     return (
       <>
         <ThemeControl />

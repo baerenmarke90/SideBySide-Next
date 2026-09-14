@@ -175,6 +175,57 @@
   box-shadow: 0 0 0 3px var(--color-brand-glow);
 }
 
+.entry-mode-toggle {
+  display: flex;
+  padding: 4px;
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--color-border);
+  gap: 4px;
+}
+
+.entry-mode-toggle button.entry-mode-btn {
+  flex: 1;
+  min-height: 42px;
+  border-radius: var(--radius-pill);
+  font-size: 0.95rem;
+  font-weight: 650;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  transform: none;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    box-shadow var(--motion-fast);
+  white-space: nowrap;
+  padding: 0 var(--space-3);
+}
+
+.entry-mode-toggle
+  button.entry-mode-btn:hover:not(.active):not([aria-pressed="true"]) {
+  color: var(--color-text);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.entry-mode-toggle button.entry-mode-btn.active,
+.entry-mode-toggle button.entry-mode-btn[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-brand-text);
+  box-shadow: 0 2px 8px var(--color-shadow-soft);
+  font-weight: 750;
+}
+
+@media (max-width: 360px) {
+  .entry-mode-toggle button.entry-mode-btn {
+    font-size: 0.84rem;
+    padding: 0 var(--space-2);
+  }
+}
+
 .login-assurance {
   margin-top: var(--space-4);
   color: var(--color-text-secondary);
@@ -195,6 +246,22 @@
   background: var(--color-surface-raised);
   border-color: rgba(255, 101, 142, 0.25);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .entry-mode-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .entry-mode-btn.active,
+:root[data-theme="dark"] .entry-mode-btn[aria-pressed="true"],
+:root[data-theme="dark"] .entry-mode-toggle button.entry-mode-btn.active,
+:root[data-theme="dark"]
+  .entry-mode-toggle
+  button.entry-mode-btn[aria-pressed="true"] {
+  background: var(--color-surface-raised);
+  color: var(--color-brand-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 :root[data-theme="dark"] .login-card button.secondary {
@@ -220,6 +287,22 @@
     background: var(--color-surface-raised);
     border-color: rgba(255, 101, 142, 0.25);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  :root:not([data-theme]) .entry-mode-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  :root:not([data-theme]) .entry-mode-btn.active,
+  :root:not([data-theme]) .entry-mode-btn[aria-pressed="true"],
+  :root:not([data-theme]) .entry-mode-toggle button.entry-mode-btn.active,
+  :root:not([data-theme])
+    .entry-mode-toggle
+    button.entry-mode-btn[aria-pressed="true"] {
+    background: var(--color-surface-raised);
+    color: var(--color-brand-text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
 }
 

@@ -114,6 +114,12 @@ const de = {
       'Wähle den gemeinsamen Bereich, mit dem du fortfahren möchtest.',
     pickerAria: 'Gemeinsamen Bereich auswählen',
     spaceFallback: 'Gemeinsamer Bereich {{index}}',
+    createFirstSpaceEyebrow: 'Euer gemeinsamer Ort',
+    createFirstSpaceTitle: 'Euren gemeinsamen Ort erstellen',
+    createFirstSpaceBody:
+      'Hier beginnt eure gemeinsame Geschichte. Erstellt euren privaten Raum für Erinnerungen, Momente und Pläne – privat und nur für euch beide.',
+    createFirstSpaceSubmit: 'Gemeinsamen Ort erstellen',
+    createFirstSpacePending: 'Gemeinsamer Ort wird erstellt …',
   },
   identity: {
     entryAria: 'Zugang zu eimir.',
@@ -179,6 +185,19 @@ const de = {
     magicLinkFailedTitle: 'Dieser Anmeldelink funktioniert nicht mehr.',
     magicLinkFailedBody:
       'Fordere bei Bedarf einen neuen Anmeldelink an oder melde dich mit deinem Passwort an.',
+    startTogether: 'Gemeinsam starten',
+    startTogetherEyebrow: 'Neu bei eimir.',
+    startTogetherTitle: 'Gemeinsam starten',
+    startTogetherBody:
+      'Erstellt euer privates Zuhause für Erinnerungen, Wünsche und Momente. Nur für euch zwei.',
+    startTogetherSubmit: 'Gemeinsam starten',
+    startTogetherPending: 'Anfrage wird gesendet …',
+    alreadyRegistered: 'Bereits registriert? Anmelden',
+    signupOpening: 'Registrierung wird bestätigt …',
+    signupFailedTitle: 'Dieser Registrierungslink funktioniert nicht mehr.',
+    signupFailedBody:
+      'Der Registrierungslink ist möglicherweise abgelaufen oder wurde bereits verwendet. Bitte fordere einen neuen Link an.',
+    entryModesAria: 'Zugangsart wählen',
     verificationOpening: 'E-Mail-Adresse wird bestätigt …',
     verificationCompleteTitle: 'E-Mail-Adresse bestätigt',
     verificationCompleteBody: 'Deine E-Mail-Adresse ist jetzt bestätigt.',

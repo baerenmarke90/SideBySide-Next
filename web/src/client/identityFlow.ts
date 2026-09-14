@@ -1,5 +1,6 @@
 import { InvitationsApi } from '../api/generated/apis/InvitationsApi';
 import type { SessionView } from '../api/generated/models/SessionView';
+import type { SignupSessionView } from '../api/generated/models/SignupSessionView';
 import { Configuration } from '../api/generated/runtime';
 import { normalizeClientError } from './problemDetails';
 import { createReferenceApis } from './referenceFlow';
@@ -157,6 +158,40 @@ export async function confirmEmailAddress(
       apiBaseUrl,
     ).auth.confirmEmailApiV1AuthEmailVerificationConfirmPost({
       tokenOnlyRequest: { token },
+    });
+  } catch (error) {
+    throw await normalizeClientError(error);
+  }
+}
+
+export async function requestSignup(
+  apiBaseUrl: string,
+  email: string,
+): Promise<void> {
+  try {
+    await createReferenceApis(
+      apiBaseUrl,
+    ).auth.requestSignupApiV1AuthSignupRequestPost({
+      emailRequest: { email },
+    });
+  } catch (error) {
+    throw await normalizeClientError(error);
+  }
+}
+
+export async function consumeSignup(
+  apiBaseUrl: string,
+  token: string,
+): Promise<SignupSessionView> {
+  try {
+    return await createReferenceApis(
+      apiBaseUrl,
+    ).auth.consumeSignupApiV1AuthSignupConsumePost({
+      signupConsumeRequest: {
+        token,
+        deviceName: WEB_DEVICE_NAME,
+        platform: WEB_PLATFORM,
+      },
     });
   } catch (error) {
     throw await normalizeClientError(error);
