@@ -102,12 +102,8 @@ function WhoOfUsSessionView({
   }
 
   if (snapshot.phase === 'handoff') {
-    const [, secondResponder] =
-      snapshot.currentRoundIndex % 2 === 0
-        ? participants
-        : [participants[1], participants[0]];
-    const firstResponder =
-      snapshot.currentRoundIndex % 2 === 0 ? participants[0] : participants[1];
+    const secondResponder =
+      snapshot.currentRoundIndex % 2 === 0 ? participants[1] : participants[0];
     return (
       <section
         className="who-of-us-card who-of-us-handoff sbs-motion-reveal"
@@ -119,11 +115,7 @@ function WhoOfUsSessionView({
             name: secondResponder.displayName,
           })}
         </h2>
-        <p>
-          {t('games.whoOfUs.handoffBody', {
-            name: firstResponder.displayName,
-          })}
-        </p>
+        <p>{t('games.whoOfUs.handoffBody')}</p>
         <button
           type="button"
           className="who-of-us-primary-action"
