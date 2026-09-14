@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from sqlalchemy.orm import Session
 
@@ -191,3 +193,38 @@ def test_wish_candidate_pool_is_bounded_without_total(client, session: Session, 
     assert len(body["items"]) == MAX_WISH_CANDIDATES
     assert "total" not in body
     assert "count" not in body
+
+
+def test_wish_candidate_pool_keeps_older_partner_wishes_when_recent_pool_is_skewed(
+    client, session: Session, couple
+) -> None:  # type: ignore[no-untyped-def]
+    _grant_games(session, couple)
+    baseline = now()
+
+    for index in range(2):
+        wish = _wish(
+            session,
+            space_id=couple["space"].id,
+            owner_id=couple["ben"].id,
+            title=f"Ben older {index}",
+        )
+        wish.created_at = baseline - timedelta(days=2, minutes=index)
+
+    for index in range(MAX_WISH_CANDIDATES + 5):
+        wish = _wish(
+            session,
+            space_id=couple["space"].id,
+            owner_id=couple["anna"].id,
+            title=f"Anna recent {index}",
+        )
+        wish.created_at = baseline + timedelta(minutes=index)
+    session.flush()
+
+    response = _candidates(client, couple)
+
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    creators = [item["createdBy"] for item in items]
+    assert creators.count(str(couple["ben"].id)) == 2
+    assert creators.count(str(couple["anna"].id)) <= MAX_WISH_CANDIDATES // 2
+    assert len(items) <= MAX_WISH_CANDIDATES
