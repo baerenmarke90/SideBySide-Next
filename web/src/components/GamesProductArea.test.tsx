@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
@@ -55,40 +55,31 @@ function expectFiveGameEntries(): void {
 }
 
 describe('GamesProductArea', () => {
-  it('keeps the five-game catalog discoverable for a Free Space with one page-level Premium treatment', async () => {
+  it('keeps the catalog discoverable for a Free Space without a page-level Premium upsell', async () => {
     renderGames(entitlement([]));
 
-    await screen.findByText(games.premium.title);
+    await screen.findByText(games.entries.moments.title);
     expectFiveGameEntries();
     expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
+    expect(document.querySelector('.games-access-panel')).toBeNull();
+    expect(screen.queryByText('Premium ansehen')).toBeNull();
     expect(
       screen.queryByRole('link', {
         name: new RegExp(games.entries.moments.title),
       }),
     ).toBeNull();
-
-    const detailsButton = screen.getByRole('button', {
-      name: games.premium.action,
-    });
-    expect(screen.queryByText(games.premium.detailsTitle)).toBeNull();
-    fireEvent.click(detailsButton);
-    expect(screen.getByText(games.premium.detailsTitle)).toBeTruthy();
-    expect(detailsButton.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('opens the implemented sofa games while later games remain unavailable', async () => {
+  it('opens the implemented sofa games without rendering an unlocked Premium panel', async () => {
     renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
 
-    await waitFor(() => {
-      expect(screen.getByText(games.unlocked.title)).toBeTruthy();
-    });
-    expect(screen.queryByText(games.premium.title)).toBeNull();
-    expectFiveGameEntries();
-    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(3);
-
-    const momentsLink = screen.getByRole('link', {
+    const momentsLink = await screen.findByRole('link', {
       name: new RegExp(games.entries.moments.title),
     });
+    expectFiveGameEntries();
+    expect(document.querySelector('.games-access-panel')).toBeNull();
+    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(3);
+
     expect(momentsLink.textContent).toContain(games.status.playNow);
     expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
 

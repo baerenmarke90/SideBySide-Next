@@ -6,6 +6,18 @@ const profiles = {
   settingsRailAria: 'Konto und Beziehung',
   accountTitle: 'Mein Konto',
   accountName: 'Anzeigename',
+  premium: {
+    eyebrow: 'Premium',
+    title: 'eimir.Pro',
+    badge: 'Pro',
+    gamesTitle: 'Gemeinsam spielen gehört zu eimir.Pro.',
+    gamesBody:
+      'Die Spiele machen aus eurer gemeinsamen Welt neue kleine Erlebnisse. Eure normalen Erinnerungen, Wünsche und Pläne bleiben davon unabhängig.',
+    action: 'Premium ansehen',
+    detailsTitle: 'Ein Premium-Bereich für euch beide',
+    detailsBody:
+      'Ein Pro-Zugang gilt für euren gemeinsamen Bereich und schaltet die Spiele für euch beide frei. Eure bestehenden Inhalte bleiben unabhängig davon erhalten.',
+  },
   relationshipTitle: 'Eure Beziehung',
   relationshipIntro:
     'Euer gemeinsamer Startpunkt für Jahrestage und eure Beziehungsdauer.',

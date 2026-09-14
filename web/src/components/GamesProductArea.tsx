@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { EntitlementsApi } from '../api/generated/apis/EntitlementsApi';
 import type { SpaceEntitlementView } from '../api/generated/models/SpaceEntitlementView';
@@ -42,7 +42,6 @@ export function GamesProductArea({
   loadEntitlement?: () => Promise<SpaceEntitlementView>;
 }) {
   const { t } = useTranslation();
-  const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const entitlementApi = useMemo(
     () =>
       new EntitlementsApi(
@@ -92,91 +91,46 @@ export function GamesProductArea({
           onRetry={() => void entitlementQuery.refetch()}
         />
       ) : (
-        <>
-          {gamesUnlocked ? (
-            <section className="games-access-panel games-access-panel-unlocked">
-              <span className="games-premium-badge">
-                {t('games.unlocked.badge')}
-              </span>
-              <div>
-                <h2>{t('games.unlocked.title')}</h2>
-                <p>{t('games.unlocked.body')}</p>
-              </div>
-            </section>
-          ) : (
-            <section
-              className="games-access-panel"
-              aria-labelledby="games-premium-heading"
-            >
-              <span className="games-premium-badge">
-                {t('games.premium.badge')}
-              </span>
-              <div className="games-access-copy">
-                <h2 id="games-premium-heading">{t('games.premium.title')}</h2>
-                <p>{t('games.premium.body')}</p>
-              </div>
-              <button
-                type="button"
-                className="games-premium-action"
-                aria-expanded={showPremiumDetails}
-                aria-controls="games-premium-details"
-                onClick={() => setShowPremiumDetails((visible) => !visible)}
-              >
-                {t('games.premium.action')}
-              </button>
-              {showPremiumDetails ? (
-                <div
-                  id="games-premium-details"
-                  className="games-premium-details"
-                >
-                  <strong>{t('games.premium.detailsTitle')}</strong>
-                  <p>{t('games.premium.detailsBody')}</p>
+        <section className="games-shelf" aria-label={t('games.title')}>
+          {GAME_ENTRIES.map((entry, index) => {
+            const route = gamesUnlocked ? gameRoute(entry) : null;
+            const content = (
+              <>
+                <div className="games-entry-index" aria-hidden="true">
+                  {String(index + 1).padStart(2, '0')}
                 </div>
-              ) : null}
-            </section>
-          )}
+                <div className="games-entry-copy">
+                  <p className="games-entry-role">
+                    {t(`games.entries.${entry}.role`)}
+                  </p>
+                  <h2>{t(`games.entries.${entry}.title`)}</h2>
+                  <p>{t(`games.entries.${entry}.description`)}</p>
+                </div>
+                <span className="games-entry-status">
+                  {route
+                    ? t('games.status.playNow')
+                    : gamesUnlocked
+                      ? t('games.status.comingSoon')
+                      : t('games.status.premium')}
+                </span>
+              </>
+            );
 
-          <section className="games-shelf" aria-label={t('games.title')}>
-            {GAME_ENTRIES.map((entry, index) => {
-              const route = gamesUnlocked ? gameRoute(entry) : null;
-              const content = (
-                <>
-                  <div className="games-entry-index" aria-hidden="true">
-                    {String(index + 1).padStart(2, '0')}
-                  </div>
-                  <div className="games-entry-copy">
-                    <p className="games-entry-role">
-                      {t(`games.entries.${entry}.role`)}
-                    </p>
-                    <h2>{t(`games.entries.${entry}.title`)}</h2>
-                    <p>{t(`games.entries.${entry}.description`)}</p>
-                  </div>
-                  <span className="games-entry-status">
-                    {route
-                      ? t('games.status.playNow')
-                      : gamesUnlocked
-                        ? t('games.status.comingSoon')
-                        : t('games.status.premium')}
-                  </span>
-                </>
-              );
-
-              return route ? (
-                <Link
-                  className="games-entry games-entry-link"
-                  key={entry}
-                  to={route}
-                >
-                  {content}
-                </Link>
-              ) : (
-                <article className="games-entry" key={entry}>
-                  {content}
-                </article>
-              );
-            })}
-          </section>
-        </>
+            return route ? (
+              <Link
+                className="games-entry games-entry-link"
+                key={entry}
+                to={route}
+              >
+                {content}
+              </Link>
+            ) : (
+              <article className="games-entry" key={entry}>
+                {content}
+              </article>
+            );
+          })}
+        </section>
       )}
     </div>
   );

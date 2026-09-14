@@ -1,10 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import de from '../i18n/locales/de';
+import games from '../i18n/locales/games';
 import { MoreOverviewPage } from './MoreOverviewPage';
 
 describe('MoreOverviewPage', () => {
-  it('renders Games with the other secondary destinations and omits persistent header affordances', () => {
+  it('renders Games with a Pro badge and the other secondary destinations', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <MoreOverviewPage />
@@ -33,6 +34,11 @@ describe('MoreOverviewPage', () => {
 
     const copyMatches = html.match(/class="more-destination-copy"/g);
     expect(copyMatches).toHaveLength(5);
+
+    // Premium membership is signposted once at the Games entry point.
+    const badgeMatches = html.match(/class="more-destination-badge"/g);
+    expect(badgeMatches).toHaveLength(1);
+    expect(html).toContain(games.status.premium);
 
     // Intro describes remaining scope
     expect(html).toContain(de.more.intro);
