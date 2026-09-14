@@ -117,9 +117,7 @@ describe('OurMomentsGamePage', () => {
     fireEvent.click(firstCard);
 
     await waitFor(() => {
-      expect(
-        screen.queryByRole('button', { name: hiddenCardName }),
-      ).toBeNull();
+      expect(screen.queryByRole('button', { name: hiddenCardName })).toBeNull();
     });
   });
 });
