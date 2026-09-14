@@ -164,6 +164,13 @@ def _require_available_variant(attachment: Attachment, variant: ReadVariant) -> 
         raise Attachment.privacy_absence.error()
 
 
+def _storage_variant(variant: ReadVariant) -> str:
+    """Map the public enum to server constants before storage-key construction."""
+    if variant == "thumbnail":
+        return service.THUMBNAIL_VARIANT
+    return service.ORIGINAL_VARIANT
+
+
 def _no_store(response: Response) -> None:
     # Descriptor responses can contain bearer capabilities. Neither the browser
     # cache nor an intermediary cache may retain them persistently.
@@ -330,7 +337,7 @@ def create_attachment_read_access(
 
     store = get_media_store()
     signed_url = store.create_read_url(
-        service.storage_key_for(attachment, body.variant), SIGNED_READ_TTL
+        service.storage_key_for(attachment, _storage_variant(body.variant)), SIGNED_READ_TTL
     )
     if signed_url is not None:
         return ReadDescriptor(
@@ -371,7 +378,7 @@ def get_attachment_content(
     )
     _require_available_variant(attachment, variant)
 
-    source = service.open_content(attachment, variant=variant)
+    source = service.open_content(attachment, variant=_storage_variant(variant))
     media_type = (
         "image/jpeg"
         if variant == "thumbnail"
