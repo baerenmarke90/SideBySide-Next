@@ -107,7 +107,7 @@ describe('GamesProductArea', () => {
     expect(perspectiveButton.textContent).toContain(games.status.playNow);
   });
 
-  it('starts Wer von euch as a hidden-answer handoff flow from the hub', async () => {
+  it('starts the perspective game as a hidden-answer handoff flow from the hub', async () => {
     renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
 
     const perspectiveButton = await screen.findByRole('button', {
