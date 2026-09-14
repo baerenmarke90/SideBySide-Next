@@ -64,7 +64,7 @@ function WhoOfUsSessionView({
   useEffect(() => () => session.dispose(), [session]);
 
   const participant = (id: string | null): WhoOfUsParticipant | null =>
-    id ? participants.find((candidate) => candidate.id === id) ?? null : null;
+    id ? (participants.find((candidate) => candidate.id === id) ?? null) : null;
   const responder = participant(snapshot.responderId);
   const roundLabel = t('games.whoOfUs.round', {
     current: Math.min(snapshot.currentRoundIndex + 1, snapshot.totalRounds),
@@ -86,9 +86,7 @@ function WhoOfUsSessionView({
             total: snapshot.roundsPlayed,
           })}
         </p>
-        <p>
-          {t('games.whoOfUs.finishDifferent', { count: differentCount })}
-        </p>
+        <p>{t('games.whoOfUs.finishDifferent', { count: differentCount })}</p>
         <div className="who-of-us-actions">
           <button type="button" onClick={() => session.restart()}>
             {t('games.whoOfUs.restart')}
