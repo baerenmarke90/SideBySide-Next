@@ -6,11 +6,19 @@ applicable) item-limit capability live in one place so Settings and Today
 composition cannot silently drift apart; both consume `CATALOG` rather than
 duplicating module identity.
 
-The App Shell/navigation and the Today hero (couple presence) are not
-Dashboard modules: they are the page's own identity and render
-unconditionally, not as one of the conditional content sections this catalog
-governs. See `web/src/components/TodayPage.tsx` for the corresponding
-`TodayModuleSection` boundary.
+The App Shell/navigation and Today's "new space" empty state are not
+Dashboard modules; the empty state only ever stands in for the configurable
+module stack, never as a member of it. `RELATIONSHIP_PRESENCE` (the Today
+Couple Presence hero) is registered like any other module - #817 makes no
+core/high-priority exception - it is simply the one whose Today rendering
+also carries the page's `<h1>`; see `web/src/components/TodayPage.tsx` for
+how hiding it preserves an accessible heading without an empty hero shell.
+
+This catalog's key order/identity is cross-checked against
+`web/src/client/dashboardModuleCatalog.contract.json` by
+`tests/unit/test_dashboard_catalog_parity.py`, and the Web catalog in
+`web/src/client/dashboardModules.ts` is checked against the same file, so the
+two layers cannot silently drift apart.
 """
 
 from __future__ import annotations
@@ -32,6 +40,7 @@ from sidebyside.dashboard.models import DashboardModulePreference
 class DashboardModuleKey(StrEnum):
     """Stable internal product keys for registered Dashboard modules."""
 
+    RELATIONSHIP_PRESENCE = "relationship_presence"
     UPCOMING = "upcoming"
     KEEPSAKE = "keepsake"
     RELATIONSHIP_SIGNAL = "relationship_signal"
@@ -70,9 +79,10 @@ class DashboardModuleState:
 
 
 # Deterministic Settings/Today order, matching the accepted #850 Today
-# composition (`web/src/components/TodayPage.tsx`): Demnaechst, Euer Moment,
-# Gerade bei euch, Diesen Monat, Zuletzt bei euch. #848 established `UPCOMING`
-# with an item-limit facet; #817 adds mandatory visibility to every module,
+# composition (`web/src/components/TodayPage.tsx`): relationship_presence
+# (the Couple Presence hero), then upcoming, keepsake, relationship_signal,
+# monthly_highlights, recent_shared. #848 established `UPCOMING` with an
+# item-limit facet; #817 adds mandatory visibility to every module,
 # including `UPCOMING` itself.
 #
 # `SHARED_STORY_SUMMARY` (#809) is deliberately absent: it is not merged to
@@ -80,6 +90,7 @@ class DashboardModuleState:
 # module registers here the same way every other module did and automatically
 # participates in this mechanism.
 CATALOG: tuple[DashboardModuleDefinition, ...] = (
+    DashboardModuleDefinition(key=DashboardModuleKey.RELATIONSHIP_PRESENCE, default_visible=True),
     DashboardModuleDefinition(
         key=DashboardModuleKey.UPCOMING,
         default_visible=True,

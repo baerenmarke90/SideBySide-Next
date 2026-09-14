@@ -1,3 +1,4 @@
+import contract from './dashboardModuleCatalog.contract.json';
 import {
   DASHBOARD_MODULE_CATALOG,
   DASHBOARD_MODULE_KEYS,
@@ -6,6 +7,7 @@ import {
 describe('dashboardModules', () => {
   it('registers the currently accepted #850 Today modules in deterministic order', () => {
     expect(DASHBOARD_MODULE_KEYS).toEqual([
+      'relationship_presence',
       'upcoming',
       'keepsake',
       'relationship_signal',
@@ -24,5 +26,14 @@ describe('dashboardModules', () => {
     for (const entry of DASHBOARD_MODULE_CATALOG) {
       expect(entry.labelKey.length).toBeGreaterThan(0);
     }
+  });
+
+  it('matches the authoritative cross-layer catalog contract exactly (#817 PO correction)', () => {
+    // dashboardModuleCatalog.contract.json is the single source of truth
+    // both the Web and backend catalogs are independently tested against
+    // (see backend/tests/unit/test_dashboard_catalog_parity.py), so neither
+    // layer can register a module - or an order - the other doesn't know
+    // about.
+    expect(DASHBOARD_MODULE_KEYS).toEqual(contract.moduleKeys);
   });
 });

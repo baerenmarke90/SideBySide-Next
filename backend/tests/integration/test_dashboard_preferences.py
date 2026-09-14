@@ -86,6 +86,7 @@ def _item(response_json, module_key):  # type: ignore[no-untyped-def]
 def test_catalog_keys_are_stable_and_unique() -> None:
     keys = [definition.key.value for definition in CATALOG]
     assert keys == [
+        "relationship_presence",
         "upcoming",
         "keepsake",
         "relationship_signal",
@@ -121,6 +122,7 @@ def test_missing_override_returns_effective_default_for_every_registered_module(
     assert response.headers["cache-control"] == "private, no-store"
     assert response.json() == {
         "items": [
+            {"moduleKey": "relationship_presence", "visible": True},
             {"moduleKey": "upcoming", "visible": True, "itemLimit": 1},
             {"moduleKey": "keepsake", "visible": True},
             {"moduleKey": "relationship_signal", "visible": True},
@@ -150,7 +152,14 @@ def test_unknown_module_is_rejected_and_fails_closed(
 
 
 @pytest.mark.parametrize(
-    "module_key", ["keepsake", "relationship_signal", "monthly_highlights", "recent_shared"]
+    "module_key",
+    [
+        "relationship_presence",
+        "keepsake",
+        "relationship_signal",
+        "monthly_highlights",
+        "recent_shared",
+    ],
 )
 def test_item_limit_is_rejected_on_modules_that_do_not_support_it(
     client,
