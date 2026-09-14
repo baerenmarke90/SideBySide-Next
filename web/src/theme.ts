@@ -5,11 +5,6 @@ export const THEME_STORAGE_KEY = 'sidebyside.theme';
 export const THEME_PREFERENCE_EVENT = 'sidebyside:theme-preference';
 export const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
 
-const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#f6efea',
-  dark: '#18131d',
-};
-
 let activeThemePreference: ThemePreference | null = null;
 
 export function parseThemePreference(
@@ -72,7 +67,13 @@ export function applyResolvedTheme(
   const themeColor = document.querySelector<HTMLMetaElement>(
     'meta[name="theme-color"]',
   );
-  if (themeColor) themeColor.content = THEME_COLOR[theme];
+  // Resolve the semantic CSS role after switching data-theme so the React
+  // runtime does not own a duplicate raw browser-chrome palette.
+  const resolvedBackground = window
+    .getComputedStyle(root)
+    .getPropertyValue('--color-background')
+    .trim();
+  if (themeColor && resolvedBackground) themeColor.content = resolvedBackground;
 }
 
 export function initializeTheme(): ThemePreference {
