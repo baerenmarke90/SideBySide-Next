@@ -2040,4 +2040,151 @@ describe('formatRelationshipDuration', () => {
       expect(html).toContain('Zusammengezogen');
     });
   });
+
+  describe('per-user module visibility (#817)', () => {
+    const now = new Date();
+    const thisMonth = (day: number) =>
+      new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+
+    function allModulesEligibleDashboard() {
+      return {
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Marie' },
+        },
+        relationshipDuration: null,
+        upcoming: [
+          {
+            id: 'plan-1',
+            type: 'PLAN',
+            titleOrText: 'Weekend trip',
+            scheduledAt: new Date(Date.now() + 86_400_000),
+          },
+        ],
+        keepsake: {
+          id: 'mem-keepsake',
+          type: 'MEMORY',
+          titleOrText: 'Keepsake Photo',
+          occurredOn: thisMonth(1),
+          previewAttachmentId: 'att-keepsake',
+        },
+        recentShared: [
+          {
+            id: 'mem-keepsake',
+            type: 'MEMORY',
+            titleOrText: 'Keepsake Photo',
+            occurredOn: thisMonth(1),
+            previewAttachmentId: 'att-keepsake',
+          },
+          {
+            id: 'mem-monthly',
+            type: 'MEMORY',
+            titleOrText: 'Monthly Photo',
+            occurredOn: thisMonth(2),
+            previewAttachmentId: 'att-monthly',
+          },
+          {
+            id: 'ms-recent',
+            type: 'MILESTONE',
+            titleOrText: 'Trace Milestone',
+            createdAt: new Date(),
+          },
+        ],
+        retrospective: {
+          id: 'heart-signal',
+          type: 'HEART_MOMENT',
+          titleOrText: 'Weisst du noch',
+          occurredOn: new Date('2020-01-01T00:00:00Z'),
+        },
+      };
+    }
+
+    function renderWithVisibility(overrides: Record<string, boolean>): string {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      queryClient.setQueryData(
+        ['m5-s5', 'dashboard', 'space-1'],
+        allModulesEligibleDashboard(),
+      );
+      queryClient.setQueryData(
+        dashboardPreferencesQueryKey('account-1', 'space-1'),
+        {
+          items: Object.entries(overrides).map(([moduleKey, visible]) => ({
+            moduleKey,
+            visible,
+          })),
+        },
+      );
+
+      return renderToStaticMarkup(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <TodayPage
+              apis={{} as M4ProductApis}
+              spaceId="space-1"
+              account={{ id: 'account-1', displayName: 'Alex' }}
+              loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    }
+
+    const MODULE_SECTIONS: Array<[string, string]> = [
+      ['upcoming', 'today-section-upcoming'],
+      ['keepsake', 'today-section-moment'],
+      ['relationship_signal', 'today-section-living'],
+      ['monthly_highlights', 'today-section-monthly'],
+      ['recent_shared', 'today-section-recent'],
+    ];
+
+    it('renders every registered module by default when no preference exists', () => {
+      const html = renderWithVisibility({});
+
+      for (const [, sectionClass] of MODULE_SECTIONS) {
+        expect(html).toContain(sectionClass);
+      }
+    });
+
+    it.each(MODULE_SECTIONS)(
+      'omits the %s section entirely when hidden, without a placeholder, while every other module stays visible',
+      (moduleKey, sectionClass) => {
+        const html = renderWithVisibility({ [moduleKey]: false });
+
+        expect(html).not.toContain(sectionClass);
+        for (const [otherKey, otherSectionClass] of MODULE_SECTIONS) {
+          if (otherKey === moduleKey) continue;
+          expect(html).toContain(otherSectionClass);
+        }
+      },
+    );
+
+    it.each(MODULE_SECTIONS)(
+      'renders the %s section again once re-shown',
+      (moduleKey, sectionClass) => {
+        const hidden = renderWithVisibility({ [moduleKey]: false });
+        expect(hidden).not.toContain(sectionClass);
+
+        const shown = renderWithVisibility({ [moduleKey]: true });
+        expect(shown).toContain(sectionClass);
+      },
+    );
+
+    it('hiding one module does not change what another module selects (no duplicate content leaks in)', () => {
+      const baseline = renderWithVisibility({});
+      const withLivingHidden = renderWithVisibility({
+        relationship_signal: false,
+      });
+
+      // The retrospective content stays claimed by `Gerade bei euch`'s
+      // selection even while that section itself is not rendered - hiding it
+      // must not let the same content reappear in `Diesen Monat` or the trace.
+      expect(baseline).toContain('today-section-monthly');
+      expect(withLivingHidden).not.toContain('today-living-retrospective');
+      expect(withLivingHidden).toContain('today-section-monthly');
+      expect(withLivingHidden).toContain('Monthly Photo');
+      expect(withLivingHidden).not.toContain('Weisst du noch');
+    });
+  });
 });

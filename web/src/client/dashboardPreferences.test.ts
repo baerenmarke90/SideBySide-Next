@@ -1,13 +1,24 @@
 import type { DashboardModulePreferenceList } from '../api/generated/models/DashboardModulePreferenceList';
+import { DASHBOARD_MODULE_KEYS } from './dashboardModules';
 import {
   dashboardPreferencesQueryKey,
   effectiveUpcomingItemLimit,
+  isDashboardModuleVisible,
   limitUpcomingItems,
 } from './dashboardPreferences';
 
 function preferences(itemLimit: number): DashboardModulePreferenceList {
   return {
     items: [{ moduleKey: 'upcoming', itemLimit }],
+  } as unknown as DashboardModulePreferenceList;
+}
+
+function withVisibility(
+  moduleKey: string,
+  visible: boolean,
+): DashboardModulePreferenceList {
+  return {
+    items: [{ moduleKey, visible }],
   } as unknown as DashboardModulePreferenceList;
 }
 
@@ -60,5 +71,38 @@ describe('dashboardPreferences', () => {
     ],
   ])('never fabricates unavailable items', (items, expected) => {
     expect(limitUpcomingItems(items, preferences(3))).toEqual(expected);
+  });
+
+  describe('isDashboardModuleVisible', () => {
+    it('defaults every registered module to visible without a preferences response', () => {
+      for (const key of DASHBOARD_MODULE_KEYS) {
+        expect(isDashboardModuleVisible(undefined, key)).toBe(true);
+      }
+    });
+
+    it('defaults to visible when the module has no explicit override', () => {
+      expect(isDashboardModuleVisible({ items: [] }, 'keepsake')).toBe(true);
+    });
+
+    it('respects an explicit hidden override', () => {
+      expect(
+        isDashboardModuleVisible(withVisibility('keepsake', false), 'keepsake'),
+      ).toBe(false);
+    });
+
+    it('respects an explicit shown override', () => {
+      expect(
+        isDashboardModuleVisible(withVisibility('keepsake', true), 'keepsake'),
+      ).toBe(true);
+    });
+
+    it('is scoped to the exact module key, not a sibling module', () => {
+      expect(
+        isDashboardModuleVisible(
+          withVisibility('keepsake', false),
+          'recent_shared',
+        ),
+      ).toBe(true);
+    });
   });
 });

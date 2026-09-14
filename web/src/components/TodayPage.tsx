@@ -11,6 +11,7 @@ import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import {
   dashboardPreferencesQueryKey,
+  isDashboardModuleVisible,
   limitUpcomingItems,
 } from '../client/dashboardPreferences';
 import {
@@ -878,6 +879,36 @@ export function TodayPage({
     (item) => !traceExcludedIds.has(item.id),
   );
 
+  /*
+   * Per-user module visibility (#817). This is presentation only: every
+   * selection/exclusion computation above stays based on the real
+   * authoritative data, unaffected by what the user chose to hide, so hiding
+   * one module never changes what another module selects (for example,
+   * hiding `Gerade bei euch` must not let its content reappear in `Zuletzt
+   * bei euch`). Only the final render of each section below is additionally
+   * gated on its effective visibility.
+   */
+  const upcomingVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'upcoming',
+  );
+  const keepsakeVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'keepsake',
+  );
+  const relationshipSignalVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'relationship_signal',
+  );
+  const monthlyHighlightsVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'monthly_highlights',
+  );
+  const recentSharedVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'recent_shared',
+  );
+
   const isSparse = Boolean(
     dashboardQuery.data &&
       upcoming.length === 0 &&
@@ -1000,7 +1031,7 @@ export function TodayPage({
               {/* 2. Demnächst — the short shared horizon. One item is the
                   default and must read as complete on its own; two or three
                   stay restrained rather than becoming an agenda table. */}
-              {upcoming.length > 0 ? (
+              {upcomingVisible && upcoming.length > 0 ? (
                 <TodayModuleSection
                   className="today-section-upcoming"
                   title={t('m5s5.dashboard.upcomingTitle')}
@@ -1024,7 +1055,7 @@ export function TodayPage({
               ) : null}
 
               {/* 3. Euer Moment — the dominant emotional anchor. */}
-              {showMomentSection ? (
+              {showMomentSection && keepsakeVisible ? (
                 <TodayModuleSection
                   className="today-section-moment"
                   title={
@@ -1047,7 +1078,7 @@ export function TodayPage({
               ) : null}
 
               {/* 4. Gerade bei euch — exactly one contextual module. */}
-              {livingModule ? (
+              {livingModule && relationshipSignalVisible ? (
                 <TodayModuleSection
                   className="today-section-living"
                   title={t('m5s5.today.living.kicker')}
@@ -1064,7 +1095,9 @@ export function TodayPage({
 
               {/* 5. Diesen Monat — this month's shared life, shown rather than
                   counted. */}
-              {monthlyStrip.length > 0 && loadMemoryImage ? (
+              {monthlyHighlightsVisible &&
+              monthlyStrip.length > 0 &&
+              loadMemoryImage ? (
                 <TodayModuleSection
                   className="today-section-monthly"
                   title={t('m5s5.today.monthly.title')}
@@ -1088,7 +1121,7 @@ export function TodayPage({
 
               {/* 6. Zuletzt bei euch — deliberately secondary. Full activity
                   navigation stays reachable from here. */}
-              {recentSharedForTrace.length > 0 ? (
+              {recentSharedVisible && recentSharedForTrace.length > 0 ? (
                 <TodayModuleSection
                   className="today-section-recent"
                   title={t('m5s5.dashboard.recentTitle')}

@@ -24,13 +24,19 @@ export interface DashboardModulePreferenceView {
      * @type {DashboardModulePreferenceViewItemLimitEnum}
      * @memberof DashboardModulePreferenceView
      */
-    itemLimit: DashboardModulePreferenceViewItemLimitEnum;
+    itemLimit?: DashboardModulePreferenceViewItemLimitEnum;
     /**
      * 
      * @type {string}
      * @memberof DashboardModulePreferenceView
      */
     moduleKey: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof DashboardModulePreferenceView
+     */
+    visible: boolean;
 }
 
 
@@ -49,8 +55,8 @@ export type DashboardModulePreferenceViewItemLimitEnum = typeof DashboardModuleP
  * Check if a given object implements the DashboardModulePreferenceView interface.
  */
 export function instanceOfDashboardModulePreferenceView(value: object): value is DashboardModulePreferenceView {
-    if (!('itemLimit' in value) || value['itemLimit'] === undefined) return false;
     if (!('moduleKey' in value) || value['moduleKey'] === undefined) return false;
+    if (!('visible' in value) || value['visible'] === undefined) return false;
     return true;
 }
 
@@ -64,8 +70,9 @@ export function DashboardModulePreferenceViewFromJSONTyped(json: any, ignoreDisc
     }
     return {
         
-        'itemLimit': json['itemLimit'],
+        'itemLimit': json['itemLimit'] == null ? undefined : json['itemLimit'],
         'moduleKey': json['moduleKey'],
+        'visible': json['visible'],
     };
 }
 
@@ -82,6 +89,7 @@ export function DashboardModulePreferenceViewToJSONTyped(value?: DashboardModule
         
         'itemLimit': value['itemLimit'],
         'moduleKey': value['moduleKey'],
+        'visible': value['visible'],
     };
 }
 

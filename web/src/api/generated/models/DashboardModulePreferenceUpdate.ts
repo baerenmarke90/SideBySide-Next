@@ -24,7 +24,13 @@ export interface DashboardModulePreferenceUpdate {
      * @type {DashboardModulePreferenceUpdateItemLimitEnum}
      * @memberof DashboardModulePreferenceUpdate
      */
-    itemLimit: DashboardModulePreferenceUpdateItemLimitEnum;
+    itemLimit?: DashboardModulePreferenceUpdateItemLimitEnum;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof DashboardModulePreferenceUpdate
+     */
+    visible?: boolean;
 }
 
 
@@ -43,7 +49,6 @@ export type DashboardModulePreferenceUpdateItemLimitEnum = typeof DashboardModul
  * Check if a given object implements the DashboardModulePreferenceUpdate interface.
  */
 export function instanceOfDashboardModulePreferenceUpdate(value: object): value is DashboardModulePreferenceUpdate {
-    if (!('itemLimit' in value) || value['itemLimit'] === undefined) return false;
     return true;
 }
 
@@ -57,7 +62,8 @@ export function DashboardModulePreferenceUpdateFromJSONTyped(json: any, ignoreDi
     }
     return {
         
-        'itemLimit': json['itemLimit'],
+        'itemLimit': json['itemLimit'] == null ? undefined : json['itemLimit'],
+        'visible': json['visible'] == null ? undefined : json['visible'],
     };
 }
 
@@ -73,6 +79,7 @@ export function DashboardModulePreferenceUpdateToJSONTyped(value?: DashboardModu
     return {
         
         'itemLimit': value['itemLimit'],
+        'visible': value['visible'],
     };
 }
 

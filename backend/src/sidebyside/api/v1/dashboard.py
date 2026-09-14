@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Response
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
@@ -59,12 +60,23 @@ class DashboardView(ApiModel):
 class DashboardModulePreferenceUpdate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
-    item_limit: preferences.DashboardItemLimit
+    visible: bool | SkipJsonSchema[None] = None
+    item_limit: preferences.DashboardItemLimit | SkipJsonSchema[None] = None
+
+    @model_validator(mode="after")
+    def _require_at_least_one_facet(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("at least one of visible or itemLimit must be supplied")
+        return self
 
 
 class DashboardModulePreferenceView(ApiModel):
     module_key: str
-    item_limit: preferences.DashboardItemLimit
+    visible: bool
+    item_limit: preferences.DashboardItemLimit | SkipJsonSchema[None] = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class DashboardModulePreferenceList(ApiModel):
@@ -133,6 +145,7 @@ def list_dashboard_module_preferences(
         items=[
             DashboardModulePreferenceView(
                 module_key=state.key.value,
+                visible=state.visible,
                 item_limit=state.item_limit,
             )
             for state in states
@@ -153,17 +166,19 @@ def update_dashboard_module_preference(
     body: DashboardModulePreferenceUpdate,
     module_key: Annotated[str, Path(alias="moduleKey")],
 ) -> DashboardModulePreferenceView:
-    """Set one private per-account Dashboard item-limit override."""
-    state = preferences.set_module_item_limit(
+    """Set one private per-account Dashboard preference (#817 visibility, #848 item limit)."""
+    state = preferences.set_module_preference(
         session,
         account_id=authorization.account_id,
         space_id=authorization.space_id,
         module_key=module_key,
+        visible=body.visible,
         item_limit=body.item_limit,
     )
     response.headers["Cache-Control"] = "private, no-store"
     return DashboardModulePreferenceView(
         module_key=state.key.value,
+        visible=state.visible,
         item_limit=state.item_limit,
     )
 

@@ -1,4 +1,9 @@
-"""Account+Space isolation and persistence tests for Dashboard preferences."""
+"""Account+Space isolation and persistence tests for Dashboard preferences.
+
+Covers the shared #817/#848 Account+Space Dashboard-module preference seam:
+#817 visibility for every registered module, and #848's item-limit facet on
+`upcoming` only.
+"""
 
 from __future__ import annotations
 
@@ -8,12 +13,15 @@ from sqlalchemy.orm import Session
 
 from sidebyside.authorization import PrivacyClass
 from sidebyside.dashboard.models import DashboardModulePreference
-from sidebyside.dashboard.preferences import DashboardModuleKey
+from sidebyside.dashboard.preferences import CATALOG, DashboardModuleKey
 from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
 from sidebyside.relationship import service as relationship_service
+from sidebyside.relationship.models import Membership, MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
+
+ALL_MODULE_KEYS = [definition.key.value for definition in CATALOG]
 
 
 @pytest.fixture
@@ -46,15 +54,63 @@ def _preferences(client, space_id, token):  # type: ignore[no-untyped-def]
     )
 
 
-def _set_limit(client, space_id, token, item_limit):  # type: ignore[no-untyped-def]
+def _patch(client, space_id, token, module_key, body):  # type: ignore[no-untyped-def]
     return client.patch(
-        f"/api/v1/spaces/{space_id}/dashboard/preferences/{DashboardModuleKey.UPCOMING.value}",
-        json={"itemLimit": item_limit},
+        f"/api/v1/spaces/{space_id}/dashboard/preferences/{module_key}",
+        json=body,
         headers=auth(token),
     )
 
 
-def test_missing_override_returns_effective_default_without_creating_row(
+def _set_limit(client, space_id, token, item_limit):  # type: ignore[no-untyped-def]
+    return _patch(
+        client,
+        space_id,
+        token,
+        DashboardModuleKey.UPCOMING.value,
+        {"itemLimit": item_limit},
+    )
+
+
+def _set_visible(client, space_id, token, module_key, visible):  # type: ignore[no-untyped-def]
+    return _patch(client, space_id, token, module_key, {"visible": visible})
+
+
+def _item(response_json, module_key):  # type: ignore[no-untyped-def]
+    return next(item for item in response_json["items"] if item["moduleKey"] == module_key)
+
+
+# --- A) Catalog -------------------------------------------------------------
+
+
+def test_catalog_keys_are_stable_and_unique() -> None:
+    keys = [definition.key.value for definition in CATALOG]
+    assert keys == [
+        "upcoming",
+        "keepsake",
+        "relationship_signal",
+        "monthly_highlights",
+        "recent_shared",
+    ]
+    assert len(keys) == len(set(keys))
+
+
+def test_only_upcoming_defines_an_item_limit_facet() -> None:
+    for definition in CATALOG:
+        if definition.key is DashboardModuleKey.UPCOMING:
+            assert definition.item_limit is not None
+        else:
+            assert definition.item_limit is None
+
+
+def test_every_module_defaults_visible() -> None:
+    assert all(definition.default_visible for definition in CATALOG)
+
+
+# --- B) Inventory completeness -----------------------------------------------
+
+
+def test_missing_override_returns_effective_default_for_every_registered_module(
     client,
     session: Session,
     couple,
@@ -64,9 +120,64 @@ def test_missing_override_returns_effective_default_without_creating_row(
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "private, no-store"
     assert response.json() == {
-        "items": [{"moduleKey": "upcoming", "itemLimit": 1}],
+        "items": [
+            {"moduleKey": "upcoming", "visible": True, "itemLimit": 1},
+            {"moduleKey": "keepsake", "visible": True},
+            {"moduleKey": "relationship_signal", "visible": True},
+            {"moduleKey": "monthly_highlights", "visible": True},
+            {"moduleKey": "recent_shared", "visible": True},
+        ],
     }
     assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+
+
+def test_unknown_module_is_rejected_and_fails_closed(
+    client,
+    session: Session,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    response = _patch(
+        client,
+        couple["space"].id,
+        couple["token_a"],
+        "not-a-module",
+        {"visible": False},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "DASHBOARD_MODULE_NOT_FOUND"
+    assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+
+
+@pytest.mark.parametrize(
+    "module_key", ["keepsake", "relationship_signal", "monthly_highlights", "recent_shared"]
+)
+def test_item_limit_is_rejected_on_modules_that_do_not_support_it(
+    client,
+    session: Session,
+    couple,
+    module_key: str,
+) -> None:  # type: ignore[no-untyped-def]
+    response = _patch(client, couple["space"].id, couple["token_a"], module_key, {"itemLimit": 2})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "DASHBOARD_MODULE_FACET_NOT_SUPPORTED"
+    assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+
+
+def test_empty_update_body_is_rejected(
+    client,
+    session: Session,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    response = _patch(client, couple["space"].id, couple["token_a"], "keepsake", {})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+
+
+# --- C) Persistence -----------------------------------------------------------
 
 
 @pytest.mark.parametrize("item_limit", [1, 2, 3])
@@ -82,14 +193,19 @@ def test_each_allowed_limit_persists_and_reloads(
     assert updated.headers["cache-control"] == "private, no-store"
     assert updated.json() == {
         "moduleKey": "upcoming",
+        "visible": True,
         "itemLimit": item_limit,
     }
     session.expire_all()
     reloaded = _preferences(client, couple["space"].id, couple["token_a"])
-    assert reloaded.json()["items"] == [{"moduleKey": "upcoming", "itemLimit": item_limit}]
+    assert _item(reloaded.json(), "upcoming") == {
+        "moduleKey": "upcoming",
+        "visible": True,
+        "itemLimit": item_limit,
+    }
 
 
-@pytest.mark.parametrize("item_limit", [0, 4, -1, 1.5, None, "many"])
+@pytest.mark.parametrize("item_limit", [0, 4, -1, 1.5, "many"])
 def test_invalid_item_limits_are_rejected_without_persistence(
     client,
     session: Session,
@@ -103,26 +219,71 @@ def test_invalid_item_limits_are_rejected_without_persistence(
     assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
 
 
-def test_unknown_module_and_unsupported_facets_fail_closed(
+def test_explicit_null_item_limit_fails_closed_without_persistence(
     client,
     session: Session,
     couple,
 ) -> None:  # type: ignore[no-untyped-def]
-    unknown = client.patch(
-        f"/api/v1/spaces/{couple['space'].id}/dashboard/preferences/not-a-module",
-        json={"itemLimit": 2},
-        headers=auth(couple["token_a"]),
-    )
-    unsupported_facet = client.patch(
-        f"/api/v1/spaces/{couple['space'].id}/dashboard/preferences/upcoming",
-        json={"itemLimit": 2, "visible": False},
-        headers=auth(couple["token_a"]),
+    # `itemLimit: null` passes the type check (the field is nullable so #817
+    # visibility-only modules can omit it) but supplies no facet at all, so it
+    # fails closed at the service boundary rather than the schema boundary.
+    response = _set_limit(client, couple["space"].id, couple["token_a"], None)
+
+    assert response.status_code == 422
+    assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+
+
+@pytest.mark.parametrize("module_key", ALL_MODULE_KEYS)
+def test_hide_then_show_persists_and_reloads_for_every_module(
+    client,
+    session: Session,
+    couple,
+    module_key: str,
+) -> None:  # type: ignore[no-untyped-def]
+    hidden = _set_visible(client, couple["space"].id, couple["token_a"], module_key, False)
+    assert hidden.status_code == 200, hidden.text
+    assert hidden.json()["visible"] is False
+
+    session.expire_all()
+    reloaded_hidden = _preferences(client, couple["space"].id, couple["token_a"])
+    assert _item(reloaded_hidden.json(), module_key)["visible"] is False
+
+    shown = _set_visible(client, couple["space"].id, couple["token_a"], module_key, True)
+    assert shown.status_code == 200, shown.text
+    assert shown.json()["visible"] is True
+
+    session.expire_all()
+    reloaded_shown = _preferences(client, couple["space"].id, couple["token_a"])
+    assert _item(reloaded_shown.json(), module_key)["visible"] is True
+
+
+def test_setting_visible_does_not_disturb_an_existing_item_limit(
+    client,
+    session: Session,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    assert _set_limit(client, couple["space"].id, couple["token_a"], 3).status_code == 200
+
+    hidden = _set_visible(client, couple["space"].id, couple["token_a"], "upcoming", False)
+
+    assert hidden.status_code == 200
+    assert hidden.json() == {"moduleKey": "upcoming", "visible": False, "itemLimit": 3}
+
+
+def test_setting_item_limit_does_not_disturb_an_existing_visibility_override(
+    client,
+    session: Session,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    assert (
+        _set_visible(client, couple["space"].id, couple["token_a"], "upcoming", False).status_code
+        == 200
     )
 
-    assert unknown.status_code == 404
-    assert unknown.json()["code"] == "DASHBOARD_MODULE_NOT_FOUND"
-    assert unsupported_facet.status_code == 422
-    assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
+    updated = _set_limit(client, couple["space"].id, couple["token_a"], 2)
+
+    assert updated.status_code == 200
+    assert updated.json() == {"moduleKey": "upcoming", "visible": False, "itemLimit": 2}
 
 
 def test_preferences_are_independent_per_partner_and_space(
@@ -130,6 +291,10 @@ def test_preferences_are_independent_per_partner_and_space(
     couple,
 ) -> None:  # type: ignore[no-untyped-def]
     assert _set_limit(client, couple["space"].id, couple["token_a"], 2).status_code == 200
+    assert (
+        _set_visible(client, couple["space"].id, couple["token_a"], "keepsake", False).status_code
+        == 200
+    )
     assert (
         _set_limit(
             client,
@@ -140,49 +305,38 @@ def test_preferences_are_independent_per_partner_and_space(
         == 200
     )
 
-    anna_primary = _preferences(client, couple["space"].id, couple["token_a"])
-    ben_primary = _preferences(client, couple["space"].id, couple["token_b"])
-    anna_secondary = _preferences(
-        client,
-        couple["second_anna_space"].id,
-        couple["token_a"],
-    )
+    anna_primary = _preferences(client, couple["space"].id, couple["token_a"]).json()
+    ben_primary = _preferences(client, couple["space"].id, couple["token_b"]).json()
+    anna_secondary = _preferences(client, couple["second_anna_space"].id, couple["token_a"]).json()
 
-    assert anna_primary.json()["items"][0]["itemLimit"] == 2
-    assert ben_primary.json()["items"][0]["itemLimit"] == 1
-    assert anna_secondary.json()["items"][0]["itemLimit"] == 3
+    assert _item(anna_primary, "upcoming")["itemLimit"] == 2
+    assert _item(anna_primary, "keepsake")["visible"] is False
 
+    # Partner A's choice does not affect Partner B, even in the same Space.
+    assert _item(ben_primary, "upcoming")["itemLimit"] == 1
+    assert _item(ben_primary, "keepsake")["visible"] is True
 
-def test_membership_guard_hides_preferences_from_outsiders(
-    client,
-    couple,
-) -> None:  # type: ignore[no-untyped-def]
-    denied_read = _preferences(client, couple["space"].id, couple["token_outsider"])
-    denied_write = _set_limit(
-        client,
-        couple["space"].id,
-        couple["token_outsider"],
-        1,
-    )
-
-    assert denied_read.status_code == 404
-    assert denied_write.status_code == 404
+    # No cross-Space leakage for the same account.
+    assert _item(anna_secondary, "upcoming")["itemLimit"] == 3
+    assert _item(anna_secondary, "keepsake")["visible"] is True
 
 
-def test_repeated_updates_upsert_one_row_and_preserve_inert_visibility(
+def test_repeated_updates_upsert_one_row_per_module(
     client,
     session: Session,
     couple,
 ) -> None:  # type: ignore[no-untyped-def]
     first = _set_limit(client, couple["space"].id, couple["token_a"], 1)
     second = _set_limit(client, couple["space"].id, couple["token_a"], 3)
+    third = _set_visible(client, couple["space"].id, couple["token_a"], "upcoming", False)
 
     assert first.status_code == 200
     assert second.status_code == 200
+    assert third.status_code == 200
     rows = session.scalars(select(DashboardModulePreference)).all()
     assert len(rows) == 1
     assert rows[0].item_limit == 3
-    assert rows[0].visible is None
+    assert rows[0].visible is False
 
 
 def test_preference_update_does_not_mutate_dashboard_or_planning_data(
@@ -205,7 +359,7 @@ def test_preference_update_does_not_mutate_dashboard_or_planning_data(
         headers=auth(couple["token_a"]),
     ).json()
 
-    updated = _set_limit(client, couple["space"].id, couple["token_a"], 1)
+    updated = _set_visible(client, couple["space"].id, couple["token_a"], "recent_shared", False)
     after = client.get(
         f"/api/v1/spaces/{couple['space'].id}/dashboard",
         headers=auth(couple["token_a"]),
@@ -215,3 +369,58 @@ def test_preference_update_does_not_mutate_dashboard_or_planning_data(
     assert after == before
     session.refresh(plan)
     assert plan.payload.title == "Shared plan"
+
+
+# --- D) Authorization -----------------------------------------------------------
+
+
+def test_membership_guard_hides_preferences_from_outsiders(
+    client,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    denied_read = _preferences(client, couple["space"].id, couple["token_outsider"])
+    denied_write = _set_visible(
+        client, couple["space"].id, couple["token_outsider"], "keepsake", False
+    )
+
+    assert denied_read.status_code == 404
+    assert denied_write.status_code == 404
+
+
+def test_foreign_space_is_denied_even_with_a_valid_session(
+    client,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    denied_read = _preferences(client, couple["foreign_space"].id, couple["token_a"])
+    denied_write = _set_visible(
+        client, couple["foreign_space"].id, couple["token_a"], "keepsake", False
+    )
+
+    assert denied_read.status_code == 404
+    assert denied_write.status_code == 404
+
+
+def test_former_member_is_denied_after_offboarding(
+    client,
+    session: Session,
+    couple,
+) -> None:  # type: ignore[no-untyped-def]
+    assert (
+        _set_visible(client, couple["space"].id, couple["token_b"], "keepsake", False).status_code
+        == 200
+    )
+
+    membership = session.execute(
+        select(Membership).where(
+            Membership.space_id == couple["space"].id,
+            Membership.account_id == couple["ben"].id,
+        )
+    ).scalar_one()
+    membership.status = MembershipStatus.REMOVED.value
+    session.flush()
+
+    denied_read = _preferences(client, couple["space"].id, couple["token_b"])
+    denied_write = _set_visible(client, couple["space"].id, couple["token_b"], "keepsake", True)
+
+    assert denied_read.status_code == 404
+    assert denied_write.status_code == 404
