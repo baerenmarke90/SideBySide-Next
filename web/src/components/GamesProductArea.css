@@ -166,6 +166,21 @@
 }
 
 .who-of-us-choices {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.who-of-us-choices-legend {
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.who-of-us-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
@@ -312,7 +327,7 @@
     grid-column: 1;
   }
 
-  .who-of-us-choices,
+  .who-of-us-choice-grid,
   .who-of-us-reveal-answers {
     grid-template-columns: 1fr;
   }
