@@ -69,11 +69,31 @@
   gap: var(--space-1);
 }
 
+.more-destination-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .more-destination-copy strong {
   font-size: 1.05rem;
 }
 
-.more-destination-copy span {
+.more-destination-badge {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.more-destination-description {
   color: var(--color-text-secondary);
   font-size: 0.92rem;
   line-height: 1.45;

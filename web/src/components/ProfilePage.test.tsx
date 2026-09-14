@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { PreferenceCategory } from '../api/generated/models/PreferenceCategory';
 import { PreferenceSentiment } from '../api/generated/models/PreferenceSentiment';
 import { ProfileVisibility } from '../api/generated/models/ProfileVisibility';
+import profiles from '../i18n/locales/profiles';
 import { ProfilePage } from './ProfilePage';
 
 const SPACE_ID = 'space-1';
@@ -81,6 +82,17 @@ describe('Profile page reorganization', () => {
     expect(html).toContain('Dies ist das Profil, das dein Partner sieht.');
     expect(html).toContain('Name ändern');
     expect(html).toContain('Bild ändern');
+  });
+
+  it('places the eimir.Pro explanation in the account profile instead of the Games surface', () => {
+    const html = renderProfilePageFixture();
+
+    expect(html).toContain('profile-premium-section');
+    expect(html).toContain(profiles.premium.title);
+    expect(html).toContain(profiles.premium.gamesTitle);
+    expect(html).toContain(profiles.premium.gamesBody);
+    expect(html).toContain(profiles.premium.action);
+    expect(html).toContain(profiles.premium.detailsTitle);
   });
 
   it('renders categorized preference chips and [Vorliebe] without a permanent empty form', () => {

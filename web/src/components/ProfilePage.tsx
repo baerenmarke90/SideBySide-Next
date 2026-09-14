@@ -65,7 +65,34 @@ export function ProfilePage(props: ProfilePageProps) {
         }}
       />
 
-      {/* 2. Preferences & partner block */}
+      {/* 2. Account-level Premium information */}
+      <section
+        className="profile-premium-section"
+        aria-labelledby="profile-premium-title"
+      >
+        <p className="eyebrow">{t('profiles.premium.eyebrow')}</p>
+        <div className="profile-premium-title-row">
+          <h2 id="profile-premium-title">{t('profiles.premium.title')}</h2>
+          <span className="profile-premium-badge">
+            {t('profiles.premium.badge')}
+          </span>
+        </div>
+        <p className="profile-premium-lead">
+          {t('profiles.premium.gamesTitle')}
+        </p>
+        <p className="profile-section-intro">
+          {t('profiles.premium.gamesBody')}
+        </p>
+        <details className="profile-premium-details">
+          <summary>{t('profiles.premium.action')}</summary>
+          <div className="profile-premium-details-copy">
+            <strong>{t('profiles.premium.detailsTitle')}</strong>
+            <p>{t('profiles.premium.detailsBody')}</p>
+          </div>
+        </details>
+      </section>
+
+      {/* 3. Preferences & partner block */}
       <ProfilePreferencesSection {...currentProps} />
     </div>
   );

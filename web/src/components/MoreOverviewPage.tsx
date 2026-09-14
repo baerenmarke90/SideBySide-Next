@@ -17,6 +17,7 @@ interface MoreDestination {
   icon: AppRouteIcon;
   titleKey: string;
   descriptionKey: string;
+  badgeKey?: string;
 }
 
 /**
@@ -29,6 +30,7 @@ const MORE_DESTINATIONS: readonly MoreDestination[] = [
     icon: 'games',
     titleKey: 'navigation.games',
     descriptionKey: 'games.intro',
+    badgeKey: 'games.status.premium',
   },
   {
     path: MORE_PEOPLE_ROUTE,
@@ -75,8 +77,17 @@ export function MoreOverviewPage() {
                 <DestinationIcon icon={destination.icon} />
               </span>
               <span className="more-destination-copy">
-                <strong>{t(destination.titleKey)}</strong>
-                <span>{t(destination.descriptionKey)}</span>
+                <span className="more-destination-title-row">
+                  <strong>{t(destination.titleKey)}</strong>
+                  {destination.badgeKey ? (
+                    <span className="more-destination-badge">
+                      {t(destination.badgeKey)}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="more-destination-description">
+                  {t(destination.descriptionKey)}
+                </span>
               </span>
             </Link>
           </li>
