@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
@@ -9,10 +9,15 @@ import {
   GAMES_MOMENTS_ROUTE,
   GAMES_WISH_DETECTIVE_ROUTE,
 } from '../client/routes';
+import type { WhoOfUsParticipant } from '../client/whoOfUsSession';
 import games from '../i18n/locales/games';
 import { GAMES_COUPLE_CAPABILITY, GamesProductArea } from './GamesProductArea';
 
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
+const PARTICIPANTS: readonly [WhoOfUsParticipant, WhoOfUsParticipant] = [
+  { id: 'lea-id', displayName: 'Lea' },
+  { id: 'alex-id', displayName: 'Alex' },
+];
 
 function entitlement(capabilities: string[]): SpaceEntitlementView {
   return {
@@ -40,6 +45,7 @@ function renderGames(view: SpaceEntitlementView) {
           accessToken="test-token"
           spaceId={SPACE_ID}
           loadEntitlement={async () => view}
+          loadPerspectiveParticipants={async () => PARTICIPANTS}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -54,13 +60,20 @@ function expectFiveGameEntries(): void {
   expect(screen.getByText(games.entries.timeTravel.title)).toBeTruthy();
 }
 
+function expectGameStatus(status: string, count: number): void {
+  const matchingStatuses = [
+    ...document.querySelectorAll<HTMLElement>('.games-entry-status'),
+  ].filter((element) => element.textContent === status);
+  expect(matchingStatuses).toHaveLength(count);
+}
+
 describe('GamesProductArea', () => {
   it('keeps the catalog discoverable for a Free Space without a page-level Premium upsell', async () => {
     renderGames(entitlement([]));
 
     await screen.findByText(games.entries.moments.title);
     expectFiveGameEntries();
-    expect(screen.getAllByText(games.status.premium)).toHaveLength(5);
+    expectGameStatus(games.status.premium, 5);
     expect(document.querySelector('.games-access-panel')).toBeNull();
     expect(screen.queryByText('Premium ansehen')).toBeNull();
     expect(
@@ -68,9 +81,14 @@ describe('GamesProductArea', () => {
         name: new RegExp(games.entries.moments.title),
       }),
     ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: new RegExp(games.entries.perspective.title),
+      }),
+    ).toBeNull();
   });
 
-  it('opens the implemented sofa games without rendering an unlocked Premium panel', async () => {
+  it('opens all implemented sofa games without rendering an unlocked Premium panel', async () => {
     renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
 
     const momentsLink = await screen.findByRole('link', {
@@ -78,7 +96,8 @@ describe('GamesProductArea', () => {
     });
     expectFiveGameEntries();
     expect(document.querySelector('.games-access-panel')).toBeNull();
-    expect(screen.getAllByText(games.status.comingSoon)).toHaveLength(3);
+    expectGameStatus(games.status.comingSoon, 2);
+    expectGameStatus(games.status.playNow, 3);
 
     expect(momentsLink.textContent).toContain(games.status.playNow);
     expect(momentsLink.getAttribute('href')).toBe(GAMES_MOMENTS_ROUTE);
@@ -88,5 +107,55 @@ describe('GamesProductArea', () => {
     });
     expect(wishesLink.textContent).toContain(games.status.playNow);
     expect(wishesLink.getAttribute('href')).toBe(GAMES_WISH_DETECTIVE_ROUTE);
+
+    const perspectiveButton = screen.getByRole('button', {
+      name: new RegExp(games.entries.perspective.title),
+    });
+    expect(perspectiveButton.textContent).toContain(games.status.playNow);
+  });
+
+  it('starts the perspective game as a hidden-answer handoff flow from the hub', async () => {
+    renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
+
+    const perspectiveButton = await screen.findByRole('button', {
+      name: new RegExp(games.entries.perspective.title),
+    });
+    fireEvent.click(perspectiveButton);
+
+    await screen.findByText(games.whoOfUs.choosePrompt);
+    const leaChoice = screen.getByRole('button', {
+      name: games.whoOfUs.choiceAria
+        .replace('{{responder}}', PARTICIPANTS[0].displayName)
+        .replace('{{choice}}', PARTICIPANTS[0].displayName),
+    });
+    fireEvent.click(leaChoice);
+
+    expect(screen.queryByText(games.whoOfUs.choosePrompt)).toBeNull();
+    expect(
+      screen.getByText(
+        games.whoOfUs.handoffTitle.replace(
+          '{{name}}',
+          PARTICIPANTS[1].displayName,
+        ),
+      ),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: games.whoOfUs.handoffConfirm.replace(
+          '{{name}}',
+          PARTICIPANTS[1].displayName,
+        ),
+      }),
+    );
+
+    await screen.findByText(games.whoOfUs.choosePrompt);
+    expect(
+      screen.getByRole('button', {
+        name: games.whoOfUs.choiceAria
+          .replace('{{responder}}', PARTICIPANTS[1].displayName)
+          .replace('{{choice}}', PARTICIPANTS[0].displayName),
+      }),
+    ).toBeTruthy();
   });
 });

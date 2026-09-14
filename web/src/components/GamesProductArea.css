@@ -87,14 +87,213 @@
   text-decoration: none;
 }
 
-.games-entry-link:hover {
-  border-color: var(--color-brand-text);
-  box-shadow: var(--shadow-card);
+.games-entry-button {
+  width: 100%;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .games-entry-link:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;
+}
+
+.who-of-us-game,
+.who-of-us-session {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.who-of-us-heading {
+  margin-bottom: var(--space-2);
+}
+
+.who-of-us-heading .back-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.who-of-us-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.who-of-us-card {
+  display: grid;
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: clamp(var(--space-5), 6vw, var(--space-7));
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.who-of-us-card > :first-child,
+.who-of-us-card > :last-child {
+  margin-block: 0;
+}
+
+.who-of-us-question h2,
+.who-of-us-reveal h2,
+.who-of-us-handoff h2,
+.who-of-us-finish h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 7vw, 2.35rem);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.who-of-us-question > p:last-of-type,
+.who-of-us-handoff > p,
+.who-of-us-reveal > p,
+.who-of-us-finish > p {
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.who-of-us-choices {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.who-of-us-choices-legend {
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.who-of-us-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.who-of-us-choice {
+  display: grid;
+  min-height: 8rem;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+}
+
+.who-of-us-choice:focus-visible,
+.who-of-us-primary-action:focus-visible,
+.who-of-us-actions button:focus-visible,
+.who-of-us-heading .back-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.who-of-us-choice-initial {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.who-of-us-handoff {
+  background: var(--color-shared-surface);
+}
+
+.who-of-us-primary-action,
+.who-of-us-actions button {
+  min-height: 2.75rem;
+}
+
+.who-of-us-primary-action {
+  justify-self: start;
+}
+
+.who-of-us-question-repeat {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.who-of-us-reveal-answers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.who-of-us-reveal-answers > div {
+  display: grid;
+  gap: var(--space-1);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+}
+
+.who-of-us-reveal-answers dt {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.who-of-us-reveal-answers dd {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.who-of-us-finish-count {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.who-of-us-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .games-entry-link:hover,
+  .who-of-us-choice:hover {
+    border-color: var(--color-brand-text);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 @media (max-width: 599px) {
@@ -112,6 +311,10 @@
     grid-column: 2;
     justify-self: start;
   }
+
+  .who-of-us-card {
+    padding: var(--space-5);
+  }
 }
 
 @media (max-width: 360px) {
@@ -122,6 +325,15 @@
   .games-entry-index,
   .games-entry-status {
     grid-column: 1;
+  }
+
+  .who-of-us-choice-grid,
+  .who-of-us-reveal-answers {
+    grid-template-columns: 1fr;
+  }
+
+  .who-of-us-choice {
+    min-height: 6.5rem;
   }
 }
 
