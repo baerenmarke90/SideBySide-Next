@@ -117,4 +117,28 @@ describe('SharedStorySummary', () => {
     const metricMatches = html.match(/shared-story-summary-metric/g);
     expect(metricMatches).toHaveLength(2);
   });
+
+  it('formats localized singular and plural accessible names for metrics', () => {
+    const htmlSingular = renderToStaticMarkup(
+      <MemoryRouter>
+        <SharedStorySummary
+          summary={{ memories: 1, heartMoments: 1, milestones: 3 }}
+        />
+      </MemoryRouter>,
+    );
+    expect(htmlSingular).toContain('aria-label="1 Moment"');
+    expect(htmlSingular).toContain('aria-label="1 Herzmoment"');
+    expect(htmlSingular).toContain('aria-label="3 Meilensteine"');
+
+    const htmlMilestoneSingular = renderToStaticMarkup(
+      <MemoryRouter>
+        <SharedStorySummary
+          summary={{ memories: 4, heartMoments: 2, milestones: 1 }}
+        />
+      </MemoryRouter>,
+    );
+    expect(htmlMilestoneSingular).toContain('aria-label="4 Momente"');
+    expect(htmlMilestoneSingular).toContain('aria-label="2 Herzmomente"');
+    expect(htmlMilestoneSingular).toContain('aria-label="1 Meilenstein"');
+  });
 });

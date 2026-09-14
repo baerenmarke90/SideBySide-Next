@@ -248,18 +248,27 @@ export function SharedStorySummary({ summary }: SharedStorySummaryProps) {
     {
       key: 'memories' as const,
       label: t('m5s5.dashboard.storySummaryMemories'),
+      ariaLabel: t('m5s5.dashboard.storySummaryMemoriesCount', {
+        count: summary.memories,
+      }),
       value: summary.memories,
       to: `${storyBaseRoute}?tab=timeline&type=MEMORY`,
     },
     {
       key: 'heartMoments' as const,
       label: t('m5s5.dashboard.storySummaryHeartMoments'),
+      ariaLabel: t('m5s5.dashboard.storySummaryHeartMomentsCount', {
+        count: summary.heartMoments,
+      }),
       value: summary.heartMoments,
       to: `${storyBaseRoute}?tab=timeline&type=HEART_MOMENT`,
     },
     {
       key: 'milestones' as const,
       label: t('m5s5.dashboard.storySummaryMilestones'),
+      ariaLabel: t('m5s5.dashboard.storySummaryMilestonesCount', {
+        count: summary.milestones,
+      }),
       value: summary.milestones,
       to: `${storyBaseRoute}?tab=timeline&type=MILESTONE`,
     },
@@ -281,7 +290,7 @@ export function SharedStorySummary({ summary }: SharedStorySummaryProps) {
               <Link
                 to={metric.to}
                 className={`shared-story-summary-badge shared-story-summary-badge-${metric.key}`}
-                aria-label={`${numberFormat.format(metric.value)} ${metric.label}`}
+                aria-label={metric.ariaLabel}
               >
                 {metric.key === 'memories' && <PolaroidMotif />}
                 {metric.key === 'heartMoments' && <HeartMotif />}

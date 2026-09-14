@@ -1,4 +1,12 @@
-import { expect, type Page, test } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  expect,
+  type Locator,
+  type Page,
+  type TestInfo,
+  test,
+} from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import m5s5 from '../../src/i18n/locales/m5s5';
 
@@ -7,8 +15,21 @@ const PARTNER_ID = '00000000-0000-0000-0000-000000000002';
 const SPACE_ID = '00000000-0000-0000-0000-000000000010';
 const PROFILE_ID = '00000000-0000-0000-0000-000000000020';
 
-const EVIDENCE_DIR =
-  '/Users/philipp/.gemini/antigravity/brain/56d33ca8-6799-49a9-acb8-7b87c8d39806';
+async function captureScreenshot(
+  target: Page | Locator,
+  testInfo: TestInfo,
+  fileName: string,
+  options?: { fullPage?: boolean },
+): Promise<void> {
+  const outputPath = testInfo.outputPath(fileName);
+  await target.screenshot({ path: outputPath, ...options });
+  const exportDir =
+    process.env.SCREENSHOT_EXPORT_DIR || process.env.VISUAL_EVIDENCE_DIR;
+  if (exportDir) {
+    fs.mkdirSync(exportDir, { recursive: true });
+    fs.copyFileSync(outputPath, path.join(exportDir, fileName));
+  }
+}
 
 const RECENT_SHARED_ITEMS = [
   {
@@ -26,7 +47,7 @@ const RECENT_SHARED_ITEMS = [
   {
     id: 'r3',
     type: 'MEMORY',
-    titleOrText: 'Unterwegs am Wochenende',
+    titleOrText: 'Ein Wochenende am Wasser',
     occurredOn: '2026-04-17T12:00:00Z',
   },
   {
@@ -177,7 +198,7 @@ async function signIn(page: Page): Promise<void> {
 
 test('three-metric state renders circular story badges on 390x844 light mode matching PO mockup', async ({
   page,
-}) => {
+}, testInfo) => {
   await installMocks(page, {
     memories: 10,
     heartMoments: 1,
@@ -190,11 +211,11 @@ test('three-metric state renders circular story badges on 390x844 light mode mat
   const section = page.locator('.shared-story-summary');
   await expect(section).toBeVisible();
 
-  // Heading
+  // Heading check
   await expect(
     section.getByRole('heading', {
-      name: m5s5.dashboard.storySummaryTitle,
       level: 2,
+      name: m5s5.dashboard.storySummaryTitle,
     }),
   ).toBeVisible();
 
@@ -218,7 +239,7 @@ test('three-metric state renders circular story badges on 390x844 light mode mat
 
   // Accessible names
   await expect(links.nth(0)).toHaveAttribute('aria-label', '10 Momente');
-  await expect(links.nth(1)).toHaveAttribute('aria-label', '1 Herzmomente');
+  await expect(links.nth(1)).toHaveAttribute('aria-label', '1 Herzmoment');
   await expect(links.nth(2)).toHaveAttribute('aria-label', '3 Meilensteine');
 
   // Touch target size >= 44x44
@@ -252,13 +273,16 @@ test('three-metric state renders circular story badges on 390x844 light mode mat
 
   // Scroll to section and capture evidence screenshot
   await section.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: `${EVIDENCE_DIR}/story-summary-390-3metrics-light.png`,
-    fullPage: false,
-  });
+  await captureScreenshot(
+    page,
+    testInfo,
+    'story-summary-390-3metrics-light.png',
+  );
 });
 
-test('three-metric state renders on 390x844 dark mode', async ({ page }) => {
+test('three-metric state renders on 390x844 dark mode', async ({
+  page,
+}, testInfo) => {
   await installMocks(page, {
     memories: 10,
     heartMoments: 1,
@@ -275,16 +299,16 @@ test('three-metric state renders on 390x844 dark mode', async ({ page }) => {
   const section = page.locator('.shared-story-summary');
   await expect(section).toBeVisible();
   await section.scrollIntoViewIfNeeded();
-
-  await page.screenshot({
-    path: `${EVIDENCE_DIR}/story-summary-390-3metrics-dark.png`,
-    fullPage: false,
-  });
+  await captureScreenshot(
+    page,
+    testInfo,
+    'story-summary-390-3metrics-dark.png',
+  );
 });
 
 test('two-metric state is deliberately centered and balanced with no placeholder', async ({
   page,
-}) => {
+}, testInfo) => {
   await installMocks(page, {
     memories: 10,
     heartMoments: 1,
@@ -323,15 +347,16 @@ test('two-metric state is deliberately centered and balanced with no placeholder
 
   // Scroll and capture evidence screenshot
   await section.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: `${EVIDENCE_DIR}/story-summary-390-2metrics-light.png`,
-    fullPage: false,
-  });
+  await captureScreenshot(
+    page,
+    testInfo,
+    'story-summary-390-2metrics-light.png',
+  );
 });
 
 test('320 CSS px reflow keeps 3 metrics readable without horizontal scroll', async ({
   page,
-}) => {
+}, testInfo) => {
   await installMocks(page, {
     memories: 10,
     heartMoments: 1,
@@ -356,15 +381,16 @@ test('320 CSS px reflow keeps 3 metrics readable without horizontal scroll', asy
   await expect(links).toHaveCount(3);
 
   await section.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: `${EVIDENCE_DIR}/story-summary-320-3metrics-light.png`,
-    fullPage: false,
-  });
+  await captureScreenshot(
+    page,
+    testInfo,
+    'story-summary-320-3metrics-light.png',
+  );
 });
 
 test('320 CSS px reflow keeps 2 metrics readable without horizontal scroll', async ({
   page,
-}) => {
+}, testInfo) => {
   await installMocks(page, {
     memories: 10,
     heartMoments: 1,
@@ -387,8 +413,9 @@ test('320 CSS px reflow keeps 2 metrics readable without horizontal scroll', asy
   expect(isOverflowing).toBe(false);
 
   await section.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: `${EVIDENCE_DIR}/story-summary-320-2metrics-light.png`,
-    fullPage: false,
-  });
+  await captureScreenshot(
+    page,
+    testInfo,
+    'story-summary-320-2metrics-light.png',
+  );
 });
