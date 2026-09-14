@@ -35,6 +35,7 @@ const m5s5 = {
     allActivityAction: 'Alle Aktivitäten ansehen →',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     storySummaryTitle: 'Eure Geschichte in Zahlen',
+    storySummarySettingsTitle: 'Geschichte in Zahlen',
     storySummaryMemories: 'Momente',
     storySummaryHeartMoments: 'Herzmomente',
     storySummaryMilestones: 'Meilensteine',

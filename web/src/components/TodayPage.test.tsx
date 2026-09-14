@@ -2186,6 +2186,9 @@ describe('formatRelationshipDuration', () => {
       for (const [, sectionClass] of MODULE_SECTIONS) {
         expect(html).toContain(sectionClass);
       }
+      expect(html.indexOf('today-section-recent')).toBeLessThan(
+        html.indexOf('shared-story-summary'),
+      );
     });
 
     it.each(MODULE_SECTIONS)(
