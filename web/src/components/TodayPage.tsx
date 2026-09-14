@@ -884,9 +884,9 @@ export function TodayPage({
    * selection/exclusion computation above stays based on the real
    * authoritative data, unaffected by what the user chose to hide, so hiding
    * one module never changes what another module selects (for example,
-   * hiding `Gerade bei euch` must not let its content reappear in `Zuletzt
-   * bei euch`). Only the final render of each section below is additionally
-   * gated on its effective visibility.
+   * hiding the `relationship_signal` module must not let its content
+   * reappear in the `recent_shared` trace). Only the final render of each
+   * section below is additionally gated on its effective visibility.
    */
   const upcomingVisible = isDashboardModuleVisible(
     dashboardPreferencesQuery.data,
