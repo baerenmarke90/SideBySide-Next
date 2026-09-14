@@ -54,8 +54,16 @@ replace_once(
 # resolver while still using the shorter accepted Settings copy.
 replace_once(
     "web/src/client/dashboardModules.ts",
-    "{ key: 'shared_story_summary', labelKey: 'profileIdentity.dashboardStorySummaryTitle' },",
-    "{ key: 'shared_story_summary', labelKey: 'm5s5.dashboard.storySummarySettingsTitle' },",
+    """    {
+      key: 'shared_story_summary',
+      labelKey: 'profileIdentity.dashboardStorySummaryTitle',
+    },
+""",
+    """    {
+      key: 'shared_story_summary',
+      labelKey: 'm5s5.dashboard.storySummarySettingsTitle',
+    },
+""",
 )
 replace_once(
     "web/src/i18n/locales/m5s5.ts",
