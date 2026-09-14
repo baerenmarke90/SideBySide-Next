@@ -228,6 +228,50 @@
   background: var(--color-shared-surface);
 }
 
+/*
+ * Reveal outcome accents. `data-outcome` picks the tone: warm brand for
+ * agreement, the app's existing "discovery" amber for divergence, so
+ * different perspectives read as an interesting find rather than a wrong
+ * answer (no red/green success-failure semantics). The headline text
+ * ("Ihr seid euch einig." / "Da seht ihr euch unterschiedlich.") carries the
+ * distinction on its own; color and motion here are reinforcement only.
+ */
+.who-of-us-reveal {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(
+    in srgb,
+    var(--who-of-us-outcome-accent, var(--color-border-subtle)) 26%,
+    var(--color-border-subtle)
+  );
+  background:
+    radial-gradient(
+      circle at 10% -15%,
+      var(--who-of-us-outcome-surface, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 105% 118%,
+      var(--who-of-us-outcome-surface, transparent),
+      transparent 50%
+    ),
+    var(--color-surface-raised);
+}
+
+.who-of-us-reveal[data-outcome="same"] {
+  --who-of-us-outcome-accent: var(--color-brand-text);
+  --who-of-us-outcome-surface: var(--color-brand-surface);
+}
+
+.who-of-us-reveal[data-outcome="different"] {
+  --who-of-us-outcome-accent: var(--color-discovery);
+  --who-of-us-outcome-surface: var(--color-discovery-surface-soft);
+}
+
+.who-of-us-reveal .eyebrow {
+  color: var(--who-of-us-outcome-accent, var(--color-brand-text));
+}
+
 .who-of-us-primary-action,
 .who-of-us-actions button {
   min-height: 2.75rem;
@@ -246,18 +290,88 @@
 }
 
 .who-of-us-reveal-answers {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-4);
   margin: 0;
 }
 
-.who-of-us-reveal-answers > div {
+/*
+ * Decorative connector between the two perspectives: a converging dot for
+ * agreement, a calm dividing line for difference. Transform-only (no
+ * opacity) so it never risks the mid-animation text-contrast regression
+ * documented for `.sbs-motion-reveal` (#790/#791) - not that this element
+ * carries text, but it keeps the same house rule everywhere in this file.
+ */
+.who-of-us-reveal-answers::before {
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--who-of-us-outcome-accent, var(--color-text-secondary));
+  transform: translate(-50%, -50%) scale(0);
+  animation: who-of-us-connector-same var(--motion-duration-long)
+    var(--motion-easing-settle) 90ms forwards;
+}
+
+.who-of-us-reveal[data-outcome="different"] .who-of-us-reveal-answers::before {
+  width: 2px;
+  height: 2.5rem;
+  border-radius: var(--radius-pill);
+  animation-name: who-of-us-connector-different;
+}
+
+.who-of-us-reveal-person {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  animation-duration: var(--motion-duration-medium);
+  animation-timing-function: var(--motion-easing-settle);
+  animation-fill-mode: both;
+}
+
+.who-of-us-reveal-person dl {
   display: grid;
   gap: var(--space-1);
-  border-radius: var(--radius-card);
-  padding: var(--space-4);
-  background: var(--color-surface-subtle);
+  margin: 0;
+}
+
+.who-of-us-reveal-person:first-child {
+  animation-name: who-of-us-person-in-left;
+}
+
+.who-of-us-reveal-person:last-child {
+  animation-name: who-of-us-person-in-right;
+  animation-delay: 60ms;
+}
+
+.who-of-us-reveal[data-outcome="different"]
+  .who-of-us-reveal-person:first-child {
+  animation-name: who-of-us-person-out-left;
+}
+
+.who-of-us-reveal[data-outcome="different"]
+  .who-of-us-reveal-person:last-child {
+  animation-name: who-of-us-person-out-right;
+}
+
+.who-of-us-reveal-avatar {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--who-of-us-outcome-surface, var(--color-surface-subtle));
+  color: var(--who-of-us-outcome-accent, var(--color-text));
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
 }
 
 .who-of-us-reveal-answers dt {
@@ -270,8 +384,62 @@
   margin: 0;
   color: var(--color-text);
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
+}
+
+@keyframes who-of-us-connector-same {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes who-of-us-connector-different {
+  from {
+    transform: translate(-50%, -50%) scaleY(0);
+  }
+  to {
+    transform: translate(-50%, -50%) scaleY(1);
+  }
+}
+
+@keyframes who-of-us-person-in-left {
+  from {
+    transform: translateX(10px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes who-of-us-person-in-right {
+  from {
+    transform: translateX(-10px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes who-of-us-person-out-left {
+  from {
+    transform: translateX(-6px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes who-of-us-person-out-right {
+  from {
+    transform: translateX(6px);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .who-of-us-finish-count {
@@ -332,6 +500,15 @@
     grid-template-columns: 1fr;
   }
 
+  .who-of-us-reveal-answers {
+    gap: var(--space-4);
+  }
+
+  /* Stacked single column has no "between" to mark. */
+  .who-of-us-reveal-answers::before {
+    display: none;
+  }
+
   .who-of-us-choice {
     min-height: 6.5rem;
   }
@@ -342,5 +519,20 @@
   .games-product-page *::before,
   .games-product-page *::after {
     scroll-behavior: auto;
+  }
+
+  .who-of-us-reveal-answers::before {
+    animation: none;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .who-of-us-reveal[data-outcome="different"]
+    .who-of-us-reveal-answers::before {
+    transform: translate(-50%, -50%) scaleY(1);
+  }
+
+  .who-of-us-reveal-person {
+    animation: none;
+    transform: none;
   }
 }

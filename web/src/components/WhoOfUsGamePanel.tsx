@@ -42,6 +42,10 @@ function questionKey(questionId: WhoOfUsQuestionId): string {
   return `games.whoOfUs.questions.${questionId}`;
 }
 
+function initialOf(displayName: string): string {
+  return displayName.trim().slice(0, 1).toLocaleUpperCase();
+}
+
 function ActiveWhoOfUsSessionView({
   participants,
   onExit,
@@ -99,6 +103,7 @@ function ActiveWhoOfUsSessionView({
       snapshot.currentRoundIndex % 2 === 0 ? participants[1] : participants[0];
     return (
       <section
+        key={`handoff-${snapshot.currentRoundIndex}`}
         className="who-of-us-card who-of-us-handoff sbs-motion-reveal"
         aria-labelledby="who-of-us-handoff-title"
       >
@@ -130,9 +135,12 @@ function ActiveWhoOfUsSessionView({
     if (!firstResponder || !firstChoice || !secondResponder || !secondChoice) {
       return null;
     }
+    const outcome = snapshot.reveal.matches ? 'same' : 'different';
     return (
       <section
+        key={`reveal-${snapshot.currentRoundIndex}`}
         className="who-of-us-card who-of-us-reveal sbs-motion-reveal"
+        data-outcome={outcome}
         aria-live="polite"
         aria-labelledby="who-of-us-reveal-title"
       >
@@ -145,16 +153,26 @@ function ActiveWhoOfUsSessionView({
         <p className="who-of-us-question-repeat">
           {t(questionKey(snapshot.reveal.questionId))}
         </p>
-        <dl className="who-of-us-reveal-answers">
-          <div>
-            <dt>{firstResponder.displayName}</dt>
-            <dd>{firstChoice.displayName}</dd>
+        <div className="who-of-us-reveal-answers">
+          <div className="who-of-us-reveal-person">
+            <span className="who-of-us-reveal-avatar" aria-hidden="true">
+              {initialOf(firstResponder.displayName)}
+            </span>
+            <dl>
+              <dt>{firstResponder.displayName}</dt>
+              <dd>{firstChoice.displayName}</dd>
+            </dl>
           </div>
-          <div>
-            <dt>{secondResponder.displayName}</dt>
-            <dd>{secondChoice.displayName}</dd>
+          <div className="who-of-us-reveal-person">
+            <span className="who-of-us-reveal-avatar" aria-hidden="true">
+              {initialOf(secondResponder.displayName)}
+            </span>
+            <dl>
+              <dt>{secondResponder.displayName}</dt>
+              <dd>{secondChoice.displayName}</dd>
+            </dl>
           </div>
-        </dl>
+        </div>
         <p>
           {snapshot.reveal.matches
             ? t('games.whoOfUs.sameBody', { name: firstChoice.displayName })
@@ -184,6 +202,7 @@ function ActiveWhoOfUsSessionView({
         </span>
       </div>
       <section
+        key={`question-${snapshot.phase}-${snapshot.currentRoundIndex}`}
         className="who-of-us-card who-of-us-question sbs-motion-reveal"
         aria-labelledby="who-of-us-question-title"
       >
@@ -218,7 +237,7 @@ function ActiveWhoOfUsSessionView({
                 }
               >
                 <span className="who-of-us-choice-initial" aria-hidden="true">
-                  {choice.displayName.trim().slice(0, 1).toLocaleUpperCase()}
+                  {initialOf(choice.displayName)}
                 </span>
                 <span>{choice.displayName}</span>
               </button>
