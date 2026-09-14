@@ -397,11 +397,17 @@ describe('StoryProductPage', () => {
         nextCursor: null,
       });
 
-      // The 12 most recent items are shown, the oldest two are not
-      expect(html).toContain('Moment 0');
-      expect(html).toContain('Moment 11');
-      expect(html).not.toContain('Moment 12');
-      expect(html).not.toContain('Moment 13');
+      // Scope the cap assertion to the tapestry. The independent featured
+      // hero may legitimately surface any eligible item outside that cap.
+      const tapestryStart = html.indexOf('momente-tapestry-bands');
+      expect(tapestryStart).toBeGreaterThan(-1);
+      const tapestryHtml = html.slice(tapestryStart);
+
+      // The 12 most recent tapestry items are shown, the oldest two are not.
+      expect(tapestryHtml).toContain('Moment 0');
+      expect(tapestryHtml).toContain('Moment 11');
+      expect(tapestryHtml).not.toContain('Moment 12');
+      expect(tapestryHtml).not.toContain('Moment 13');
     });
   });
 
