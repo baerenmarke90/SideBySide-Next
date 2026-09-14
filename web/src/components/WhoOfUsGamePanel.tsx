@@ -209,6 +209,7 @@ function WhoOfUsSessionView({
         <p>{t('games.whoOfUs.choosePrompt')}</p>
         <div
           className="who-of-us-choices"
+          role="group"
           aria-label={t('games.whoOfUs.choicesAria')}
         >
           {participants.map((choice) => (
