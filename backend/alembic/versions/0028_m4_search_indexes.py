@@ -12,6 +12,7 @@ write lock for the duration of each index build.
 
 from __future__ import annotations
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = "0028"
@@ -106,11 +107,30 @@ def upgrade() -> None:
     # IF NOT EXISTS handles indexes already completed by a previous attempt.
     # Runtime integration tests verify the resulting definitions, so the
     # resumability guard is not used as a substitute for schema validation.
+    #
+    # IF NOT EXISTS only checks the index *name*, not its validity. If a
+    # previous attempt was interrupted mid-build (killed migrate container,
+    # host restart), PostgreSQL leaves that index catalogued but invalid, and
+    # a bare retry would silently skip rebuilding it forever. Drop an invalid
+    # leftover first so the retry actually resumes instead of no-op'ing.
     with op.get_context().autocommit_block():
+        connection = op.get_bind()
         for name, table, expression in _INDEXES:
-            op.execute(
-                f"CREATE INDEX CONCURRENTLY IF NOT EXISTS {name} "
-                f"ON {table} USING gin (({expression}))"
+            invalid = connection.execute(
+                sa.text(
+                    "SELECT true FROM pg_index "
+                    "JOIN pg_class ON pg_class.oid = pg_index.indexrelid "
+                    "WHERE pg_class.relname = :name AND NOT pg_index.indisvalid"
+                ),
+                {"name": name},
+            ).scalar()
+            if invalid:
+                connection.execute(sa.text(f"DROP INDEX CONCURRENTLY IF EXISTS {name}"))
+            connection.execute(
+                sa.text(
+                    f"CREATE INDEX CONCURRENTLY IF NOT EXISTS {name} "
+                    f"ON {table} USING gin (({expression}))"
+                )
             )
 
 
