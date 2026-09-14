@@ -34,9 +34,7 @@ export interface WhoOfUsReveal {
 
 export interface WhoOfUsSessionSnapshot {
   phase: WhoOfUsPhase;
-  participants:
-    | readonly [WhoOfUsParticipant, WhoOfUsParticipant]
-    | null;
+  participants: readonly [WhoOfUsParticipant, WhoOfUsParticipant] | null;
   currentQuestionId: WhoOfUsQuestionId | null;
   currentRoundIndex: number;
   totalRounds: number;
@@ -102,9 +100,8 @@ function responderPair(
 export function createLocalWhoOfUsSession(): WhoOfUsSession {
   const listeners = new Set<() => void>();
   let sourceQuestions: WhoOfUsQuestionId[] = [];
-  let sourceParticipants:
-    | [WhoOfUsParticipant, WhoOfUsParticipant]
-    | null = null;
+  let sourceParticipants: [WhoOfUsParticipant, WhoOfUsParticipant] | null =
+    null;
   let hiddenFirstAnswerPartnerId: string | null = null;
   let snapshot = EMPTY_SNAPSHOT;
   let disposed = false;
@@ -141,7 +138,9 @@ export function createLocalWhoOfUsSession(): WhoOfUsSession {
 
   function answer(partnerId: string): void {
     if (!sourceParticipants || !snapshot.currentQuestionId) return;
-    if (!sourceParticipants.some((participant) => participant.id === partnerId)) {
+    if (
+      !sourceParticipants.some((participant) => participant.id === partnerId)
+    ) {
       return;
     }
 
