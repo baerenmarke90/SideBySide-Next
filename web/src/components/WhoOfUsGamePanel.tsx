@@ -8,6 +8,7 @@ import {
   selectWhoOfUsQuestions,
   type WhoOfUsParticipant,
   type WhoOfUsQuestionId,
+  type WhoOfUsSession,
 } from '../client/whoOfUsSession';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -41,27 +42,21 @@ function questionKey(questionId: WhoOfUsQuestionId): string {
   return `games.whoOfUs.questions.${questionId}`;
 }
 
-function WhoOfUsSessionView({
+function ActiveWhoOfUsSessionView({
   participants,
   onExit,
+  session,
 }: {
   participants: readonly [WhoOfUsParticipant, WhoOfUsParticipant];
   onExit: () => void;
+  session: WhoOfUsSession;
 }) {
   const { t } = useTranslation();
-  const [questions] = useState(() => selectWhoOfUsQuestions());
-  const [session] = useState(() => {
-    const next = createLocalWhoOfUsSession();
-    next.start(questions, participants);
-    return next;
-  });
   const snapshot = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
     session.getSnapshot,
   );
-
-  useEffect(() => () => session.dispose(), [session]);
 
   const participant = (id: string | null): WhoOfUsParticipant | null =>
     id ? (participants.find((candidate) => candidate.id === id) ?? null) : null;
@@ -232,6 +227,34 @@ function WhoOfUsSessionView({
         </fieldset>
       </section>
     </div>
+  );
+}
+
+function WhoOfUsSessionView({
+  participants,
+  onExit,
+}: {
+  participants: readonly [WhoOfUsParticipant, WhoOfUsParticipant];
+  onExit: () => void;
+}) {
+  const [questions] = useState(() => selectWhoOfUsQuestions());
+  const [session, setSession] = useState<WhoOfUsSession | null>(null);
+
+  useEffect(() => {
+    const next = createLocalWhoOfUsSession();
+    next.start(questions, participants);
+    setSession(next);
+    return () => next.dispose();
+  }, [questions, participants]);
+
+  if (!session) return null;
+
+  return (
+    <ActiveWhoOfUsSessionView
+      participants={participants}
+      onExit={onExit}
+      session={session}
+    />
   );
 }
 
