@@ -1,9 +1,13 @@
 """The durable technical identity of the two canonical demo personas.
 
-`display_name` is ordinary mutable presentation data (see
-`sidebyside.demo.canonical` and `docs/DEMO-SPACE.md`): a visitor is explicitly
-allowed to change it, and it must never again be the thing create/ensure/reset
-use to recognize a canonical demo Account (#633).
+`display_name` is presentation state in the domain model (see
+`sidebyside.demo.canonical` and `docs/DEMO-SPACE.md`) and must never again be
+the thing create/ensure/reset use to recognize a canonical demo Account
+(#633). Public Demo visitors are already prevented from changing it at all
+through the normal profile API (#697), but legacy data from before this
+marker existed, an operator edit, or a direct database change can still leave
+it drifted, and the demo maintenance path must remain recoverable when it
+does.
 
 This table is the stable alternative: a private demo-only registry stating
 which already-verified reserved-address Account currently plays each
