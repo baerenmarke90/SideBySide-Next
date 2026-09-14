@@ -32,13 +32,17 @@ import kotlinx.serialization.Contextual
  * 
  *
  * @param itemLimit 
+ * @param visible 
  */
 @Serializable
 
 data class DashboardModulePreferenceUpdate (
 
     @SerialName(value = "itemLimit")
-    val itemLimit: DashboardModulePreferenceUpdate.ItemLimit
+    val itemLimit: DashboardModulePreferenceUpdate.ItemLimit? = null,
+
+    @SerialName(value = "visible")
+    val visible: kotlin.Boolean? = null
 
 ) {
 

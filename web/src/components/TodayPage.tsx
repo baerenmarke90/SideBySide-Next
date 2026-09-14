@@ -11,6 +11,7 @@ import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import {
   dashboardPreferencesQueryKey,
+  isDashboardModuleVisible,
   limitUpcomingItems,
 } from '../client/dashboardPreferences';
 import {
@@ -878,6 +879,56 @@ export function TodayPage({
     (item) => !traceExcludedIds.has(item.id),
   );
 
+  /*
+   * Per-user module visibility (#817). This is presentation only: every
+   * selection/exclusion computation above stays based on the real
+   * authoritative data, unaffected by what the user chose to hide, so hiding
+   * one module never changes what another module selects (for example,
+   * hiding the `relationship_signal` module must not let its content
+   * reappear in the `recent_shared` trace). Only the final render of each
+   * section below is additionally gated on its effective visibility.
+   *
+   * `preferencesUnresolved` distinguishes "the preference query is still
+   * actually fetching" from "it resolved with no override" or "it is
+   * disabled" (no account context) - `fetchStatus` stays `'idle'` in the
+   * latter two cases, so only a genuine in-flight fetch counts. Dashboard
+   * data and Dashboard preferences load independently; without this, a
+   * user-hidden module could render for one frame before the slower
+   * preferences request arrives and hides it again. The configurable module
+   * stack below (including the relationship-presence hero) stays gated on
+   * `contentReady` until the real preference state is known, so nothing the
+   * user chose to hide is ever shown, even momentarily.
+   */
+  const preferencesUnresolved =
+    dashboardPreferencesQuery.isPending &&
+    dashboardPreferencesQuery.fetchStatus !== 'idle';
+  const contentReady = Boolean(dashboardQuery.data) && !preferencesUnresolved;
+
+  const relationshipPresenceVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'relationship_presence',
+  );
+  const upcomingVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'upcoming',
+  );
+  const keepsakeVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'keepsake',
+  );
+  const relationshipSignalVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'relationship_signal',
+  );
+  const monthlyHighlightsVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'monthly_highlights',
+  );
+  const recentSharedVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'recent_shared',
+  );
+
   const isSparse = Boolean(
     dashboardQuery.data &&
       upcoming.length === 0 &&
@@ -896,7 +947,8 @@ export function TodayPage({
 
   return (
     <div className="page today-page">
-      {dashboardQuery.isLoading && (
+      {(dashboardQuery.isLoading ||
+        (Boolean(dashboardQuery.data) && preferencesUnresolved)) && (
         <UiState kind="loading" title={t('states.loading.title')} />
       )}
       {dashboardQuery.error && (
@@ -905,63 +957,81 @@ export function TodayPage({
           onRetry={() => dashboardQuery.refetch()}
         />
       )}
+      {/* A failed preferences fetch does not block Today: the configurable
+          module stack proceeds with product defaults (visible) rather than
+          holding the whole page hostage on a secondary, non-critical
+          presentation preference. The retry stays reachable so the user's
+          real hidden/shown choices come back without a full reload. */}
+      {dashboardPreferencesQuery.error ? (
+        <ProblemState
+          error={dashboardPreferencesQuery.error}
+          onRetry={() => void dashboardPreferencesQuery.refetch()}
+        />
+      ) : null}
 
-      {dashboardQuery.data ? (
+      {contentReady && dashboardQuery.data ? (
         <div className="today-content">
-          {/* ROLE: Hero / Couple Presence — the permanent emotional entry point,
-              shown for every space including a new/sparse one. */}
-          <CouplePresence
-            className="today-hero sbs-motion-reveal"
-            headingLevel="h1"
-            spaceTitle={
-              partner
-                ? t('m5s5.dashboard.partner', {
-                    name: partner.displayName,
-                  })
-                : t('m5s5.dashboard.durationTitle')
-            }
-            primaryPerson={{
-              displayName:
-                account?.displayName ||
-                t('m5s5.activity.you', { defaultValue: 'Du' }),
-              imageUrl: userAvatar.avatarUrl,
-            }}
-            secondaryPerson={
-              partner
-                ? {
-                    displayName: partner.displayName,
-                    imageUrl: partnerAvatar.avatarUrl,
-                  }
-                : null
-            }
-            status={partner ? 'connected' : 'waiting'}
-            relationshipDuration={
-              dashboardQuery.data.relationshipDuration
-                ? formatRelationshipDuration(
-                    dashboardQuery.data.relationshipDuration,
-                    t,
-                  )
-                : undefined
-            }
-            durationLinkTo={
-              dashboardQuery.data.relationshipDuration
-                ? '/more/profile#relationship-profile-title'
-                : undefined
-            }
-            durationTitle={t('m5s5.dashboard.openRelationshipSettings')}
-            actions={
-              <div className="today-hero-action-container">
-                <ThinkingOfYouHero
-                  apis={apis}
-                  spaceId={spaceId}
-                  partnerName={partner?.displayName}
-                  thinkingOfYouAvailableAt={
-                    dashboardQuery.data.thinkingOfYouAvailableAt
-                  }
-                />
-              </div>
-            }
-          />
+          {/* ROLE: Hero / Couple Presence — the permanent emotional entry
+              point, shown for every space including a new/sparse one, unless
+              the user hid the `relationship_presence` module. Hiding it must
+              not remove the page's own accessible heading, so a quiet
+              sr-only h1 takes its place - never an empty visual hero shell. */}
+          {relationshipPresenceVisible ? (
+            <CouplePresence
+              className="today-hero sbs-motion-reveal"
+              headingLevel="h1"
+              spaceTitle={
+                partner
+                  ? t('m5s5.dashboard.partner', {
+                      name: partner.displayName,
+                    })
+                  : t('m5s5.dashboard.durationTitle')
+              }
+              primaryPerson={{
+                displayName:
+                  account?.displayName ||
+                  t('m5s5.activity.you', { defaultValue: 'Du' }),
+                imageUrl: userAvatar.avatarUrl,
+              }}
+              secondaryPerson={
+                partner
+                  ? {
+                      displayName: partner.displayName,
+                      imageUrl: partnerAvatar.avatarUrl,
+                    }
+                  : null
+              }
+              status={partner ? 'connected' : 'waiting'}
+              relationshipDuration={
+                dashboardQuery.data.relationshipDuration
+                  ? formatRelationshipDuration(
+                      dashboardQuery.data.relationshipDuration,
+                      t,
+                    )
+                  : undefined
+              }
+              durationLinkTo={
+                dashboardQuery.data.relationshipDuration
+                  ? '/more/profile#relationship-profile-title'
+                  : undefined
+              }
+              durationTitle={t('m5s5.dashboard.openRelationshipSettings')}
+              actions={
+                <div className="today-hero-action-container">
+                  <ThinkingOfYouHero
+                    apis={apis}
+                    spaceId={spaceId}
+                    partnerName={partner?.displayName}
+                    thinkingOfYouAvailableAt={
+                      dashboardQuery.data.thinkingOfYouAvailableAt
+                    }
+                  />
+                </div>
+              }
+            />
+          ) : (
+            <h1 className="sr-only">{t('m5s5.dashboard.title')}</h1>
+          )}
 
           {isSparse ? (
             <div className="new-space-experience sbs-motion-reveal">
@@ -1000,7 +1070,7 @@ export function TodayPage({
               {/* 2. Demnächst — the short shared horizon. One item is the
                   default and must read as complete on its own; two or three
                   stay restrained rather than becoming an agenda table. */}
-              {upcoming.length > 0 ? (
+              {upcomingVisible && upcoming.length > 0 ? (
                 <TodayModuleSection
                   className="today-section-upcoming"
                   title={t('m5s5.dashboard.upcomingTitle')}
@@ -1024,7 +1094,7 @@ export function TodayPage({
               ) : null}
 
               {/* 3. Euer Moment — the dominant emotional anchor. */}
-              {showMomentSection ? (
+              {showMomentSection && keepsakeVisible ? (
                 <TodayModuleSection
                   className="today-section-moment"
                   title={
@@ -1047,7 +1117,7 @@ export function TodayPage({
               ) : null}
 
               {/* 4. Gerade bei euch — exactly one contextual module. */}
-              {livingModule ? (
+              {livingModule && relationshipSignalVisible ? (
                 <TodayModuleSection
                   className="today-section-living"
                   title={t('m5s5.today.living.kicker')}
@@ -1064,7 +1134,9 @@ export function TodayPage({
 
               {/* 5. Diesen Monat — this month's shared life, shown rather than
                   counted. */}
-              {monthlyStrip.length > 0 && loadMemoryImage ? (
+              {monthlyHighlightsVisible &&
+              monthlyStrip.length > 0 &&
+              loadMemoryImage ? (
                 <TodayModuleSection
                   className="today-section-monthly"
                   title={t('m5s5.today.monthly.title')}
@@ -1088,7 +1160,7 @@ export function TodayPage({
 
               {/* 6. Zuletzt bei euch — deliberately secondary. Full activity
                   navigation stays reachable from here. */}
-              {recentSharedForTrace.length > 0 ? (
+              {recentSharedVisible && recentSharedForTrace.length > 0 ? (
                 <TodayModuleSection
                   className="today-section-recent"
                   title={t('m5s5.dashboard.recentTitle')}

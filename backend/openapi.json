@@ -1472,11 +1472,12 @@
             ],
             "title": "Itemlimit",
             "type": "integer"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
           }
         },
-        "required": [
-          "itemLimit"
-        ],
         "title": "DashboardModulePreferenceUpdate",
         "type": "object"
       },
@@ -1494,11 +1495,15 @@
           "moduleKey": {
             "title": "Modulekey",
             "type": "string"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
           }
         },
         "required": [
           "moduleKey",
-          "itemLimit"
+          "visible"
         ],
         "title": "DashboardModulePreferenceView",
         "type": "object"
@@ -14702,7 +14707,7 @@
     },
     "/api/v1/spaces/{spaceId}/dashboard/preferences/{moduleKey}": {
       "patch": {
-        "description": "Set one private per-account Dashboard item-limit override.",
+        "description": "Set one private per-account Dashboard preference (#817 visibility, #848 item limit).",
         "operationId": "updateDashboardModulePreference",
         "parameters": [
           {

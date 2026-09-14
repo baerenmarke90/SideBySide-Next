@@ -1,8 +1,12 @@
 import type { DashboardModulePreferenceList } from '../api/generated/models/DashboardModulePreferenceList';
+import type { DashboardModuleKey } from './dashboardModules';
 
 export const DEFAULT_UPCOMING_ITEM_LIMIT = 1;
-export const UPCOMING_MODULE_KEY = 'upcoming';
+export const UPCOMING_MODULE_KEY: DashboardModuleKey = 'upcoming';
 export const UPCOMING_ITEM_LIMITS = [1, 2, 3] as const;
+
+/** Absence of an explicit override resolves to visible, the product default. */
+export const DEFAULT_MODULE_VISIBLE = true;
 
 export type UpcomingItemLimit = (typeof UPCOMING_ITEM_LIMITS)[number];
 
@@ -33,4 +37,22 @@ export function limitUpcomingItems<T>(
   preferences: DashboardModulePreferenceList | undefined,
 ): T[] {
   return items.slice(0, effectiveUpcomingItemLimit(preferences));
+}
+
+/**
+ * Effective per-user visibility for one registered Dashboard module (#817).
+ *
+ * Absence of an explicit override — including while the preferences query is
+ * still loading or unavailable — resolves to `DEFAULT_MODULE_VISIBLE` so a
+ * transient fetch hiccup never hides real content the user never chose to
+ * hide.
+ */
+export function isDashboardModuleVisible(
+  preferences: DashboardModulePreferenceList | undefined,
+  moduleKey: DashboardModuleKey,
+): boolean {
+  const value = preferences?.items.find(
+    (item) => item.moduleKey === moduleKey,
+  )?.visible;
+  return value ?? DEFAULT_MODULE_VISIBLE;
 }

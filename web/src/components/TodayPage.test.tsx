@@ -3,26 +3,42 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
 import type { M4ProductApis } from '../client/m4Product';
+import {
+  DASHBOARD_MODULE_KEYS,
+  type DashboardModuleKey,
+} from '../client/dashboardModules';
 import { dashboardPreferencesQueryKey } from '../client/dashboardPreferences';
 import { i18n } from '../i18n';
+import de from '../i18n/locales/de';
 import m5s5 from '../i18n/locales/m5s5';
 import relationshipComponents from '../i18n/locales/relationshipComponents';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
+/**
+ * By default this seeds an already-resolved (empty-override) Dashboard
+ * preferences response, so every existing content assertion keeps seeing the
+ * product-default composition it always has. Pass `preferencesPending: true`
+ * to instead leave the preferences query genuinely unresolved (#817
+ * regression coverage: Today must not flash hidden content while an
+ * account-scoped preferences fetch is still in flight - see "never flashes a
+ * persisted-hidden module" below).
+ */
 function renderTodayPage(
   dashboardData: unknown,
   itemLimit?: 1 | 2 | 3,
+  options?: { preferences?: unknown; preferencesPending?: boolean },
 ): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], dashboardData);
-  if (itemLimit !== undefined) {
+  if (!options?.preferencesPending) {
     queryClient.setQueryData(
       dashboardPreferencesQueryKey('account-1', 'space-1'),
-      {
-        items: [{ moduleKey: 'upcoming', itemLimit }],
-      },
+      options?.preferences ??
+        (itemLimit !== undefined
+          ? { items: [{ moduleKey: 'upcoming', itemLimit }] }
+          : { items: [] }),
     );
   }
 
@@ -2038,6 +2054,234 @@ describe('formatRelationshipDuration', () => {
 
       expect(html).toContain('today-section-upcoming');
       expect(html).toContain('Zusammengezogen');
+    });
+  });
+
+  describe('per-user module visibility (#817)', () => {
+    const now = new Date();
+    const thisMonth = (day: number) =>
+      new Date(Date.UTC(now.getFullYear(), now.getMonth(), day));
+
+    function allModulesEligibleDashboard() {
+      return {
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Marie' },
+        },
+        relationshipDuration: null,
+        upcoming: [
+          {
+            id: 'plan-1',
+            type: 'PLAN',
+            titleOrText: 'Weekend trip',
+            scheduledAt: new Date(Date.now() + 86_400_000),
+          },
+        ],
+        keepsake: {
+          id: 'mem-keepsake',
+          type: 'MEMORY',
+          titleOrText: 'Keepsake Photo',
+          occurredOn: thisMonth(1),
+          previewAttachmentId: 'att-keepsake',
+        },
+        recentShared: [
+          {
+            id: 'mem-keepsake',
+            type: 'MEMORY',
+            titleOrText: 'Keepsake Photo',
+            occurredOn: thisMonth(1),
+            previewAttachmentId: 'att-keepsake',
+          },
+          {
+            id: 'mem-monthly',
+            type: 'MEMORY',
+            titleOrText: 'Monthly Photo',
+            occurredOn: thisMonth(2),
+            previewAttachmentId: 'att-monthly',
+          },
+          {
+            id: 'ms-recent',
+            type: 'MILESTONE',
+            titleOrText: 'Trace Milestone',
+            createdAt: new Date(),
+          },
+        ],
+        retrospective: {
+          id: 'heart-signal',
+          type: 'HEART_MOMENT',
+          titleOrText: 'Weisst du noch',
+          occurredOn: new Date('2020-01-01T00:00:00Z'),
+        },
+      };
+    }
+
+    function renderWithVisibility(
+      overrides: Partial<Record<DashboardModuleKey, boolean>>,
+    ): string {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      queryClient.setQueryData(
+        ['m5-s5', 'dashboard', 'space-1'],
+        allModulesEligibleDashboard(),
+      );
+      // A resolved (possibly empty) preferences response - not pending, see
+      // the dedicated "never flashes" test below for the pending case.
+      queryClient.setQueryData(
+        dashboardPreferencesQueryKey('account-1', 'space-1'),
+        {
+          items: Object.entries(overrides).map(([moduleKey, visible]) => ({
+            moduleKey,
+            visible,
+          })),
+        },
+      );
+
+      return renderToStaticMarkup(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <TodayPage
+              apis={{} as M4ProductApis}
+              spaceId="space-1"
+              account={{ id: 'account-1', displayName: 'Alex' }}
+              loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    }
+
+    /**
+     * Exhaustive by construction: `Record<DashboardModuleKey, string>` means
+     * TypeScript refuses to compile once a new key is added to
+     * `DashboardModuleKey` (in `dashboardModules.ts`) until this map gets a
+     * corresponding entry, so a registered module cannot silently end up
+     * without Today visibility coverage (#817 PO correction). The test
+     * matrix below is then derived from `DASHBOARD_MODULE_KEYS`, the same
+     * authoritative list Settings renders from, rather than a hand-written
+     * key list of its own.
+     */
+    const MODULE_SECTION_MARKER: Record<DashboardModuleKey, string> = {
+      relationship_presence: 'today-hero',
+      upcoming: 'today-section-upcoming',
+      keepsake: 'today-section-moment',
+      relationship_signal: 'today-section-living',
+      monthly_highlights: 'today-section-monthly',
+      recent_shared: 'today-section-recent',
+    };
+
+    const MODULE_SECTIONS = DASHBOARD_MODULE_KEYS.map(
+      (key) => [key, MODULE_SECTION_MARKER[key]] as const,
+    );
+
+    it('renders every registered module by default when no preference exists', () => {
+      const html = renderWithVisibility({});
+
+      for (const [, sectionClass] of MODULE_SECTIONS) {
+        expect(html).toContain(sectionClass);
+      }
+    });
+
+    it.each(MODULE_SECTIONS)(
+      'omits the %s section entirely when hidden, without a placeholder, while every other module stays visible',
+      (moduleKey, sectionClass) => {
+        const html = renderWithVisibility({ [moduleKey]: false });
+
+        expect(html).not.toContain(sectionClass);
+        for (const [otherKey, otherSectionClass] of MODULE_SECTIONS) {
+          if (otherKey === moduleKey) continue;
+          expect(html).toContain(otherSectionClass);
+        }
+      },
+    );
+
+    it.each(MODULE_SECTIONS)(
+      'renders the %s section again once re-shown',
+      (moduleKey, sectionClass) => {
+        const hidden = renderWithVisibility({ [moduleKey]: false });
+        expect(hidden).not.toContain(sectionClass);
+
+        const shown = renderWithVisibility({ [moduleKey]: true });
+        expect(shown).toContain(sectionClass);
+      },
+    );
+
+    it('hiding one module does not change what another module selects (no duplicate content leaks in)', () => {
+      const baseline = renderWithVisibility({});
+      const withLivingHidden = renderWithVisibility({
+        relationship_signal: false,
+      });
+
+      // The retrospective content stays claimed by `Gerade bei euch`'s
+      // selection even while that section itself is not rendered - hiding it
+      // must not let the same content reappear in `Diesen Monat` or the trace.
+      expect(baseline).toContain('today-section-monthly');
+      expect(withLivingHidden).not.toContain('today-living-retrospective');
+      expect(withLivingHidden).toContain('today-section-monthly');
+      expect(withLivingHidden).toContain('Monthly Photo');
+      expect(withLivingHidden).not.toContain('Weisst du noch');
+    });
+
+    describe('relationship_presence (Couple Presence hero)', () => {
+      it('hides the hero without an empty shell, replacing it with a valid page heading', () => {
+        const shown = renderWithVisibility({});
+        const hidden = renderWithVisibility({ relationship_presence: false });
+
+        expect(shown).toContain('today-hero');
+        expect(hidden).not.toContain('today-hero');
+
+        // Exactly one <h1> either way: the real heading inside the hero, or
+        // the quiet sr-only fallback that takes its place - never zero,
+        // never two.
+        const h1Count = (html: string) =>
+          (html.match(/<h1[\s>]/g) ?? []).length;
+        expect(h1Count(shown)).toBe(1);
+        expect(h1Count(hidden)).toBe(1);
+        expect(hidden).toContain('sr-only');
+      });
+
+      it('leaves every other module unaffected when the hero is hidden', () => {
+        const hidden = renderWithVisibility({ relationship_presence: false });
+
+        for (const [key, sectionClass] of MODULE_SECTIONS) {
+          if (key === 'relationship_presence') continue;
+          expect(hidden).toContain(sectionClass);
+        }
+      });
+    });
+
+    it('never flashes a persisted-hidden module while Dashboard preferences are still pending, even though Dashboard data already arrived', () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      queryClient.setQueryData(
+        ['m5-s5', 'dashboard', 'space-1'],
+        allModulesEligibleDashboard(),
+      );
+      // Deliberately NOT seeding dashboardPreferencesQueryKey: the query is
+      // enabled (an account is supplied) but has neither resolved nor been
+      // given cached data, so it is genuinely still pending - the exact race
+      // the #817 PO correction flags (Dashboard data arrives first, the
+      // independent preferences fetch is still in flight).
+      const html = renderToStaticMarkup(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <TodayPage
+              apis={{} as M4ProductApis}
+              spaceId="space-1"
+              account={{ id: 'account-1', displayName: 'Alex' }}
+              loadMemoryImage={() => Promise.resolve('blob:http://localhost/x')}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      // Not one configurable module - hero included - renders as visible
+      // content while the authoritative preference state is still unknown.
+      for (const [, sectionClass] of MODULE_SECTIONS) {
+        expect(html).not.toContain(sectionClass);
+      }
+      expect(html).toContain(de.states.loading.title);
     });
   });
 });

@@ -42,7 +42,12 @@ const profileIdentity = {
   settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
   settingsDashboard: 'Dashboard',
   settingsDashboardIntro:
-    'Passe an, wie viel Raum einzelne Bereiche auf deiner Übersicht einnehmen.',
+    'Entscheide, welche Bereiche auf eurem gemeinsamen Ort für dich sichtbar sind.',
+  dashboardModulesTitle: 'Sichtbare Bereiche',
+  dashboardModulesIntro:
+    'Blende einzelne Bereiche für dich aus oder wieder ein. Dein Partner sieht weiterhin seine eigene Auswahl.',
+  dashboardModuleSaving: 'Wird gespeichert …',
+  dashboardModuleSaved: '✓ Gespeichert',
   dashboardUpcomingTitle: 'Demnächst',
   dashboardUpcomingQuestion: 'Wie viele Einträge möchtest du sehen?',
   dashboardUpcomingLoading: 'Dashboard-Einstellung wird geladen …',

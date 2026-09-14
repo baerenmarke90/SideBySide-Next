@@ -2,9 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { DashboardApi } from '../api/generated/apis/DashboardApi';
 import type { DashboardModulePreferenceList } from '../api/generated/models/DashboardModulePreferenceList';
+import type { DashboardModulePreferenceView } from '../api/generated/models/DashboardModulePreferenceView';
+import {
+  DASHBOARD_MODULE_CATALOG,
+  type DashboardModuleKey,
+} from '../client/dashboardModules';
 import {
   dashboardPreferencesQueryKey,
   effectiveUpcomingItemLimit,
+  isDashboardModuleVisible,
   type UpcomingItemLimit,
   UPCOMING_ITEM_LIMITS,
   UPCOMING_MODULE_KEY,
@@ -19,6 +25,19 @@ export interface DashboardSettingsPanelProps {
   spaceId: string;
 }
 
+function upsertPreference(
+  old: DashboardModulePreferenceList | undefined,
+  updated: DashboardModulePreferenceView,
+): DashboardModulePreferenceList {
+  return {
+    items: [
+      ...(old?.items.filter((item) => item.moduleKey !== updated.moduleKey) ??
+        []),
+      updated,
+    ],
+  };
+}
+
 export function DashboardSettingsPanel({
   dashboardApi,
   accountId,
@@ -31,6 +50,8 @@ export function DashboardSettingsPanel({
     null,
   );
   const [saved, setSaved] = useState(false);
+  const [savedModuleKey, setSavedModuleKey] =
+    useState<DashboardModuleKey | null>(null);
 
   const preferencesQuery = useQuery({
     queryKey,
@@ -61,16 +82,8 @@ export function DashboardSettingsPanel({
       setSaved(false);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData<DashboardModulePreferenceList>(
-        queryKey,
-        (old) => ({
-          items: [
-            ...(old?.items.filter(
-              (item) => item.moduleKey !== UPCOMING_MODULE_KEY,
-            ) ?? []),
-            updated,
-          ],
-        }),
+      queryClient.setQueryData<DashboardModulePreferenceList>(queryKey, (old) =>
+        upsertPreference(old, updated),
       );
       setPendingLimit(null);
       setSaved(true);
@@ -78,6 +91,38 @@ export function DashboardSettingsPanel({
     onError: () => {
       setPendingLimit(null);
       setSaved(false);
+    },
+  });
+
+  const visibilityMutation = useMutation({
+    mutationFn: async ({
+      moduleKey,
+      visible,
+    }: {
+      moduleKey: DashboardModuleKey;
+      visible: boolean;
+    }) => {
+      try {
+        return await dashboardApi.updateDashboardModulePreference({
+          moduleKey,
+          spaceId,
+          dashboardModulePreferenceUpdate: { visible },
+        });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    onMutate: () => {
+      setSavedModuleKey(null);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<DashboardModulePreferenceList>(queryKey, (old) =>
+        upsertPreference(old, updated),
+      );
+      setSavedModuleKey(updated.moduleKey as DashboardModuleKey);
+    },
+    onError: () => {
+      setSavedModuleKey(null);
     },
   });
 
@@ -90,6 +135,12 @@ export function DashboardSettingsPanel({
       : preferencesQuery.isPending
         ? t('profileIdentity.dashboardUpcomingLoading')
         : null;
+
+  const visibilityStatus = visibilityMutation.isPending
+    ? t('profileIdentity.dashboardModuleSaving')
+    : savedModuleKey
+      ? t('profileIdentity.dashboardModuleSaved')
+      : null;
 
   return (
     <section
@@ -105,6 +156,54 @@ export function DashboardSettingsPanel({
           {t('profileIdentity.settingsDashboardIntro')}
         </p>
       </div>
+
+      <fieldset
+        className="dashboard-module-preference"
+        aria-busy={visibilityMutation.isPending || preferencesQuery.isPending}
+      >
+        <legend>{t('profileIdentity.dashboardModulesTitle')}</legend>
+        <p className="dashboard-module-question">
+          {t('profileIdentity.dashboardModulesIntro')}
+        </p>
+        <div className="dashboard-module-list">
+          {DASHBOARD_MODULE_CATALOG.map((entry) => {
+            const visible = isDashboardModuleVisible(
+              preferencesQuery.data,
+              entry.key,
+            );
+            const isRowPending =
+              visibilityMutation.isPending &&
+              visibilityMutation.variables?.moduleKey === entry.key;
+            return (
+              <label key={entry.key} className="dashboard-module-option">
+                <span className="dashboard-module-option-label">
+                  {t(entry.labelKey)}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={visible}
+                  disabled={isRowPending || preferencesQuery.isPending}
+                  onChange={(event) =>
+                    visibilityMutation.mutate({
+                      moduleKey: entry.key,
+                      visible: event.target.checked,
+                    })
+                  }
+                />
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {visibilityStatus ? (
+        <p className="dashboard-module-status" role="status" aria-live="polite">
+          {visibilityStatus}
+        </p>
+      ) : null}
+      {visibilityMutation.error ? (
+        <ProblemState error={visibilityMutation.error} />
+      ) : null}
 
       <fieldset
         className="dashboard-upcoming-preference"
