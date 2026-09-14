@@ -206,32 +206,32 @@ function WhoOfUsSessionView({
         <h2 id="who-of-us-question-title">
           {t(questionKey(snapshot.currentQuestionId))}
         </h2>
-        <p>{t('games.whoOfUs.choosePrompt')}</p>
-        <div
-          className="who-of-us-choices"
-          role="group"
-          aria-label={t('games.whoOfUs.choicesAria')}
-        >
-          {participants.map((choice) => (
-            <button
-              type="button"
-              className="who-of-us-choice"
-              key={choice.id}
-              aria-label={t('games.whoOfUs.choiceAria', {
-                responder: responder.displayName,
-                choice: choice.displayName,
-              })}
-              onClick={() =>
-                session.dispatch({ type: 'ANSWER', partnerId: choice.id })
-              }
-            >
-              <span className="who-of-us-choice-initial" aria-hidden="true">
-                {choice.displayName.trim().slice(0, 1).toLocaleUpperCase()}
-              </span>
-              <span>{choice.displayName}</span>
-            </button>
-          ))}
-        </div>
+        <fieldset className="who-of-us-choices">
+          <legend className="who-of-us-choices-legend">
+            {t('games.whoOfUs.choosePrompt')}
+          </legend>
+          <div className="who-of-us-choice-grid">
+            {participants.map((choice) => (
+              <button
+                type="button"
+                className="who-of-us-choice"
+                key={choice.id}
+                aria-label={t('games.whoOfUs.choiceAria', {
+                  responder: responder.displayName,
+                  choice: choice.displayName,
+                })}
+                onClick={() =>
+                  session.dispatch({ type: 'ANSWER', partnerId: choice.id })
+                }
+              >
+                <span className="who-of-us-choice-initial" aria-hidden="true">
+                  {choice.displayName.trim().slice(0, 1).toLocaleUpperCase()}
+                </span>
+                <span>{choice.displayName}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
       </section>
     </div>
   );
