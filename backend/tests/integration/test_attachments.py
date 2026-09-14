@@ -239,6 +239,24 @@ class TestFailClosed:
         assert response.status_code == 409
         assert response.json()["code"] == "ATTACHMENT_NOT_READY"
 
+    def test_read_paths_reject_storage_key_shaped_variants(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        process_attachment(session, attachment_id)
+
+        for response in (
+            client.post(
+                f"{path(couple['space'].id)}/{attachment_id}/read-access",
+                json={"parentType": "NONE", "variant": "../thumbnail"},
+                headers=auth(couple["token_a"]),
+            ),
+            client.get(
+                f"{path(couple['space'].id)}/{attachment_id}/content",
+                params={"variant": "../thumbnail"},
+                headers=auth(couple["token_a"]),
+            ),
+        ):
+            assert response.status_code == 422
+
 
 class TestOwnerBoundary:
     def test_partner_sees_foreign_attachment_not(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
@@ -253,9 +271,18 @@ class TestOwnerBoundary:
                 f"{path(couple['space'].id)}/{attachment_id}/content",
                 headers=auth(couple["token_b"]),
             ),
+            client.get(
+                f"{path(couple['space'].id)}/{attachment_id}/content?variant=thumbnail",
+                headers=auth(couple["token_b"]),
+            ),
             client.post(
                 f"{path(couple['space'].id)}/{attachment_id}/read-access",
                 json={"parentType": "NONE"},
+                headers=auth(couple["token_b"]),
+            ),
+            client.post(
+                f"{path(couple['space'].id)}/{attachment_id}/read-access",
+                json={"parentType": "NONE", "variant": "thumbnail"},
                 headers=auth(couple["token_b"]),
             ),
         ):
@@ -286,17 +313,44 @@ class TestOwnerBoundary:
         )
         assert descriptor.status_code == 200
         assert descriptor.json()["method"] == "STREAM"
+        assert descriptor.json()["url"].endswith(f"/{attachment_id}/content")
 
         content = client.get(descriptor.json()["url"], headers=auth(couple["token_a"]))
         assert content.status_code == 200
         assert content.headers["content-type"].startswith("image/jpeg")
         assert MANUFACTURER.encode() not in content.content
 
-        thumbnail = client.get(
-            f"{path(couple['space'].id)}/{attachment_id}/content?variant=thumbnail",
+        thumbnail_descriptor = client.post(
+            f"{path(couple['space'].id)}/{attachment_id}/read-access",
+            json={"parentType": "NONE", "variant": "thumbnail"},
             headers=auth(couple["token_a"]),
         )
+        assert thumbnail_descriptor.status_code == 200
+        assert thumbnail_descriptor.json()["method"] == "STREAM"
+        assert thumbnail_descriptor.json()["url"].endswith(
+            f"/{attachment_id}/content?variant=thumbnail"
+        )
+
+        thumbnail = client.get(thumbnail_descriptor.json()["url"], headers=auth(couple["token_a"]))
         assert thumbnail.status_code == 200
+        assert thumbnail.headers["content-type"].startswith("image/jpeg")
+
+    def test_thumbnail_read_access_requires_an_available_variant(
+        self, client, couple, session
+    ) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
+        attachment.has_thumbnail = False
+        session.flush()
+
+        response = client.post(
+            f"{path(couple['space'].id)}/{attachment_id}/read-access",
+            json={"parentType": "NONE", "variant": "thumbnail"},
+            headers=auth(couple["token_a"]),
+        )
+
+        assert response.status_code == 404
+        assert response.json()["code"] == "RESOURCE_NOT_FOUND"
 
     def test_parent_reference_grants_no_access(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         "while nothing is bound, there is no parent that grants access."

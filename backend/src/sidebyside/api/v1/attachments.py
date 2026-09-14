@@ -24,6 +24,7 @@ router = APIRouter(tags=["attachments"])
 STREAM_CHUNK = 64 * 1024
 SIGNED_UPLOAD_TTL = timedelta(minutes=10)
 SIGNED_READ_TTL = timedelta(minutes=5)
+ReadVariant = Literal["original", "thumbnail"]
 
 _PUBLIC_STATUS: dict[str, str] = {
     AttachmentStatus.PENDING.value: "PENDING",
@@ -62,6 +63,12 @@ class AttachmentReadRequest(ApiModel):
 
     parent_type: Literal["MEMORY", "HEART_MOMENT", "RELATED_PERSON", "NONE"] = "NONE"
     parent_id: UUID | None = None
+    variant: ReadVariant = Field(
+        default="original",
+        description=(
+            "Server-defined content variant. Request thumbnail only when hasThumbnail is true."
+        ),
+    )
 
     @model_validator(mode="after")
     def _validate_target(self) -> Self:
@@ -135,7 +142,11 @@ def _detail(attachment: Attachment) -> AttachmentDetail:
     )
 
 
-def _content_path(space_id: UUID, attachment_id: UUID) -> str:
+def _content_path(
+    space_id: UUID,
+    attachment_id: UUID,
+    variant: ReadVariant = "original",
+) -> str:
     """Build the Space-scoped streaming path for an attachment.
 
     The caller's authorized Space is used rather than the row's own key: every
@@ -143,7 +154,14 @@ def _content_path(space_id: UUID, attachment_id: UUID) -> str:
     Account-owned profile media has no Space key at all and is never served
     here.
     """
-    return f"/api/v1/spaces/{space_id}/attachments/{attachment_id}/content"
+    path = f"/api/v1/spaces/{space_id}/attachments/{attachment_id}/content"
+    return f"{path}?variant=thumbnail" if variant == "thumbnail" else path
+
+
+def _require_available_variant(attachment: Attachment, variant: ReadVariant) -> None:
+    """Keep derived-media existence private and authoritative on the server."""
+    if variant == "thumbnail" and not attachment.has_thumbnail:
+        raise Attachment.privacy_absence.error()
 
 
 def _no_store(response: Response) -> None:
@@ -307,10 +325,13 @@ def create_attachment_read_access(
         if body.parent_type == "NONE"
         else service.ReadTarget.parent(body.parent_type, body.parent_id),  # type: ignore[arg-type]
     )
+    _require_available_variant(attachment, body.variant)
     _no_store(response)
 
     store = get_media_store()
-    signed_url = store.create_read_url(service.storage_key_for(attachment), SIGNED_READ_TTL)
+    signed_url = store.create_read_url(
+        service.storage_key_for(attachment, body.variant), SIGNED_READ_TTL
+    )
     if signed_url is not None:
         return ReadDescriptor(
             method="SIGNED_URL",
@@ -320,7 +341,7 @@ def create_attachment_read_access(
 
     return ReadDescriptor(
         method="STREAM",
-        url=_content_path(authorization.space_id, attachment.id),
+        url=_content_path(authorization.space_id, attachment.id, body.variant),
     )
 
 
@@ -334,7 +355,7 @@ def get_attachment_content(
     authorization: Authorization,
     session: DbSession,
     attachment_id: Annotated[str, Path(alias="attachmentId")],
-    variant: Literal["original", "thumbnail"] = "original",
+    variant: ReadVariant = "original",
 ) -> StreamingResponse:
     """Authorized streaming route (media pipeline, section 9).
 
@@ -348,8 +369,7 @@ def get_attachment_content(
         attachment_id,
         service.ReadTarget.resolved_by_server(),
     )
-    if variant == "thumbnail" and not attachment.has_thumbnail:
-        raise Attachment.privacy_absence.error()
+    _require_available_variant(attachment, variant)
 
     source = service.open_content(attachment, variant=variant)
     media_type = (
