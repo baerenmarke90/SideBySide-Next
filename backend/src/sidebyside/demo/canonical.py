@@ -57,26 +57,18 @@ in one place therefore cannot leave the other behind.
 
 
 class DemoPersona:
-    """The two canonical demo personas, independent of any presentation data."""
+    """The two canonical demo personas, independent of any presentation data.
+
+    Also the value space the durable marker `sidebyside.demo.models` stores:
+    `display_name` and even the reserved address itself are things a visitor
+    or an operator could, in principle, cause to drift, but the marker is the
+    technical fact create/ensure/reset ultimately trust once it has been
+    established. See `sidebyside.demo.service` for how it is adopted for an
+    already-deployed demo database that predates this marker.
+    """
 
     LEA = "LEA"
     ALEX = "ALEX"
-
-
-RESERVED_PERSONAS: Mapping[str, str] = MappingProxyType(
-    {
-        LEA_EMAIL: DemoPersona.LEA,
-        ALEX_EMAIL: DemoPersona.ALEX,
-    }
-)
-"""Reserved address to the durable persona marker `sidebyside.demo.models` stores.
-
-`display_name` and even the reserved address itself are things a visitor or an
-operator could, in principle, cause to drift; the marker is the technical fact
-create/ensure/reset ultimately trust once it has been established. See
-`sidebyside.demo.service` for how it is adopted for an already-deployed demo
-database that predates this marker.
-"""
 
 
 class DemoIsolationErrorCode:
