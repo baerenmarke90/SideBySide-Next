@@ -406,16 +406,8 @@
   }
 }
 
+/* Converge (SAME): each person starts further out and settles inward, toward the center connector. */
 @keyframes who-of-us-person-in-left {
-  from {
-    transform: translateX(10px);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes who-of-us-person-in-right {
   from {
     transform: translateX(-10px);
   }
@@ -424,9 +416,19 @@
   }
 }
 
+@keyframes who-of-us-person-in-right {
+  from {
+    transform: translateX(10px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Diverge (DIFFERENT): each person starts closer to the center connector and settles outward, apart. */
 @keyframes who-of-us-person-out-left {
   from {
-    transform: translateX(-6px);
+    transform: translateX(6px);
   }
   to {
     transform: translateX(0);
@@ -435,7 +437,7 @@
 
 @keyframes who-of-us-person-out-right {
   from {
-    transform: translateX(6px);
+    transform: translateX(-6px);
   }
   to {
     transform: translateX(0);
