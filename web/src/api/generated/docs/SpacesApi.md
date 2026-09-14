@@ -4,11 +4,73 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**createSpaceApiV1SpacesPost**](SpacesApi.md#createspaceapiv1spacespost) | **POST** /api/v1/spaces | Create the authenticated Account\&#39;s own private Space |
 | [**getSpaceApiV1SpacesSpaceIdGet**](SpacesApi.md#getspaceapiv1spacesspaceidget) | **GET** /api/v1/spaces/{spaceId} | Get Space |
 | [**getSpaceProfileApiV1SpacesSpaceIdProfileGet**](SpacesApi.md#getspaceprofileapiv1spacesspaceidprofileget) | **GET** /api/v1/spaces/{spaceId}/profile | Get Space Profile |
 | [**leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost**](SpacesApi.md#leavespaceapiv1spacesspaceidmembershipleavepost) | **POST** /api/v1/spaces/{spaceId}/membership/leave | Leave the authenticated Account\&#39;s Membership in this Space |
 | [**updateSpaceProfileApiV1SpacesSpaceIdProfilePut**](SpacesApi.md#updatespaceprofileapiv1spacesspaceidprofileput) | **PUT** /api/v1/spaces/{spaceId}/profile | Update Space Profile |
 
+
+
+## createSpaceApiV1SpacesPost
+
+> SpaceView createSpaceApiV1SpacesPost()
+
+Create the authenticated Account\&#39;s own private Space
+
+Create a private couple Space with the caller as its first partner.  The request has no body: the founder is always the authenticated Account. Allowed only while the Account has no active Membership, and serialized per Account, so retries and concurrent requests yield exactly one Space. Invite the partner afterwards through the ordinary invitation endpoints.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  SpacesApi,
+} from '';
+import type { CreateSpaceApiV1SpacesPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new SpacesApi();
+
+  try {
+    const data = await api.createSpaceApiV1SpacesPost();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**SpaceView**](SpaceView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **409** | &#x60;ACCOUNT_HAS_ACTIVE_SPACE&#x60;: the Account already has an active Membership. Nothing was created; select the existing Space through &#x60;GET /auth/memberships&#x60;. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## getSpaceApiV1SpacesSpaceIdGet

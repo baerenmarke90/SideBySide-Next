@@ -875,6 +875,9 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     # registered from an authenticated session.
     ("POST", "/api/v1/auth/passkeys/registration/start"),
     ("POST", "/api/v1/auth/passkeys/registration/finish"),
+    # Founding a Space has no Space yet to be scoped by; the founder is always
+    # the authenticated Account.
+    ("POST", "/api/v1/spaces"),
 )
 """Account-scoped but not space-scoped. Anonymous requests receive 401."""
 
@@ -914,6 +917,8 @@ PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     # use the single-use token delivered by mail as their proof.
     ("POST", "/api/v1/auth/magic-link/request"),
     ("POST", "/api/v1/auth/magic-link/consume"),
+    ("POST", "/api/v1/auth/signup/request"),
+    ("POST", "/api/v1/auth/signup/consume"),
     ("POST", "/api/v1/auth/email/verification/confirm"),
     ("POST", "/api/v1/auth/recovery/request"),
     ("POST", "/api/v1/auth/recovery/consume"),

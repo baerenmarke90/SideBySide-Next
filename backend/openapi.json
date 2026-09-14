@@ -2556,7 +2556,18 @@
         "type": "object"
       },
       "InstanceAccessStatus": {
+        "description": "Public access state.\n\nThree independent questions are answered separately so a client never\nderives one from another:\n\n- ``registrationAvailable``: does the administrator currently admit new\n  Accounts at all (``false`` during maintenance)?\n- ``accountCreation``: through which path can a new Account come into being\n  on this deployment?\n- ``auth``: which methods can an existing Account use to sign in?",
         "properties": {
+          "accountCreation": {
+            "default": "invitation",
+            "description": "Deployment policy for new Accounts. `self_service`: a person proves control of an email address and creates their own Account (Cloud/Managed). `invitation`: a new Account requires an invitation; the first Self-Hosted Account is an operator bootstrap, which is not a client path.",
+            "enum": [
+              "self_service",
+              "invitation"
+            ],
+            "title": "Accountcreation",
+            "type": "string"
+          },
           "auth": {
             "$ref": "#/components/schemas/AuthCapabilities"
           },
@@ -2565,6 +2576,7 @@
             "type": "boolean"
           },
           "registrationAvailable": {
+            "description": "Whether the administrator currently admits new Accounts. It does not say how an Account is created and does not affect sign-in of existing Accounts.",
             "title": "Registrationavailable",
             "type": "boolean"
           },
@@ -2582,6 +2594,12 @@
               }
             ],
             "title": "Registrationunavailablereason"
+          },
+          "selfServiceSignupAvailable": {
+            "default": false,
+            "description": "Whether a client should offer self-service signup right now: `accountCreation` is `self_service` and `registrationAvailable` is true.",
+            "title": "Selfservicesignupavailable",
+            "type": "boolean"
           }
         },
         "required": [
@@ -7286,6 +7304,61 @@
         "title": "SignInRequest",
         "type": "object"
       },
+      "SignupConsumeRequest": {
+        "properties": {
+          "deviceName": {
+            "default": "",
+            "title": "Devicename",
+            "type": "string"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "platform": {
+            "default": "",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "SignupConsumeRequest",
+        "type": "object"
+      },
+      "SignupSessionView": {
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountView"
+          },
+          "accountCreated": {
+            "title": "Accountcreated",
+            "type": "boolean"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/TokenView"
+          }
+        },
+        "required": [
+          "account",
+          "tokens",
+          "accountCreated"
+        ],
+        "title": "SignupSessionView",
+        "type": "object"
+      },
       "SpaceEntitlementView": {
         "description": "Effective commercial entitlement representation for a Space.",
         "properties": {
@@ -9809,6 +9882,143 @@
         ]
       }
     },
+    "/api/v1/auth/signup/consume": {
+      "post": {
+        "description": "Redeem a signup proof into a normal session.\n\nSend the proof in the request body, never in a URL. After a successful\nredemption the client removes it from its address bar and history. A new\nAccount has no Membership: continue with `POST /spaces` or accept an\ninvitation.",
+        "operationId": "consume_signup_api_v1_auth_signup_consume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupSessionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`AUTH_METHOD_DISABLED` on deployments without self-service signup, or `REGISTRATION_DISABLED` when the proof would create a new Account while the administrator does not admit new Accounts. Nothing was created."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`MAINTENANCE_MODE`: no new Account is created during maintenance."
+          }
+        },
+        "summary": "Consume Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup/request": {
+      "post": {
+        "description": "Start Cloud/Managed self-service onboarding with an emailed one-time proof.\n\nOne entry for everyone: the server does the same work for an address with\nand without an Account and always answers with an empty `202`. The mailed\nproof decides on redemption whether it signs into the existing Account or\ncreates one. Rejected with `403 AUTH_METHOD_DISABLED` on deployments without\nself-service signup, including every Self-Hosted instance.",
+        "operationId": "request_signup_api_v1_auth_signup_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "A capability required for this operation is not configured on this instance."
+          }
+        },
+        "summary": "Request Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_api_v1_health_get",
@@ -11425,6 +11635,48 @@
         "summary": "Get Server Admin Storage",
         "tags": [
           "server-admin"
+        ]
+      }
+    },
+    "/api/v1/spaces": {
+      "post": {
+        "description": "Create a private couple Space with the caller as its first partner.\n\nThe request has no body: the founder is always the authenticated Account.\nAllowed only while the Account has no active Membership, and serialized per\nAccount, so retries and concurrent requests yield exactly one Space. Invite\nthe partner afterwards through the ordinary invitation endpoints.",
+        "operationId": "create_space_api_v1_spaces_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "`ACCOUNT_HAS_ACTIVE_SPACE`: the Account already has an active Membership. Nothing was created; select the existing Space through `GET /auth/memberships`."
+          }
+        },
+        "summary": "Create the authenticated Account's own private Space",
+        "tags": [
+          "spaces"
         ]
       }
     },

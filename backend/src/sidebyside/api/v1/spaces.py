@@ -12,7 +12,7 @@ from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path, Response
+from fastapi import APIRouter, Path, Response, status
 from sqlalchemy import select
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
@@ -162,6 +162,38 @@ def _today_for(tenant: TenantContext) -> date:
     west of UTC and one day behind for users east of UTC.
     """
     return today_in(tenant.account.timezone)
+
+
+@router.post(
+    "/spaces",
+    response_model=SpaceView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(
+        401,
+        409,
+        descriptions={
+            409: (
+                "`ACCOUNT_HAS_ACTIVE_SPACE`: the Account already has an active Membership. "
+                "Nothing was created; select the existing Space through `GET /auth/memberships`."
+            )
+        },
+    ),
+    summary="Create the authenticated Account's own private Space",
+)
+def create_space(account: CurrentAccount, session: DbSession) -> SpaceView:
+    """Create a private couple Space with the caller as its first partner.
+
+    The request has no body: the founder is always the authenticated Account.
+    Allowed only while the Account has no active Membership, and serialized per
+    Account, so retries and concurrent requests yield exactly one Space. Invite
+    the partner afterwards through the ordinary invitation endpoints.
+    """
+    space = relationship_service.create_first_space(session, account)
+    return SpaceView(
+        id=space.id,
+        created_at=space.created_at,
+        partners=[PartnerView(id=account.id, display_name=account.display_name or "")],
+    )
 
 
 @router.get(

@@ -323,6 +323,33 @@ class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
     )
 
 
+class SignupProof(IdMixin, OneTimeTokenMixin, Base):
+    """One-time proof of control over an address that may not have an Account yet.
+
+    A ``MagicLinkToken`` is bound to an existing ``AccountEmail`` and therefore
+    cannot represent an address nobody has registered. Cloud self-service
+    onboarding (#923) needs exactly that, so the subject here is the normalized
+    address itself. Consumption decides whether the verified person signs into
+    the Account that owns the address or whether one is created; the request
+    that issued the proof never looks at Account state.
+
+    The address is stored only for the short lifetime of the proof. Security
+    retention deletes expired, consumed, and superseded rows, so this table does
+    not become a second directory of addresses.
+    """
+
+    __tablename__ = "signup_proofs"
+
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_signup_proofs_token_hash"),
+        CheckConstraint("email = lower(email)", name="email_is_lowercase"),
+        Index("ix_signup_proofs_email", "email"),
+        Index("ix_signup_proofs_expires_at", "expires_at"),
+    )
+
+
 class OidcAuthRequest(IdMixin, Base):
     """An initiated OIDC authentication request.
 

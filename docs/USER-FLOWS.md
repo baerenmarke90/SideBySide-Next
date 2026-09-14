@@ -36,12 +36,19 @@ After an error, the last safe input is preserved. The screen explains whether th
 
 **Entry points:** start screen, expired session, protected Deep Link, Invitation.
 
+### Deployment contract
+
+- **Cloud/Managed:** verified self-service Account → own private Space → invite partner. A new couple needs neither an operator bootstrap secret nor an existing Invitation (#923).
+- **Self-Hosted:** operator bootstrap for the first local Account → Invitation for every later Account. There is no invitation-free self-service registration.
+
+Clients decide which entry points to offer from `GET /instance/status`, never from a single field standing in for another: `registrationAvailable` is the administrative state, `accountCreation` (`self_service` or `invitation`) is the deployment path, `selfServiceSignupAvailable` combines both, and `auth` lists the sign-in methods of existing Accounts.
+
 ### Cloud happy path
 
-1. The person enters their email address or selects an existing Passkey.
-2. The UI explains the next step without revealing whether another person's email address is registered.
-3. Magic Link or Passkey is confirmed.
-4. The client receives a secure session; tokens are not copied into URLs, Analytics, or logs.
+1. The person chooses the intentional de-DE entry **„Anmelden“** or **„Gemeinsam starten“**, enters their email address, or selects an existing Passkey.
+2. The UI explains the next step without revealing whether another person's email address is registered. **„Gemeinsam starten“** calls `POST /auth/signup/request`, which does the same work and answers the same empty `202` for known and unknown addresses. **„Anmelden“** keeps using the Magic Link request for existing Accounts.
+3. The mailed one-time link, Magic Link, or Passkey is confirmed. Redeeming the signup link (`POST /auth/signup/consume`) signs into the Account that already owns the verified address, or creates exactly one new Account bound to it; `accountCreated` tells the client which happened.
+4. The client receives a secure session; tokens are not copied into URLs, Analytics, or logs. After redeeming a mailed proof, the client removes it from the address bar and history.
 5. If an active Membership exists, the originally requested Deep Link or the intentional de-DE destination `Wir` opens.
 6. If no Space exists yet, Flow B starts.
 
@@ -50,10 +57,12 @@ After an error, the last safe input is preserved. The screen explains whether th
 - Local password login and OIDC may be offered.
 - Provider and server selection happen before the credential step.
 - Error messages do not unnecessarily distinguish incorrect input from unknown Accounts.
+- Account creation stays operator-controlled: the first local Account requires the one-time bootstrap proof and every later Account an Invitation. The Cloud signup endpoints answer `403 AUTH_METHOD_DISABLED`, even for a genuine proof, and `accountCreation` is `invitation`.
 
 ### Errors and branches
 
-- Expired/used Magic Link: request a new link while preserving destination context.
+- Expired/used/superseded Magic Link or signup link: request a new link while preserving destination context.
+- Registration disabled or maintenance: a signup link for an address without an Account fails with `403 REGISTRATION_DISABLED` or `503 MAINTENANCE_MODE` and creates nothing; it stays usable until it expires. Existing Accounts still sign in with it.
 - Rate Limit: show the waiting time understandably; no repeated automatic submission.
 - Revoked session: close local sensitive caches and sign in again.
 - Offline: existing read cache may be shown only after valid local access protection; never pretend authentication succeeded.
@@ -70,15 +79,15 @@ After an error, the last safe input is preserved. The screen explains whether th
 
 1. After first login, SideBySide explains the private shared Space.
 2. The person confirms profile name and optional basic information.
-3. The Space is created.
-4. An Invitation is created through a deliberately selected channel.
+3. The Space is created with `POST /spaces`. The request has no body: the founder is always the authenticated Account. The server allows it only while that Account has no active Membership and serializes it per Account, so a retry or a concurrent request answers `409 ACCOUNT_HAS_ACTIVE_SPACE` and the client selects the existing Space through `GET /auth/memberships`. Ended relationship history is never reactivated or merged; a new Space is always fresh.
+4. An Invitation is created through a deliberately selected channel with the existing one-time, expiring, revocable Invitation (`POST /spaces/{spaceId}/invitations`).
 5. The UI shows status, expiry, and the intentional de-DE action **„Einladung widerrufen“**.
 6. Until acceptance, the app remains usable wherever the particular feature does not require a partner.
 
 ### Invited person
 
 1. The Invitation link opens app/Web and shows a neutral, non-sensitive preview.
-2. Before acceptance, sign-in or Account creation occurs.
+2. Before acceptance, sign-in or Account creation occurs. On Cloud an unknown person uses the same signup link as in Flow A and then accepts with `POST /invitations/accept`; the client keeps the Invitation token out of URLs and does not create an own Space in between. On Self-Hosted a new Account is created together with the acceptance (local registration with the Invitation, or OIDC started with it). In both modes a disabled registration blocks new Accounts but not existing ones.
 3. The inviting person's name and the effect of the connection are confirmed.
 4. The one-time token is redeemed atomically.
 5. Both clients update Space and Membership state.

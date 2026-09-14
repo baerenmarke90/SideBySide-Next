@@ -76,6 +76,14 @@ class MagicLinkConsumeRequest(ApiModel):
     platform: str = ""
 
 
+class SignupConsumeRequest(ApiModel):
+    token: str
+    display_name: str | None = None
+    """Used only when the proof creates a new Account; ignored for an existing one."""
+    device_name: str = ""
+    platform: str = ""
+
+
 class TokenOnlyRequest(ApiModel):
     token: str
 
@@ -136,6 +144,16 @@ class TokenView(ApiModel):
 class SessionView(ApiModel):
     account: AccountView
     tokens: TokenView
+
+
+class SignupSessionView(SessionView):
+    account_created: bool
+    """True when this redemption created the Account.
+
+    Only the holder of the mailed one-time proof receives this response, so it
+    reveals nothing to someone probing addresses. Clients use it to continue
+    with name confirmation and Space creation instead of guessing.
+    """
 
 
 def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn | passkeys.SignedIn) -> SessionView:
@@ -280,6 +298,72 @@ def consume_magic_link(body: MagicLinkConsumeRequest, session: DbSession) -> Ses
             device_name=body.device_name[:MAX_DEVICE_NAME],
             platform=body.platform,
         )
+    )
+
+
+@router.post(
+    "/auth/signup/request",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_class=Response,
+    responses=problem_responses(403, 422, 429, 503),
+)
+def request_signup(
+    body: EmailRequest, request: Request, session: DbSession, mail: Mail
+) -> Response:
+    """Start Cloud/Managed self-service onboarding with an emailed one-time proof.
+
+    One entry for everyone: the server does the same work for an address with
+    and without an Account and always answers with an empty `202`. The mailed
+    proof decides on redemption whether it signs into the existing Account or
+    creates one. Rejected with `403 AUTH_METHOD_DISABLED` on deployments without
+    self-service signup, including every Self-Hosted instance.
+    """
+    client_host = request.client.host if request.client is not None else None
+    cloud.request_signup(session, email=body.email, mail=mail, client_host=client_host)
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.post(
+    "/auth/signup/consume",
+    response_model=SignupSessionView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(
+        403,
+        422,
+        429,
+        503,
+        descriptions={
+            403: (
+                "`AUTH_METHOD_DISABLED` on deployments without self-service signup, or "
+                "`REGISTRATION_DISABLED` when the proof would create a new Account while the "
+                "administrator does not admit new Accounts. Nothing was created."
+            ),
+            503: "`MAINTENANCE_MODE`: no new Account is created during maintenance.",
+        },
+    ),
+)
+def consume_signup(
+    body: SignupConsumeRequest, request: Request, session: DbSession
+) -> SignupSessionView:
+    """Redeem a signup proof into a normal session.
+
+    Send the proof in the request body, never in a URL. After a successful
+    redemption the client removes it from its address bar and history. A new
+    Account has no Membership: continue with `POST /spaces` or accept an
+    invitation.
+    """
+    client_host = request.client.host if request.client is not None else None
+    result = cloud.consume_signup(
+        session,
+        token=body.token,
+        client_host=client_host,
+        display_name=body.display_name,
+        device_name=body.device_name[:MAX_DEVICE_NAME],
+        platform=body.platform,
+    )
+    view = _view(SignedIn(account=result.account, tokens=result.tokens))
+    return SignupSessionView(
+        account=view.account, tokens=view.tokens, account_created=result.account_created
     )
 
 

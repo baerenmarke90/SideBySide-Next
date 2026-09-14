@@ -20,6 +20,12 @@ EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     # offer this operation. The error occurs while resolving the mail dependency.
     ("/api/v1/auth/magic-link/request", "post"): {422, 429, 503},
     ("/api/v1/auth/magic-link/consume", "post"): {422},
+    # 403: no self-service signup on this deployment, or registration disabled
+    # when the proof would create an Account. 503: no mail transport (request)
+    # or maintenance (consume).
+    ("/api/v1/auth/signup/request", "post"): {403, 422, 429, 503},
+    ("/api/v1/auth/signup/consume", "post"): {403, 422, 429, 503},
+    ("/api/v1/spaces", "post"): {401, 409},
     ("/api/v1/auth/email/verification/request", "post"): {401, 429, 503},
     ("/api/v1/auth/email/verification/confirm", "post"): {422},
     ("/api/v1/auth/recovery/request", "post"): {403, 422, 429, 503},

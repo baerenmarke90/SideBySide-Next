@@ -19,6 +19,9 @@ from sidebyside.identity.models import (
 
 MAX_DISPLAY_NAME = 120
 
+FALLBACK_DISPLAY_NAME = "Partner"
+"""Neutral presentation name for an onboarding path that has no usable name yet."""
+
 
 class AccountErrorCode:
     EMAIL_INVALID = "EMAIL_INVALID"
@@ -146,7 +149,7 @@ def create_oidc_account(
         # An external presentation claim must not make a verified OIDC identity
         # unusable. Invalid provider display data receives the existing neutral
         # fallback and can later be edited through the profile contract.
-        name = "Partner"
+        name = FALLBACK_DISPLAY_NAME
     account = Account(display_name=name)
     session.add(account)
     session.flush()
@@ -167,6 +170,46 @@ def create_oidc_account(
             )
             session.flush()
 
+    return account
+
+
+def create_verified_email_account(
+    session: Session,
+    *,
+    email: str,
+    display_name: str | None = None,
+) -> Account:
+    """Create an Account whose only identity is an already verified address.
+
+    The caller must already have proven control of ``email`` and must have
+    serialized its own decision that no Account owns the address. The unique
+    address constraint stays the final guard: a creation that committed through
+    a different path makes this flush fail instead of producing a second owner.
+
+    A name the person typed is validated like any other display name. When none
+    is supplied, the neutral fallback is used and the person can change it later
+    through the profile contract; the address is never turned into a name,
+    because the name is visible to a future partner.
+    """
+    if display_name is None or not display_name.strip():
+        name = FALLBACK_DISPLAY_NAME
+    else:
+        name = normalize_display_name(display_name)
+    address = validate_email(email)
+
+    account = Account(display_name=name)
+    session.add(account)
+    session.flush()
+
+    session.add(
+        AccountEmail(
+            account_id=account.id,
+            email=address,
+            verified_at=now(),
+            is_primary=True,
+        )
+    )
+    session.flush()
     return account
 
 

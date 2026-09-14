@@ -61,6 +61,10 @@ def test_public_instance_status_defaults_to_available(client) -> None:  # type: 
             "magicLink": True,
             "oidc": False,
         },
+        # The default test deployment is Self-Hosted: new Accounts come from
+        # bootstrap/invitation, never from self-service signup.
+        "accountCreation": "invitation",
+        "selfServiceSignupAvailable": False,
     }
 
 

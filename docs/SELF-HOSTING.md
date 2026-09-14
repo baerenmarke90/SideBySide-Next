@@ -379,6 +379,11 @@ untracked environment.
 The bootstrap token must not enter repository files, screenshots, support requests or
 shell history.
 
+Self-Hosted has no invitation-free self-service registration. The Cloud/Managed signup
+endpoints (`/api/v1/auth/signup/*`) reject every request on a Self-Hosted instance with
+`403 AUTH_METHOD_DISABLED`, also when mail delivery is configured, and
+`/api/v1/instance/status` reports `accountCreation: invitation`.
+
 ## Reverse proxy and public exposure
 
 The TLS reverse proxy is the only public endpoint and routes one public origin:

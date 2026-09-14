@@ -86,6 +86,32 @@ def resolve_auth_capabilities(settings: Settings | None = None) -> AuthCapabilit
     )
 
 
+def self_service_signup_supported(settings: Settings | None = None) -> bool:
+    """Return whether this deployment lets a verified person create their own Account.
+
+    Only Cloud/Managed offers self-service Account creation (#923), and only
+    through a method that proves control of an address before the Account
+    exists, which today is the mailed signup proof. Self-Hosted never does: its
+    first local Account needs the operator bootstrap proof and every later one
+    an invitation.
+
+    This is deployment policy only. Whether the administrator currently admits
+    new Accounts remains the separate registration state, and neither of the two
+    says which sign-in methods an existing Account may use.
+    """
+    if settings is None:
+        settings = config.get_settings()
+    return (
+        settings.deployment is Deployment.CLOUD and resolve_auth_capabilities(settings).magic_link
+    )
+
+
+def ensure_self_service_signup_supported(settings: Settings | None = None) -> None:
+    """Reject self-service onboarding before any address or proof is looked at."""
+    if not self_service_signup_supported(settings):
+        raise AuthMethodDisabledError("Self-service signup is not supported on this deployment.")
+
+
 def get_auth_capabilities() -> AuthCapabilities:
     """FastAPI dependency returning current instance auth capabilities."""
     return resolve_auth_capabilities(config.get_settings())

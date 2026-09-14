@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import (
+    action_tokens,
     oidc,
     passkeys,
     rate_limit,
@@ -113,6 +114,7 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
     recent_grants = recent_auth.prune_grants(session)
     recent_oidc_requests = recent_oidc.prune_requests(session)
     recent_passkey_challenges = recent_passkeys.prune_challenges(session)
+    signup_proofs = action_tokens.prune_signup_proofs(session)
 
     log.info(
         "security retention completed",
@@ -124,6 +126,7 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
             "recent_authentication_grants_removed": recent_grants,
             "recent_authentication_oidc_requests_removed": recent_oidc_requests,
             "recent_authentication_passkey_challenges_removed": recent_passkey_challenges,
+            "signup_proofs_removed": signup_proofs,
         },
     )
 

@@ -1,6 +1,6 @@
-"""Passwordless sign-in, address verification, and account recovery.
+"""Passwordless sign-in, self-service signup, address verification, and recovery.
 
-Three flows that look similar but deliberately remain separate: each has its
+Four flows that look similar but deliberately remain separate: each has its
 own table, lifetime, and endpoint. A token from one cannot be accepted by
 another because that other flow never looks it up.
 
@@ -13,13 +13,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 from urllib.parse import quote
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import action_tokens, passwords, rate_limit, sessions
-from sidebyside.auth.policy import resolve_auth_capabilities
+from sidebyside.administration import service as administration
+from sidebyside.auth import action_tokens, passkey_abuse, passwords, rate_limit, sessions
+from sidebyside.auth.policy import ensure_self_service_signup_supported, resolve_auth_capabilities
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.config import get_settings
 from sidebyside.core.clock import now
@@ -36,12 +39,35 @@ log = logging.getLogger(__name__)
 ACTION_MAGIC_LINK = "magic_link"
 ACTION_EMAIL_VERIFICATION = "email_verification"
 ACTION_RECOVERY = "account_recovery"
+ACTION_SIGNUP_REQUEST = "signup_request"
+ACTION_SIGNUP_NETWORK = "signup_network"
+
+SIGNUP_NETWORK = rate_limit.Limit(attempts=30, window=timedelta(minutes=15))
+"""Per-network budget for anonymous signup requests and redemptions.
+
+The per-address limit alone cannot stop one client from spraying proofs at many
+different addresses, because every address has its own budget. The network key
+is resolved exactly like the passkey start limit, so it inherits the same
+trusted-proxy configuration instead of parsing forwarded headers here.
+"""
 
 
 @dataclass(frozen=True)
 class SignedIn:
     account: Account
     tokens: IssuedTokens
+
+
+@dataclass(frozen=True)
+class SignupCompleted:
+    account: Account
+    tokens: IssuedTokens
+    account_created: bool
+    """Whether this redemption created the Account.
+
+    Only the holder of the mailed proof learns it, and that person controls the
+    address anyway, so it discloses nothing an enumeration attempt could use.
+    """
 
 
 def _link(path: str, token: str) -> str:
@@ -135,6 +161,135 @@ def consume_magic_link(
     _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)
+
+
+def request_signup(
+    session: Session, *, email: str, mail: MailSender, client_host: str | None
+) -> None:
+    """Start Cloud self-service onboarding by mailing a one-time proof.
+
+    The request never looks at Account state. A known and an unknown address
+    take the same path, reserve the same rate-limit slots, issue one proof, and
+    hand one message to the transport, so neither the response nor the work
+    done differs. Whether the proof signs into an existing Account or creates
+    one is decided only when the mailbox owner redeems it.
+
+    The administrative registration state is deliberately not consulted here
+    either: rejecting unknown addresses while registration is disabled would
+    reintroduce exactly the difference this request must not have. Clients read
+    the public instance status instead of offering a dead entry point.
+    """
+    ensure_self_service_signup_supported()
+    address = accounts.validate_email(email)
+
+    network = passkey_abuse.network_key(client_host)
+    rate_limit.check(session, ACTION_SIGNUP_NETWORK, network, SIGNUP_NETWORK)
+    rate_limit.record_attempt(session, ACTION_SIGNUP_NETWORK, network)
+    rate_limit.check(session, ACTION_SIGNUP_REQUEST, address, rate_limit.MAGIC_LINK)
+    rate_limit.record_attempt(session, ACTION_SIGNUP_REQUEST, address)
+
+    _, issued = action_tokens.issue_signup_proof(session, address)
+    _deliver(
+        mail,
+        MailMessage(
+            to=address,
+            subject="Dein Link fuer SideBySide",
+            body=(
+                "Mit diesem Link geht es bei SideBySide weiter:\n\n"
+                f"{_link('auth/signup', issued.token)}\n\n"
+                "Er gilt 15 Minuten und genau einmal.\n\n"
+                "Wenn du ihn nicht angefordert hast, kannst du diese "
+                "Nachricht ignorieren. Ohne den Link passiert nichts."
+            ),
+        ),
+    )
+
+
+def _invalid_proof() -> ValidationError:
+    return ValidationError(
+        "This authentication token is no longer valid.",
+        action_tokens.ActionTokenErrorCode.INVALID,
+    )
+
+
+def _owner_signing_in(session: Session, email_record: AccountEmail) -> Account:
+    """Resolve the Account a verified address belongs to, like a magic link would."""
+    account = session.get(Account, email_record.account_id)
+    if account is None or not account.is_active:
+        raise _invalid_proof()
+    if email_record.verified_at is None:
+        email_record.verified_at = now()
+    return account
+
+
+def _signup_account(
+    session: Session, address: str, display_name: str | None
+) -> tuple[Account, bool]:
+    """Decide between signing in and creating, for an address just proven.
+
+    Every redemption for the address already holds the signup generation lock,
+    so two redemptions cannot both observe "no Account". The remaining window is
+    a different creation path, such as OIDC onboarding with a verified email
+    claim, committing the same address after the lookup. The savepoint turns the
+    resulting unique violation back into a decision: the address now has an
+    owner, and the proof signs into it rather than failing or creating a second
+    Account.
+    """
+    existing = _primary_email(session, address)
+    if existing is not None:
+        return _owner_signing_in(session, existing), False
+
+    # Existing Accounts are not blocked by this check above; only creation is.
+    administration.ensure_new_account_registration_allowed(session)
+    try:
+        with session.begin_nested():
+            account = accounts.create_verified_email_account(
+                session, email=address, display_name=display_name
+            )
+    except IntegrityError:
+        converged = _primary_email(session, address)
+        if converged is None:
+            raise
+        return _owner_signing_in(session, converged), False
+    return account, True
+
+
+def consume_signup(
+    session: Session,
+    *,
+    token: str,
+    client_host: str | None,
+    display_name: str | None = None,
+    device_name: str = "",
+    platform: str = "",
+) -> SignupCompleted:
+    """Redeem a signup proof into a normal session.
+
+    - The address has an active Account: sign into it and mark the address
+      verified, exactly as a magic link does. Registration state is irrelevant.
+    - No Account and new Accounts are admitted: create one bound to the verified
+      address, then sign in.
+    - No Account and registration disabled or maintenance active: fail with the
+      authoritative administration error and create nothing. The transaction
+      rolls back, so the proof stays redeemable once onboarding reopens within
+      its lifetime.
+
+    A consumed, superseded, expired, or unknown proof fails with the ordinary
+    invalid-token response. Membership is not touched: a new Account has none,
+    and Space creation or invitation acceptance are separate authorized steps.
+    """
+    ensure_self_service_signup_supported()
+    network = passkey_abuse.network_key(client_host)
+    rate_limit.check(session, ACTION_SIGNUP_NETWORK, network, SIGNUP_NETWORK)
+    rate_limit.record_attempt(session, ACTION_SIGNUP_NETWORK, network)
+
+    proof = action_tokens.consume_signup_proof(session, token)
+    account, created = _signup_account(session, proof.email, display_name)
+
+    rate_limit.clear(session, ACTION_SIGNUP_REQUEST, proof.email)
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
+    session.flush()
+    return SignupCompleted(account=account, tokens=issued, account_created=created)
 
 
 def request_email_verification(session: Session, account: Account, *, mail: MailSender) -> None:

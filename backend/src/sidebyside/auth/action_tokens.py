@@ -30,10 +30,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, select
+from sqlalchemy import ColumnElement, delete, or_, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
+
+if TYPE_CHECKING:
+    from sqlalchemy import CursorResult
 
 from sidebyside.auth.demo_authority import lock_demo_auth_authority
 from sidebyside.auth.tokens import generate_token, hash_token
@@ -45,6 +49,7 @@ from sidebyside.identity.models import (
     EmailVerificationToken,
     MagicLinkToken,
     OneTimeTokenMixin,
+    SignupProof,
 )
 
 EMAIL_VERIFICATION_LIFETIME = timedelta(hours=24)
@@ -63,9 +68,12 @@ boundary either: it is reserved and released inside its own short security
 transaction before token work begins, so it does not span revoke-then-issue.
 """
 
+SIGNUP_PROOF_LIFETIME = timedelta(minutes=15)
+
 FLOW_EMAIL_VERIFICATION = "email_verification"
 FLOW_MAGIC_LINK = "magic_link"
 FLOW_ACCOUNT_RECOVERY = "account_recovery"
+FLOW_SIGNUP = "signup"
 
 
 class ActionTokenErrorCode:
@@ -81,8 +89,8 @@ class IssuedActionToken:
 def _supersede_open[TokenModel: OneTimeTokenMixin](
     session: Session,
     model_type: type[TokenModel],
-    subject_column: InstrumentedAttribute[UUID],
-    subject_id: UUID,
+    subject_column: InstrumentedAttribute[UUID] | InstrumentedAttribute[str],
+    subject_id: UUID | str,
     *,
     flow: str,
     extra_where: Sequence[ColumnElement[bool]] = (),
@@ -232,7 +240,7 @@ def _consume[TokenModel: OneTimeTokenMixin](
     model_type: type[TokenModel],
     token: str,
     *,
-    subject_column: InstrumentedAttribute[UUID],
+    subject_column: InstrumentedAttribute[UUID] | InstrumentedAttribute[str],
     flow: str,
 ) -> TokenModel:
     """Redeem a token exactly once, ordered against a competing reissue.
@@ -332,6 +340,70 @@ def consume_account_recovery(session: Session, token: str) -> AccountRecoveryTok
         subject_column=AccountRecoveryToken.account_id,
         flow=FLOW_ACCOUNT_RECOVERY,
     )
+
+
+def issue_signup_proof(session: Session, email: str) -> tuple[SignupProof, IssuedActionToken]:
+    """Issue a Cloud signup proof, superseding older open proofs for the address.
+
+    The subject is the normalized address rather than an AccountEmail, because
+    the address may not belong to any Account yet. The same generation lock
+    therefore also serializes every consumption for that address, which is
+    what keeps two redemptions from both deciding that no Account exists.
+    """
+    issued_at = _supersede_open(
+        session,
+        SignupProof,
+        SignupProof.email,
+        email,
+        flow=FLOW_SIGNUP,
+    )
+    token = generate_token(ACTION_TOKEN_BYTES)
+    model = SignupProof(
+        email=email,
+        token_hash=hash_token(token),
+        expires_at=issued_at + SIGNUP_PROOF_LIFETIME,
+    )
+    session.add(model)
+    session.flush()
+    return model, IssuedActionToken(token)
+
+
+def consume_signup_proof(session: Session, token: str) -> SignupProof:
+    """Redeem a signup proof once; the generation lock stays held until commit.
+
+    Callers decide about Account creation after this returns and inside the same
+    transaction, so that decision is serialized per address as well.
+    """
+    return _consume(
+        session,
+        SignupProof,
+        token,
+        subject_column=SignupProof.email,
+        flow=FLOW_SIGNUP,
+    )
+
+
+def prune_signup_proofs(session: Session) -> int:
+    """Delete signup proofs that can no longer be redeemed.
+
+    Unlike Account-bound tokens, a signup proof carries a plain address that may
+    never become an Account. Keeping spent rows would retain that address
+    without purpose. Deleting them does not reopen anything: redemption looks
+    the hash up and rejects a missing row exactly like a consumed one.
+    """
+    result = cast(
+        "CursorResult[Any]",
+        session.execute(
+            delete(SignupProof).where(
+                or_(
+                    SignupProof.expires_at < now(),
+                    SignupProof.consumed_at.is_not(None),
+                    SignupProof.revoked_at.is_not(None),
+                )
+            )
+        ),
+    )
+    return int(result.rowcount or 0)
 
 
 def revoke(session: Session, model: OneTimeTokenMixin) -> None:

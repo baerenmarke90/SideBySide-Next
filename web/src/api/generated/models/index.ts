@@ -208,6 +208,8 @@ export * from './SharedHeartMomentSummary';
 export * from './SidebysideApiV1AuthOidcCallbackRequest';
 export * from './SidebysideApiV1RecentAuthenticationOidcCallbackRequest';
 export * from './SignInRequest';
+export * from './SignupConsumeRequest';
+export * from './SignupSessionView';
 export * from './SpaceEntitlementView';
 export * from './SpaceMembershipExitView';
 export * from './SpaceProfileUpdate';

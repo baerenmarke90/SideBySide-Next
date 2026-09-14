@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, NotFoundError
+from sidebyside.db.locks import lock_subject
 from sidebyside.identity.models import Account
 from sidebyside.relationship import policy
 from sidebyside.relationship.models import (
@@ -28,12 +29,20 @@ from sidebyside.relationship.models import (
     SpaceProfile,
 )
 
+FOUNDER_SPACE_LOCK = "founder_space"
+"""Namespace serializing first-Space creation for one founding Account.
+
+"This Account has no active Membership" is decided on rows that do not exist
+yet, so a row lock cannot close the window between that check and the insert.
+"""
+
 
 class SpaceErrorCode:
     NOT_FOUND = "SPACE_NOT_FOUND"
     FULL = "SPACE_FULL"
     ALREADY_MEMBER = "ACCOUNT_ALREADY_MEMBER"
     RELATIONSHIP_ENDED = "SPACE_RELATIONSHIP_ENDED"
+    ACTIVE_SPACE_EXISTS = "ACCOUNT_HAS_ACTIVE_SPACE"
 
 
 def require_membership(session: Session, account: Account, space_id: UUID) -> Membership:
@@ -98,6 +107,39 @@ def create_space(session: Session, founder: Account) -> Space:
     session.flush()
     _ensure_partner_profile(session, space.id, founder.id)
     return space
+
+
+def create_first_space(session: Session, founder: Account) -> Space:
+    """Create a private Space for an Account that has no active Membership.
+
+    This is the self-service entry into Flow B (#923). The founder is always the
+    authenticated caller; there is no way to name another Account.
+
+    The advisory lock is taken before the Membership read, so concurrent or
+    retried requests for the same Account are ordered: the first creates the
+    Space and every later one observes its committed Membership and is
+    rejected, never silently given a second Space. An Account that already
+    has an active Membership uses ordinary Space selection instead.
+
+    Ended relationship history is not consulted and never reused: a new Space
+    is always a fresh Space, so former Memberships are neither reactivated nor
+    merged.
+    """
+    lock_subject(session, FOUNDER_SPACE_LOCK, str(founder.id))
+    active = session.execute(
+        select(Membership.id)
+        .where(
+            Membership.account_id == founder.id,
+            Membership.status == MembershipStatus.ACTIVE.value,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    if active is not None:
+        raise ConflictError(
+            "This Account already has an active Space.",
+            SpaceErrorCode.ACTIVE_SPACE_EXISTS,
+        )
+    return create_space(session, founder)
 
 
 def active_memberships(session: Session, space_id: UUID) -> Sequence[Membership]:

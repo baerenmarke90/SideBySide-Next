@@ -30,12 +30,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * Public access state.  Three independent questions are answered separately so a client never derives one from another:  - ``registrationAvailable``: does the administrator currently admit new   Accounts at all (``false`` during maintenance)? - ``accountCreation``: through which path can a new Account come into being   on this deployment? - ``auth``: which methods can an existing Account use to sign in?
  *
  * @param maintenanceMode 
- * @param registrationAvailable 
+ * @param registrationAvailable Whether the administrator currently admits new Accounts. It does not say how an Account is created and does not affect sign-in of existing Accounts.
  * @param registrationUnavailableReason 
+ * @param accountCreation Deployment policy for new Accounts. `self_service`: a person proves control of an email address and creates their own Account (Cloud/Managed). `invitation`: a new Account requires an invitation; the first Self-Hosted Account is an operator bootstrap, which is not a client path.
  * @param auth 
+ * @param selfServiceSignupAvailable Whether a client should offer self-service signup right now: `accountCreation` is `self_service` and `registrationAvailable` is true.
  */
 @Serializable
 
@@ -44,14 +46,23 @@ data class InstanceAccessStatus (
     @SerialName(value = "maintenanceMode")
     val maintenanceMode: kotlin.Boolean,
 
+    /* Whether the administrator currently admits new Accounts. It does not say how an Account is created and does not affect sign-in of existing Accounts. */
     @SerialName(value = "registrationAvailable")
     val registrationAvailable: kotlin.Boolean,
 
     @SerialName(value = "registrationUnavailableReason")
     val registrationUnavailableReason: InstanceAccessStatus.RegistrationUnavailableReason?,
 
+    /* Deployment policy for new Accounts. `self_service`: a person proves control of an email address and creates their own Account (Cloud/Managed). `invitation`: a new Account requires an invitation; the first Self-Hosted Account is an operator bootstrap, which is not a client path. */
+    @SerialName(value = "accountCreation")
+    val accountCreation: InstanceAccessStatus.AccountCreation? = AccountCreation.invitation,
+
     @SerialName(value = "auth")
-    val auth: AuthCapabilities? = null
+    val auth: AuthCapabilities? = null,
+
+    /* Whether a client should offer self-service signup right now: `accountCreation` is `self_service` and `registrationAvailable` is true. */
+    @SerialName(value = "selfServiceSignupAvailable")
+    val selfServiceSignupAvailable: kotlin.Boolean? = false
 
 ) {
 
@@ -64,6 +75,16 @@ data class InstanceAccessStatus (
     enum class RegistrationUnavailableReason(val value: kotlin.String) {
         @SerialName(value = "maintenance") maintenance("maintenance"),
         @SerialName(value = "administrator") administrator("administrator");
+    }
+    /**
+     * Deployment policy for new Accounts. `self_service`: a person proves control of an email address and creates their own Account (Cloud/Managed). `invitation`: a new Account requires an invitation; the first Self-Hosted Account is an operator bootstrap, which is not a client path.
+     *
+     * Values: self_service,invitation
+     */
+    @Serializable
+    enum class AccountCreation(val value: kotlin.String) {
+        @SerialName(value = "self_service") self_service("self_service"),
+        @SerialName(value = "invitation") invitation("invitation");
     }
 
 }

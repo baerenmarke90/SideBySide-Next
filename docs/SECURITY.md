@@ -141,6 +141,23 @@ and `/api/v1/auth/capabilities`) reflect this policy to official clients, but
 the server remains authoritative. This enforces the security boundary tracked by
 Issue **#710**.
 
+### How a new Account comes into being
+
+Sign-in methods and Account creation are separate policies. A method being
+available for existing Accounts never implies that it may create Accounts.
+
+| Deployment mode | New Account |
+|---|---|
+| Managed/Cloud | Self-service: a mailed signup proof (`/auth/signup/request`, `/auth/signup/consume`) proves control of the address first (#923). Requires configured mail transport. Local registration is disabled; Passkey never creates an Account; OIDC creates one only when started with an Invitation. |
+| Self-Hosted | First local Account only with the one-time bootstrap proof; every later Account only with an Invitation. The signup endpoints reject every request with `403 AUTH_METHOD_DISABLED`, before reading the address or the proof. |
+
+`/api/v1/instance/status` keeps these questions apart: `registrationAvailable` is
+whether the administrator admits new Accounts right now (false in maintenance),
+`accountCreation` is the deployment path (`self_service` or `invitation`), and
+`selfServiceSignupAvailable` is their combination. The administrative state
+blocks only creation: existing Accounts keep signing in through the methods in
+`auth`.
+
 For OIDC, the external account is identified exclusively by `(issuer,
 subject)`. A freely configurable `connection_id` selects the adapter; Pocket ID
 is therefore a normal OIDC connection, not a special case. A new identity may
@@ -282,17 +299,18 @@ because the other flow never searches for it. OIDC, WebAuthn, Magic Link,
 email verification, and Recovery have production adapters/API flows; every
 successful authentication method converges on the same `DeviceSession` output.
 
-### The three mail flows
+### The four mail flows
 
 | Flow | Endpoints | Lifetime |
 |---|---|---|
 | Magic Link | `/auth/magic-link/request`, `/auth/magic-link/consume` | 15 minutes |
+| Signup proof (Cloud only) | `/auth/signup/request`, `/auth/signup/consume` | 15 minutes |
 | Email verification | `/auth/email/verification/request` (authenticated), `/auth/email/verification/confirm` | 24 hours |
 | Account Recovery | `/auth/recovery/request`, `/auth/recovery/consume` | 30 minutes |
 
 **No account-existence disclosure when mail delivery is available.** The
-unauthenticated Magic Link and Recovery request endpoints return `202` with an
-empty body for a known address exactly as for an unknown one. Rate limiting
+unauthenticated Magic Link, signup, and Recovery request endpoints return `202`
+with an empty body for a known address exactly as for an unknown one. Rate limiting
 applies identically to both; otherwise the behavior difference would itself
 disclose existence. A mail-server delivery failure is logged without message
 content and does not change the response.
@@ -302,10 +320,12 @@ dependency before address lookup, token issuance, or rate-limit reservation.
 They therefore do not create undeliverable proofs and do not turn the disabled
 mail capability into an account-existence oracle.
 
-A residual timing difference remains when mail delivery is enabled: a mail is
-handed off for a known address but not for an unknown one. This is accepted
-because the endpoints are rate limited; equalizing it would require deliberately
-delaying delivery.
+A residual timing difference remains for Magic Link and Recovery when mail
+delivery is enabled: a mail is handed off for a known address but not for an
+unknown one. This is accepted because the endpoints are rate limited; equalizing
+it would require deliberately delaying delivery. The signup request does not have
+this difference: it never looks up an Account and issues and mails one proof for
+every valid address.
 
 **Normative invariant — only the most recently requested link is valid.** A new
 request invalidates every older still-open link for the same flow, so valid
@@ -394,6 +414,62 @@ The first Self-Hosted account requires a one-time secret bootstrap proof.
 PostgreSQL serializes competing first registrations; after the first success,
 bootstrap remains permanently closed and every subsequent registration
 requires an invitation. The secret value is neither persisted nor logged.
+
+### Cloud self-service signup proof
+
+A Magic Link is bound to an existing `AccountEmail`, so it cannot represent an
+address without an Account. Cloud onboarding (#923) therefore uses its own
+`SignupProof` table, whose subject is the normalized address. It shares the
+action-token rules above: 32 random bytes, SHA-256 hash only, 15 minutes,
+single use, and one live generation per address.
+
+**Request.** `POST /auth/signup/request` checks the deployment policy, validates
+the address format, reserves a per-address slot (the Magic Link budget) and a
+per-network slot (30 per 15 minutes, keyed like the passkey start limit), issues
+a proof, and mails a link built from `SBS_PUBLIC_BASE_URL`. It reads neither
+Accounts nor the registration state, so a known and an unknown address produce
+the same response and the same work.
+
+**Redemption.** `POST /auth/signup/consume` takes the proof in the body, reserves
+the same per-network slot, and redeems the proof under the generation lock for
+its address, which stays held until commit:
+
+| State at redemption | Result |
+|---|---|
+| Active Account owns the address | Session for that Account; address marked verified; `accountCreated=false` |
+| Account owns the address but is disabled | `422 ACTION_TOKEN_INVALID` |
+| No Account, registration admitted | One Account with the verified address, session; `accountCreated=true` |
+| No Account, registration disabled | `403 REGISTRATION_DISABLED`, nothing created |
+| No Account, maintenance | `503 MAINTENANCE_MODE`, nothing created |
+| Consumed, superseded, expired, or unknown proof | `422 ACTION_TOKEN_INVALID` |
+
+A rejected redemption rolls back, including the consumption itself, so the proof
+stays usable until it expires. Redemption never touches Memberships.
+
+**Duplicate Accounts cannot arise.** Every redemption for one address waits for
+the same generation lock, so two of them cannot both observe "no Account". A
+different creation path committing the same address after the lookup (for
+example OIDC onboarding with a verified email claim) makes the insert violate the
+unique address constraint inside a savepoint; redemption then re-reads the
+address and signs into the committed owner. An Account that appears between
+request and redemption is signed into the same way.
+
+**Retention.** Security retention deletes expired, consumed, and superseded
+signup proofs, so addresses that never became Accounts are not kept beyond the
+proof lifetime. Deleting a row does not reopen it: a missing hash is rejected
+like a consumed one.
+
+**First Space.** `POST /spaces` creates a Space only for the authenticated
+Account and only while it has no active Membership. A PostgreSQL advisory lock
+per Account is taken before the Membership read, so concurrent or retried
+requests produce exactly one Space and `409 ACCOUNT_HAS_ACTIVE_SPACE` otherwise.
+Ended relationship history is not reused. The partner joins through the ordinary
+Invitation, with its unchanged one-time, expiry, revocation, and two-partner rules.
+
+**ServerAdmin.** The `SBS_SERVER_ADMIN_EMAILS` allowlist still matches only
+verified addresses. A signup proof verifies the address it was mailed to, so the
+mailbox owner of an allowlisted address becomes ServerAdmin exactly as through a
+Magic Link; no bootstrap secret is involved on Cloud.
 
 ### Refresh-token family
 
@@ -611,6 +687,9 @@ test is created.
 | Each action-token flow keeps at most one live generation per subject under concurrent requests, repeated requests, and consume-versus-reissue | `test_action_token_generation.py` |
 | Two concurrent invitation acceptances cannot grow a Space beyond two partners | `test_invitations.py::TestRace` |
 | Concurrent bootstrap creates exactly one initial owner | `test_auth_flows.py::test_paralleler_bootstrap_hat_exactly_a_owner` |
+| The Cloud signup request is identical for known and unknown addresses; one proof creates at most one Account under replay, concurrency, and a creation race with another path | `test_cloud_self_service_onboarding.py::TestEnumerationNeutrality`, `::TestProofLifecycle`, `::TestExistingCloudUser`, `::TestProductionTransactions` |
+| Concurrent first-Space requests for one Account create exactly one Space | `test_cloud_self_service_onboarding.py::TestProductionTransactions::test_concurrent_first_space_requests_create_exactly_one_space` |
+| Cloud self-service signup cannot bypass Self-Hosted bootstrap and invitation rules | `test_cloud_self_service_onboarding.py::TestDeploymentIsolation` |
 | Security-relevant integration tests actually run in CI and are not silently skipped | CI step **Integration tests actually ran** |
 | The production Web server serves exactly the restrictive CSP; arbitrary origins fail before startup | `web/scripts/check_csp_header.sh`, `web/scripts/test_csp_config.sh`, CI step **CSP origins are narrowly and fail-closed configurable** |
 
@@ -638,8 +717,8 @@ delete.
 Allowed: `request_id`, `account_id`, `space_id`, route, duration, status, error
 code.
 
-Never logged: passwords; Bearer, refresh, Magic Link, verification, or Recovery
-tokens; OIDC tokens; WebAuthn challenges; contents of Memories, HeartMoments,
+Never logged: passwords; Bearer, refresh, Magic Link, signup, verification, or
+Recovery tokens; OIDC tokens; WebAuthn challenges; contents of Memories, HeartMoments,
 answers, private notes, and gift ideas; sensitive preference values; precise
 locations. Error tracking is sanitized in the same way.
 
