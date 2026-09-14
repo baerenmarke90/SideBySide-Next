@@ -9,6 +9,8 @@ import pytest
 from sidebyside.api.v1 import demo as demo_api
 from sidebyside.config import Environment, Settings
 from sidebyside.demo.service import LEA_NAME, create_demo_space
+from sidebyside.identity import service as identity_service
+from sidebyside.identity.models import Account
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -77,6 +79,32 @@ def test_demo_entry_issues_one_time_proof_for_selected_persona(
         json={"token": token, "deviceName": "Demo test", "platform": "web"},
     )
     assert repeated.status_code == 422
+
+
+def test_demo_entry_still_succeeds_after_a_renamed_persona(
+    client,
+    session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # type: ignore[no-untyped-def]
+    """#633: a changed display name alone must never hide the entry persona.
+
+    The entry endpoint used to require an exact display-name match, so a
+    visitor who renamed Lea (or any pre-existing drift) would lock the
+    persona out of its own public entry point.
+    """
+    result = _seed(session)
+    lea = session.get(Account, result.lea_id)
+    assert lea is not None
+    identity_service.update_display_name(session, lea, "Renamed durch Besucher")
+    monkeypatch.setattr(
+        demo_api,
+        "get_settings",
+        lambda: Settings.model_validate({"demo_mode": True}),
+    )
+
+    entry = client.post("/api/v1/demo/entry", json={"persona": "LEA"})
+
+    assert entry.status_code == 200, entry.text
 
 
 def test_demo_entry_reuses_normalized_network_rate_limit_key(

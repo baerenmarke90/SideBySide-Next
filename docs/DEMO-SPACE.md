@@ -186,24 +186,49 @@ uv run python -m scripts.demo_space reset --reference-date 2026-08-24
 The reset refuses ambiguous/partial reserved-account state, a demo Account in another active Space,
 or unsafe media cleanup. It never accepts an arbitrary Space ID.
 
+## Canonical technical identity
+
+`display_name` is ordinary mutable presentation data. A visitor is explicitly allowed to change it,
+and create/ensure/reset must not depend on it to recognize a canonical demo Account -- an edited
+name must never make `demo-init` fail (#633).
+
+Each reserved persona is instead recognized by a durable technical marker, `DemoCanonicalIdentity`
+(`sidebyside.demo.models`, table `demo_canonical_identities`): a small registry stating which
+Account currently plays the `LEA` or `ALEX` persona, independent of any presentation field. Resolving
+a persona for create/ensure/reset checks, in order:
+
+1. the reserved, non-deliverable `.invalid` address belongs to the Account;
+2. the durable marker for that persona, if one already exists, points at the same Account.
+
+If no marker exists yet for a persona whose reserved address already resolves to a verified Account,
+that Account is adopted: the marker is created pointing at it. This is what makes an already-running
+demo database safe to upgrade -- see "Existing deployments" below. If a marker already exists and
+points at a *different* Account than the one the reserved address resolves to, the operation is
+refused; the same happens if only one of the two reserved accounts exists, or if the reserved
+accounts do not share exactly one active Space. None of these fail-closed checks are weakened by the
+marker: they refuse rather than guess which Account was meant, exactly as before.
+
+A successful reset additionally restores the canonical presentation state it owns: both personas'
+display names are set back to `Lea Sommer` / `Alex Winter` regardless of what a visitor changed them
+to. Account IDs never change as part of this. `ensure` (the idempotent create path Compose's
+`demo-init` calls) does not itself restore the display name -- it recognizes and returns the existing
+Space without touching it -- but it no longer fails because of one either; the next reset puts it
+back.
+
 ## What a visitor may change
 
-The reset resolves the two reserved Accounts by their reserved address and then refuses to run
-unless each still carries its canonical display name. That name is therefore the one thing a
-visitor could change that the reset cannot rebuild, and a single ordinary profile edit would
-otherwise break every later reset for everybody.
+Everything the reset replaces stays editable: the Space and all of its product data, and the
+profile avatar, whose attachment lives in that Space and is purged with it.
 
-`sidebyside.demo.canonical` protects exactly that. In a demo deployment
+Between resets, `sidebyside.demo.canonical` additionally protects a persona's display name from an
+ordinary visitor mutation while the demo is live, so a persona is not visibly mislabeled to other
+visitors before the next reset runs -- not because the reset depends on it. In a demo deployment
 (`SBS_ENVIRONMENT=demo` or `SBS_DEMO_MODE=true`), a request that would change the Account-global
 display name of a reserved persona is refused with `403 DEMO_CANONICAL_IDENTITY_IMMUTABLE`.
 Recognition follows the reserved address rather than the current name, so the guard still applies
 to an identity that has already drifted. Setting the name to the value it already has is not a
-mutation and stays accepted.
-
-Everything the reset replaces stays editable: the Space and all of its product data, and the
-profile avatar, whose attachment lives in that Space and is purged with it. The Web UI hiding a
-control is not part of this boundary; a visitor holds an ordinary bearer token and the refusal is
-made server-side.
+mutation and stays accepted. The Web UI hiding a control is not part of this boundary; a visitor
+holds an ordinary bearer token and the refusal is made server-side.
 
 Two Account-global operations were already blocked for every Account in a demo deployment and stay
 that way, deliberately broader than the reserved-identity guard: self-service Account deletion
@@ -218,9 +243,18 @@ requires the current password, which the public demo never issues, and recovery 
 delivered to a deliberately non-deliverable `.invalid` address. There is no self-service endpoint
 that changes an Account's email address.
 
-The guard does not replace the reset's own validation. An operator or a direct database edit can
-still produce a drifted identity, and the reset keeps failing closed on it rather than guessing
-which Account was meant.
+## Existing deployments
+
+A demo database created before #633 has no `demo_canonical_identities` rows yet. The next
+`ensure`/`create`/`reset` on it adopts the two already-verified reserved-address Accounts
+automatically, as described above, with no manual SQL required and no change to their Account IDs.
+Nothing about that adoption is skipped for an Account whose display name had already drifted --
+that is exactly the case it exists to repair.
+
+An operator who directly edited the database into a genuinely ambiguous state -- for example
+binding the marker to an Account other than the one the reserved address resolves to -- still needs
+to resolve that by hand. Create/ensure/reset refuse to guess in that case, the same as they always
+refused a partial or ambiguous reserved-account state before #633.
 
 ## Automatic reset timer
 

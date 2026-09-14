@@ -18,9 +18,10 @@ a visitor holds an ordinary bearer token and can call the API directly; UI
 visibility is a representation of a server decision, never the decision
 itself.
 
-This module deliberately depends only on configuration and the identity models.
-The services that must not corrupt a reserved identity can therefore import it
-without importing the demo seeding service that imports them.
+This module deliberately depends only on configuration, the identity models,
+and the lightweight demo identity-marker model. The services that must not
+corrupt a reserved identity, and the public demo-entry endpoint, can therefore
+import it without importing the demo seeding service that imports them.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.config import Environment, get_settings
 from sidebyside.core.errors import ForbiddenError
+from sidebyside.demo.models import DemoCanonicalIdentity
 from sidebyside.identity.models import Account, AccountEmail
 
 LEA_EMAIL = "demo-lea@sidebyside.invalid"
@@ -115,6 +117,34 @@ def is_canonical_reserved_account(session: Session, account: Account) -> bool:
             )
         ).scalar_one()
     )
+
+
+def resolve_canonical_account(session: Session, *, persona: str) -> Account | None:
+    """Resolve the Account currently recognized as ``persona``, or ``None``.
+
+    Recognition requires both the reserved address and the durable marker to
+    agree; a reserved address that exists without a matching marker is not
+    (yet) a verified canonical demo Account from this function's point of
+    view. This performs no write and never adopts a missing marker --
+    create/ensure/reset own that (`sidebyside.demo.service`), and a demo
+    deployment always runs `ensure` once at startup before serving requests,
+    so a public caller such as the demo-entry endpoint never needs to.
+
+    `display_name` plays no part here, so a visitor who renamed a persona can
+    still enter as it (#633).
+    """
+    email = LEA_EMAIL if persona == DemoPersona.LEA else ALEX_EMAIL
+    account = session.execute(
+        select(Account)
+        .join(AccountEmail, AccountEmail.account_id == Account.id)
+        .where(AccountEmail.email == email)
+    ).scalar_one_or_none()
+    if account is None:
+        return None
+    marker = session.get(DemoCanonicalIdentity, persona)
+    if marker is None or marker.account_id != account.id:
+        return None
+    return account
 
 
 def ensure_account_identity_mutable(session: Session, account: Account) -> None:
