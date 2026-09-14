@@ -38,7 +38,9 @@ from sidebyside.demo.canonical import (
     LEA_EMAIL,
     LEA_NAME,
     RESERVED_IDENTITIES,
+    DemoPersona,
 )
+from sidebyside.demo.models import DemoCanonicalIdentity
 from sidebyside.demo.story import CHAPTERS, MEMORIES
 from sidebyside.engagement import service as engagement_service
 from sidebyside.gift_ideas import service as gift_idea_service
@@ -130,33 +132,85 @@ def _active_space_ids(session: Session, account: Account) -> set[UUID]:
     )
 
 
-def _validate_demo_account(account: Account, *, expected_name: str, email: str) -> None:
-    if account.display_name != expected_name:
-        raise RuntimeError(f"Refusing demo operation: {email} exists with a non-demo display name.")
+def _claim_or_verify_marker(
+    session: Session, account: Account, *, persona: str, email: str
+) -> None:
+    """Bind ``account`` to ``persona`` in the durable marker registry.
+
+    A fresh deployment never reaches the adoption branch below:
+    :func:`_create_accounts` inserts the marker immediately at creation. This
+    exists for an already-deployed demo database from before the marker
+    existed (#633). Owning the reserved, non-deliverable ``.invalid`` address
+    is what already made this Account trustworthy as the persona --
+    ``_existing_accounts`` only reaches this Account by that address in the
+    first place -- so claiming the still-empty marker for it is not a guess,
+    and it makes every later resolution direct instead of repeating the
+    adoption.
+
+    Fail-closed stays intact: a marker already bound to a *different* Account
+    is never silently reassigned or ignored, and an Account that already
+    carries a *different* persona's marker is never adopted into this one.
+    """
+    existing = session.get(DemoCanonicalIdentity, persona)
+    if existing is None:
+        conflicting = session.execute(
+            select(DemoCanonicalIdentity).where(DemoCanonicalIdentity.account_id == account.id)
+        ).scalar_one_or_none()
+        if conflicting is not None:
+            raise RuntimeError(
+                f"Refusing demo operation: {email} already carries the "
+                f"{conflicting.persona} demo identity marker."
+            )
+        session.add(DemoCanonicalIdentity(persona=persona, account_id=account.id))
+        session.flush()
+        return
+    if existing.account_id != account.id:
+        raise RuntimeError(
+            f"Refusing demo operation: {email} does not resolve to the expected "
+            "demo identity marker."
+        )
+
+
+def _resolve_reserved_account(session: Session, *, persona: str, email: str) -> Account | None:
+    account = identity_service.find_by_email(session, email)
+    if account is None:
+        return None
+    _claim_or_verify_marker(session, account, persona=persona, email=email)
+    return account
 
 
 def _existing_accounts(session: Session) -> tuple[Account | None, Account | None]:
-    """Resolve the reserved accounts, refusing to proceed on a drifted identity.
+    """Resolve the reserved accounts by their durable technical identity.
 
-    This stays fail-closed even though ``demo.canonical`` now prevents a
-    visitor from causing the drift. An operator or a direct database edit can
-    still produce it, and a reset that guessed which Account was meant would be
-    exactly the wrong response to that.
+    ``display_name`` is ordinary mutable presentation data a visitor is
+    explicitly allowed to change (#633); it plays no part in this resolution.
+    This stays fail-closed even though ``demo.canonical`` already prevents a
+    visitor from renaming a persona through the profile API: an operator or a
+    direct database edit could still bind the reserved address or the marker
+    to an unexpected Account, and a reset that guessed which Account was meant
+    would be exactly the wrong response to that.
     """
-    lea = identity_service.find_by_email(session, LEA_EMAIL)
-    alex = identity_service.find_by_email(session, ALEX_EMAIL)
-    if lea is not None:
-        _validate_demo_account(lea, expected_name=RESERVED_IDENTITIES[LEA_EMAIL], email=LEA_EMAIL)
-    if alex is not None:
-        _validate_demo_account(
-            alex, expected_name=RESERVED_IDENTITIES[ALEX_EMAIL], email=ALEX_EMAIL
-        )
+    lea = _resolve_reserved_account(session, persona=DemoPersona.LEA, email=LEA_EMAIL)
+    alex = _resolve_reserved_account(session, persona=DemoPersona.ALEX, email=ALEX_EMAIL)
     if (lea is None) != (alex is None):
         raise RuntimeError(
             "Refusing demo operation: only one reserved demo account exists. "
             "Resolve the partial state explicitly before retrying."
         )
     return lea, alex
+
+
+def _restore_canonical_presentation(session: Session, lea: Account, alex: Account) -> None:
+    """Restore the mutable presentation state reset owns (#633).
+
+    The durable identity marker means create/ensure/reset no longer depend on
+    ``display_name`` to recognize a persona, but a visitor can still have
+    changed it; a successful reset is what puts it back.
+    """
+    if lea.display_name != RESERVED_IDENTITIES[LEA_EMAIL]:
+        identity_service.update_display_name(session, lea, RESERVED_IDENTITIES[LEA_EMAIL])
+    if alex.display_name != RESERVED_IDENTITIES[ALEX_EMAIL]:
+        identity_service.update_display_name(session, alex, RESERVED_IDENTITIES[ALEX_EMAIL])
 
 
 def _shared_demo_space(
@@ -215,6 +269,9 @@ def _create_accounts(
         email=ALEX_EMAIL,
         password_hash=passwords.hash_password(alex_password),
     )
+    session.add(DemoCanonicalIdentity(persona=DemoPersona.LEA, account_id=lea.id))
+    session.add(DemoCanonicalIdentity(persona=DemoPersona.ALEX, account_id=alex.id))
+    session.flush()
     return lea, alex
 
 
@@ -969,6 +1026,7 @@ def reset_demo_space(
     space = _shared_demo_space(session, lea, alex, required=True)
     assert space is not None
 
+    _restore_canonical_presentation(session, lea, alex)
     _detach_and_purge_media(session, space, lea, alex)
     session.delete(space)
     session.flush()

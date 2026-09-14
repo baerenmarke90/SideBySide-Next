@@ -2,16 +2,21 @@
 
 The demo is a shared, publicly reachable deployment whose content is thrown
 away and rebuilt on a timer. That only works while the two reserved Accounts
-stay recognizable: the reset resolves them by their reserved address and then
-refuses to run unless each still carries its canonical display name, because a
-demo it cannot identify is one it must not delete a Space for.
+stay recognizable: create/ensure/reset resolve them by their reserved address
+and a durable technical identity marker (`sidebyside.demo.models`), never by
+`display_name`, because a demo it cannot identify is one it must not delete a
+Space for. `display_name` is ordinary mutable presentation data -- a visitor
+is explicitly allowed to change it, and reset restores it rather than relying
+on it (#633).
 
-Everything a visitor does inside the Space is therefore disposable by design,
-but the Account-global identity the reset keys on is not. It is the one thing a
-visitor could change that the reset cannot rebuild, so it is protected here
-rather than by hiding a control in a client. A visitor holds an ordinary bearer
-token and can call the API directly; UI visibility is a representation of a
-server decision, never the decision itself.
+Everything a visitor does inside the Space is therefore disposable by design.
+The Account-global name they could still change while the demo is live between
+resets is additionally protected here, not because the reset depends on it,
+but so a persona is not visibly mislabeled to other visitors until the next
+reset runs. It is protected here rather than by hiding a control in a client:
+a visitor holds an ordinary bearer token and can call the API directly; UI
+visibility is a representation of a server decision, never the decision
+itself.
 
 This module deliberately depends only on configuration and the identity models.
 The services that must not corrupt a reserved identity can therefore import it
@@ -41,11 +46,34 @@ RESERVED_IDENTITIES: Mapping[str, str] = MappingProxyType(
         ALEX_EMAIL: ALEX_NAME,
     }
 )
-"""Reserved address to the canonical display name the reset expects.
+"""Reserved address to the canonical display name reset restores.
 
-The reset resolves the accounts by exactly these addresses, so this mapping is
-the same authority for the guard and for the reset. Adding a persona in one
-place therefore cannot leave the other behind.
+This is presentation data reset writes back, not an identity check: the
+address is what the guard and the reset resolve accounts by. Adding a persona
+in one place therefore cannot leave the other behind.
+"""
+
+
+class DemoPersona:
+    """The two canonical demo personas, independent of any presentation data."""
+
+    LEA = "LEA"
+    ALEX = "ALEX"
+
+
+RESERVED_PERSONAS: Mapping[str, str] = MappingProxyType(
+    {
+        LEA_EMAIL: DemoPersona.LEA,
+        ALEX_EMAIL: DemoPersona.ALEX,
+    }
+)
+"""Reserved address to the durable persona marker `sidebyside.demo.models` stores.
+
+`display_name` and even the reserved address itself are things a visitor or an
+operator could, in principle, cause to drift; the marker is the technical fact
+create/ensure/reset ultimately trust once it has been established. See
+`sidebyside.demo.service` for how it is adopted for an already-deployed demo
+database that predates this marker.
 """
 
 
