@@ -48,3 +48,27 @@ replace_once(
     '''      for (const [, sectionClass] of MODULE_SECTIONS) {\n        expect(html).toContain(sectionClass);\n      }\n    });\n''',
     '''      for (const [, sectionClass] of MODULE_SECTIONS) {\n        expect(html).toContain(sectionClass);\n      }\n      expect(html.indexOf('today-section-recent')).toBeLessThan(\n        html.indexOf('shared-story-summary'),\n      );\n    });\n''',
 )
+
+# Keep every Dashboard module label on the existing m5s5 registry path. This
+# preserves the generic Settings test/helper and avoids a one-off #809 label
+# resolver while still using the shorter accepted Settings copy.
+replace_once(
+    "web/src/client/dashboardModules.ts",
+    "{ key: 'shared_story_summary', labelKey: 'profileIdentity.dashboardStorySummaryTitle' },",
+    "{ key: 'shared_story_summary', labelKey: 'm5s5.dashboard.storySummarySettingsTitle' },",
+)
+replace_once(
+    "web/src/i18n/locales/m5s5.ts",
+    """    storySummaryTitle: 'Eure Geschichte in Zahlen',
+    storySummaryMemories: 'Momente',
+""",
+    """    storySummaryTitle: 'Eure Geschichte in Zahlen',
+    storySummarySettingsTitle: 'Geschichte in Zahlen',
+    storySummaryMemories: 'Momente',
+""",
+)
+replace_once(
+    "web/src/i18n/locales/profileIdentity.ts",
+    "  dashboardStorySummaryTitle: 'Geschichte in Zahlen',\n",
+    "",
+)
