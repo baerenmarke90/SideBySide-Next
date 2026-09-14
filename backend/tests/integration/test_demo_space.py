@@ -17,6 +17,7 @@ from sidebyside.config import Environment
 from sidebyside.core.errors import NotFoundError
 from sidebyside.dashboard import service as dashboard_service
 from sidebyside.demo.assets import import_demo_asset, load_and_validate_assets
+from sidebyside.demo.models import DemoCanonicalIdentity
 from sidebyside.demo.service import (
     ALEX_NAME,
     LEA_NAME,
@@ -127,6 +128,17 @@ def test_create_is_idempotent_and_representative(session: Session) -> None:
         PlanStatus.PLANNED.value,
         PlanStatus.COMPLETED.value,
     }
+
+
+def test_create_establishes_the_durable_identity_marker(session: Session) -> None:
+    """#633: the marker create/ensure/reset resolve accounts by, not display_name."""
+    result = _seed(session)
+
+    markers = {
+        marker.persona: marker.account_id
+        for marker in session.execute(select(DemoCanonicalIdentity)).scalars()
+    }
+    assert markers == {"LEA": result.lea_id, "ALEX": result.alex_id}
 
 
 def test_private_demo_content_stays_owner_only_across_read_models(session: Session) -> None:

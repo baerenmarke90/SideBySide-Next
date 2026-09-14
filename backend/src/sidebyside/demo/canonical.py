@@ -2,20 +2,30 @@
 
 The demo is a shared, publicly reachable deployment whose content is thrown
 away and rebuilt on a timer. That only works while the two reserved Accounts
-stay recognizable: the reset resolves them by their reserved address and then
-refuses to run unless each still carries its canonical display name, because a
-demo it cannot identify is one it must not delete a Space for.
+stay recognizable: create/ensure/reset resolve them by their reserved address
+and a durable technical identity marker (`sidebyside.demo.models`), never by
+`display_name`, because a demo it cannot identify is one it must not delete a
+Space for. `display_name` is presentation state in the domain model and must
+never serve as durable technical demo identity: legacy data from before this
+marker existed, an operator edit, or a direct database change can still leave
+it drifted, and create/ensure/reset/demo-entry must remain recoverable when it
+does (#633).
 
-Everything a visitor does inside the Space is therefore disposable by design,
-but the Account-global identity the reset keys on is not. It is the one thing a
-visitor could change that the reset cannot rebuild, so it is protected here
-rather than by hiding a control in a client. A visitor holds an ordinary bearer
-token and can call the API directly; UI visibility is a representation of a
-server decision, never the decision itself.
+Public Demo visitors are currently prevented from changing an Account-global
+reserved-persona name at all through the normal profile API (#697):
+`DEMO_CANONICAL_IDENTITY_IMMUTABLE`, enforced by `ensure_account_identity_mutable`
+below, keeps an ordinary visitor from causing that drift in the first place.
+This is not what create/ensure/reset depend on, though -- they recognize and
+recover from a drifted name on their own (#633) -- it exists so a persona is
+never visibly mislabeled to other visitors in the meantime. It is enforced
+here rather than by hiding a control in a client: a visitor holds an ordinary
+bearer token and can call the API directly; UI visibility is a representation
+of a server decision, never the decision itself.
 
-This module deliberately depends only on configuration and the identity models.
-The services that must not corrupt a reserved identity can therefore import it
-without importing the demo seeding service that imports them.
+This module deliberately depends only on configuration, the identity models,
+and the lightweight demo identity-marker model. The services that must not
+corrupt a reserved identity, and the public demo-entry endpoint, can therefore
+import it without importing the demo seeding service that imports them.
 """
 
 from __future__ import annotations
@@ -28,6 +38,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.config import Environment, get_settings
 from sidebyside.core.errors import ForbiddenError
+from sidebyside.demo.models import DemoCanonicalIdentity
 from sidebyside.identity.models import Account, AccountEmail
 
 LEA_EMAIL = "demo-lea@sidebyside.invalid"
@@ -41,12 +52,28 @@ RESERVED_IDENTITIES: Mapping[str, str] = MappingProxyType(
         ALEX_EMAIL: ALEX_NAME,
     }
 )
-"""Reserved address to the canonical display name the reset expects.
+"""Reserved address to the canonical display name reset restores.
 
-The reset resolves the accounts by exactly these addresses, so this mapping is
-the same authority for the guard and for the reset. Adding a persona in one
-place therefore cannot leave the other behind.
+This is presentation data reset writes back, not an identity check: the
+address is what the guard and the reset resolve accounts by. Adding a persona
+in one place therefore cannot leave the other behind.
 """
+
+
+class DemoPersona:
+    """The two canonical demo personas, independent of any presentation data.
+
+    Also the value space the durable marker `sidebyside.demo.models` stores:
+    `display_name` is legacy/operator-driftable presentation state, and even
+    the reserved address itself is only a claim to check, not proof on its
+    own -- the marker is the technical fact create/ensure/reset ultimately
+    trust once it has been established. See `sidebyside.demo.service` for how
+    it is adopted for an already-deployed demo database that predates this
+    marker, and only once an already-verified canonical Space proves it.
+    """
+
+    LEA = "LEA"
+    ALEX = "ALEX"
 
 
 class DemoIsolationErrorCode:
@@ -89,13 +116,44 @@ def is_canonical_reserved_account(session: Session, account: Account) -> bool:
     )
 
 
-def ensure_account_identity_mutable(session: Session, account: Account) -> None:
-    """Refuse an Account-global mutation the demo reset cannot reconstruct.
+def resolve_canonical_account(session: Session, *, persona: str) -> Account | None:
+    """Resolve the Account currently recognized as ``persona``, or ``None``.
 
-    Callers decide which of their mutations is reset-critical, because that
-    depends on what the reset rebuilds; this only answers whether the Account
-    is one whose global identity the reset depends on. Space and product
-    content stay mutable, since the reset replaces the Space wholesale.
+    Recognition requires both the reserved address and the durable marker to
+    agree; a reserved address that exists without a matching marker is not
+    (yet) a verified canonical demo Account from this function's point of
+    view. This performs no write and never adopts a missing marker --
+    create/ensure/reset own that (`sidebyside.demo.service`), and a demo
+    deployment always runs `ensure` once at startup before serving requests,
+    so a public caller such as the demo-entry endpoint never needs to.
+
+    `display_name` plays no part here, so legacy or operator-caused drift in
+    it can never hide a persona from its own public entry point (#633).
+    """
+    email = LEA_EMAIL if persona == DemoPersona.LEA else ALEX_EMAIL
+    account = session.execute(
+        select(Account)
+        .join(AccountEmail, AccountEmail.account_id == Account.id)
+        .where(AccountEmail.email == email)
+    ).scalar_one_or_none()
+    if account is None:
+        return None
+    marker = session.get(DemoCanonicalIdentity, persona)
+    if marker is None or marker.account_id != account.id:
+        return None
+    return account
+
+
+def ensure_account_identity_mutable(session: Session, account: Account) -> None:
+    """Refuse an Account-global mutation of a canonical reserved persona (#697).
+
+    Callers decide which of their mutations this guards, because that is a
+    product decision, not a technical one: create/ensure/reset now recognize
+    and recover a drifted name on their own (#633), so this is not about what
+    the reset "cannot reconstruct" any more -- it keeps a live persona from
+    ever being visibly mislabeled to other visitors in the first place. Space
+    and product content stay mutable, since the reset replaces the Space
+    wholesale regardless.
 
     Outside a demo deployment nothing is refused. The reserved accounts do not
     exist in production, and elsewhere the reset's own fail-closed validation

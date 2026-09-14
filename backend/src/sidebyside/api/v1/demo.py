@@ -19,8 +19,8 @@ from sidebyside.api.schema import ApiModel
 from sidebyside.auth import action_tokens, passkey_abuse, rate_limit
 from sidebyside.config import get_settings
 from sidebyside.core.errors import NotFoundError
-from sidebyside.demo.canonical import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
-from sidebyside.identity import service as identity_service
+from sidebyside.demo import canonical
+from sidebyside.demo.canonical import ALEX_EMAIL, LEA_EMAIL
 from sidebyside.identity.models import AccountEmail
 
 router = APIRouter(tags=["demo"])
@@ -42,10 +42,8 @@ class DemoEntryView(ApiModel):
     token: str
 
 
-def _demo_identity(persona: DemoPersona) -> tuple[str, str]:
-    if persona is DemoPersona.LEA:
-        return LEA_EMAIL, LEA_NAME
-    return ALEX_EMAIL, ALEX_NAME
+def _demo_email(persona: DemoPersona) -> str:
+    return LEA_EMAIL if persona is DemoPersona.LEA else ALEX_EMAIL
 
 
 @router.post(
@@ -74,9 +72,9 @@ def create_demo_entry(
         DEMO_ENTRY_LIMIT,
     )
 
-    email, expected_name = _demo_identity(body.persona)
-    account = identity_service.find_by_email(session, email)
-    if account is None or not account.is_active or account.display_name != expected_name:
+    email = _demo_email(body.persona)
+    account = canonical.resolve_canonical_account(session, persona=body.persona.value)
+    if account is None or not account.is_active:
         raise NotFoundError("Canonical demo identity is not available.", "DEMO_IDENTITY_MISSING")
 
     email_record = session.execute(
