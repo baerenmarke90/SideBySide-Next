@@ -868,7 +868,14 @@ class TestDeploymentIsolation:
         _, issued = action_tokens.issue_signup_proof(session, ANNA)
         session.flush()
 
-        assert client.post(SIGNUP_REQUEST, json={"email": ANNA}).status_code == 503
+        # The policy rejects before the mail transport is used, so no further
+        # proof is issued even when a transport happens to be resolvable.
+        rejected = client.post(SIGNUP_REQUEST, json={"email": ANNA})
+        assert rejected.status_code == 403
+        assert rejected.json()["code"] == "AUTH_METHOD_DISABLED"
+        assert mailbox.messages == []
+        assert session.execute(select(func.count()).select_from(SignupProof)).scalar_one() == 1
+
         response = consume(client, issued.token)
         assert response.status_code == 403
         assert response.json()["code"] == "AUTH_METHOD_DISABLED"
