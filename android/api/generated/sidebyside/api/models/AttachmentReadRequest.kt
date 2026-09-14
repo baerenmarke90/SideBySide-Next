@@ -33,6 +33,7 @@ import kotlinx.serialization.Contextual
  *
  * @param parentId 
  * @param parentType 
+ * @param variant Server-defined content variant. Request thumbnail only when hasThumbnail is true.
  */
 @Serializable
 
@@ -42,7 +43,11 @@ data class AttachmentReadRequest (
     val parentId: java.util.UUID? = null,
 
     @SerialName(value = "parentType")
-    val parentType: AttachmentReadRequest.ParentType? = ParentType.NONE
+    val parentType: AttachmentReadRequest.ParentType? = ParentType.NONE,
+
+    /* Server-defined content variant. Request thumbnail only when hasThumbnail is true. */
+    @SerialName(value = "variant")
+    val variant: AttachmentReadRequest.Variant? = Variant.original
 
 ) {
 
@@ -57,6 +62,16 @@ data class AttachmentReadRequest (
         @SerialName(value = "HEART_MOMENT") HEART_MOMENT("HEART_MOMENT"),
         @SerialName(value = "RELATED_PERSON") RELATED_PERSON("RELATED_PERSON"),
         @SerialName(value = "NONE") NONE("NONE");
+    }
+    /**
+     * Server-defined content variant. Request thumbnail only when hasThumbnail is true.
+     *
+     * Values: original,thumbnail
+     */
+    @Serializable
+    enum class Variant(val value: kotlin.String) {
+        @SerialName(value = "original") original("original"),
+        @SerialName(value = "thumbnail") thumbnail("thumbnail");
     }
 
 }

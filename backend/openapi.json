@@ -452,6 +452,16 @@
             ],
             "title": "Parenttype",
             "type": "string"
+          },
+          "variant": {
+            "default": "original",
+            "description": "Server-defined content variant. Request thumbnail only when hasThumbnail is true.",
+            "enum": [
+              "original",
+              "thumbnail"
+            ],
+            "title": "Variant",
+            "type": "string"
           }
         },
         "title": "AttachmentReadRequest",
