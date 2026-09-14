@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -44,6 +45,8 @@ from sidebyside.plans.models import Plan
 from sidebyside.relationship.models import Membership, MembershipStatus
 from sidebyside.reminders import delivery as reminder_delivery
 from sidebyside.wishes.models import Wish
+
+log = logging.getLogger(__name__)
 
 DEFAULT_LIMIT = 25
 MAX_LIMIT = 50
@@ -124,6 +127,10 @@ def project_pending(session: Session, *, limit: int = 50) -> int:
             # follow-up comment; #695 tracks whether Outbox needs anything
             # beyond this).
             outbox_service.mark_failed(event, safe_exception_summary(exc))
+            log.exception(
+                "outbox event projection failed",
+                extra={"event_id": str(event.id), "event_type": event.event_type},
+            )
         else:
             outbox_service.mark_processed(event)
     return len(events)
