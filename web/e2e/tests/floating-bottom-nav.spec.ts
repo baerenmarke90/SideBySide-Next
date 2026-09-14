@@ -256,7 +256,13 @@ async function waitForGamesHub(page: Page): Promise<void> {
   await expect(
     page.getByRole('heading', { name: games.title, level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText(games.unlocked.title)).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: games.entries.moments.title,
+      level: 2,
+    }),
+  ).toBeVisible();
+  await expect(page.locator('.games-access-panel')).toHaveCount(0);
 }
 
 test.describe('Floating Bottom Navigation (#882/#905)', () => {
