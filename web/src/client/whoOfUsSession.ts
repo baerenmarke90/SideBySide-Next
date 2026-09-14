@@ -117,7 +117,9 @@ export function createLocalWhoOfUsSession(): WhoOfUsSession {
 
   function beginGame(): void {
     if (!sourceParticipants || sourceQuestions.length === 0) {
-      throw new Error('Wer von euch? requires two participants and at least one question.');
+      throw new Error(
+        'The perspective game requires two participants and at least one question.',
+      );
     }
     hiddenFirstAnswerPartnerId = null;
     const [firstResponder] = responderPair(0, sourceParticipants);
@@ -242,11 +244,15 @@ export function createLocalWhoOfUsSession(): WhoOfUsSession {
         participants.map((participant) => participant.id),
       );
       if (participantIds.size !== 2) {
-        throw new Error('Wer von euch? requires two stable participant identities.');
+        throw new Error(
+          'The perspective game requires two stable participant identities.',
+        );
       }
       const uniqueQuestions = [...new Set(questions)];
       if (uniqueQuestions.length !== questions.length) {
-        throw new Error('Wer von euch? question IDs must be unique within a session.');
+        throw new Error(
+          'Perspective-game question IDs must be unique within a session.',
+        );
       }
       sourceQuestions = [...questions];
       sourceParticipants = [{ ...participants[0] }, { ...participants[1] }];
