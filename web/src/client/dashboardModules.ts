@@ -28,7 +28,8 @@ export type DashboardModuleKey =
   | 'keepsake'
   | 'relationship_signal'
   | 'monthly_highlights'
-  | 'recent_shared';
+  | 'recent_shared'
+  | 'shared_story_summary';
 
 export interface DashboardModuleCatalogEntry {
   key: DashboardModuleKey;
@@ -41,8 +42,7 @@ export interface DashboardModuleCatalogEntry {
  * composition in `TodayPage.tsx`: the Couple Presence hero, then Demnaechst,
  * Euer Moment, Gerade bei euch, Diesen Monat, Zuletzt bei euch.
  *
- * `SHARED_STORY_SUMMARY` (#809) is deliberately absent: it is not merged to
- * `main`, and #817 does not implement #809 on its behalf.
+ * #809 appends `shared_story_summary` as the quiet final Today epilogue.
  */
 export const DASHBOARD_MODULE_CATALOG: readonly DashboardModuleCatalogEntry[] =
   [
@@ -52,6 +52,10 @@ export const DASHBOARD_MODULE_CATALOG: readonly DashboardModuleCatalogEntry[] =
     { key: 'relationship_signal', labelKey: 'm5s5.today.living.kicker' },
     { key: 'monthly_highlights', labelKey: 'm5s5.today.monthly.title' },
     { key: 'recent_shared', labelKey: 'm5s5.dashboard.recentTitle' },
+    {
+      key: 'shared_story_summary',
+      labelKey: 'profileIdentity.dashboardStorySummaryTitle',
+    },
   ];
 
 export const DASHBOARD_MODULE_KEYS: readonly DashboardModuleKey[] =

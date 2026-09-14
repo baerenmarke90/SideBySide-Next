@@ -46,6 +46,7 @@ class DashboardModuleKey(StrEnum):
     RELATIONSHIP_SIGNAL = "relationship_signal"
     MONTHLY_HIGHLIGHTS = "monthly_highlights"
     RECENT_SHARED = "recent_shared"
+    SHARED_STORY_SUMMARY = "shared_story_summary"
 
 
 class DashboardPreferenceErrorCode:
@@ -85,10 +86,9 @@ class DashboardModuleState:
 # item-limit facet; #817 adds mandatory visibility to every module,
 # including `UPCOMING` itself.
 #
-# `SHARED_STORY_SUMMARY` (#809) is deliberately absent: it is not merged to
-# `main`, and #817 does not implement #809 on its behalf. Once #809 lands, its
-# module registers here the same way every other module did and automatically
-# participates in this mechanism.
+# #809 appends the quiet shared-story epilogue after the existing Today
+# composition. It is a normal registered module and therefore inherits the
+# same per-Account+Space visibility behavior as every other Dashboard module.
 CATALOG: tuple[DashboardModuleDefinition, ...] = (
     DashboardModuleDefinition(key=DashboardModuleKey.RELATIONSHIP_PRESENCE, default_visible=True),
     DashboardModuleDefinition(
@@ -100,6 +100,7 @@ CATALOG: tuple[DashboardModuleDefinition, ...] = (
     DashboardModuleDefinition(key=DashboardModuleKey.RELATIONSHIP_SIGNAL, default_visible=True),
     DashboardModuleDefinition(key=DashboardModuleKey.MONTHLY_HIGHLIGHTS, default_visible=True),
     DashboardModuleDefinition(key=DashboardModuleKey.RECENT_SHARED, default_visible=True),
+    DashboardModuleDefinition(key=DashboardModuleKey.SHARED_STORY_SUMMARY, default_visible=True),
 )
 
 _DEFINITIONS = {definition.key: definition for definition in CATALOG}

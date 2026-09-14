@@ -5,7 +5,7 @@ import {
 } from './dashboardModules';
 
 describe('dashboardModules', () => {
-  it('registers the currently accepted #850 Today modules in deterministic order', () => {
+  it('registers the accepted #850 Today modules plus the #809 epilogue in deterministic order', () => {
     expect(DASHBOARD_MODULE_KEYS).toEqual([
       'relationship_presence',
       'upcoming',
@@ -13,6 +13,7 @@ describe('dashboardModules', () => {
       'relationship_signal',
       'monthly_highlights',
       'recent_shared',
+      'shared_story_summary',
     ]);
   });
 

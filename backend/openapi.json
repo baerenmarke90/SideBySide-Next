@@ -1550,6 +1550,29 @@
         "title": "DashboardRelationshipDuration",
         "type": "object"
       },
+      "DashboardSharedStorySummary": {
+        "properties": {
+          "heartMoments": {
+            "title": "Heartmoments",
+            "type": "integer"
+          },
+          "memories": {
+            "title": "Memories",
+            "type": "integer"
+          },
+          "milestones": {
+            "title": "Milestones",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "memories",
+          "heartMoments",
+          "milestones"
+        ],
+        "title": "DashboardSharedStorySummary",
+        "type": "object"
+      },
       "DashboardSpaceSummary": {
         "properties": {
           "partner": {
@@ -1614,6 +1637,9 @@
               }
             ]
           },
+          "sharedStorySummary": {
+            "$ref": "#/components/schemas/DashboardSharedStorySummary"
+          },
           "space": {
             "$ref": "#/components/schemas/DashboardSpaceSummary"
           },
@@ -1644,6 +1670,7 @@
           "keepsake",
           "upcoming",
           "recentShared",
+          "sharedStorySummary",
           "thinkingOfYouAvailableAt"
         ],
         "title": "DashboardView",

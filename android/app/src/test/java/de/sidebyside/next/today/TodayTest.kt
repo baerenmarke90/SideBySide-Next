@@ -180,6 +180,7 @@ private fun dashboard(
     recentShared = emptyList(),
     relationshipDuration = duration,
     retrospective = null,
+    sharedStorySummary = sidebyside.api.models.DashboardSharedStorySummary(heartMoments = 0, memories = 0, milestones = 0),
     space = DashboardSpaceSummary(partner = null, spaceId = SPACE),
     thinkingOfYouAvailableAt = null,
     upcoming = listOf(

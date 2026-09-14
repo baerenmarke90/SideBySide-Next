@@ -10,6 +10,7 @@ Name | Type
 `recentShared` | [Array&lt;DashboardItem&gt;](DashboardItem.md)
 `relationshipDuration` | [DashboardRelationshipDuration](DashboardRelationshipDuration.md)
 `retrospective` | [DashboardItem](DashboardItem.md)
+`sharedStorySummary` | [DashboardSharedStorySummary](DashboardSharedStorySummary.md)
 `space` | [DashboardSpaceSummary](DashboardSpaceSummary.md)
 `thinkingOfYouAvailableAt` | Date
 `upcoming` | [Array&lt;DashboardItem&gt;](DashboardItem.md)
@@ -25,6 +26,7 @@ const example = {
   "recentShared": null,
   "relationshipDuration": null,
   "retrospective": null,
+  "sharedStorySummary": null,
   "space": null,
   "thinkingOfYouAvailableAt": null,
   "upcoming": null,

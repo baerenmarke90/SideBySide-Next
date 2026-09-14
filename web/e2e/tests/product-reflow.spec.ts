@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
+import m5s5 from '../../src/i18n/locales/m5s5';
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const PARTNER_ID = '44444444-4444-4444-8444-444444444444';
@@ -189,7 +190,10 @@ async function installApiMocks(page: Page): Promise<string[]> {
       pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
     ) {
       await fulfillJson({
-        items: [{ moduleKey: 'upcoming', itemLimit: 2 }],
+        items: [
+          { moduleKey: 'upcoming', visible: true, itemLimit: 2 },
+          { moduleKey: 'shared_story_summary', visible: true },
+        ],
       });
       return;
     }
@@ -205,6 +209,11 @@ async function installApiMocks(page: Page): Promise<string[]> {
         },
         retrospective: null,
         recentShared: [],
+        sharedStorySummary: {
+          memories: 4,
+          heartMoments: 1,
+          milestones: 0,
+        },
         upcoming: [
           {
             id: 'plan-1',
@@ -523,6 +532,14 @@ test('representative layout families keep their accepted normal viewport reflow'
       await page.goto(path);
       await expect(page.locator('#main-content')).toBeVisible();
       await expectHorizontalReflow(page);
+      if (path === '/today') {
+        await expect(
+          page.getByRole('heading', {
+            name: m5s5.dashboard.storySummaryTitle,
+            level: 2,
+          }),
+        ).toBeVisible();
+      }
     }
   }
 

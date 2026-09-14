@@ -48,6 +48,7 @@ const profileIdentity = {
     'Blende einzelne Bereiche für dich aus oder wieder ein. Dein Partner sieht weiterhin seine eigene Auswahl.',
   dashboardModuleSaving: 'Wird gespeichert …',
   dashboardModuleSaved: '✓ Gespeichert',
+  dashboardStorySummaryTitle: 'Geschichte in Zahlen',
   dashboardUpcomingTitle: 'Demnächst',
   dashboardUpcomingQuestion: 'Wie viele Einträge möchtest du sehen?',
   dashboardUpcomingLoading: 'Dashboard-Einstellung wird geladen …',
