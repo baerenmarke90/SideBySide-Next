@@ -2,14 +2,18 @@
 
 create/ensure/reset resolve the two reserved personas by their reserved
 address and a durable technical marker (`sidebyside.demo.models`), never by
-`display_name` (#633): that is ordinary mutable presentation data a visitor
-is explicitly allowed to change, and reset restores it rather than depending
-on it. Everything a visitor does inside the Space is disposable, because the
-reset replaces the Space wholesale.
+`display_name` (#633): that is presentation state in the domain model and
+must never serve as durable technical demo identity. Legacy data from before
+this marker existed, an operator edit, or a direct database change can leave
+it drifted, and reset restores it rather than depending on it being correct.
+Everything a visitor does inside the Space is disposable, because the reset
+replaces the Space wholesale.
 
-Independently of that, this Account-global name is additionally protected
-between resets so a persona is not visibly mislabeled to other visitors until
-the next reset runs -- not because the reset depends on it.
+Independently of that -- and not what create/ensure/reset rely on -- an
+ordinary Demo visitor is already prevented from causing that drift at all
+through the normal profile API (#697): this Account-global name is protected
+between resets so a persona is not visibly mislabeled to other visitors in
+the meantime.
 
 Every check here goes through the HTTP API with a real bearer token, because a
 client that hides the control is not the boundary: a visitor holds an ordinary
@@ -24,6 +28,7 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from sidebyside.auth import passwords
 from sidebyside.config import Environment, Settings
 from sidebyside.demo import canonical
 from sidebyside.demo.canonical import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
@@ -37,7 +42,7 @@ from sidebyside.profiles.models import (
     ProfileVisibility,
 )
 from sidebyside.relationship import offboarding
-from sidebyside.relationship.models import Membership, MembershipStatus
+from sidebyside.relationship.models import Membership, MembershipStatus, Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -318,18 +323,19 @@ class TestResetStaysUsableAndFailsClosed:
         assert account_by_email(session, LEA_EMAIL).display_name == LEA_NAME
         assert account_by_email(session, ALEX_EMAIL).display_name == ALEX_NAME
 
-    def test_reset_still_runs_after_a_renamed_persona(self, session, demo) -> None:  # type: ignore[no-untyped-def]
-        """#633: a changed display name alone must never break reset.
+    def test_reset_still_runs_after_a_drifted_display_name(self, session, demo) -> None:  # type: ignore[no-untyped-def]
+        """#633: a drifted display name alone must never break reset.
 
-        This is the regression the durable marker exists for: a visitor is
-        explicitly allowed to change the presentation name, and reset must
-        still recognize the Account by its technical identity and put the
-        canonical name back, not refuse.
+        An ordinary Demo visitor cannot cause this through the normal profile
+        API (#697 already blocks that); this simulates legacy data or a direct
+        database/operator edit instead. This is the regression the durable
+        marker exists for: reset must still recognize the Account by its
+        technical identity and put the canonical name back, not refuse.
         """
         lea = account_by_email(session, LEA_EMAIL)
         alex = account_by_email(session, ALEX_EMAIL)
-        lea.display_name = "Renamed durch Besucher"
-        alex.display_name = "Auch umbenannt"
+        lea.display_name = "Legacy-Datenstand"
+        alex.display_name = "Auch abgewichen"
         session.flush()
 
         result = reset_demo_space(
@@ -344,17 +350,19 @@ class TestResetStaysUsableAndFailsClosed:
         assert account_by_email(session, LEA_EMAIL).display_name == LEA_NAME
         assert account_by_email(session, ALEX_EMAIL).display_name == ALEX_NAME
 
-    def test_ensure_after_a_renamed_persona_is_idempotent(self, session, demo) -> None:  # type: ignore[no-untyped-def]
-        """#633: a changed display name alone must never break `ensure`.
+    def test_ensure_after_a_drifted_display_name_is_idempotent(self, session, demo) -> None:  # type: ignore[no-untyped-def]
+        """#633: a drifted display name alone must never break `ensure`.
 
         The idempotent `create_demo_space` path is what Compose's `demo-init`
         actually calls on every redeploy; it must keep observing the existing
-        Space rather than raising or duplicating it.
+        Space rather than raising or duplicating it, even against legacy data
+        or a direct database/operator edit (see the module docstring for why
+        this isn't simulating an ordinary visitor request).
         """
         lea = account_by_email(session, LEA_EMAIL)
         alex = account_by_email(session, ALEX_EMAIL)
-        lea.display_name = "Renamed durch Besucher"
-        alex.display_name = "Auch umbenannt"
+        lea.display_name = "Legacy-Datenstand"
+        alex.display_name = "Auch abgewichen"
         session.flush()
 
         result = create_demo_space(
@@ -427,6 +435,96 @@ class TestResetStaysUsableAndFailsClosed:
             for marker in session.execute(select(DemoCanonicalIdentity)).scalars()
         }
         assert markers == {"LEA": lea.id, "ALEX": alex.id}
+
+    def test_ensure_adopts_a_pre_existing_demo_database_without_a_marker(  # type: ignore[no-untyped-def]
+        self, session, demo
+    ) -> None:
+        """Compatibility, via the idempotent `create_demo_space`/`ensure` path.
+
+        Same simulated pre-#633 state as the reset case above, but exercised
+        through the path Compose's `demo-init` actually calls on redeploy:
+        the two reserved-address Accounts already share exactly one verified
+        Space, so the still-missing markers are safe to backfill.
+        """
+        lea = account_by_email(session, LEA_EMAIL)
+        alex = account_by_email(session, ALEX_EMAIL)
+        session.execute(
+            delete(DemoCanonicalIdentity).where(
+                DemoCanonicalIdentity.account_id.in_([lea.id, alex.id])
+            )
+        )
+        session.flush()
+
+        result = create_demo_space(
+            session,
+            environment=Environment.TEST,
+            lea_password=DEMO_PASSWORD,
+            alex_password=DEMO_PASSWORD,
+            reference_date=REFERENCE_DATE,
+        )
+
+        assert result.created is False
+        assert result.space_id == demo["space_id"]
+        assert result.lea_id == lea.id
+        assert result.alex_id == alex.id
+        session.expire_all()
+        markers = {
+            marker.persona: marker.account_id
+            for marker in session.execute(select(DemoCanonicalIdentity)).scalars()
+        }
+        assert markers == {"LEA": lea.id, "ALEX": alex.id}
+
+
+class TestMarkerAdoptionRequiresAVerifiedSpace:
+    """Owning the reserved address is necessary, never sufficient, to adopt.
+
+    Adoption -- writing a still-missing marker -- may only happen once the
+    *existing* demo structure already proves an Account is the canonical
+    persona (the two reserved-address Accounts share exactly one active,
+    verified Space). Two reserved-address Accounts that exist without a
+    marker and without such a Space must fail closed instead of being
+    silently treated as the legitimate pair and seeded a brand-new Space.
+    """
+
+    def test_create_refuses_markerless_reserved_accounts_without_an_existing_space(  # type: ignore[no-untyped-def]
+        self, session
+    ) -> None:
+        """The exact ambiguous state a pre-#633 upgrade must NOT auto-resolve.
+
+        Unlike the compatibility tests above, these reserved-address Accounts
+        were never seeded through `create_demo_space` at all -- there is no
+        marker *and* no pre-existing canonical Space linking them, e.g. an
+        operator pre-created them for an unrelated purpose. `create`/`ensure`
+        must abort rather than guess, creating neither a marker nor a Space.
+        """
+        lea = identity_service.create_account(
+            session,
+            display_name=LEA_NAME,
+            email=LEA_EMAIL,
+            password_hash=passwords.hash_password(DEMO_PASSWORD),
+        )
+        alex = identity_service.create_account(
+            session,
+            display_name=ALEX_NAME,
+            email=ALEX_EMAIL,
+            password_hash=passwords.hash_password(DEMO_PASSWORD),
+        )
+        session.flush()
+
+        with pytest.raises(RuntimeError, match="without a durable identity marker"):
+            create_demo_space(
+                session,
+                environment=Environment.TEST,
+                lea_password=DEMO_PASSWORD,
+                alex_password=DEMO_PASSWORD,
+                reference_date=REFERENCE_DATE,
+            )
+
+        session.expire_all()
+        assert session.execute(select(DemoCanonicalIdentity)).scalars().all() == []
+        assert session.execute(select(Space)).scalars().all() == []
+        assert session.get(Account, lea.id) is not None
+        assert session.get(Account, alex.id) is not None
 
 
 class TestGuardPrimitive:

@@ -132,39 +132,20 @@ def _active_space_ids(session: Session, account: Account) -> set[UUID]:
     )
 
 
-def _claim_or_verify_marker(
+def _verify_marker_if_present(
     session: Session, account: Account, *, persona: str, email: str
 ) -> None:
-    """Bind ``account`` to ``persona`` in the durable marker registry.
+    """Refuse if ``persona``'s durable marker already points elsewhere.
 
-    A fresh deployment never reaches the adoption branch below:
-    :func:`_create_accounts` inserts the marker immediately at creation. This
-    exists for an already-deployed demo database from before the marker
-    existed (#633). Owning the reserved, non-deliverable ``.invalid`` address
-    is what already made this Account trustworthy as the persona --
-    ``_existing_accounts`` only reaches this Account by that address in the
-    first place -- so claiming the still-empty marker for it is not a guess,
-    and it makes every later resolution direct instead of repeating the
-    adoption.
-
-    Fail-closed stays intact: a marker already bound to a *different* Account
-    is never silently reassigned or ignored, and an Account that already
-    carries a *different* persona's marker is never adopted into this one.
+    Read-only: a *missing* marker is not decided here at all. Whether a
+    reserved-address Account without one yet may be adopted depends on
+    whether an already-existing, already-verified canonical Space proves it
+    -- see :func:`_backfill_missing_markers`, which runs only after that
+    proof, never before it (#633 follow-up: owning the reserved address
+    alone is not sufficient evidence to adopt).
     """
     existing = session.get(DemoCanonicalIdentity, persona)
-    if existing is None:
-        conflicting = session.execute(
-            select(DemoCanonicalIdentity).where(DemoCanonicalIdentity.account_id == account.id)
-        ).scalar_one_or_none()
-        if conflicting is not None:
-            raise RuntimeError(
-                f"Refusing demo operation: {email} already carries the "
-                f"{conflicting.persona} demo identity marker."
-            )
-        session.add(DemoCanonicalIdentity(persona=persona, account_id=account.id))
-        session.flush()
-        return
-    if existing.account_id != account.id:
+    if existing is not None and existing.account_id != account.id:
         raise RuntimeError(
             f"Refusing demo operation: {email} does not resolve to the expected "
             "demo identity marker."
@@ -175,20 +156,25 @@ def _resolve_reserved_account(session: Session, *, persona: str, email: str) -> 
     account = identity_service.find_by_email(session, email)
     if account is None:
         return None
-    _claim_or_verify_marker(session, account, persona=persona, email=email)
+    _verify_marker_if_present(session, account, persona=persona, email=email)
     return account
 
 
 def _existing_accounts(session: Session) -> tuple[Account | None, Account | None]:
     """Resolve the reserved accounts by their durable technical identity.
 
-    ``display_name`` is ordinary mutable presentation data a visitor is
-    explicitly allowed to change (#633); it plays no part in this resolution.
+    ``display_name`` is presentation state in the domain model and must never
+    serve as durable demo identity (#633); it plays no part in this
+    resolution. This performs no write: a reserved-address Account without a
+    marker yet is returned as-is, neither adopted nor rejected here -- see
+    :func:`_backfill_missing_markers` for when adopting it is actually safe.
+
     This stays fail-closed even though ``demo.canonical`` already prevents a
-    visitor from renaming a persona through the profile API: an operator or a
-    direct database edit could still bind the reserved address or the marker
-    to an unexpected Account, and a reset that guessed which Account was meant
-    would be exactly the wrong response to that.
+    public Demo visitor from renaming a persona through the profile API
+    (#697): an operator or a direct database edit could still bind the
+    reserved address or the marker to an unexpected Account, and a reset that
+    guessed which Account was meant would be exactly the wrong response to
+    that.
     """
     lea = _resolve_reserved_account(session, persona=DemoPersona.LEA, email=LEA_EMAIL)
     alex = _resolve_reserved_account(session, persona=DemoPersona.ALEX, email=ALEX_EMAIL)
@@ -200,12 +186,55 @@ def _existing_accounts(session: Session) -> tuple[Account | None, Account | None
     return lea, alex
 
 
+def _missing_marker_personas(session: Session, lea: Account, alex: Account) -> list[str]:
+    return [
+        persona
+        for persona, account in ((DemoPersona.LEA, lea), (DemoPersona.ALEX, alex))
+        if session.get(DemoCanonicalIdentity, persona) is None
+    ]
+
+
+def _backfill_missing_markers(session: Session, lea: Account, alex: Account) -> None:
+    """Adopt whichever persona still lacks a durable marker.
+
+    Callers must only reach this once an already-existing, already-verified
+    canonical Space unambiguously proves ``lea``/``alex`` are the existing
+    canonical pair (`_shared_demo_space` succeeded) -- never merely because
+    both reserved addresses resolve to *some* Account. Two reserved-address
+    Accounts with no marker and no such Space are exactly the ambiguous case
+    that must fail closed instead: see the callers in `create_demo_space` and
+    `reset_demo_space`.
+
+    Fail-closed stays intact even here: an Account that already carries a
+    *different* persona's marker is never adopted into this one.
+    """
+    for persona, account, email in (
+        (DemoPersona.LEA, lea, LEA_EMAIL),
+        (DemoPersona.ALEX, alex, ALEX_EMAIL),
+    ):
+        if session.get(DemoCanonicalIdentity, persona) is not None:
+            continue
+        conflicting = session.execute(
+            select(DemoCanonicalIdentity).where(DemoCanonicalIdentity.account_id == account.id)
+        ).scalar_one_or_none()
+        if conflicting is not None:
+            raise RuntimeError(
+                f"Refusing demo operation: {email} already carries the "
+                f"{conflicting.persona} demo identity marker."
+            )
+        session.add(DemoCanonicalIdentity(persona=persona, account_id=account.id))
+    session.flush()
+
+
 def _restore_canonical_presentation(session: Session, lea: Account, alex: Account) -> None:
-    """Restore the mutable presentation state reset owns (#633).
+    """Restore the presentation state reset owns (#633).
 
     The durable identity marker means create/ensure/reset no longer depend on
-    ``display_name`` to recognize a persona, but a visitor can still have
-    changed it; a successful reset is what puts it back.
+    ``display_name`` to recognize a persona. Public Demo visitors are
+    currently prevented from changing it at all through the normal API
+    (#697), but legacy data, an operator edit, or a direct database change
+    can still leave it drifted; a successful reset is what makes it
+    recoverable rather than a permanent fail-closed condition.
     """
     if lea.display_name != RESERVED_IDENTITIES[LEA_EMAIL]:
         identity_service.update_display_name(session, lea, RESERVED_IDENTITIES[LEA_EMAIL])
@@ -913,12 +942,30 @@ def create_demo_space(
 
     existing = _shared_demo_space(session, lea, alex, required=False)
     if existing is not None:
+        # Both reserved Accounts already share exactly one active Space, so
+        # this *is* the pre-existing canonical demo, marker or not -- safe to
+        # adopt a still-missing marker now that the Space itself proves it.
+        _backfill_missing_markers(session, lea, alex)
         return DemoSeedResult(
             lea_id=lea.id,
             alex_id=alex.id,
             space_id=existing.id,
             reference_date=reference_date,
             created=False,
+        )
+
+    if _missing_marker_personas(session, lea, alex):
+        # Both reserved addresses resolve to Accounts, but neither carries a
+        # durable marker yet, and there is no existing shared canonical Space
+        # to prove they are the legitimate demo pair rather than, say,
+        # Accounts an operator pre-created for an unrelated purpose. Owning
+        # the reserved `.invalid` address alone is not sufficient evidence to
+        # adopt them and build a brand-new Space around them (#633 follow-up).
+        raise RuntimeError(
+            "Refusing demo operation: reserved demo accounts exist without a "
+            "durable identity marker and without an existing canonical demo "
+            "Space to verify them against. Resolve this ambiguous state "
+            "explicitly; see docs/DEMO-SPACE.md."
         )
 
     space = _new_space(session, lea, alex)
@@ -1026,6 +1073,10 @@ def reset_demo_space(
     space = _shared_demo_space(session, lea, alex, required=True)
     assert space is not None
 
+    # Both reserved Accounts share exactly one active, verified Space, so a
+    # still-missing marker is safe to adopt now -- the same proof
+    # `create_demo_space` requires (#633 follow-up).
+    _backfill_missing_markers(session, lea, alex)
     _restore_canonical_presentation(session, lea, alex)
     _detach_and_purge_media(session, space, lea, alex)
     session.delete(space)
