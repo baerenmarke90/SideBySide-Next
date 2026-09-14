@@ -327,6 +327,7 @@ class TodayScreenSemanticsTest {
             recentShared = recent,
             relationshipDuration = duration,
             retrospective = retrospective,
+            sharedStorySummary = sidebyside.api.models.DashboardSharedStorySummary(heartMoments = 0, memories = 0, milestones = 0),
             space = DashboardSpaceSummary(partner = partner, spaceId = UUID.randomUUID()),
             thinkingOfYouAvailableAt = null,
             upcoming = upcoming,

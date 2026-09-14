@@ -46,6 +46,7 @@ import { CouplePresence } from './CouplePresence';
 import { MemoryPreview } from './MemoryPreview';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
+import { SharedStorySummary } from './SharedStorySummary';
 import { ThinkingOfYouButton } from './ThinkingOfYouButton';
 import { UiState } from './UiState';
 import './TodayPage.css';
@@ -928,6 +929,10 @@ export function TodayPage({
     dashboardPreferencesQuery.data,
     'recent_shared',
   );
+  const sharedStorySummaryVisible = isDashboardModuleVisible(
+    dashboardPreferencesQuery.data,
+    'shared_story_summary',
+  );
 
   const isSparse = Boolean(
     dashboardQuery.data &&
@@ -1183,6 +1188,12 @@ export function TodayPage({
                     </Link>
                   </div>
                 </TodayModuleSection>
+              ) : null}
+              {sharedStorySummaryVisible &&
+              dashboardQuery.data.sharedStorySummary ? (
+                <SharedStorySummary
+                  summary={dashboardQuery.data.sharedStorySummary}
+                />
               ) : null}
             </>
           )}

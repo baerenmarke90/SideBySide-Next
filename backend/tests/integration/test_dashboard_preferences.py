@@ -92,6 +92,7 @@ def test_catalog_keys_are_stable_and_unique() -> None:
         "relationship_signal",
         "monthly_highlights",
         "recent_shared",
+        "shared_story_summary",
     ]
     assert len(keys) == len(set(keys))
 
@@ -128,6 +129,7 @@ def test_missing_override_returns_effective_default_for_every_registered_module(
             {"moduleKey": "relationship_signal", "visible": True},
             {"moduleKey": "monthly_highlights", "visible": True},
             {"moduleKey": "recent_shared", "visible": True},
+            {"moduleKey": "shared_story_summary", "visible": True},
         ],
     }
     assert session.scalar(select(func.count()).select_from(DashboardModulePreference)) == 0
@@ -159,6 +161,7 @@ def test_unknown_module_is_rejected_and_fails_closed(
         "relationship_signal",
         "monthly_highlights",
         "recent_shared",
+        "shared_story_summary",
     ],
 )
 def test_item_limit_is_rejected_on_modules_that_do_not_support_it(

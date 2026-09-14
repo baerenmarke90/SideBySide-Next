@@ -90,6 +90,15 @@ class StoryPageResult:
     has_more: bool
 
 
+@dataclass(frozen=True)
+class SharedStoryCounts:
+    """All-time counts for the relationship-shared Story projection (#809)."""
+
+    memories: int
+    heart_moments: int
+    milestones: int
+
+
 def _effective_date(model: StoryModel) -> Any:
     """Use `happenedOn`, falling back to the UTC calendar date of `createdAt`.
 
@@ -134,6 +143,32 @@ def _leg(
             effective_date <= date(year, 12, 31),
         )
     return statement
+
+
+def read_shared_story_counts(
+    session: Session,
+    context: AuthorizationContext,
+) -> SharedStoryCounts:
+    """Count the shared Story without materializing Story rows.
+
+    The aggregation reuses the exact authorized Timeline legs. In particular,
+    OWNER_ONLY HeartMoments are excluded by ``_leg`` before counting, so they
+    cannot influence either a value or #809's presentation eligibility.
+    """
+    combined = union_all(*(_leg(kind, context, year=None) for kind in StoryKind)).subquery(
+        "shared_story_counts"
+    )
+    rows = session.execute(
+        select(combined.c.kind_rank, func.count())
+        .group_by(combined.c.kind_rank)
+        .order_by(combined.c.kind_rank)
+    ).all()
+    counts = {int(kind_rank): int(count) for kind_rank, count in rows}
+    return SharedStoryCounts(
+        memories=counts.get(_KIND_RANK[StoryKind.MEMORY], 0),
+        heart_moments=counts.get(_KIND_RANK[StoryKind.HEART_MOMENT], 0),
+        milestones=counts.get(_KIND_RANK[StoryKind.MILESTONE], 0),
+    )
 
 
 def _cursor_binding(

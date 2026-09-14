@@ -2112,6 +2112,11 @@ describe('formatRelationshipDuration', () => {
           titleOrText: 'Weisst du noch',
           occurredOn: new Date('2020-01-01T00:00:00Z'),
         },
+        sharedStorySummary: {
+          memories: 4,
+          heartMoments: 1,
+          milestones: 0,
+        },
       };
     }
 
@@ -2168,6 +2173,7 @@ describe('formatRelationshipDuration', () => {
       relationship_signal: 'today-section-living',
       monthly_highlights: 'today-section-monthly',
       recent_shared: 'today-section-recent',
+      shared_story_summary: 'shared-story-summary',
     };
 
     const MODULE_SECTIONS = DASHBOARD_MODULE_KEYS.map(
@@ -2180,6 +2186,9 @@ describe('formatRelationshipDuration', () => {
       for (const [, sectionClass] of MODULE_SECTIONS) {
         expect(html).toContain(sectionClass);
       }
+      expect(html.indexOf('today-section-recent')).toBeLessThan(
+        html.indexOf('shared-story-summary'),
+      );
     });
 
     it.each(MODULE_SECTIONS)(

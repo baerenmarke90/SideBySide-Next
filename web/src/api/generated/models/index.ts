@@ -47,6 +47,7 @@ export * from './DashboardModulePreferenceUpdate';
 export * from './DashboardModulePreferenceView';
 export * from './DashboardPartner';
 export * from './DashboardRelationshipDuration';
+export * from './DashboardSharedStorySummary';
 export * from './DashboardSpaceSummary';
 export * from './DashboardView';
 export * from './DateRepeat';

@@ -487,6 +487,7 @@ private class SpaceApi(
             recentShared = emptyList(),
             relationshipDuration = null,
             retrospective = null,
+            sharedStorySummary = sidebyside.api.models.DashboardSharedStorySummary(heartMoments = 0, memories = 0, milestones = 0),
             space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
             thinkingOfYouAvailableAt = null,
             upcoming = emptyList(),

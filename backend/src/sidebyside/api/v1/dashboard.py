@@ -16,6 +16,7 @@ from sidebyside.api.schema import ApiModel
 from sidebyside.dashboard import preferences, service
 from sidebyside.dashboard.service import DashboardItemType
 from sidebyside.relationship.models import DurationDisplayMode
+from sidebyside.story import service as story_service
 
 router = APIRouter(tags=["dashboard"])
 
@@ -47,6 +48,12 @@ class DashboardItem(ApiModel):
     preview_attachment_id: UUID | None = None
 
 
+class DashboardSharedStorySummary(ApiModel):
+    memories: int
+    heart_moments: int
+    milestones: int
+
+
 class DashboardView(ApiModel):
     space: DashboardSpaceSummary
     relationship_duration: DashboardRelationshipDuration | None
@@ -54,6 +61,7 @@ class DashboardView(ApiModel):
     keepsake: DashboardItem | None
     upcoming: list[DashboardItem]
     recent_shared: list[DashboardItem]
+    shared_story_summary: DashboardSharedStorySummary
     thinking_of_you_available_at: datetime | None
 
 
@@ -96,6 +104,7 @@ def get_dashboard(
 ) -> DashboardView:
     """Return the shared-only relationship overview for one Space."""
     view = service.read_dashboard(session, authorization)
+    shared_story_counts = story_service.read_shared_story_counts(session, authorization)
     response.headers["Cache-Control"] = "private, no-store"
     return DashboardView(
         space=DashboardSpaceSummary(
@@ -119,6 +128,11 @@ def get_dashboard(
         keepsake=_project_item(view.keepsake) if view.keepsake is not None else None,
         upcoming=[_project_item(item) for item in view.upcoming],
         recent_shared=[_project_item(item) for item in view.recent_shared],
+        shared_story_summary=DashboardSharedStorySummary(
+            memories=shared_story_counts.memories,
+            heart_moments=shared_story_counts.heart_moments,
+            milestones=shared_story_counts.milestones,
+        ),
         thinking_of_you_available_at=view.thinking_of_you_available_at,
     )
 

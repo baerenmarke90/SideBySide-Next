@@ -25,6 +25,7 @@ package sidebyside.api.models
 
 import sidebyside.api.models.DashboardItem
 import sidebyside.api.models.DashboardRelationshipDuration
+import sidebyside.api.models.DashboardSharedStorySummary
 import sidebyside.api.models.DashboardSpaceSummary
 
 import kotlinx.serialization.Serializable
@@ -38,6 +39,7 @@ import kotlinx.serialization.Contextual
  * @param recentShared 
  * @param relationshipDuration 
  * @param retrospective 
+ * @param sharedStorySummary 
  * @param space 
  * @param thinkingOfYouAvailableAt 
  * @param upcoming 
@@ -57,6 +59,9 @@ data class DashboardView (
 
     @SerialName(value = "retrospective")
     val retrospective: DashboardItem?,
+
+    @SerialName(value = "sharedStorySummary")
+    val sharedStorySummary: DashboardSharedStorySummary,
 
     @SerialName(value = "space")
     val space: DashboardSpaceSummary,

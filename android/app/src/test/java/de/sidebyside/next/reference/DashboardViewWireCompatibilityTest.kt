@@ -22,6 +22,11 @@ class DashboardViewWireCompatibilityTest {
               "recentShared": [],
               "relationshipDuration": null,
               "retrospective": null,
+              "sharedStorySummary": {
+                "heartMoments": 0,
+                "memories": 0,
+                "milestones": 0
+              },
               "space": {
                 "partner": null,
                 "spaceId": "00000000-0000-0000-0000-000000000010"
@@ -48,6 +53,11 @@ class DashboardViewWireCompatibilityTest {
               "recentShared": [],
               "relationshipDuration": null,
               "retrospective": null,
+              "sharedStorySummary": {
+                "heartMoments": 0,
+                "memories": 0,
+                "milestones": 0
+              },
               "space": {
                 "partner": null,
                 "spaceId": "00000000-0000-0000-0000-000000000010"
