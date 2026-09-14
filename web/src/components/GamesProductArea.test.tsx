@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntitlementStatus } from '../api/generated/models/EntitlementStatus';
 import { EntitlementTier } from '../api/generated/models/EntitlementTier';
@@ -32,12 +33,14 @@ function entitlement(capabilities: string[]): SpaceEntitlementView {
   };
 }
 
-function renderGames(view: SpaceEntitlementView) {
+function renderGames(
+  view: SpaceEntitlementView,
+  { strictMode = false }: { strictMode?: boolean } = {},
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-
-  return render(
+  const ui = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/games']}>
         <GamesProductArea
@@ -48,8 +51,10 @@ function renderGames(view: SpaceEntitlementView) {
           loadPerspectiveParticipants={async () => PARTICIPANTS}
         />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+
+  return render(strictMode ? <StrictMode>{ui}</StrictMode> : ui);
 }
 
 function expectFiveGameEntries(): void {
@@ -114,8 +119,8 @@ describe('GamesProductArea', () => {
     expect(perspectiveButton.textContent).toContain(games.status.playNow);
   });
 
-  it('starts the perspective game as a hidden-answer handoff flow from the hub', async () => {
-    renderGames(entitlement([GAMES_COUPLE_CAPABILITY]));
+  it('starts the perspective game as a hidden-answer handoff flow from the hub under StrictMode', async () => {
+    renderGames(entitlement([GAMES_COUPLE_CAPABILITY]), { strictMode: true });
 
     const perspectiveButton = await screen.findByRole('button', {
       name: new RegExp(games.entries.perspective.title),
