@@ -119,8 +119,7 @@ export function GamesProductArea({
         <section className="games-shelf" aria-label={t('games.title')}>
           {GAME_ENTRIES.map((entry, index) => {
             const route = gamesUnlocked ? gameRoute(entry) : null;
-            const localGameAvailable =
-              gamesUnlocked && entry === 'perspective';
+            const localGameAvailable = gamesUnlocked && entry === 'perspective';
             const playable = Boolean(route || localGameAvailable);
             const content = (
               <>
