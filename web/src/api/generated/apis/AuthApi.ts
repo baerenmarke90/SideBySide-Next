@@ -134,6 +134,16 @@ import {
     SignInRequestToJSON,
 } from '../models/SignInRequest';
 import {
+    type SignupConsumeRequest,
+    SignupConsumeRequestFromJSON,
+    SignupConsumeRequestToJSON,
+} from '../models/SignupConsumeRequest';
+import {
+    type SignupSessionView,
+    SignupSessionViewFromJSON,
+    SignupSessionViewToJSON,
+} from '../models/SignupSessionView';
+import {
     type TokenOnlyRequest,
     TokenOnlyRequestFromJSON,
     TokenOnlyRequestToJSON,
@@ -174,6 +184,10 @@ export interface ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest {
     recoveryConsumeRequest: RecoveryConsumeRequest;
 }
 
+export interface ConsumeSignupApiV1AuthSignupConsumePostRequest {
+    signupConsumeRequest: SignupConsumeRequest;
+}
+
 export interface FinishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPostRequest {
     passkeyFinishRequest: PasskeyFinishRequest;
 }
@@ -207,6 +221,10 @@ export interface RequestMagicLinkApiV1AuthMagicLinkRequestPostRequest {
 }
 
 export interface RequestRecoveryApiV1AuthRecoveryRequestPostRequest {
+    emailRequest: EmailRequest;
+}
+
+export interface RequestSignupApiV1AuthSignupRequestPostRequest {
     emailRequest: EmailRequest;
 }
 
@@ -571,6 +589,55 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async consumeRecoveryApiV1AuthRecoveryConsumePost(requestParameters: ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
         const response = await this.consumeRecoveryApiV1AuthRecoveryConsumePostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for consumeSignupApiV1AuthSignupConsumePost without sending the request
+     */
+    async consumeSignupApiV1AuthSignupConsumePostRequestOpts(requestParameters: ConsumeSignupApiV1AuthSignupConsumePostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['signupConsumeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'signupConsumeRequest',
+                'Required parameter "signupConsumeRequest" was null or undefined when calling consumeSignupApiV1AuthSignupConsumePost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/signup/consume`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SignupConsumeRequestToJSON(requestParameters['signupConsumeRequest']),
+        };
+    }
+
+    /**
+     * Redeem a signup proof into a normal session.  Send the proof in the request body, never in a URL. After a successful redemption the client removes it from its address bar and history. A new Account has no Membership: continue with `POST /spaces` or accept an invitation.
+     * Consume Signup
+     */
+    async consumeSignupApiV1AuthSignupConsumePostRaw(requestParameters: ConsumeSignupApiV1AuthSignupConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SignupSessionView>> {
+        const requestOptions = await this.consumeSignupApiV1AuthSignupConsumePostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SignupSessionViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Redeem a signup proof into a normal session.  Send the proof in the request body, never in a URL. After a successful redemption the client removes it from its address bar and history. A new Account has no Membership: continue with `POST /spaces` or accept an invitation.
+     * Consume Signup
+     */
+    async consumeSignupApiV1AuthSignupConsumePost(requestParameters: ConsumeSignupApiV1AuthSignupConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SignupSessionView> {
+        const response = await this.consumeSignupApiV1AuthSignupConsumePostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1152,6 +1219,54 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async requestRecoveryApiV1AuthRecoveryRequestPost(requestParameters: RequestRecoveryApiV1AuthRecoveryRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.requestRecoveryApiV1AuthRecoveryRequestPostRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for requestSignupApiV1AuthSignupRequestPost without sending the request
+     */
+    async requestSignupApiV1AuthSignupRequestPostRequestOpts(requestParameters: RequestSignupApiV1AuthSignupRequestPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['emailRequest'] == null) {
+            throw new runtime.RequiredError(
+                'emailRequest',
+                'Required parameter "emailRequest" was null or undefined when calling requestSignupApiV1AuthSignupRequestPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/auth/signup/request`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: EmailRequestToJSON(requestParameters['emailRequest']),
+        };
+    }
+
+    /**
+     * Start Cloud/Managed self-service onboarding with an emailed one-time proof.  One entry for everyone: the server does the same work for an address with and without an Account and always answers with an empty `202`. The mailed proof decides on redemption whether it signs into the existing Account or creates one. Rejected with `403 AUTH_METHOD_DISABLED` on deployments without self-service signup, including every Self-Hosted instance.
+     * Request Signup
+     */
+    async requestSignupApiV1AuthSignupRequestPostRaw(requestParameters: RequestSignupApiV1AuthSignupRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.requestSignupApiV1AuthSignupRequestPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Start Cloud/Managed self-service onboarding with an emailed one-time proof.  One entry for everyone: the server does the same work for an address with and without an Account and always answers with an empty `202`. The mailed proof decides on redemption whether it signs into the existing Account or creates one. Rejected with `403 AUTH_METHOD_DISABLED` on deployments without self-service signup, including every Self-Hosted instance.
+     * Request Signup
+     */
+    async requestSignupApiV1AuthSignupRequestPost(requestParameters: RequestSignupApiV1AuthSignupRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.requestSignupApiV1AuthSignupRequestPostRaw(requestParameters, initOverrides);
     }
 
     /**

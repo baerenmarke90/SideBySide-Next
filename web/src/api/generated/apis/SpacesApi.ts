@@ -63,6 +63,45 @@ export interface UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest {
 export class SpacesApi extends runtime.BaseAPI {
 
     /**
+     * Creates request options for createSpaceApiV1SpacesPost without sending the request
+     */
+    async createSpaceApiV1SpacesPostRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Create a private couple Space with the caller as its first partner.  The request has no body: the founder is always the authenticated Account. Allowed only while the Account has no active Membership, and serialized per Account, so retries and concurrent requests yield exactly one Space. Invite the partner afterwards through the ordinary invitation endpoints.
+     * Create the authenticated Account\'s own private Space
+     */
+    async createSpaceApiV1SpacesPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceView>> {
+        const requestOptions = await this.createSpaceApiV1SpacesPostRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SpaceViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Create a private couple Space with the caller as its first partner.  The request has no body: the founder is always the authenticated Account. Allowed only while the Account has no active Membership, and serialized per Account, so retries and concurrent requests yield exactly one Space. Invite the partner afterwards through the ordinary invitation endpoints.
+     * Create the authenticated Account\'s own private Space
+     */
+    async createSpaceApiV1SpacesPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SpaceView> {
+        const response = await this.createSpaceApiV1SpacesPostRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getSpaceApiV1SpacesSpaceIdGet without sending the request
      */
     async getSpaceApiV1SpacesSpaceIdGetRequestOpts(requestParameters: GetSpaceApiV1SpacesSpaceIdGetRequest): Promise<runtime.RequestOpts> {

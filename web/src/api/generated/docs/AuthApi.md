@@ -11,6 +11,7 @@ All URIs are relative to *http://localhost*
 | [**confirmEmailApiV1AuthEmailVerificationConfirmPost**](AuthApi.md#confirmemailapiv1authemailverificationconfirmpost) | **POST** /api/v1/auth/email/verification/confirm | Confirm Email |
 | [**consumeMagicLinkApiV1AuthMagicLinkConsumePost**](AuthApi.md#consumemagiclinkapiv1authmagiclinkconsumepost) | **POST** /api/v1/auth/magic-link/consume | Consume Magic Link |
 | [**consumeRecoveryApiV1AuthRecoveryConsumePost**](AuthApi.md#consumerecoveryapiv1authrecoveryconsumepost) | **POST** /api/v1/auth/recovery/consume | Consume Recovery |
+| [**consumeSignupApiV1AuthSignupConsumePost**](AuthApi.md#consumesignupapiv1authsignupconsumepost) | **POST** /api/v1/auth/signup/consume | Consume Signup |
 | [**finishPasskeyApiV1AuthRecentAuthenticationAccountDeletionPasskeysFinishPost**](AuthApi.md#finishpasskeyapiv1authrecentauthenticationaccountdeletionpasskeysfinishpost) | **POST** /api/v1/auth/recent-authentication/account-deletion/passkeys/finish | Finish Passkey |
 | [**finishPasskeyAuthenticationApiV1AuthPasskeysAuthenticationFinishPost**](AuthApi.md#finishpasskeyauthenticationapiv1authpasskeysauthenticationfinishpost) | **POST** /api/v1/auth/passkeys/authentication/finish | Finish Passkey Authentication |
 | [**finishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPost**](AuthApi.md#finishpasskeyregistrationapiv1authpasskeysregistrationfinishpost) | **POST** /api/v1/auth/passkeys/registration/finish | Finish Passkey Registration |
@@ -24,6 +25,7 @@ All URIs are relative to *http://localhost*
 | [**requestEmailVerificationApiV1AuthEmailVerificationRequestPost**](AuthApi.md#requestemailverificationapiv1authemailverificationrequestpost) | **POST** /api/v1/auth/email/verification/request | Request Email Verification |
 | [**requestMagicLinkApiV1AuthMagicLinkRequestPost**](AuthApi.md#requestmagiclinkapiv1authmagiclinkrequestpost) | **POST** /api/v1/auth/magic-link/request | Request Magic Link |
 | [**requestRecoveryApiV1AuthRecoveryRequestPost**](AuthApi.md#requestrecoveryapiv1authrecoveryrequestpost) | **POST** /api/v1/auth/recovery/request | Request Recovery |
+| [**requestSignupApiV1AuthSignupRequestPost**](AuthApi.md#requestsignupapiv1authsignuprequestpost) | **POST** /api/v1/auth/signup/request | Request Signup |
 | [**signInApiV1AuthSignInPost**](AuthApi.md#signinapiv1authsigninpost) | **POST** /api/v1/auth/sign-in | Sign In |
 | [**signOutApiV1AuthSignOutPost**](AuthApi.md#signoutapiv1authsignoutpost) | **POST** /api/v1/auth/sign-out | Sign Out |
 | [**startOidcApiV1AuthOidcConnectionIdStartPost**](AuthApi.md#startoidcapiv1authoidcconnectionidstartpost) | **POST** /api/v1/auth/oidc/{connectionId}/start | Start Oidc |
@@ -514,6 +516,77 @@ No authorization required
 | **201** | Successful Response |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## consumeSignupApiV1AuthSignupConsumePost
+
+> SignupSessionView consumeSignupApiV1AuthSignupConsumePost(signupConsumeRequest)
+
+Consume Signup
+
+Redeem a signup proof into a normal session.  Send the proof in the request body, never in a URL. After a successful redemption the client removes it from its address bar and history. A new Account has no Membership: continue with &#x60;POST /spaces&#x60; or accept an invitation.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { ConsumeSignupApiV1AuthSignupConsumePostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // SignupConsumeRequest
+    signupConsumeRequest: ...,
+  } satisfies ConsumeSignupApiV1AuthSignupConsumePostRequest;
+
+  try {
+    const data = await api.consumeSignupApiV1AuthSignupConsumePost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **signupConsumeRequest** | [SignupConsumeRequest](SignupConsumeRequest.md) |  | |
+
+### Return type
+
+[**SignupSessionView**](SignupSessionView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Successful Response |  -  |
+| **403** | &#x60;AUTH_METHOD_DISABLED&#x60; on deployments without self-service signup, or &#x60;REGISTRATION_DISABLED&#x60; when the proof would create a new Account while the administrator does not admit new Accounts. Nothing was created. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+| **503** | &#x60;MAINTENANCE_MODE&#x60;: no new Account is created during maintenance. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1335,6 +1408,77 @@ async function example() {
 
   try {
     const data = await api.requestRecoveryApiV1AuthRecoveryRequestPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **emailRequest** | [EmailRequest](EmailRequest.md) |  | |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Successful Response |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+| **503** | A capability required for this operation is not configured on this instance. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## requestSignupApiV1AuthSignupRequestPost
+
+> requestSignupApiV1AuthSignupRequestPost(emailRequest)
+
+Request Signup
+
+Start Cloud/Managed self-service onboarding with an emailed one-time proof.  One entry for everyone: the server does the same work for an address with and without an Account and always answers with an empty &#x60;202&#x60;. The mailed proof decides on redemption whether it signs into the existing Account or creates one. Rejected with &#x60;403 AUTH_METHOD_DISABLED&#x60; on deployments without self-service signup, including every Self-Hosted instance.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { RequestSignupApiV1AuthSignupRequestPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  const body = {
+    // EmailRequest
+    emailRequest: ...,
+  } satisfies RequestSignupApiV1AuthSignupRequestPostRequest;
+
+  try {
+    const data = await api.requestSignupApiV1AuthSignupRequestPost(body);
     console.log(data);
   } catch (error) {
     console.error(error);
