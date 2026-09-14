@@ -35,10 +35,7 @@ export function FirstSpaceGate({
       await onSpaceReady();
     } catch (err: unknown) {
       const normalized = await normalizeClientError(err);
-      if (
-        normalized.status === 409 ||
-        normalized.code === 'ACCOUNT_HAS_ACTIVE_SPACE'
-      ) {
+      if (normalized.code === 'ACCOUNT_HAS_ACTIVE_SPACE') {
         try {
           await onSpaceReady();
           return;

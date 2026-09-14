@@ -97,16 +97,22 @@ test.describe('Cloud Onboarding Entry Flow (#622)', () => {
 
     await page.goto('/');
 
-    // Check mode switcher presence
-    const startTogetherBtn = page
-      .getByRole('button', {
-        name: de.identity.startTogether,
-      })
-      .first();
+    // Check mode switcher presence and accessibility
+    const modeGroup = page.getByRole('group', {
+      name: de.identity.entryModesAria,
+    });
+    await expect(modeGroup).toBeVisible();
+
+    const startTogetherBtn = modeGroup.getByRole('button', {
+      name: de.identity.startTogether,
+    });
     await expect(startTogetherBtn).toBeVisible();
+    await expect(startTogetherBtn).toHaveAttribute('aria-pressed', 'false');
 
     // Click "Gemeinsam starten"
     await startTogetherBtn.click();
+    await expect(startTogetherBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByLabel(de.login.email)).toBeFocused();
 
     // Headings and explanation
     await expect(
@@ -123,9 +129,10 @@ test.describe('Cloud Onboarding Entry Flow (#622)', () => {
       .getByRole('button', { name: de.identity.startTogetherSubmit });
     await submitBtn.click();
 
-    // Expect neutral mailbox confirmation
+    // Expect neutral mailbox confirmation with programmatic focus
     await expect(page.getByText(de.identity.mailRequestedTitle)).toBeVisible();
     await expect(page.getByText(de.identity.mailRequestedBody)).toBeVisible();
+    await expect(page.getByRole('status')).toBeFocused();
     expect(signupRequestSubmitted).toBe(true);
 
     // Responsive check at 390px and 320px
@@ -197,6 +204,7 @@ test.describe('Cloud Onboarding Entry Flow (#622)', () => {
             accessExpiresAt: '2026-09-01T12:00:00Z',
             refreshExpiresAt: '2026-09-08T12:00:00Z',
           },
+          accountCreated: true,
         });
         return;
       }
@@ -343,6 +351,230 @@ test.describe('Cloud Onboarding Entry Flow (#622)', () => {
     await expect(page).toHaveURL(/.*\/more\/settings#settings-connection/);
     await expect(page.locator('#settings-connection')).toBeVisible();
     expect(spacesCreated).toBe(true);
+  });
+
+  test('signup consume with existing account and existing membership enters existing space without FirstSpaceGate', async ({
+    page,
+  }) => {
+    let spacesCreated = false;
+
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const method = request.method();
+      const pathname = new URL(request.url()).pathname;
+
+      const fulfillJson = async (body: unknown, status = 200) =>
+        route.fulfill({
+          status,
+          contentType: 'application/json',
+          body: JSON.stringify(body),
+        });
+
+      if (method === 'POST' && pathname === '/api/v1/auth/instance-access') {
+        await fulfillJson({
+          maintenanceMode: false,
+          registrationAvailable: true,
+          accountCreation: 'self_service',
+          selfServiceSignupAvailable: true,
+          auth: {
+            localPassword: false,
+            magicLink: true,
+            oidc: false,
+            passkey: false,
+          },
+        });
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/v1/instance/status') {
+        await fulfillJson({
+          maintenanceMode: false,
+          registrationAvailable: true,
+          accountCreation: 'self_service',
+          selfServiceSignupAvailable: true,
+          auth: {
+            localPassword: false,
+            magicLink: true,
+            oidc: false,
+            passkey: false,
+          },
+        });
+        return;
+      }
+
+      if (method === 'POST' && pathname === '/api/v1/auth/signup/consume') {
+        await fulfillJson({
+          account: { id: ACCOUNT_ID, displayName: 'Lea' },
+          tokens: {
+            accessToken: 'session-access-token',
+            refreshToken: 'session-refresh-token',
+            accessExpiresAt: '2026-09-01T12:00:00Z',
+            refreshExpiresAt: '2026-09-08T12:00:00Z',
+          },
+          accountCreated: false,
+        });
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/v1/auth/me') {
+        await fulfillJson({ id: ACCOUNT_ID, displayName: 'Lea' });
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
+        await fulfillJson({ serverAdmin: false });
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
+        await fulfillJson([
+          {
+            accountId: ACCOUNT_ID,
+            spaceId: SPACE_ID,
+            createdAt: TEST_NOW,
+          },
+        ]);
+        return;
+      }
+
+      if (method === 'GET' && pathname === `/api/v1/spaces/${SPACE_ID}`) {
+        await fulfillJson({
+          id: SPACE_ID,
+          createdAt: TEST_NOW,
+          partners: [{ id: ACCOUNT_ID, displayName: 'Lea' }],
+        });
+        return;
+      }
+
+      if (method === 'GET' && pathname === '/api/v1/spaces') {
+        await fulfillJson([
+          {
+            id: SPACE_ID,
+            createdAt: TEST_NOW,
+            partners: [{ id: ACCOUNT_ID, displayName: 'Lea' }],
+          },
+        ]);
+        return;
+      }
+
+      if (method === 'POST' && pathname === '/api/v1/spaces') {
+        spacesCreated = true;
+        await fulfillJson({
+          id: SPACE_ID,
+          createdAt: TEST_NOW,
+          partners: [{ id: ACCOUNT_ID, displayName: 'Lea' }],
+        });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/invitations`
+      ) {
+        await fulfillJson([]);
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/profile`
+      ) {
+        await fulfillJson({
+          relationshipStartedOn: null,
+          showRelationshipDuration: false,
+        });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname.startsWith(`/api/v1/spaces/${SPACE_ID}/profile-identity/`)
+      ) {
+        await fulfillJson({
+          accountId: ACCOUNT_ID,
+          displayName: 'Lea',
+          profileAttachmentId: null,
+          version: 1,
+        });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname.includes('/rules/relationship_anniversary_reminder/preference')
+      ) {
+        await fulfillJson({
+          ruleKey: 'relationship_anniversary_reminder',
+          enabled: false,
+          parameters: { daysBefore: [30, 7, 1], localTime: '09:00:00' },
+        });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/dashboard/preferences`
+      ) {
+        await fulfillJson({ items: [] });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+      ) {
+        await fulfillJson({ unreadCount: 0 });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/dashboard`
+      ) {
+        await fulfillJson({
+          space: {
+            id: SPACE_ID,
+            partner: null,
+            relationshipDuration: null,
+          },
+          upcoming: [],
+          keepsake: null,
+          retrospective: null,
+          recentShared: [],
+        });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/activity`
+      ) {
+        await fulfillJson({ items: [] });
+        return;
+      }
+
+      route.continue();
+    });
+
+    // Enter via verified signup URL
+    await page.goto('/auth/signup?token=secret-signup-proof');
+
+    // Sensitive token stripped immediately from URL
+    expect(page.url()).not.toContain('secret-signup-proof');
+
+    // FirstSpaceGate must NOT be displayed
+    await expect(
+      page.getByRole('heading', {
+        name: de.spaceContext.createFirstSpaceTitle,
+      }),
+    ).toHaveCount(0);
+
+    // Enters active space directly; POST /api/v1/spaces was never invoked
+    await expect(page.locator('.product-shell')).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: de.navigation.primary }),
+    ).toBeVisible();
+    expect(spacesCreated).toBe(false);
   });
 
   test('does not show "Gemeinsam starten" on self-hosted invitation-only deployment', async ({

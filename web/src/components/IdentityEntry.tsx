@@ -102,6 +102,9 @@ export function IdentityEntry({
     null,
   );
   const processedEntryToken = useRef<string | null>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const shouldFocusInput = useRef(false);
+  const neutralMailStatusRef = useRef<HTMLDivElement>(null);
 
   async function runAction<T>(
     action: PendingAction,
@@ -218,7 +221,21 @@ export function IdentityEntry({
     }
   }, [apiBaseUrl, entryToken, onSession]);
 
+  useEffect(() => {
+    if (shouldFocusInput.current && mode) {
+      shouldFocusInput.current = false;
+      emailInputRef.current?.focus();
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (signupRequested) {
+      neutralMailStatusRef.current?.focus();
+    }
+  }, [signupRequested]);
+
   function switchMode(nextMode: EntryMode) {
+    if (nextMode === mode) return;
     if (
       !localPasswordEnabled &&
       nextMode !== 'magicLinkRequest' &&
@@ -228,6 +245,7 @@ export function IdentityEntry({
     }
     setActiveError(null);
     setValidationError(null);
+    shouldFocusInput.current = true;
     setMode(nextMode);
   }
 
@@ -445,8 +463,10 @@ export function IdentityEntry({
           ) : (
             <>
               {selfServiceSignupAvailable && !invitationToken ? (
-                <nav
+                // biome-ignore lint/a11y/useSemanticElements: ARIA button group pattern for entry mode switcher
+                <div
                   className="entry-mode-toggle"
+                  role="group"
                   aria-label={t('identity.entryModesAria')}
                 >
                   <button
@@ -454,6 +474,7 @@ export function IdentityEntry({
                     className={`entry-mode-btn ${
                       mode !== 'signupRequest' ? 'active' : ''
                     }`}
+                    aria-pressed={mode !== 'signupRequest'}
                     onClick={() =>
                       switchMode(
                         localPasswordEnabled ? 'signIn' : 'magicLinkRequest',
@@ -467,11 +488,12 @@ export function IdentityEntry({
                     className={`entry-mode-btn ${
                       mode === 'signupRequest' ? 'active' : ''
                     }`}
+                    aria-pressed={mode === 'signupRequest'}
                     onClick={() => switchMode('signupRequest')}
                   >
                     {t('identity.startTogether')}
                   </button>
-                </nav>
+                </div>
               ) : null}
 
               {mode === 'signupRequest' ? (
@@ -486,13 +508,13 @@ export function IdentityEntry({
                     <p className="muted">{t('identity.startTogetherBody')}</p>
                   </div>
                   {signupRequested ? (
-                    <NeutralMailResult />
+                    <NeutralMailResult statusRef={neutralMailStatusRef} />
                   ) : (
                     <form
                       onSubmit={submitSignupRequest}
                       className="form-grid login-form"
                     >
-                      <EmailField />
+                      <EmailField inputRef={emailInputRef} />
                       <button
                         type="submit"
                         disabled={pendingAction === 'signupRequest'}
@@ -623,7 +645,7 @@ export function IdentityEntry({
                       onSubmit={submitMagicLinkRequest}
                       className="form-grid login-form"
                     >
-                      <EmailField />
+                      <EmailField inputRef={emailInputRef} />
                       <button
                         type="submit"
                         disabled={pendingAction === 'magicLinkRequest'}
@@ -633,15 +655,6 @@ export function IdentityEntry({
                           ? t('identity.magicLinkRequestPending')
                           : t('identity.magicLinkRequestSubmit')}
                       </button>
-                      {selfServiceSignupAvailable && !invitationToken ? (
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => switchMode('signupRequest')}
-                        >
-                          {t('identity.startTogether')}
-                        </button>
-                      ) : null}
                     </form>
                   )}
                   {localPasswordEnabled ? (
@@ -697,7 +710,7 @@ export function IdentityEntry({
                     onSubmit={submitSignIn}
                     className="form-grid login-form"
                   >
-                    <EmailField />
+                    <EmailField inputRef={emailInputRef} />
                     <div className="field-group">
                       <label htmlFor="password">{t('login.password')}</label>
                       <input
@@ -728,28 +741,15 @@ export function IdentityEntry({
                           {t('identity.createAccount')}
                         </button>
                       ) : null
-                    ) : (
-                      <>
-                        {selfServiceSignupAvailable ? (
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => switchMode('signupRequest')}
-                          >
-                            {t('identity.startTogether')}
-                          </button>
-                        ) : null}
-                        {magicLinkEnabled ? (
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => switchMode('magicLinkRequest')}
-                          >
-                            {t('identity.useMagicLink')}
-                          </button>
-                        ) : null}
-                      </>
-                    )}
+                    ) : magicLinkEnabled ? (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => switchMode('magicLinkRequest')}
+                      >
+                        {t('identity.useMagicLink')}
+                      </button>
+                    ) : null}
                     {localPasswordEnabled ? (
                       <button
                         type="button"
@@ -821,12 +821,17 @@ function registrationAvailabilityBodyKey(
   }
 }
 
-function EmailField() {
+function EmailField({
+  inputRef,
+}: {
+  inputRef?: React.Ref<HTMLInputElement>;
+} = {}) {
   const { t } = useTranslation();
   return (
     <div className="field-group">
       <label htmlFor="email">{t('login.email')}</label>
       <input
+        ref={inputRef}
         id="email"
         name="email"
         type="email"
@@ -869,10 +874,19 @@ function PasswordFields() {
   );
 }
 
-function NeutralMailResult() {
+function NeutralMailResult({
+  statusRef,
+}: {
+  statusRef?: React.Ref<HTMLDivElement>;
+} = {}) {
   const { t } = useTranslation();
   return (
-    <div className="inline-message inline-message-success" role="status">
+    <div
+      ref={statusRef}
+      tabIndex={-1}
+      className="inline-message inline-message-success"
+      role="status"
+    >
       <strong>{t('identity.mailRequestedTitle')}</strong>
       <span>{t('identity.mailRequestedBody')}</span>
     </div>

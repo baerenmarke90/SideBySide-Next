@@ -7,6 +7,29 @@ import { ClientProblemError } from '../client/problemDetails';
 import de from '../i18n/locales/de';
 import { IdentityEntry } from './IdentityEntry';
 
+interface CustomMatchers<R = unknown> {
+  toHaveFocus(): R;
+}
+
+declare module 'vitest' {
+  // biome-ignore lint/suspicious/noExplicitAny: vitest matcher declaration
+  interface Assertion<T = any> extends CustomMatchers<T> {}
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
+expect.extend({
+  toHaveFocus(received: HTMLElement) {
+    const pass = document.activeElement === received;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? 'expected element not to have focus'
+          : `expected element to have focus, but activeElement is ${document.activeElement?.outerHTML ?? 'null'}`,
+    };
+  },
+});
+
 describe('IdentityEntry', () => {
   const apiBaseUrl = 'https://sidebyside.invalid';
 
@@ -38,21 +61,33 @@ describe('IdentityEntry', () => {
       />,
     );
 
-    // Both modes are accessible via mode toggle buttons
-    await screen.findByRole('button', { name: de.login.heading });
-    const startTogetherButtons = screen.getAllByRole('button', {
+    // Mode group and toggle buttons are accessible
+    const modeGroup = await screen.findByRole('group', {
+      name: de.identity.entryModesAria,
+    });
+    expect(modeGroup).toBeDefined();
+
+    const signInToggle = screen.getByRole('button', {
+      name: de.login.heading,
+    });
+    const startTogetherToggle = screen.getByRole('button', {
       name: de.identity.startTogether,
     });
-    expect(startTogetherButtons.length).toBeGreaterThanOrEqual(1);
+
+    expect(signInToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(startTogetherToggle.getAttribute('aria-pressed')).toBe('false');
 
     // Click "Gemeinsam starten" toggle
-    fireEvent.click(startTogetherButtons[0]);
+    fireEvent.click(startTogetherToggle);
 
-    // Card switches to "Gemeinsam starten" view
+    // Card switches to "Gemeinsam starten" view and focuses email input
     await screen.findByRole('heading', {
       name: de.identity.startTogetherTitle,
     });
     expect(screen.getByText(de.identity.startTogetherBody)).toBeDefined();
+    expect(startTogetherToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(signInToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByLabelText(de.login.email)).toHaveFocus();
 
     // Submit button says "Gemeinsam starten"
     const submitBtns = screen.getAllByRole('button', {
@@ -69,9 +104,12 @@ describe('IdentityEntry', () => {
     });
     expect(backBtn).toBeDefined();
 
-    // Clicking back returns to sign-in
+    // Clicking back returns to sign-in and focuses email input
     fireEvent.click(backBtn);
     await screen.findByRole('heading', { name: de.identity.magicLinkTitle });
+    expect(signInToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(startTogetherToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByLabelText(de.login.email)).toHaveFocus();
   });
 
   it('suppresses "Gemeinsam starten" when selfServiceSignupAvailable is false', async () => {
@@ -134,13 +172,14 @@ describe('IdentityEntry', () => {
     );
 
     // Switch to Gemeinsam starten
-    const startTogetherBtns = await screen.findAllByRole('button', {
+    const startTogetherBtn = await screen.findByRole('button', {
       name: de.identity.startTogether,
     });
-    fireEvent.click(startTogetherBtns[0]);
+    fireEvent.click(startTogetherBtn);
 
     // Fill email
     const emailInput = screen.getByLabelText(de.login.email);
+    expect(emailInput).toHaveFocus();
     fireEvent.change(emailInput, {
       target: { value: 'couple@example.invalid' },
     });
@@ -164,9 +203,11 @@ describe('IdentityEntry', () => {
       );
     });
 
-    // Shows neutral mail notice
+    // Shows neutral mail notice and moves focus to status container
     await screen.findByText(de.identity.mailRequestedTitle);
     expect(screen.getByText(de.identity.mailRequestedBody)).toBeDefined();
+    const statusBox = screen.getByRole('status');
+    expect(statusBox).toHaveFocus();
   });
 
   it('consumes valid signup token and starts session', async () => {
@@ -237,7 +278,7 @@ describe('IdentityEntry', () => {
       />,
     );
 
-    // Does NOT show "Registrierungslink funktioniert nicht mehr"
+    // Does not show the expired signup link message
     await waitFor(() => {
       expect(screen.queryByText(de.identity.signupFailedTitle)).toBeNull();
     });

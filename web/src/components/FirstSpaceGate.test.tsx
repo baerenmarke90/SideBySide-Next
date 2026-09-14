@@ -115,6 +115,43 @@ describe('FirstSpaceGate', () => {
     });
   });
 
+  it('does not converge to onSpaceReady on other 409 conflict and shows problem state', async () => {
+    const onSpaceReady = vi.fn().mockResolvedValue(undefined);
+    const response = new Response(
+      JSON.stringify({
+        code: 'OTHER_CONFLICT',
+        detail: 'Concurrent space creation in progress',
+        status: 409,
+        title: 'Conflict',
+        type: 'about:blank',
+      }),
+      { status: 409, headers: { 'content-type': 'application/problem+json' } },
+    );
+    vi.spyOn(
+      SpacesApi.prototype,
+      'createSpaceApiV1SpacesPost',
+    ).mockRejectedValue(new ResponseError(response));
+
+    render(
+      <FirstSpaceGate
+        apiBaseUrl={apiBaseUrl}
+        accessToken={accessToken}
+        onSpaceReady={onSpaceReady}
+      />,
+    );
+
+    const submitBtn = screen.getByRole('button', {
+      name: de.spaceContext.createFirstSpaceSubmit,
+    });
+    fireEvent.click(submitBtn);
+
+    const retryBtn = await screen.findByRole('button', {
+      name: de.common.retry,
+    });
+    expect(retryBtn).toBeDefined();
+    expect(onSpaceReady).not.toHaveBeenCalled();
+  });
+
   it('shows problem state on server error and allows retry', async () => {
     const onSpaceReady = vi.fn().mockResolvedValue(undefined);
     const response = new Response(

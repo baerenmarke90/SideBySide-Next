@@ -205,12 +205,14 @@
   padding: 0 var(--space-3);
 }
 
-.entry-mode-toggle button.entry-mode-btn:hover:not(.active) {
+.entry-mode-toggle
+  button.entry-mode-btn:hover:not(.active):not([aria-pressed="true"]) {
   color: var(--color-text);
   background: rgba(0, 0, 0, 0.04);
 }
 
-.entry-mode-toggle button.entry-mode-btn.active {
+.entry-mode-toggle button.entry-mode-btn.active,
+.entry-mode-toggle button.entry-mode-btn[aria-pressed="true"] {
   background: var(--color-surface);
   color: var(--color-brand-text);
   box-shadow: 0 2px 8px var(--color-shadow-soft);
@@ -252,7 +254,11 @@
 }
 
 :root[data-theme="dark"] .entry-mode-btn.active,
-:root[data-theme="dark"] .entry-mode-toggle button.entry-mode-btn.active {
+:root[data-theme="dark"] .entry-mode-btn[aria-pressed="true"],
+:root[data-theme="dark"] .entry-mode-toggle button.entry-mode-btn.active,
+:root[data-theme="dark"]
+  .entry-mode-toggle
+  button.entry-mode-btn[aria-pressed="true"] {
   background: var(--color-surface-raised);
   color: var(--color-brand-text);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
@@ -289,7 +295,11 @@
   }
 
   :root:not([data-theme]) .entry-mode-btn.active,
-  :root:not([data-theme]) .entry-mode-toggle button.entry-mode-btn.active {
+  :root:not([data-theme]) .entry-mode-btn[aria-pressed="true"],
+  :root:not([data-theme]) .entry-mode-toggle button.entry-mode-btn.active,
+  :root:not([data-theme])
+    .entry-mode-toggle
+    button.entry-mode-btn[aria-pressed="true"] {
     background: var(--color-surface-raised);
     color: var(--color-brand-text);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
