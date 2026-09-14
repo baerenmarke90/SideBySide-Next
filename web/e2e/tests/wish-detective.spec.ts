@@ -246,6 +246,7 @@ test.describe('Wish Detective Product Reference (#864)', () => {
   test('390/320 handoff keeps the secret hidden and stays accessible', async ({
     page,
   }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 390, height: 844 });
     await installApiMocks(page);
     await page.goto('/login');
@@ -260,6 +261,10 @@ test.describe('Wish Detective Product Reference (#864)', () => {
     ).toBeVisible();
     const secretWishHeading = page.locator('#wish-detective-clue-title');
     await expect(secretWishHeading).toBeVisible();
+    await expect(page.locator('.wish-detective-card')).toHaveCSS(
+      'animation-name',
+      'none',
+    );
     const secretWishTitle =
       (await secretWishHeading.textContent())?.trim() ?? '';
     expect(POSSIBLE_ACCOUNT_WISH_TITLES).toContain(secretWishTitle);
@@ -310,16 +315,22 @@ test.describe('Wish Detective Product Reference (#864)', () => {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.documentElement.style.colorScheme = 'dark';
     });
+    await page.waitForTimeout(300);
+    const axeDarkHandoff = await new AxeBuilder({ page })
+      .include('.wish-detective-page')
+      .analyze();
+    expect(axeDarkHandoff.violations).toEqual([]);
     await page.screenshot({
       path: testInfo.outputPath('wish-detective-handoff-390-dark.png'),
       fullPage: true,
     });
 
-    await page
-      .getByRole('button', {
-        name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
-      })
-      .click();
+    const handoffConfirm = page.getByRole('button', {
+      name: localized(games.wishDetective.handoffConfirm, { name: 'Alex' }),
+    });
+    await handoffConfirm.focus();
+    await expect(handoffConfirm).toBeFocused();
+    await page.keyboard.press('Enter');
     await expect(page.getByText(secretWishTitle, { exact: true })).toHaveCount(
       0,
     );
@@ -342,6 +353,27 @@ test.describe('Wish Detective Product Reference (#864)', () => {
     await page.screenshot({
       path: testInfo.outputPath('wish-detective-guess-320-dark.png'),
       fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '24px';
+    });
+    await expectNoHorizontalOverflow(page);
+    await expect(guessInput).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: games.wishDetective.pass }),
+    ).toBeVisible();
+    const axeLargeText = await new AxeBuilder({ page })
+      .include('.wish-detective-page')
+      .analyze();
+    expect(axeLargeText.violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath('wish-detective-guess-390-dark-large-text.png'),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '';
     });
 
     await page.goBack();
