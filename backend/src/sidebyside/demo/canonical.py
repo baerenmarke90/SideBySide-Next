@@ -5,18 +5,22 @@ away and rebuilt on a timer. That only works while the two reserved Accounts
 stay recognizable: create/ensure/reset resolve them by their reserved address
 and a durable technical identity marker (`sidebyside.demo.models`), never by
 `display_name`, because a demo it cannot identify is one it must not delete a
-Space for. `display_name` is ordinary mutable presentation data -- a visitor
-is explicitly allowed to change it, and reset restores it rather than relying
-on it (#633).
+Space for. `display_name` is presentation state in the domain model and must
+never serve as durable technical demo identity: legacy data from before this
+marker existed, an operator edit, or a direct database change can still leave
+it drifted, and create/ensure/reset/demo-entry must remain recoverable when it
+does (#633).
 
-Everything a visitor does inside the Space is therefore disposable by design.
-The Account-global name they could still change while the demo is live between
-resets is additionally protected here, not because the reset depends on it,
-but so a persona is not visibly mislabeled to other visitors until the next
-reset runs. It is protected here rather than by hiding a control in a client:
-a visitor holds an ordinary bearer token and can call the API directly; UI
-visibility is a representation of a server decision, never the decision
-itself.
+Public Demo visitors are currently prevented from changing an Account-global
+reserved-persona name at all through the normal profile API (#697):
+`DEMO_CANONICAL_IDENTITY_IMMUTABLE`, enforced by `ensure_account_identity_mutable`
+below, keeps an ordinary visitor from causing that drift in the first place.
+This is not what create/ensure/reset depend on, though -- they recognize and
+recover from a drifted name on their own (#633) -- it exists so a persona is
+never visibly mislabeled to other visitors in the meantime. It is enforced
+here rather than by hiding a control in a client: a visitor holds an ordinary
+bearer token and can call the API directly; UI visibility is a representation
+of a server decision, never the decision itself.
 
 This module deliberately depends only on configuration, the identity models,
 and the lightweight demo identity-marker model. The services that must not
@@ -60,11 +64,12 @@ class DemoPersona:
     """The two canonical demo personas, independent of any presentation data.
 
     Also the value space the durable marker `sidebyside.demo.models` stores:
-    `display_name` and even the reserved address itself are things a visitor
-    or an operator could, in principle, cause to drift, but the marker is the
-    technical fact create/ensure/reset ultimately trust once it has been
-    established. See `sidebyside.demo.service` for how it is adopted for an
-    already-deployed demo database that predates this marker.
+    `display_name` is legacy/operator-driftable presentation state, and even
+    the reserved address itself is only a claim to check, not proof on its
+    own -- the marker is the technical fact create/ensure/reset ultimately
+    trust once it has been established. See `sidebyside.demo.service` for how
+    it is adopted for an already-deployed demo database that predates this
+    marker, and only once an already-verified canonical Space proves it.
     """
 
     LEA = "LEA"
@@ -122,8 +127,8 @@ def resolve_canonical_account(session: Session, *, persona: str) -> Account | No
     deployment always runs `ensure` once at startup before serving requests,
     so a public caller such as the demo-entry endpoint never needs to.
 
-    `display_name` plays no part here, so a visitor who renamed a persona can
-    still enter as it (#633).
+    `display_name` plays no part here, so legacy or operator-caused drift in
+    it can never hide a persona from its own public entry point (#633).
     """
     email = LEA_EMAIL if persona == DemoPersona.LEA else ALEX_EMAIL
     account = session.execute(
@@ -140,12 +145,15 @@ def resolve_canonical_account(session: Session, *, persona: str) -> Account | No
 
 
 def ensure_account_identity_mutable(session: Session, account: Account) -> None:
-    """Refuse an Account-global mutation the demo reset cannot reconstruct.
+    """Refuse an Account-global mutation of a canonical reserved persona (#697).
 
-    Callers decide which of their mutations is reset-critical, because that
-    depends on what the reset rebuilds; this only answers whether the Account
-    is one whose global identity the reset depends on. Space and product
-    content stay mutable, since the reset replaces the Space wholesale.
+    Callers decide which of their mutations this guards, because that is a
+    product decision, not a technical one: create/ensure/reset now recognize
+    and recover a drifted name on their own (#633), so this is not about what
+    the reset "cannot reconstruct" any more -- it keeps a live persona from
+    ever being visibly mislabeled to other visitors in the first place. Space
+    and product content stay mutable, since the reset replaces the Space
+    wholesale regardless.
 
     Outside a demo deployment nothing is refused. The reserved accounts do not
     exist in production, and elsewhere the reset's own fail-closed validation

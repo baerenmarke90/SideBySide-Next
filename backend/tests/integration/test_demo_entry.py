@@ -81,21 +81,23 @@ def test_demo_entry_issues_one_time_proof_for_selected_persona(
     assert repeated.status_code == 422
 
 
-def test_demo_entry_still_succeeds_after_a_renamed_persona(
+def test_demo_entry_still_succeeds_after_a_drifted_display_name(
     client,
     session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:  # type: ignore[no-untyped-def]
-    """#633: a changed display name alone must never hide the entry persona.
+    """#633: a drifted display name alone must never hide the entry persona.
 
-    The entry endpoint used to require an exact display-name match, so a
-    visitor who renamed Lea (or any pre-existing drift) would lock the
+    An ordinary Demo visitor cannot cause this through the normal profile API
+    (#697 already blocks that); this simulates legacy data or a direct
+    database/operator edit instead. The entry endpoint used to require an
+    exact display-name match, so any such pre-existing drift would lock the
     persona out of its own public entry point.
     """
     result = _seed(session)
     lea = session.get(Account, result.lea_id)
     assert lea is not None
-    identity_service.update_display_name(session, lea, "Renamed durch Besucher")
+    identity_service.update_display_name(session, lea, "Legacy-Datenstand")
     monkeypatch.setattr(
         demo_api,
         "get_settings",
