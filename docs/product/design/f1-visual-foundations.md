@@ -2,7 +2,7 @@
 
 **Owner:** [#957](https://github.com/baerenmarke90/eimir/issues/957), child of #955.  
 **Authority:** [Product Reference v1](product-reference-v1.md), D1/D2/D7; [system direction](design-system-direction.md).  
-**Status:** implementation delivered for review; native device evidence and final CI are being completed. The preflight was committed before UI implementation on 2026-09-15.
+**Status:** implemented with Web and Android emulator evidence; delivery and review are tracked in [#960](https://github.com/baerenmarke90/eimir/pull/960). The preflight was committed before UI implementation on 2026-09-15.
 
 ## Live baseline and overlap
 
@@ -83,7 +83,7 @@ Photo provenance: `backend/demo_assets/manifest.json`, `memory-cabin`, creator D
 | Existing product shell | Web `shell.css` and `product-reflow.css`; native page-margin consumers | Web widths 390–839 change from 16 to 20 px. Native widths below 390 change from 20 to 16 dp; consumers using all-direction padding also reduce their vertical margin by 4 dp. Web Expanded 32 px spacing remains unchanged. |
 | Internal proofs | Development-only Web entry and debug-only Android Activity | Photo, authored text, utility selection, reading detail, visible privacy, stable loading/error/retry, absent image, explicitly simulated offline/status, and platform overlay |
 
-For Web token changes run `npm --prefix web run tokens:generate`; `tokens:check` is part of build and unit-test commands. Never edit the generated CSS directly. Android generation runs through the existing Gradle token task. Existing legacy Web radius/motion aliases are deliberately compatible; migrate consumers by their meaning in the owning R1–R5 slice. There is no universal Card/Surface wrapper. Raised surfaces belong to transient overlays, meaningful tints require textual meaning, and essential supporting text uses the readable secondary role.
+For Web token changes run `npm --prefix web run tokens:generate`; `tokens:check` is part of build and unit-test commands. Never edit the generated CSS directly. The supported Web-only Docker context uses explicit `build:bundle` to compile this checked-in adapter; it does not have the canonical JSON. Default monorepo build/test and token-source-triggered Web S8 CI retain strict drift checking. Android generation runs through the existing Gradle token task. Existing legacy Web radius/motion aliases are deliberately compatible; migrate consumers by their meaning in the owning R1–R5 slice. There is no universal Card/Surface wrapper. Raised surfaces belong to transient overlays, meaningful tints require textual meaning, and essential supporting text uses the readable secondary role.
 
 The proof is an internal composition, not a standalone populated catalog: Playwright supplies the approved local photo at `/__foundation-proof/cabin-lake.jpg`. Opening the Vite fixture directly can use `?media=none` for the intentional text-only composition. No remote photo request or new CDN is introduced. Android copies the same source asset only into generated debug assets. The production Web bundle and merged Android release manifest/assets exclude the proof and its photo.
 
@@ -109,7 +109,7 @@ python3 tools/qa/measure_f1_android_contrast.py \
   --output /tmp/eimir-f1-android-evidence/f1-android-contrast.json
 ```
 
-Pass `--adb` when platform-tools is not on PATH. The capture helper installs only the debug APK, exercises controls through UIAutomator, captures screenshot/semantics pairs, and restores display/font/motion overrides. Its report includes source commit, APK hash, screenshot hashes, observed bounds, interaction results and limitations; unsuccessful runs explicitly report `completed: false`. The contrast sampler requires Pillow in the QA environment, reads images without modifying them, and fails when expected rendered role colors are missing. No production runtime dependency is added.
+Pass `--adb` when platform-tools is not on PATH. The capture helper installs only the debug APK, exercises controls through UIAutomator, captures screenshot/semantics pairs, and restores display/font/motion/system-night overrides. Its report includes source commit, APK hash, screenshot hashes, observed bounds, interaction results and limitations; unsuccessful runs explicitly report `completed: false`. The contrast sampler uses Pillow, already declared in the backend project, in the QA environment, reads images without modifying them, and fails when expected rendered role colors are missing. No production runtime dependency is added.
 
 ### Evidence and validation
 
@@ -117,7 +117,24 @@ The [evidence index](evidence/f1/README.md) links representative Compact/Expande
 
 Web proof: **19 passing tests** plus **20 passing gutter-boundary checks**, including image/detail recovery, stale completion protection, reading return, native-dialog modality, theme completion, 200% text, long labels, reduced motion, axe and minimum targets. Essential rendered CSS contrast ratios are recorded in the JSON files: Light/Dark body **15.44/15.71**, supporting copy **6.29/11.72**, shared label **5.25/7.71**, link text **5.27/6.69**, focus **5.88/8.58**; filled actions **5.99** in both themes.
 
-Native unit/lint/build and device results are completed in the final review update. The first device attempt was rejected by the capture helper after the resource-constrained host caused an Android process-start timeout; its launcher image is not accepted as proof.
+Native proof: **24 accepted captures and 8 real interaction scenarios** on a dedicated Android 15 / API 35 ARM64 emulator, at 2 pixels per dp. The report records 320/360/390/430/1280 in both themes, loading/error/absent media/offline/success, photo/text detail, selection and overlays. Both visible Back and System Back return to the source; Retry reveals the photo; absent media stays absent in detail. Close and System Back dismiss the sheet. 200% font scaling plus disabled system animations retain reachable actions. Measured Back/selection/sheet/Close/Retry targets meet **48 dp**. Photo bounds prove symmetric **16 dp** gutters at 320/360 and **20 dp** at 390/430; the outer accessibility scroll node includes padding and is not used as the gutter measurement.
+
+Native source: `0dffed3e1e3beaaaf54adac3395fb221e1d46e12`; APK SHA-256: `614d3d14f09253ac115828a9e39d4296006dfd019b2938f705f9183a24bba152`. Screenshots and their semantic hierarchies are committed without image modification. The contrast report checks actual role pixels inside bounded semantic regions in addition to calculated token ratios. All **15 sampled text pairs pass**, with minimum **5.267:1**. The Dark utility-heading correction is explicitly covered by its own region. Activity and system night mode match for each capture; the final Dark sheet and system-bar icons were visually checked with normal and 200% text.
+
+| Check | Result |
+| --- | --- |
+| Full Web unit suite in CI | 818 passed, 1 existing skip; an overloaded local W08 timeout also reproduced on clean main and passes in CI |
+| Web build, typecheck, lint and formatting | Passed; fixture has a separate typecheck |
+| Web production exclusion | No proof entry, fixture copy or cabin image in the production bundle |
+| Native build, unit tests and lint | Passed; 570 tests, 0 failures/errors, 1 existing real-stack G2 skip; 20 focused tests rerun after the final visual fix |
+| Android release exclusion | No proof Activity or photo in merged release manifest/assets |
+| Product-design tooling / language tooling | 26 and 22 tests passed; documentation/engineering audits and status-drift passed |
+| Web-only build compatibility | Isolated bundle with no canonical JSON produces identical JS/CSS; normal token check still rejects missing source; 16 source-build helper tests pass |
+| Full browser and remaining integration gates | Required checks on [PR #960](https://github.com/baerenmarke90/eimir/pull/960); no claim of merge readiness before those checks pass |
+
+Local macOS native builds used lenient verification for the existing host-tool metadata gap; the unchanged Android CI runs unit tests, lint, APK assembly and the tampered-metadata negative check with **strict** dependency verification.
+
+The final diff retains the preflight business/freemium and cross-cutting conclusions: no new domain, entitlement, data lifecycle, managed service or runtime dependency. The only broader production presentation change is the documented responsive margin. Build-context adjustments preserve existing local and remote Self-Hosted source-build entrypoints.
 
 ### Remaining scope and limitations
 

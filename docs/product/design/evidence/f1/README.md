@@ -19,4 +19,21 @@ Adjacent JSON reports cover 320/360/390/430/1280, stable loading geometry and sh
 
 ## Android
 
-Device capture and its reproducible report are added after the emulator run passes. Failed startup captures are not evidence.
+Android 15 / API 35 ARM64 emulator, source `0dffed3e`, with exact APK/screenshot hashes in the [completed capture report](f1-android-report.json). All 24 final PNGs and UIAutomator XML hierarchies are retained here. The report records eight interaction scenarios and measured targets; the [rendered contrast report](f1-android-contrast.json) supplements visual inspection with bounded role-color checks.
+
+| State | Light | Dark |
+| --- | --- | --- |
+| Compact 320 | [Capture](f1-android-320-light.png) | [Capture](f1-android-320-dark.png) |
+| Compact 360 | [Capture](f1-android-360-light.png) | [Capture](f1-android-360-dark.png) |
+| Compact 390 | [Capture](f1-android-390-light.png) | [Capture](f1-android-390-dark.png) |
+| Compact 430 | [Capture](f1-android-430-light.png) | [Capture](f1-android-430-dark.png) |
+| Expanded 1280 | [Capture](f1-android-1280-light.png) | [Capture](f1-android-1280-dark.png) |
+| Native sheet | [Capture](f1-android-overlay.png) | [Capture](f1-android-overlay-dark.png) |
+| Completed utility selection | [Capture](f1-android-utility-selected.png) | [Capture](f1-android-utility-selected-dark.png) |
+
+- [Stable loading](f1-android-loading.png), [failed photo and retry](f1-android-error.png), [successful retry](f1-android-retry-success.png)
+- [No-photo composition](f1-android-empty.png), [explicitly simulated offline](f1-android-offline.png), [status](f1-android-success.png)
+- [Full photo detail](f1-android-photo-detail.png), [reading detail](f1-android-text-detail.png)
+- [200% text / disabled system animations](f1-android-390-dark-large-text-reduced-motion.png), [reachable large-text sheet Close](f1-android-390-dark-large-text-sheet.png)
+
+The native helper checks System Back, visible Back, Close, selection, Retry and retained absent-media meaning through real device input. UIAutomator and Compose semantic checks do not establish human TalkBack focus restoration; no human TalkBack session or full release-device matrix is claimed.

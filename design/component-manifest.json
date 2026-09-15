@@ -165,8 +165,8 @@
       "id": "product-reference-visual-roles",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#65-product-reference-v1-visual-roles",
-      "web": "in_progress",
-      "android": "in_progress"
+      "web": "implemented",
+      "android": "implemented"
     }
   ],
   "patterns": [
