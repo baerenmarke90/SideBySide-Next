@@ -1,8 +1,8 @@
 # SideBySide Critical User Flows
 
 **Status:** Binding UX/product foundation  
-**Version:** 1.0  
-**As of:** August 24, 2026
+**Version:** 1.1  
+**As of:** September 15, 2026
 
 This document describes the critical end-to-end flows for the WebApp and Android app. It complements the Screen Templates with transitions, decisions, system responses, and acceptance criteria. The product specification and OpenAPI contract remain the authoritative domain sources.
 
@@ -16,6 +16,7 @@ This document describes the critical end-to-end flows for the WebApp and Android
 - Mutable objects carry a `version`; conflicts surface as HTTP 409 and are never silently overwritten.
 - Sensitive content appears neither in Analytics nor in logs.
 - Every flow has Loading, Empty, Error, Offline, and cancellation behavior where applicable.
+- User-facing flow steps describe the **human outcome and domain invariants**, not a mandatory database-field order. Compact implementations use established mobile/platform patterns and minimize avoidable typing/keyboard activation as required by `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and `docs/UX-PATTERNS.md`.
 
 ## 2. Shared states
 
@@ -105,20 +106,27 @@ Clients decide which entry points to offer from `GET /instance/status`, never fr
 
 **Allowed Analytics:** `space_created`, `invitation_created`, `invitation_revoked`, `invitation_completed`, `invitation_failed`; no token, email, or partner names.
 
-## 5. Flow C — Create a Memory with media
+## 5. Flow C — Capture a Memory with optional media/context
 
-**Goal:** Safely create a shared Memory and show it in Story.
+**Goal:** Safely capture a shared Memory and make it available in Momente without turning capture into database entry.
 
 **Privacy class:** `SPACE_SHARED`. A private note is a separate `OWNER_ONLY` domain and not a hidden Memory mode.
 
-### Flow
+### Human flow
 
-1. Entry through Story or the intentional de-DE Quick Action **„Erinnerung hinzufügen“**.
-2. Title, text, and domain date `happenedOn` are entered.
-3. Media can be selected, validated, removed, and described.
-4. Before saving, the UI shows the intentional de-DE status **„Mit Partner geteilt“** as a domain state, not as an optional marketing promise.
-5. With connectivity, the Memory is created first and media state is then/coordinarily processed visibly.
-6. Success opens the new detail; Story and Dashboard queries are refreshed.
+1. Entry through Momente or an intentional contextual/Quick Action such as **„Erinnerung hinzufügen“** / **„Moment festhalten“**.
+2. The person starts with the content that expresses the Memory: for example a photo/media item, a thought/text, or another domain-supported capture entry. The UI does not require a title-first sequence merely because the persistence model contains a title.
+3. Required Memory information and any useful context are completed with the least-friction appropriate controls. Dates/times and bounded choices use established picker/selection patterns; optional metadata remains progressive. Media can be selected, previewed, validated, removed, retried, and described where relevant.
+4. Before completion, the UI communicates the `SPACE_SHARED` result with understandable intentional de-DE product copy such as **„Mit Partner geteilt“**. Sharing is a domain state, not an optional marketing promise.
+5. With connectivity, the authoritative Memory is created according to the API contract and media processing/upload state remains visible. Implementation details such as whether the object or upload request is persisted first must not leak into the interaction model.
+6. Success presents the captured Memory in its meaningful product context and refreshes affected Momente/Wir read models.
+
+### Interaction invariants
+
+- The Compact capture path minimizes unnecessary typing and does not summon the software keyboard before the person chooses a text-entry task.
+- The primary capture action remains reachable with the keyboard/IME visible.
+- Optional metadata must not block fast capture when the domain does not require it.
+- Established platform/media/date selection patterns are reused unless a documented product need requires otherwise.
 
 ### Media states
 
@@ -134,7 +142,7 @@ selected → validating → uploading → processing → ready
 ### Errors
 
 - Offline while saving: intentional de-DE state **„Noch nicht gespeichert“**; retain the draft locally in the form but do not represent it as synchronized content.
-- Validation: show field errors directly at the field.
+- Validation: show field/control errors directly at the affected input or decision.
 - Upload failure: Retry/Remove per file.
 - 409: Flow H.
 - 404 after Deep Link: neutral unavailable state without confirming existence.
@@ -143,16 +151,23 @@ selected → validating → uploading → processing → ready
 
 ## 6. Flow D — Capture a HeartMoment privately or shared
 
-**Goal:** Save an emotional moment with deliberate visibility.
+**Goal:** Capture an emotional moment with deliberate visibility and minimal interaction overhead.
 
-### Flow
+### Human flow
 
-1. The person enters text and emotion.
-2. Visibility is a required selection: intentional de-DE **„Nur für mich“** (`OWNER_ONLY`) or **„Mit Partner teilen“** (`SPACE_SHARED`).
+1. The person captures the thought/emotional content using the established HeartMoment composition. Text, emotion, media, or other supported context is presented according to the human task rather than a generic field stack.
+2. Visibility is a required, understandable decision before completion: intentional de-DE **„Nur für mich“** (`OWNER_ONLY`) or **„Mit Partner teilen“** (`SPACE_SHARED`). The control uses the established visibility pattern rather than exposing API terminology.
 3. Before the first switch to shared, the UI briefly explains that the content becomes visible in the shared Space.
-4. After saving, the detail state shows Privacy label and Sync result.
+4. Optional context is progressively disclosed and must not obscure the emotional content or privacy decision.
+5. After saving, the resulting detail/product state shows the Privacy label and Sync result while keeping the HeartMoment content as the primary meaning.
 
-### Invariants
+### Interaction invariants
+
+- Capture does not require a generic title or metadata-first sequence unless the domain specification explicitly makes that information necessary.
+- Important privacy state is recognized from visible text/icon state; it is never hidden behind a gesture or color alone.
+- Established mobile selection, media, Back, and completion patterns are reused unless a documented product reason requires deviation.
+
+### Domain invariants
 
 - `OWNER_ONLY` appears only to the owner, including Lists, Search, Story, Dashboard, notifications, Export, Attachments, and relations.
 - Comments are available only for shared HeartMoments.
@@ -179,7 +194,7 @@ selected → validating → uploading → processing → ready
 
 - Wishes and Plans are `SPACE_SHARED` in the Core unless the product specification defines a private variant.
 - An unfinished Plan can move back to Wish state in a controlled way.
-- A recommendation from the intentional de-DE area **„Entdecken“** creates a Wish or Plan only after explicit confirmation.
+- A recommendation/discovery experience inside `Momente` creates a Wish or Plan only after explicit confirmation.
 - Deleting a Chapter removes links, not Memories or Plans.
 
 ### Errors
@@ -188,21 +203,21 @@ selected → validating → uploading → processing → ready
 - 409 exposes current and own version; Flow H.
 - Feature not enabled/entitled: clear explanation, no disabled dead end.
 
-## 8. Flow F — Search Story and open content
+## 8. Flow F — Search Momente and open content
 
 **Goal:** Safely filter/search the shared history and open content through a Deep Link.
 
 ### Flow
 
-1. Story loads cursor-based and grouped by month.
+1. Momente loads cursor-based and grouped according to the current timeline/product composition.
 2. Type/year filters and Search are processed server-side with Space and Privacy filtering.
-3. Selection opens a page on Compact and the Detail Pane on Expanded.
+3. Selection opens a page on Compact and the Detail Pane on Expanded when the selected composition supports it.
 4. Back restores search term, filters, selection, and scroll position.
 5. The intentional de-DE feature **„Weißt du noch?“** links to originals and creates no copy.
 
 ### Privacy
 
-- Story contains Memories, Milestones, and shared HeartMoments — never `OWNER_ONLY`.
+- Momente contains Memories, Milestones, and shared HeartMoments — never `OWNER_ONLY`.
 - 404 is treated identically for nonexistent and unauthorized privacy-sensitive resources.
 - Result count, load time, and response size must not reveal private partner content.
 
@@ -283,6 +298,9 @@ Every flow is verified at minimum for:
 - Cloud and Self-Hosted where authentication or Provider differences matter.
 - normal Membership, foreign Space, `OWNER_ONLY`, expired session.
 - Loading, Empty, Validation, 401, privacy-safe 404, 409, 429, Offline, and server failure.
+- established platform/mobile interaction patterns or a documented deviation;
+- first-time discoverability without relying on hidden gestures or memorized controls;
+- minimized avoidable typing and keyboard burden on Compact.
 
 ## Related documents
 
