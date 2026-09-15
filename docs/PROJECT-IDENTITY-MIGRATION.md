@@ -2,9 +2,9 @@
 
 This guide is the controlled upgrade contract for the project-identity change
 introduced by issue #953. The product display name is **eimir.** and the
-machine-safe name is **eimir**. The GitHub repository rename from
-`SideBySide-Next` to `eimir` is deliberately a separate, final operation and is
-not part of the implementation commit.
+machine-safe name is **eimir**. The GitHub repository was renamed from its
+legacy name to `baerenmarke90/eimir` on 2026-09-15 after the implementation PR
+passed its complete protected-branch gate matrix.
 
 ## Canonical identity
 
@@ -125,26 +125,33 @@ deployment health checks can move together. Documentation examples use
 `demo.eimir.example`; no replacement production hostname is invented by this
 repository change.
 
-## Final GitHub repository rename — deferred
+## Final GitHub repository rename — completed 2026-09-15
 
-Perform this only after the parallel read-only product-design audit has ended
-and the implementation has been explicitly approved for merge:
+The controlled repository rename was performed only after the parallel
+read-only product-design audit and calibration pass ended and PR #954 passed
+all required checks. Recorded post-rename evidence:
 
-1. Merge the tested implementation through the normal protected-branch flow.
-2. Pause releases and deployments and record the last successful source SHA.
-3. In GitHub repository settings, rename `SideBySide-Next` to `eimir`.
-4. Update local remotes to the new canonical URL. Do not reclone or move an
-   existing Self-Hosted checkout until its Compose project name is pinned as
-   described above.
-5. Verify branch protection, environments, Actions permissions, repository
-   variables, secrets, webhooks, app installations, deploy keys, issue links,
-   badges, and external status checks.
-6. Provision canonical `EIMIR_*` release secrets alongside the deprecated
-   aliases, run the release-evidence workflow, and verify GHCR package links,
-   SBOM subjects, signatures, and attestations resolve to the new repository.
-7. Verify GitHub's old URL redirect and every deployment/release source link.
-8. Resume automation only after the new source identity and an upgrade from the
-   last pre-rename release both pass.
+- the last pre-rename `main` commit was
+  `9da8087695f3f952ab344e25dc693d87f5d327d5`;
+- the canonical repository and clone URL are `baerenmarke90/eimir` and
+  `https://github.com/baerenmarke90/eimir.git`;
+- the stable GitHub repository ID remains `1344232309`;
+- both the legacy and canonical Git endpoints resolve `main` to the same
+  recorded commit, confirming GitHub's compatibility redirect; and
+- the post-rename validation change and its CI run use the canonical repository
+  endpoint, proving that current automation does not require the redirect.
+
+Operators must update local remotes to the canonical URL. Do not reclone or move
+an existing Self-Hosted checkout until its Compose project name is pinned as
+described above. Repository settings such as branch protection, environments,
+Actions permissions, variables, secrets, webhooks, app installations, deploy
+keys, badges, and external status checks remain part of the normal operational
+review after any GitHub repository rename.
+
+Canonical `EIMIR_*` release secrets must remain provisioned alongside the
+deprecated aliases during the compatibility window. Release-evidence runs must
+continue to verify that GHCR package links, SBOM subjects, signatures, and
+attestations resolve to the canonical repository.
 
 Renaming the GitHub repository, deleting old packages/assets, changing Android
 application identity, changing Compose project names, or migrating PostgreSQL
