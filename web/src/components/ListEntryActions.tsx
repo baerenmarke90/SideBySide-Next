@@ -1,6 +1,7 @@
 import {
   type ButtonHTMLAttributes,
   type PointerEvent as ReactPointerEvent,
+  forwardRef,
   useRef,
   useState,
 } from 'react';
@@ -171,14 +172,20 @@ type IconButtonProps = Omit<
   variant?: 'tertiary' | 'add';
 };
 
-export function ListEntryIconButton({
-  label,
-  icon,
-  variant = icon === 'add' ? 'add' : 'tertiary',
-  className,
-  type = 'button',
-  ...props
-}: IconButtonProps) {
+export const ListEntryIconButton = forwardRef<
+  HTMLButtonElement,
+  IconButtonProps
+>(function ListEntryIconButton(
+  {
+    label,
+    icon,
+    variant = icon === 'add' ? 'add' : 'tertiary',
+    className,
+    type = 'button',
+    ...props
+  },
+  ref,
+) {
   const classes = [
     'list-entry-icon-button',
     variant === 'add' ? 'list-entry-add-button' : null,
@@ -190,6 +197,7 @@ export function ListEntryIconButton({
 
   return (
     <button
+      ref={ref}
       {...props}
       type={type}
       className={classes}
@@ -199,7 +207,7 @@ export function ListEntryIconButton({
       <ListEntryIcon kind={icon} />
     </button>
   );
-}
+});
 
 function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
   if (kind === 'add') {

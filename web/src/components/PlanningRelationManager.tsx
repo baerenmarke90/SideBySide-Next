@@ -1,6 +1,13 @@
 import { type FormEvent, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import type { ChapterContentItem } from '../api/generated/models/ChapterContentItem';
+import type { StoryItem } from '../api/generated/models/StoryItem';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   storyRelationTarget,
@@ -13,7 +20,11 @@ import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
 const STORY_PAGE_SIZE = 50;
-const MAX_STORY_PAGES = 20;
+
+type RelationTargetPage = {
+  items: StoryItem[];
+  nextCursor: string | null;
+};
 
 async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   try {
@@ -27,29 +38,91 @@ function targetKey(kind: PlanningRelationKind, id: string): string {
   return `${kind}:${id}`;
 }
 
-async function loadRelationTargets(
+async function loadRelationTargetPage(
   apis: SharedPlanningApis,
   spaceId: string,
+  cursor: string | null,
+): Promise<RelationTargetPage> {
+  return apiCall(() =>
+    apis.story.getStoryTimeline({
+      spaceId,
+      cursor,
+      limit: STORY_PAGE_SIZE,
+      order: 'DESC',
+    }),
+  );
+}
+
+export function nextRelationTargetCursor(
+  lastPage: RelationTargetPage,
+  _allPages: RelationTargetPage[],
+  lastPageParam: string | null,
+  allPageParams: Array<string | null>,
+): string | undefined {
+  const nextCursor = lastPage.nextCursor;
+  if (!nextCursor) return undefined;
+  if (nextCursor === lastPageParam || allPageParams.includes(nextCursor)) {
+    return undefined;
+  }
+  return nextCursor;
+}
+
+async function loadLinkedRelationTargets(
+  apis: SharedPlanningApis,
+  spaceId: string,
+  relations: ChapterContentItem[],
 ): Promise<PlanningRelationTarget[]> {
-  const targets: PlanningRelationTarget[] = [];
-  let cursor: string | null | undefined = null;
-  let pageCount = 0;
-
-  do {
-    const page = await apiCall(() =>
-      apis.story.getStoryTimeline({
-        spaceId,
-        cursor,
-        limit: STORY_PAGE_SIZE,
-        order: 'DESC',
-      }),
-    );
-    targets.push(...page.items.map(storyRelationTarget));
-    cursor = page.nextCursor;
-    pageCount += 1;
-  } while (cursor && pageCount < MAX_STORY_PAGES);
-
-  return targets;
+  const targets = await Promise.all(
+    relations.map(async (relation): Promise<PlanningRelationTarget | null> => {
+      try {
+        switch (relation.targetType) {
+          case 'MEMORY': {
+            const memory = await apis.memories.getMemory({
+              spaceId,
+              memoryId: relation.targetId,
+            });
+            return {
+              id: memory.id,
+              kind: 'MEMORY',
+              label: memory.title,
+              effectiveDate: memory.happenedOn ?? memory.createdAt,
+            };
+          }
+          case 'HEART_MOMENT': {
+            const heartMoment = await apis.heartMoments.getHeartMoment({
+              spaceId,
+              heartMomentId: relation.targetId,
+            });
+            return {
+              id: heartMoment.id,
+              kind: 'HEART_MOMENT',
+              label: heartMoment.text,
+              effectiveDate: heartMoment.happenedOn,
+            };
+          }
+          case 'MILESTONE': {
+            const milestone = await apis.milestones.getMilestone({
+              spaceId,
+              milestoneId: relation.targetId,
+            });
+            return {
+              id: milestone.id,
+              kind: 'MILESTONE',
+              label: milestone.title,
+              effectiveDate: milestone.happenedOn,
+            };
+          }
+        }
+      } catch {
+        // Detail APIs enforce authorization. An unreadable target stays an
+        // opaque relation row and is never reconstructed client-side.
+        return null;
+      }
+    }),
+  );
+  return targets.filter(
+    (target): target is PlanningRelationTarget => target !== null,
+  );
 }
 
 async function loadPlaceRelations(
@@ -111,9 +184,12 @@ export function PlanningRelationManager({
     ownerId,
   ] as const;
 
-  const targetsQuery = useQuery({
-    queryKey: ['m5-s3', 'relation-targets', spaceId],
-    queryFn: () => loadRelationTargets(apis, spaceId),
+  const targetsQuery = useInfiniteQuery({
+    queryKey: authorSummaryQueryKeys.relationTargets(spaceId),
+    queryFn: ({ pageParam }) =>
+      loadRelationTargetPage(apis, spaceId, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: nextRelationTargetCursor,
     staleTime: 60_000,
     retry: false,
   });
@@ -129,6 +205,19 @@ export function PlanningRelationManager({
             }),
           ).then((content) => content.items)
         : loadPlaceRelations(apis, spaceId, ownerId),
+    retry: false,
+  });
+
+  const linkedTargetSignature = (relationsQuery.data ?? [])
+    .map((relation) => targetKey(relation.targetType, relation.targetId))
+    .sort()
+    .join('|');
+  const linkedTargetsQuery = useQuery({
+    queryKey: [...relationKey, 'targets', linkedTargetSignature],
+    queryFn: () =>
+      loadLinkedRelationTargets(apis, spaceId, relationsQuery.data ?? []),
+    enabled: relationsQuery.isSuccess && linkedTargetSignature.length > 0,
+    staleTime: 60_000,
     retry: false,
   });
 
@@ -266,22 +355,35 @@ export function PlanningRelationManager({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: relationKey }),
   });
 
+  const loadedTargets = useMemo(() => {
+    const byKey = new Map<string, PlanningRelationTarget>();
+    for (const page of targetsQuery.data?.pages ?? []) {
+      for (const item of page.items) {
+        const target = storyRelationTarget(item);
+        byKey.set(targetKey(target.kind, target.id), target);
+      }
+    }
+    for (const target of linkedTargetsQuery.data ?? []) {
+      byKey.set(targetKey(target.kind, target.id), target);
+    }
+    return [...byKey.values()];
+  }, [linkedTargetsQuery.data, targetsQuery.data?.pages]);
   const targetMap = useMemo(
     () =>
       new Map(
-        (targetsQuery.data ?? []).map((target) => [
+        loadedTargets.map((target) => [
           targetKey(target.kind, target.id),
           target,
         ]),
       ),
-    [targetsQuery.data],
+    [loadedTargets],
   );
   const linkedKeys = new Set(
     (relationsQuery.data ?? []).map((relation) =>
       targetKey(relation.targetType, relation.targetId),
     ),
   );
-  const availableTargets = (targetsQuery.data ?? []).filter(
+  const availableTargets = loadedTargets.filter(
     (target) => !linkedKeys.has(targetKey(target.kind, target.id)),
   );
 
@@ -391,8 +493,21 @@ export function PlanningRelationManager({
               : t('m5s3.relations.link')}
           </button>
         </form>
-      ) : targetsQuery.data ? (
+      ) : targetsQuery.data && !targetsQuery.hasNextPage ? (
         <p className="planning-meta">{t('m5s3.relations.noMoreTargets')}</p>
+      ) : null}
+
+      {targetsQuery.hasNextPage ? (
+        <button
+          type="button"
+          className="tertiary compact-action"
+          onClick={() => void targetsQuery.fetchNextPage()}
+          disabled={targetsQuery.isFetchingNextPage}
+        >
+          {targetsQuery.isFetchingNextPage
+            ? t('m5s3.common.loadingMore')
+            : t('m5s3.common.loadMore')}
+        </button>
       ) : null}
 
       {linkMutation.error ? <ProblemState error={linkMutation.error} /> : null}

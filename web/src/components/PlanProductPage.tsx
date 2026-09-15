@@ -76,7 +76,7 @@ export function PlanProductPage({
     retry: false,
   });
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'plan-places', spaceId],
+    queryKey: authorSummaryQueryKeys.placeOptions(spaceId),
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,

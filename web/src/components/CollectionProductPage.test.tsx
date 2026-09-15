@@ -2,11 +2,86 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import { EDITOR_HISTORY_STATE_KEY } from '../client/useEditorHistoryEntry';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { i18n } from '../i18n';
 import { CollectionProductPage } from './CollectionProductPage';
+import { CollectionsOverviewPage } from './CollectionsOverviewPage';
+
+const sampleCollection = {
+  capabilities: { canComment: false, canDelete: true, canEdit: true },
+  createdAt: new Date('2026-08-01T10:00:00Z'),
+  createdBy: 'account-1',
+  creator: { id: 'account-1', displayName: 'Lea' },
+  id: 'collection-1',
+  items: [],
+  spaceId: 'space-1',
+  title: 'Packing list',
+  updatedAt: new Date('2026-08-01T10:00:00Z'),
+  version: 1,
+};
+const nextCollection = {
+  ...sampleCollection,
+  id: 'collection-2',
+  title: 'Shared recipes',
+};
+
+function renderInteractiveCollection(
+  apiOverrides: Record<string, unknown> = {},
+  includeOverview = false,
+  configureClient?: (client: QueryClient) => void,
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  queryClient.setQueryData(
+    ['m5-s3', 'collection', 'space-1', 'collection-1'],
+    sampleCollection,
+  );
+  configureClient?.(queryClient);
+  const apis = {
+    collections: {
+      getCollection: vi.fn().mockResolvedValue(sampleCollection),
+      listCollections: vi.fn().mockResolvedValue({
+        items: [nextCollection],
+        nextCursor: null,
+      }),
+      ...apiOverrides,
+    },
+  } as unknown as SharedPlanningApis;
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/plan/collections/collection-1']}>
+        <Routes>
+          <Route
+            path="/plan/collections/:collectionId"
+            element={<CollectionProductPage apis={apis} spaceId="space-1" />}
+          />
+          {includeOverview ? (
+            <Route
+              path="/more/collections"
+              element={
+                <CollectionsOverviewPage apis={apis} spaceId="space-1" />
+              }
+            />
+          ) : null}
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  window.history.replaceState(null, '', '/');
+});
 
 describe('CollectionProductPage', () => {
   it('shows collection title cleanly without icon prefix or edit field (#373)', () => {
@@ -113,19 +188,6 @@ describe('CollectionProductPage', () => {
   });
 
   it('resets isEditing and confirmDelete on successful title update', async () => {
-    const sampleCollection = {
-      capabilities: { canComment: false, canDelete: true, canEdit: true },
-      createdAt: new Date('2026-08-01T10:00:00Z'),
-      createdBy: 'account-1',
-      creator: { id: 'account-1', displayName: 'Lea' },
-      id: 'collection-1',
-      items: [],
-      spaceId: 'space-1',
-      title: 'Packing list',
-      updatedAt: new Date('2026-08-01T10:00:00Z'),
-      version: 1,
-    };
-
     const updateCollectionMock = vi
       .fn()
       .mockImplementation(async ({ collectionUpdate }) => ({
@@ -215,5 +277,158 @@ describe('CollectionProductPage', () => {
         name: i18n.t('m5s3.common.confirmDelete'),
       }),
     ).toBeNull();
+  });
+
+  it('focuses the editor and protects a dirty draft through Escape', async () => {
+    const user = userEvent.setup();
+    renderInteractiveCollection();
+    const edit = screen.getByRole('button', { name: i18n.t('common.edit') });
+
+    await user.click(edit);
+    const title = screen.getByRole('textbox', {
+      name: i18n.t('m5s3.common.title'),
+    });
+    expect(document.activeElement).toBe(title);
+    expect(window.history.state?.[EDITOR_HISTORY_STATE_KEY]).toBeTruthy();
+
+    await user.clear(title);
+    await user.type(title, 'Holiday packing');
+    await user.keyboard('{Escape}');
+    const discard = screen.getByRole('alertdialog');
+    expect(document.activeElement).toBe(
+      discard.querySelector('[tabindex="-1"]'),
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('m5s3.common.keepEditing') }),
+    );
+    expect((title as HTMLInputElement).value).toBe('Holiday packing');
+
+    await user.keyboard('{Escape}');
+    await user.click(
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.common.discardConfirm'),
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    expect(window.history.state?.[EDITOR_HISTORY_STATE_KEY]).toBeUndefined();
+  });
+
+  it('closes a clean editor through Browser Back', async () => {
+    const user = userEvent.setup();
+    renderInteractiveCollection();
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    expect(window.history.state?.[EDITOR_HISTORY_STATE_KEY]).toBeTruthy();
+
+    window.history.back();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: i18n.t('m5s3.common.title') }),
+      ).toBeNull(),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', { name: i18n.t('m5s3.common.title') }),
+      ).toBeNull(),
+    );
+  });
+
+  it('restores delete-trigger focus and blocks dismissal while delete is pending', async () => {
+    const user = userEvent.setup();
+    const never = new Promise<void>(() => undefined);
+    renderInteractiveCollection({
+      deleteCollection: vi.fn().mockReturnValue(never),
+    });
+
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    const deleteTrigger = screen.getByRole('button', {
+      name: i18n.t('m5s3.common.delete'),
+    });
+    await user.click(deleteTrigger);
+    expect(document.activeElement?.id).toBe(
+      'collection-delete-confirmation-heading',
+    );
+
+    const deleteCancel = screen
+      .getAllByRole('button', { name: i18n.t('common.cancel') })
+      .at(-1);
+    expect(deleteCancel).toBeDefined();
+    await user.click(deleteCancel as HTMLButtonElement);
+    const restoredDeleteTrigger = screen.getByRole('button', {
+      name: i18n.t('m5s3.common.delete'),
+    });
+    expect(document.activeElement).toBe(restoredDeleteTrigger);
+
+    await user.click(restoredDeleteTrigger);
+    await user.click(
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.common.confirmDelete'),
+      }),
+    );
+    await user.keyboard('{Escape}');
+    window.history.back();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: i18n.t('m5s3.common.deleting'),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
+  it('focuses the successor after a successful Collection delete', async () => {
+    const user = userEvent.setup();
+    renderInteractiveCollection(
+      { deleteCollection: vi.fn().mockResolvedValue(undefined) },
+      true,
+      (queryClient) => {
+        queryClient.setQueryData(
+          authorSummaryQueryKeys.collections('space-1'),
+          {
+            pages: [
+              {
+                items: [sampleCollection, nextCollection],
+                nextCursor: null,
+                hasMore: false,
+              },
+            ],
+            pageParams: [null],
+          },
+        );
+      },
+    );
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('m5s3.common.delete') }),
+    );
+    await user.click(
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.common.confirmDelete'),
+      }),
+    );
+
+    const successor = (await screen.findByText(nextCollection.title)).closest(
+      'a',
+    );
+    expect(successor).not.toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(successor));
   });
 });

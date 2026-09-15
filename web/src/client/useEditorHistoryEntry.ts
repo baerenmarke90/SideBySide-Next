@@ -33,11 +33,13 @@ function historyStateWithMarker(marker: string): Record<string, unknown> {
 }
 
 export function useEditorHistoryEntry({
+  isActive = true,
   isDirty,
   isCloseBlocked = false,
   onDiscardRequested,
   onClose,
 }: {
+  isActive?: boolean;
   isDirty: boolean;
   isCloseBlocked?: boolean;
   onDiscardRequested: () => void;
@@ -61,6 +63,10 @@ export function useEditorHistoryEntry({
   onDiscardRequestedRef.current = onDiscardRequested;
   onCloseRef.current = onClose;
 
+  useEffect(() => {
+    if (isActive) closingRef.current = false;
+  }, [isActive]);
+
   const isCurrentEntry = useCallback(
     () =>
       window.history.state?.[EDITOR_HISTORY_STATE_KEY] === markerRef.current,
@@ -77,7 +83,7 @@ export function useEditorHistoryEntry({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !isActive) return;
 
     let mounted = true;
     const handlePopState = () => {
@@ -111,7 +117,7 @@ export function useEditorHistoryEntry({
         void removeCurrentEntry(markerRef.current);
       }
     };
-  }, [isCurrentEntry, pushEntry]);
+  }, [isActive, isCurrentEntry, pushEntry]);
 
   return useCallback(() => {
     if (closingRef.current) return;

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { invalidateStoryProjections } from '../client/authorSummaryConsumers';
 import { formatDateInputValue } from '../client/dateInput';
 import { normalizeClientError } from '../client/problemDetails';
 import {
@@ -334,7 +335,7 @@ export function PlanStoryContinuation({
     onSuccess: async (story) => {
       setCreatedStory(story);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
     },

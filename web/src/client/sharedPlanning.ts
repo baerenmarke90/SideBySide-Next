@@ -1,6 +1,7 @@
 import { ChapterRelationsApi } from '../api/generated/apis/ChapterRelationsApi';
 import { ChaptersApi } from '../api/generated/apis/ChaptersApi';
 import { CollectionsApi } from '../api/generated/apis/CollectionsApi';
+import { HeartMomentsApi } from '../api/generated/apis/HeartMomentsApi';
 import { MemoriesApi } from '../api/generated/apis/MemoriesApi';
 import { MilestonesApi } from '../api/generated/apis/MilestonesApi';
 import { PlaceRelationsApi } from '../api/generated/apis/PlaceRelationsApi';
@@ -24,6 +25,7 @@ export interface SharedPlanningApis {
   collections: CollectionsApi;
   story: StoryApi;
   memories: MemoriesApi;
+  heartMoments: HeartMomentsApi;
   milestones: MilestonesApi;
 }
 
@@ -59,6 +61,7 @@ export function createSharedPlanningApis(
     collections: new CollectionsApi(configuration),
     story: new StoryApi(configuration),
     memories: new MemoriesApi(configuration),
+    heartMoments: new HeartMomentsApi(configuration),
     milestones: new MilestonesApi(configuration),
   };
 }

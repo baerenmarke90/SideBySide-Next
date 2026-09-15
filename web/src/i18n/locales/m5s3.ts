@@ -27,6 +27,11 @@ const m5s3 = {
     delete: 'Löschen',
     deleting: 'Wird gelöscht …',
     confirmDelete: 'Endgültig löschen',
+    discardTitle: 'Ungespeicherte Änderungen verwerfen?',
+    discardBody:
+      'Deine Änderungen sind noch nicht gespeichert. Möchtest du weiter bearbeiten oder sie verwerfen?',
+    discardConfirm: 'Änderungen verwerfen',
+    keepEditing: 'Weiter bearbeiten',
   },
   overview: {
     title: 'Planen',

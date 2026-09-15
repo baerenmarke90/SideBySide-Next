@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
+import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   dateFromInput,
@@ -12,9 +13,18 @@ import {
 } from '../client/sharedPlanning';
 import { STORY_CHAPTERS_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import {
+  deleteFocusTargetFromInfiniteData,
+  type InfiniteItemsData,
+  PLANNING_DELETE_FOCUS_STATE_KEY,
+} from '../client/deleteFocusTarget';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ListEntryIconButton } from './ListEntryActions';
+import {
+  PlanningDiscardConfirmation,
+  usePlanningEditorLifecycle,
+} from './PlanningEditorLifecycle';
 import { PlanningRelationManager } from './PlanningRelationManager';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -28,6 +38,226 @@ async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+type ChapterDraft = {
+  title: string;
+  description: string;
+  startOn: string;
+  endOn: string;
+  placeId: string;
+};
+
+function chapterDraft(chapter: ChapterDetail): ChapterDraft {
+  return {
+    title: chapter.title,
+    description: chapter.description ?? '',
+    startOn: dateOnlyInput(chapter.startOn),
+    endOn: dateOnlyInput(chapter.endOn),
+    placeId: chapter.placeId ?? '',
+  };
+}
+
+function ChapterEditor({
+  chapter,
+  places,
+  draft,
+  setDraft,
+  titleInputRef,
+  editTriggerRef,
+  updatePending,
+  updateError,
+  deletePending,
+  deleteError,
+  onSubmit,
+  onDelete,
+  onClose,
+}: {
+  chapter: ChapterDetail;
+  places: PlaceDetail[];
+  draft: ChapterDraft;
+  setDraft: (draft: ChapterDraft) => void;
+  titleInputRef: RefObject<HTMLInputElement | null>;
+  editTriggerRef: RefObject<HTMLButtonElement | null>;
+  updatePending: boolean;
+  updateError: unknown;
+  deletePending: boolean;
+  deleteError: unknown;
+  onSubmit: (draft: ChapterDraft) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteHeadingRef = useRef<HTMLHeadingElement>(null);
+  const restoreDeleteTriggerRef = useRef(false);
+  const isDirty =
+    JSON.stringify(draft) !== JSON.stringify(chapterDraft(chapter));
+  const isPending = updatePending || deletePending;
+  const lifecycle = usePlanningEditorLifecycle({
+    isDirty,
+    isPending,
+    initialFocusRef: titleInputRef,
+    restoreFocusRef: editTriggerRef,
+    onEscape: () => {
+      if (!confirmDelete) return false;
+      restoreDeleteTriggerRef.current = true;
+      setConfirmDelete(false);
+      return true;
+    },
+    onClose,
+  });
+
+  useEffect(() => {
+    if (confirmDelete) deleteHeadingRef.current?.focus();
+    else if (restoreDeleteTriggerRef.current) {
+      restoreDeleteTriggerRef.current = false;
+      deleteTriggerRef.current?.focus();
+    }
+  }, [confirmDelete]);
+
+  const updateDraft = (values: Partial<ChapterDraft>) =>
+    setDraft({ ...draft, ...values });
+
+  return (
+    <section className="planning-subsection">
+      <h2>{t('m5s3.common.edit')}</h2>
+      {lifecycle.showDiscardConfirm ? (
+        <PlanningDiscardConfirmation
+          onKeepEditing={lifecycle.keepEditing}
+          onDiscard={lifecycle.discard}
+        />
+      ) : null}
+      <form
+        id="chapter-edit-form"
+        className="form-grid"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(draft);
+        }}
+      >
+        <label htmlFor="chapter-edit-description">
+          {t('m5s3.common.description')}
+        </label>
+        <textarea
+          id="chapter-edit-description"
+          name="description"
+          rows={4}
+          value={draft.description}
+          onChange={(event) => updateDraft({ description: event.target.value })}
+        />
+        <div className="planning-coordinate-grid">
+          <div className="field-group">
+            <label htmlFor="chapter-edit-start">
+              {t('m5s3.chapter.startOn')}
+            </label>
+            <input
+              id="chapter-edit-start"
+              name="startOn"
+              type="date"
+              value={draft.startOn}
+              onChange={(event) => updateDraft({ startOn: event.target.value })}
+            />
+          </div>
+          <div className="field-group">
+            <label htmlFor="chapter-edit-end">{t('m5s3.chapter.endOn')}</label>
+            <input
+              id="chapter-edit-end"
+              name="endOn"
+              type="date"
+              value={draft.endOn}
+              onChange={(event) => updateDraft({ endOn: event.target.value })}
+            />
+          </div>
+        </div>
+        <label htmlFor="chapter-edit-place">{t('m5s3.common.place')}</label>
+        <select
+          id="chapter-edit-place"
+          name="placeId"
+          value={draft.placeId}
+          onChange={(event) => updateDraft({ placeId: event.target.value })}
+        >
+          <option value="">{t('m5s3.common.noPlace')}</option>
+          {places.map((place) => (
+            <option key={place.id} value={place.id}>
+              {place.name}
+            </option>
+          ))}
+        </select>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <button type="submit" disabled={isPending}>
+            {updatePending
+              ? t('m5s3.common.saving')
+              : t('m5s3.common.saveChanges')}
+          </button>
+          <button
+            type="button"
+            className="tertiary"
+            onClick={lifecycle.requestClose}
+            disabled={isPending}
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+        {updateError ? <ProblemState error={updateError} /> : null}
+      </form>
+
+      {chapter.capabilities.canDelete ? (
+        <div style={{ marginTop: 'var(--space-8)' }}>
+          {!confirmDelete ? (
+            <button
+              ref={deleteTriggerRef}
+              type="button"
+              className="button-link danger-link"
+              onClick={() => setConfirmDelete(true)}
+              disabled={isPending}
+            >
+              {t('m5s3.common.delete')}
+            </button>
+          ) : (
+            <section
+              className="planning-danger-zone"
+              aria-labelledby="chapter-delete-heading"
+            >
+              <h2
+                ref={deleteHeadingRef}
+                id="chapter-delete-heading"
+                tabIndex={-1}
+              >
+                {t('m5s3.common.deleteHeading')}
+              </h2>
+              <p>{t('m5s3.chapter.deleteConsequence')}</p>
+              <div className="planning-confirm-row">
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={onDelete}
+                  disabled={isPending}
+                >
+                  {deletePending
+                    ? t('m5s3.common.deleting')
+                    : t('m5s3.common.confirmDelete')}
+                </button>
+                <button
+                  type="button"
+                  className="tertiary"
+                  onClick={() => {
+                    restoreDeleteTriggerRef.current = true;
+                    setConfirmDelete(false);
+                  }}
+                  disabled={isPending}
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+              {deleteError ? <ProblemState error={deleteError} /> : null}
+            </section>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function ChapterProductPage({
   apis,
   spaceId,
@@ -39,8 +269,10 @@ export function ChapterProductPage({
   const { chapterId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState<ChapterDraft | null>(null);
+  const editTriggerRef = useRef<HTMLButtonElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const key = authorSummaryQueryKeys.chapterDetail(spaceId, chapterId);
 
   const chapterQuery = useQuery({
@@ -53,7 +285,7 @@ export function ChapterProductPage({
     retry: false,
   });
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'chapter-places', spaceId],
+    queryKey: authorSummaryQueryKeys.placeOptions(spaceId),
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,
@@ -92,7 +324,7 @@ export function ChapterProductPage({
         queryClient.invalidateQueries({ queryKey: key }),
       ]);
       setIsEditing(false);
-      setConfirmDelete(false);
+      setDraft(null);
     },
   });
 
@@ -105,12 +337,25 @@ export function ChapterProductPage({
           ifMatch: planningIfMatch(chapter),
         }),
       ),
-    onSuccess: async () => {
+    onMutate: (chapter) => ({
+      focusTarget: deleteFocusTargetFromInfiniteData(
+        queryClient.getQueryData<InfiniteItemsData<ChapterDetail>>(
+          authorSummaryQueryKeys.chapters(spaceId),
+        ),
+        chapter.id,
+      ),
+    }),
+    onSuccess: async (_result, _chapter, context) => {
       queryClient.removeQueries({ queryKey: key });
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'chapters', spaceId],
       });
-      navigate(STORY_CHAPTERS_ROUTE, { replace: true });
+      navigate(STORY_CHAPTERS_ROUTE, {
+        replace: true,
+        state: {
+          [PLANNING_DELETE_FOCUS_STATE_KEY]: context.focusTarget,
+        },
+      });
     },
   });
 
@@ -134,35 +379,8 @@ export function ChapterProductPage({
   const chapter = chapterQuery.data;
   if (!chapter) return null;
 
-  function submitEdit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!chapter) return;
-    const data = new FormData(event.currentTarget);
-    const description = String(data.get('description')).trim();
-    const startOn = dateFromInput(String(data.get('startOn')).trim()) ?? null;
-    const endOn = dateFromInput(String(data.get('endOn')).trim()) ?? null;
-    const placeId = String(data.get('placeId')).trim();
-    updateMutation.mutate({
-      chapter,
-      title: String(data.get('title')).trim(),
-      description: description || null,
-      startOn,
-      endOn,
-      placeId: placeId || null,
-    });
-  }
-
   return (
     <div className="page planning-page">
-      {isEditing ? (
-        <form
-          id="chapter-edit-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitEdit(e);
-          }}
-        />
-      ) : null}
       <PageHeader
         before={
           <Link className="back-link" to={STORY_CHAPTERS_ROUTE}>
@@ -174,11 +392,18 @@ export function ChapterProductPage({
         titleEditor={
           isEditing ? (
             <input
+              ref={titleInputRef}
               form="chapter-edit-form"
               name="title"
               required
               maxLength={200}
-              defaultValue={chapter.title}
+              value={draft?.title ?? chapter.title}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...(current ?? chapterDraft(chapter)),
+                  title: event.target.value,
+                }))
+              }
               aria-label={t('m5s3.common.title')}
             />
           ) : undefined
@@ -187,147 +412,49 @@ export function ChapterProductPage({
         titleAction={
           chapter.capabilities.canEdit && !isEditing ? (
             <ListEntryIconButton
+              ref={editTriggerRef}
               icon="edit"
               className="tertiary"
               label={t('common.edit')}
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setDraft(chapterDraft(chapter));
+                setIsEditing(true);
+              }}
             />
           ) : undefined
         }
       />
 
-      {isEditing ? (
-        <section className="planning-subsection">
-          <h2>{t('m5s3.common.edit')}</h2>
-          <div className="form-grid">
-            <label htmlFor="chapter-edit-description">
-              {t('m5s3.common.description')}
-            </label>
-            <textarea
-              form="chapter-edit-form"
-              id="chapter-edit-description"
-              name="description"
-              rows={4}
-              defaultValue={chapter.description ?? ''}
-            />
-            <div className="planning-coordinate-grid">
-              <div className="field-group">
-                <label htmlFor="chapter-edit-start">
-                  {t('m5s3.chapter.startOn')}
-                </label>
-                <input
-                  form="chapter-edit-form"
-                  id="chapter-edit-start"
-                  name="startOn"
-                  type="date"
-                  defaultValue={dateOnlyInput(chapter.startOn)}
-                />
-              </div>
-              <div className="field-group">
-                <label htmlFor="chapter-edit-end">
-                  {t('m5s3.chapter.endOn')}
-                </label>
-                <input
-                  form="chapter-edit-form"
-                  id="chapter-edit-end"
-                  name="endOn"
-                  type="date"
-                  defaultValue={dateOnlyInput(chapter.endOn)}
-                />
-              </div>
-            </div>
-            <label htmlFor="chapter-edit-place">{t('m5s3.common.place')}</label>
-            <select
-              form="chapter-edit-form"
-              id="chapter-edit-place"
-              name="placeId"
-              defaultValue={chapter.placeId ?? ''}
-            >
-              <option value="">{t('m5s3.common.noPlace')}</option>
-              {placesQuery.data?.map((place) => (
-                <option key={place.id} value={place.id}>
-                  {place.name}
-                </option>
-              ))}
-            </select>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button
-                form="chapter-edit-form"
-                type="submit"
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending
-                  ? t('m5s3.common.saving')
-                  : t('m5s3.common.saveChanges')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => {
-                  setIsEditing(false);
-                  setConfirmDelete(false);
-                }}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-            {updateMutation.error ? (
-              <ProblemState
-                error={updateMutation.error}
-                onRetry={() => void chapterQuery.refetch()}
-              />
-            ) : null}
-          </div>
-
-          {chapter.capabilities.canDelete ? (
-            <div style={{ marginTop: 'var(--space-8)' }}>
-              {!confirmDelete ? (
-                <button
-                  type="button"
-                  className="button-link danger-link"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  {t('m5s3.common.delete')}
-                </button>
-              ) : (
-                <section
-                  className="planning-danger-zone"
-                  aria-labelledby="chapter-delete-heading"
-                >
-                  <h2 id="chapter-delete-heading">
-                    {t('m5s3.common.deleteHeading')}
-                  </h2>
-                  <p>{t('m5s3.chapter.deleteConsequence')}</p>
-                  <div className="planning-confirm-row">
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => deleteMutation.mutate(chapter)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {deleteMutation.isPending
-                        ? t('m5s3.common.deleting')
-                        : t('m5s3.common.confirmDelete')}
-                    </button>
-                    <button
-                      type="button"
-                      className="tertiary"
-                      onClick={() => setConfirmDelete(false)}
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                  {deleteMutation.error ? (
-                    <ProblemState
-                      error={deleteMutation.error}
-                      onRetry={() => void chapterQuery.refetch()}
-                    />
-                  ) : null}
-                </section>
-              )}
-            </div>
-          ) : null}
-        </section>
+      {isEditing && draft ? (
+        <ChapterEditor
+          chapter={chapter}
+          places={placesQuery.data ?? []}
+          draft={draft}
+          setDraft={setDraft}
+          titleInputRef={titleInputRef}
+          editTriggerRef={editTriggerRef}
+          updatePending={updateMutation.isPending}
+          updateError={updateMutation.error}
+          deletePending={deleteMutation.isPending}
+          deleteError={deleteMutation.error}
+          onSubmit={(next) =>
+            updateMutation.mutate({
+              chapter,
+              title: next.title.trim(),
+              description: next.description.trim() || null,
+              startOn: dateFromInput(next.startOn) ?? null,
+              endOn: dateFromInput(next.endOn) ?? null,
+              placeId: next.placeId || null,
+            })
+          }
+          onDelete={() => deleteMutation.mutate(chapter)}
+          onClose={() => {
+            setIsEditing(false);
+            setDraft(null);
+            updateMutation.reset();
+            deleteMutation.reset();
+          }}
+        />
       ) : null}
 
       <PlanningRelationManager

@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { normalizeClientError } from '../client/problemDetails';
 import { chapterDetailPath, STORY_CHAPTERS_ROUTE } from '../client/routes';
 import {
@@ -33,7 +34,7 @@ export function ChapterCreatePage({
   const queryClient = useQueryClient();
 
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'chapter-places', spaceId],
+    queryKey: authorSummaryQueryKeys.placeOptions(spaceId),
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,

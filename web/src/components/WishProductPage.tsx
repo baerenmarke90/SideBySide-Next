@@ -63,7 +63,7 @@ export function WishProductPage({
   });
 
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'wish-conversion-places', spaceId],
+    queryKey: authorSummaryQueryKeys.placeOptions(spaceId),
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,
