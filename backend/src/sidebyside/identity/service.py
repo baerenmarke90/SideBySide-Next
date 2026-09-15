@@ -5,6 +5,7 @@ from __future__ import annotations
 import unicodedata
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
@@ -113,20 +114,33 @@ def create_account(
             "This email address is already registered.", AccountErrorCode.EMAIL_TAKEN
         )
 
-    account = Account(display_name=name)
-    session.add(account)
-    session.flush()
+    # The check above only rules out an address already committed at read
+    # time. A concurrent registration for the same address can still commit
+    # between that check and this flush; the savepoint turns the resulting
+    # unique violation (`uq_account_emails_email` or the non-OIDC identity
+    # index) back into the documented conflict instead of an unhandled 500,
+    # mirroring `auth.cloud._signup_account`'s handling of the same race.
+    try:
+        with session.begin_nested():
+            account = Account(display_name=name)
+            session.add(account)
+            session.flush()
 
-    session.add(AccountEmail(account_id=account.id, email=email_address, is_primary=True))
-    session.add(
-        AuthIdentity(
-            account_id=account.id,
-            provider=AuthProvider.LOCAL_PASSWORD.value,
-            subject=email_address,
-            secret_hash=password_hash,
-        )
-    )
-    session.flush()
+            session.add(AccountEmail(account_id=account.id, email=email_address, is_primary=True))
+            session.add(
+                AuthIdentity(
+                    account_id=account.id,
+                    provider=AuthProvider.LOCAL_PASSWORD.value,
+                    subject=email_address,
+                    secret_hash=password_hash,
+                )
+            )
+            session.flush()
+    except IntegrityError as error:
+        raise ConflictError(
+            "This email address is already registered.", AccountErrorCode.EMAIL_TAKEN
+        ) from error
+
     return account
 
 
@@ -160,15 +174,25 @@ def create_oidc_account(
         except ValidationError:
             email_address = ""
         if email_address and find_by_email(session, email_address) is None:
-            session.add(
-                AccountEmail(
-                    account_id=account.id,
-                    email=email_address,
-                    verified_at=now(),
-                    is_primary=True,
-                )
-            )
-            session.flush()
+            # As above: the read-time check cannot see an address committed by
+            # a concurrent registration or a different OIDC onboarding claiming
+            # the same verified address between the check and this flush. Per
+            # the docstring, a taken address is discarded here rather than
+            # failing account creation, so the conflict is swallowed instead
+            # of re-raised.
+            try:
+                with session.begin_nested():
+                    session.add(
+                        AccountEmail(
+                            account_id=account.id,
+                            email=email_address,
+                            verified_at=now(),
+                            is_primary=True,
+                        )
+                    )
+                    session.flush()
+            except IntegrityError:
+                pass
 
     return account
 

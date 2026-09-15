@@ -289,6 +289,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     " im Park.",
     " war der Tag.",
     "Al dente mit Salbei",
+    "Als gelesen markieren",
     "Am Abend saßen wir noch lange draußen und haben über die letzten Monate gesprochen.",
     "Am See",
     "Anmeldung fehlgeschlagen.",
