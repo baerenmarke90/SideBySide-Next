@@ -127,7 +127,7 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 
 **Availability:** Discovery is product behavior inside `Momente`; it is not a
 persistent primary-navigation destination. See `docs/INFORMATION-ARCHITECTURE.md`
-and `decisions/0009-discovery-inside-momente.md`.
+and `decisions/0009-games-primary-navigation-and-premium-capability.md`.
 
 **Purpose:** Offer inspiration and rediscovery of relationship content without
 creating a parallel data world or overshadowing the private core experience.
