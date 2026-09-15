@@ -5,6 +5,7 @@ import {
   formatCompactCalendarDate,
   formatCompactWeekdayDate,
 } from './formatRecency';
+import { resolvedLocale } from '../i18n';
 
 /**
  * Shared Planen product-reference (#859) status/date pill presentation for
@@ -37,10 +38,32 @@ export function planStatusWord(
 }
 
 export function planScheduleLabel(
-  plan: Pick<PlanDetail, 'plannedOn' | 'plannedStart'>,
+  plan: Pick<PlanDetail, 'plannedOn' | 'plannedStart' | 'plannedEnd'>,
+  locale = resolvedLocale(),
 ): string | null {
-  if (plan.plannedOn) return formatCompactCalendarDate(plan.plannedOn);
-  if (plan.plannedStart) return formatCompactWeekdayDate(plan.plannedStart);
+  if (plan.plannedOn) return formatCompactCalendarDate(plan.plannedOn, locale);
+  if (plan.plannedStart) {
+    const formatTime = (value: Date) =>
+      new Intl.DateTimeFormat(locale, {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(value);
+    const startDate = formatCompactWeekdayDate(plan.plannedStart, locale);
+    const startTime = formatTime(plan.plannedStart);
+    if (!plan.plannedEnd) return `${startDate} · ${startTime}`;
+
+    const sameDay =
+      plan.plannedStart.getFullYear() === plan.plannedEnd.getFullYear() &&
+      plan.plannedStart.getMonth() === plan.plannedEnd.getMonth() &&
+      plan.plannedStart.getDate() === plan.plannedEnd.getDate();
+    if (sameDay) {
+      return `${startDate} · ${startTime}–${formatTime(plan.plannedEnd)}`;
+    }
+    return `${startDate} · ${startTime} – ${formatCompactWeekdayDate(
+      plan.plannedEnd,
+      locale,
+    )} · ${formatTime(plan.plannedEnd)}`;
+  }
   return null;
 }
 
@@ -51,7 +74,10 @@ export function planScheduleLabel(
  */
 export function planPillLabel(
   t: TFunction,
-  plan: Pick<PlanDetail, 'status' | 'plannedOn' | 'plannedStart'>,
+  plan: Pick<
+    PlanDetail,
+    'status' | 'plannedOn' | 'plannedStart' | 'plannedEnd'
+  >,
 ): string {
   const statusWord = planStatusWord(t, plan);
   const date = planScheduleLabel(plan);

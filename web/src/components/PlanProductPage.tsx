@@ -24,7 +24,7 @@ import {
   planScheduleTimeInput,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { resolvedLocale, useTranslation } from '../i18n';
+import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
 import { ListEntryIconButton } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
@@ -41,14 +41,6 @@ async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   } catch (error) {
     throw await normalizeClientError(error);
   }
-}
-
-function formatDateTime(value: Date | null): string | null {
-  if (!value) return null;
-  return new Intl.DateTimeFormat(resolvedLocale(), {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(value);
 }
 
 export function PlanProductPage({
@@ -279,7 +271,7 @@ export function PlanProductPage({
       null)
     : null;
   const scheduleLabel = planScheduleLabel(plan);
-  const hasSubfacts = Boolean(plan.plannedEnd || plan.experiencedOn);
+  const hasSubfacts = Boolean(plan.experiencedOn);
   const showsLifecycle =
     plan.capabilities.canEdit && plan.status !== 'COMPLETED';
 
@@ -349,12 +341,6 @@ export function PlanProductPage({
         </p>
         {hasSubfacts ? (
           <div className="planen-detail-subfacts">
-            {plan.plannedEnd ? (
-              <p>
-                <strong>{t('m5s3.plan.plannedEnd')}:</strong>{' '}
-                {formatDateTime(plan.plannedEnd)}
-              </p>
-            ) : null}
             {plan.experiencedOn ? (
               <p>
                 <strong>{t('m5s3.plan.experiencedOn')}:</strong>{' '}

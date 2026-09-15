@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import m5s3 from '../../src/i18n/locales/m5s3';
 
@@ -13,7 +13,12 @@ const TEST_NOW = '2026-09-01T10:00:00Z';
 const PLAN_TITLE = 'Picnic in the park';
 const WISH_TITLE = 'Weekend trip to Lisbon';
 
-type MockOptions = { plansFail?: boolean; plansDelayMs?: number };
+type MockOptions = {
+  plansFail?: boolean;
+  plansDelayMs?: number;
+  plannedEnd?: string | null;
+  onSchedule?: (body: Record<string, unknown>) => void;
+};
 
 async function installMocks(
   page: Page,
@@ -191,7 +196,7 @@ async function installMocks(
                 experiencedOn: null,
                 id: PLAN_ID,
                 placeId: null,
-                plannedEnd: null,
+                plannedEnd: options.plannedEnd ?? null,
                 plannedStart: '2026-09-14T14:00:00Z',
                 sourceWishId: null,
                 spaceId: SPACE_ID,
@@ -224,7 +229,7 @@ async function installMocks(
         experiencedOn: null,
         id: PLAN_ID,
         placeId: null,
-        plannedEnd: null,
+        plannedEnd: options.plannedEnd ?? null,
         plannedStart: '2026-09-14T14:00:00Z',
         sourceWishId: null,
         spaceId: SPACE_ID,
@@ -232,6 +237,33 @@ async function installMocks(
         title: PLAN_TITLE,
         updatedAt: TEST_NOW,
         version: 1,
+      });
+      return;
+    }
+
+    if (
+      method === 'POST' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/plans/${PLAN_ID}/schedule`
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      options.onSchedule?.(body);
+      await fulfillJson({
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: { id: ACCOUNT_ID, displayName: 'Ben' },
+        description: 'Nice weather, remember the sunscreen.',
+        experiencedOn: null,
+        id: PLAN_ID,
+        placeId: null,
+        plannedEnd: body.plannedEnd ?? null,
+        plannedStart: body.plannedStart ?? null,
+        sourceWishId: null,
+        spaceId: SPACE_ID,
+        status: 'PLANNED',
+        title: PLAN_TITLE,
+        updatedAt: TEST_NOW,
+        version: 2,
       });
       return;
     }
@@ -254,6 +286,24 @@ async function signIn(page: Page): Promise<void> {
   await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
   await page.getByRole('button', { name: de.login.submit }).click();
   await expect(page.getByLabel(de.login.email)).toHaveCount(0);
+}
+
+async function capture(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  await page.screenshot({
+    path: testInfo.outputPath(`plan-range-${name}.png`),
+    fullPage: true,
+  });
+}
+
+async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
 }
 
 test('ArrowLeft/ArrowRight moves focus and selection between the Pläne and Wünsche tabs', async ({
@@ -328,6 +378,96 @@ test('shows the loading state while Plans are in flight, then the error state on
     timeout: 10_000,
   });
   expect(plansCallCount).toBeGreaterThan(0);
+});
+
+test('end time is progressive, blocks an invalid range, and submits the same-day end without a second date', async ({
+  page,
+}) => {
+  let scheduleBody: Record<string, unknown> | null = null;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installMocks(page, {
+    onSchedule: (body) => {
+      scheduleBody = body;
+    },
+  });
+  await signIn(page);
+  await page.goto(`/plan/plans/${PLAN_ID}`);
+
+  const disclosure = page.getByRole('button', { name: m5s3.plan.addEndTime });
+  await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByLabel(m5s3.plan.endTime)).toBeHidden();
+
+  await disclosure.click();
+  const endTime = page.getByLabel(m5s3.plan.endTime);
+  await expect(endTime).toBeVisible();
+  await endTime.fill('13:30');
+  await expect(page.getByText(m5s3.plan.endMustFollowStart)).toBeVisible();
+  await page.getByRole('button', { name: m5s3.plan.reschedule }).click();
+  expect(scheduleBody).toBeNull();
+
+  await endTime.fill('16:30');
+  await page.getByRole('button', { name: m5s3.plan.reschedule }).click();
+  await expect.poll(() => scheduleBody).not.toBeNull();
+  expect(scheduleBody).toMatchObject({
+    plannedStart: '2026-09-14T14:00:00.000Z',
+    plannedEnd: '2026-09-14T16:30:00.000Z',
+  });
+});
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`timed Plan range is readable at 390x844 in ${colorScheme} mode`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.addInitScript(() =>
+      window.localStorage.setItem('sidebyside.theme', 'system'),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installMocks(page, { plannedEnd: '2026-09-14T16:30:00Z' });
+    await signIn(page);
+    await page.goto(`/plan/plans/${PLAN_ID}`);
+
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      colorScheme,
+    );
+    await expect(page.getByText(/14:00–16:30/)).toBeVisible();
+    await expect(page.getByLabel(m5s3.plan.endTime)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    const result = await new AxeBuilder({ page })
+      .withTags([
+        'wcag2a',
+        'wcag2aa',
+        'wcag21a',
+        'wcag21aa',
+        'wcag22a',
+        'wcag22aa',
+      ])
+      .analyze();
+    expect(result.violations).toEqual([]);
+    await capture(page, testInfo, `390-${colorScheme}`);
+  });
+}
+
+test('cross-day Plan range reflows at 320px and keeps the same hierarchy when expanded', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await installMocks(page, { plannedEnd: '2026-09-15T01:15:00Z' });
+  await signIn(page);
+  await page.goto(`/plan/plans/${PLAN_ID}`);
+
+  await expect(page.getByText(/14:00.*15\. Sept\..*01:15/)).toBeVisible();
+  await expect(page.getByLabel(m5s3.plan.endsAnotherDay)).toBeChecked();
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, '320-cross-day-light');
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.getByText(/14:00.*15\. Sept\..*01:15/)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, '1280-cross-day-light');
 });
 
 for (const colorScheme of ['light', 'dark'] as const) {
