@@ -28,6 +28,8 @@ def main() -> None:
         parser.error("Use a dedicated disposable emulator, never a personal device.")
     args.output.mkdir(parents=True, exist_ok=True)
     command = [args.adb, "-s", args.serial]
+    source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    apk_digest = hashlib.sha256(args.apk.read_bytes()).hexdigest()
 
     def adb(*parts: str, binary: bool = False) -> str | bytes:
         return subprocess.check_output(command + list(parts), text=not binary, timeout=120)
@@ -181,6 +183,7 @@ def main() -> None:
         tap("proof-close")
         assert find("proof-overlay") is None
         behavior.append("200% text and disabled system animations retain operable sheet actions")
+        assert hashlib.sha256(args.apk.read_bytes()).hexdigest() == apk_digest, "APK changed during capture"
         completed = True
     finally:
         for (namespace, key), value in saved.items():
@@ -192,8 +195,8 @@ def main() -> None:
             override = re.search(r"Override .*?: (.+)", original)
             adb("shell", "wm", kind, override.group(1) if override else "reset")
         report = {"completed": completed,
-                  "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-                  "apkSha256": hashlib.sha256(args.apk.read_bytes()).hexdigest(),
+                  "sourceCommit": source_commit,
+                  "apkSha256": apk_digest,
                   "device": args.serial, "androidRelease": str(adb("shell", "getprop", "ro.build.version.release")).strip(),
                   "captures": captures, "behavior": behavior, "touchTargets": targets,
                   "limitations": "UIAutomator semantics and real emulator operation; no human TalkBack session or full release device matrix."}

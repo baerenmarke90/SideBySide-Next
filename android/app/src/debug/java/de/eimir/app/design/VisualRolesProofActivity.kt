@@ -169,7 +169,8 @@ internal fun VisualRolesProof(initialState: String = "ready") {
                     verticalArrangement = Arrangement.spacedBy(EimirTheme.spacing.step2),
                 ) {
                     Text(stringResource(R.string.proof_utility_heading), style = EimirTheme.contentTypography.sectionHeading,
-                        modifier = Modifier.semantics { heading() })
+                        color = EimirTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() }.testTag("proof-utility-heading"))
                     TextButton(
                         onClick = { selected = !selected },
                         colors = ButtonDefaults.textButtonColors(contentColor = EimirTheme.colors.linkText),
@@ -200,7 +201,8 @@ internal fun VisualRolesProof(initialState: String = "ready") {
                 verticalArrangement = Arrangement.spacedBy(EimirTheme.spacing.groupGap),
             ) {
                 Text(stringResource(R.string.proof_overlay_title), style = EimirTheme.contentTypography.utilityHeading,
-                    modifier = Modifier.semantics { heading() })
+                    color = EimirTheme.colors.textPrimary,
+                    modifier = Modifier.semantics { heading() }.testTag("proof-overlay-heading"))
                 VisibilityBadge(isShared = false)
                 ProofParagraph(R.string.proof_overlay_body)
                 Button(onClick = { sheetOpen = false }, modifier = Modifier.heightIn(min = MinimumTouchTarget).testTag("proof-close")) {
