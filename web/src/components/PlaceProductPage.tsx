@@ -212,7 +212,10 @@ function PlaceEditor({
             />
           </div>
         </div>
-        <p id="place-edit-coordinate-help" className="field-help">
+        <p
+          id="place-edit-coordinate-help"
+          className="field-help planning-coordinate-help"
+        >
           {t('m5s3.place.coordinateHelp')}
         </p>
         {coordinateError ? (
