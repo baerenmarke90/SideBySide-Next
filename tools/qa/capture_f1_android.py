@@ -91,10 +91,16 @@ def main() -> None:
         ET.ElementTree(tree).write(args.output / f"f1-android-{name}.xml", encoding="utf-8")
         content = find("proof-content", tree)
         content_bounds = bounds(content) if content is not None else None
+        photo = find("proof-photo", tree)
+        photo_bounds = bounds(photo) if photo is not None else None
         if gutter is not None:
-            assert content_bounds is not None, "Missing proof content semantics"
-            assert abs(content_bounds[0] / 2 - gutter) <= 1, (name, content_bounds, gutter)
+            # UIAutomator reports the scroll viewport including its padding.
+            # Measure the rendered photo inside that viewport on ready scenes.
+            assert photo_bounds is not None, "Missing rendered photo semantics"
+            assert abs(photo_bounds[0] / 2 - gutter) <= 1, (name, photo_bounds, gutter)
+            assert abs((width_pixels - photo_bounds[2]) / 2 - gutter) <= 1, (name, photo_bounds, gutter)
         captures.append({"name": name, "pixels": [width_pixels, height_pixels], "contentBounds": content_bounds,
+                         "photoBounds": photo_bounds,
                          "pngSha256": hashlib.sha256(screenshot.read_bytes()).hexdigest()})
         print("Captured", name, flush=True)
 
