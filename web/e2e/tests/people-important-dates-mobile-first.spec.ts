@@ -408,6 +408,11 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await expect(
     dateCard.getByText(importantDates.visibility.SHARED),
   ).toBeVisible();
+  await expect(dateCard).toHaveAccessibleName(
+    new RegExp(
+      `${LONG_DATE_LABEL}.*${LONG_PERSON_NAME}.*${importantDates.visibility.SHARED}`,
+    ),
+  );
   await expectHorizontalReflow(page);
   await expectNoWcagViolations(page);
   await capture(page, testInfo, 'w50-important-dates-390-light');
@@ -420,6 +425,10 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   let dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/important-date-editor/);
   await expect(page.getByLabel(importantDates.dateLabel)).toBeFocused();
+  await expect(page.getByLabel(importantDates.labelLabel)).toHaveAttribute(
+    'maxlength',
+    '120',
+  );
   await dialog.getByRole('button', { name: importantDates.create }).click();
   await expect(page.locator('#important-date-date:invalid')).toHaveCount(1);
   await expect(page.locator('#important-date-label:invalid')).toHaveCount(1);
@@ -455,7 +464,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await personCreate.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
-  await expect(page.getByLabel(people.nameLabel)).toBeFocused();
+  await expect(
+    dialog.getByRole('textbox', { name: people.nameLabel, exact: true }),
+  ).toBeFocused();
   await expect(
     dialog.locator('.focused-editor-disclosure'),
   ).not.toHaveAttribute('open');
@@ -469,9 +480,9 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await expect(dialog).toHaveCount(0);
   await expect(personCreate).toBeFocused();
 
-  const personCard = page.getByRole('button', {
-    name: new RegExp(LONG_PERSON_NAME.slice(0, 28), 'i'),
-  });
+  const personCard = page
+    .locator('.people-card')
+    .filter({ hasText: LONG_PERSON_NAME });
   await personCard.click();
   dialog = page.getByRole('dialog');
   await expect(dialog).toHaveClass(/related-person-editor/);
@@ -487,6 +498,55 @@ test('W50-W55 compact composition is relationship-led, keyboard-safe and axe-cle
   await expectNoWcagViolations(page);
   await capture(page, testInfo, 'w55-person-edit-390-light');
 
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('editor Browser Back keeps dirty drafts and closes clean editors without a loop', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const unexpectedRequests = await installPeopleApiMocks(page);
+  await signInAndOpenPeople(page);
+
+  const dateCreate = page.getByRole('button', {
+    name: importantDates.create,
+  });
+  await dateCreate.focus();
+  await dateCreate.click();
+  let dialog = page.getByRole('dialog');
+  const labelInput = dialog.getByLabel(importantDates.labelLabel);
+  await labelInput.fill('A Back-safe date draft');
+
+  await page.goBack();
+  await expect(dialog.getByText(importantDates.discardTitle)).toBeVisible();
+  await dialog
+    .getByRole('button', { name: importantDates.keepEditing })
+    .click();
+  await expect(labelInput).toHaveValue('A Back-safe date draft');
+
+  await page.goBack();
+  await expect(dialog.getByText(importantDates.discardTitle)).toBeVisible();
+  await dialog
+    .getByRole('button', { name: importantDates.discardConfirm })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/more\/people$/);
+  await expect(dateCreate).toBeFocused();
+
+  const personCreate = page.getByRole('button', {
+    name: people.addPersonAction,
+  });
+  await personCreate.focus();
+  await personCreate.click();
+  dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveClass(/related-person-editor/);
+
+  await page.goBack();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/more\/people$/);
+  await expect(personCreate).toBeFocused();
   expect(unexpectedRequests).toEqual([]);
 });
 
@@ -545,9 +605,9 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 
-  const personCard = page.getByRole('button', {
-    name: new RegExp(LONG_PERSON_NAME.slice(0, 28), 'i'),
-  });
+  const personCard = page
+    .locator('.people-card')
+    .filter({ hasText: LONG_PERSON_NAME });
   await personCard.click();
   dialog = page.getByRole('dialog');
   await expectHorizontalReflow(page);

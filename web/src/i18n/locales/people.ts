@@ -65,6 +65,11 @@ const people = {
     'Ich möchte die Person und die verknüpften Termine wirklich löschen.',
   deleteConfirm: 'Person löschen',
   deleting: 'Wird gelöscht …',
+  discardTitle: 'Ungespeicherte Änderungen verwerfen?',
+  discardBody:
+    'Möchtest du den Editor wirklich schließen? Deine Änderungen gehen verloren.',
+  discardConfirm: 'Änderungen verwerfen',
+  keepEditing: 'Weiter bearbeiten',
   avatarLabel: 'Profilbild',
   avatarUpload: 'Foto auswählen',
   avatarChange: 'Foto ändern',
