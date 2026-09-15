@@ -21,22 +21,11 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
+from sidebyside.search.index_migration import SEARCH_INDEXES
+from tests.conftest import requires_database
+
 INDEX_NAME = "ix_memories_search_fts"
-ALL_INDEX_NAMES = (
-    "ix_memories_search_fts",
-    "ix_heart_moments_search_fts",
-    "ix_milestones_search_fts",
-    "ix_wishes_search_fts",
-    "ix_plans_search_fts",
-    "ix_places_search_fts",
-    "ix_chapters_search_fts",
-    "ix_collections_search_fts",
-    "ix_collection_items_search_fts",
-    "ix_private_notes_search_fts",
-    "ix_gift_ideas_search_fts",
-    "ix_private_collections_search_fts",
-    "ix_private_collection_items_search_fts",
-)
+MEMORY_INDEX = next(index for index in SEARCH_INDEXES if index.name == INDEX_NAME)
 
 
 def _is_valid(conn: sa.Connection, index_name: str) -> bool | None:
@@ -44,13 +33,15 @@ def _is_valid(conn: sa.Connection, index_name: str) -> bool | None:
         sa.text(
             "SELECT indisvalid FROM pg_index "
             "JOIN pg_class ON pg_class.oid = pg_index.indexrelid "
-            "WHERE pg_class.relname = :name"
+            "JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace "
+            "WHERE pg_namespace.nspname = current_schema() AND pg_class.relname = :name"
         ),
         {"name": index_name},
     ).scalar_one_or_none()
 
 
 @pytest.mark.integration
+@requires_database
 def test_real_alembic_migration_0028_repairs_an_interrupted_concurrent_index(
     engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -69,11 +60,8 @@ def test_real_alembic_migration_0028_repairs_an_interrupted_concurrent_index(
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             conn.execute(
                 sa.text(
-                    f"CREATE INDEX CONCURRENTLY {INDEX_NAME} ON memories "
-                    "USING gin ((setweight(to_tsvector('simple', "
-                    "coalesce(payload->>'title', '')), 'A') || "
-                    "setweight(to_tsvector('simple', "
-                    "coalesce(payload->>'body', '')), 'B')))"
+                    f"CREATE INDEX CONCURRENTLY {MEMORY_INDEX.name} "
+                    f"ON {MEMORY_INDEX.table} USING gin (({MEMORY_INDEX.expression}))"
                 )
             )
         with engine.begin() as conn:
@@ -92,7 +80,7 @@ def test_real_alembic_migration_0028_repairs_an_interrupted_concurrent_index(
         alembic.command.upgrade(config, "0028")
 
         with engine.connect() as conn:
-            for name in ALL_INDEX_NAMES:
-                assert _is_valid(conn, name) is True, f"{name} missing or still invalid"
+            for index in SEARCH_INDEXES:
+                assert _is_valid(conn, index.name) is True, f"{index.name} missing or still invalid"
     finally:
         alembic.command.upgrade(config, "head")
