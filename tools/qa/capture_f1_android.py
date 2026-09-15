@@ -81,6 +81,7 @@ def main() -> None:
 
     def launch(state: str = "ready", theme: str = "light") -> None:
         adb("shell", "am", "force-stop", package)
+        adb("shell", "cmd", "uimode", "night", "yes" if theme == "dark" else "no")
         result = str(adb("shell", "am", "start", "-W", "-n", component, "--es", "state", state, "--es", "theme", theme))
         if "Error" in result or "Status: timeout" in result:
             raise AssertionError(result)
@@ -109,6 +110,7 @@ def main() -> None:
     keys = [("system", "font_scale"), ("global", "animator_duration_scale"),
             ("global", "transition_animation_scale"), ("global", "window_animation_scale")]
     saved = {(namespace, key): setting(namespace, key) for namespace, key in keys}
+    original_night = str(adb("shell", "cmd", "uimode", "night")).strip().split()[-1]
     original_size = str(adb("shell", "wm", "size"))
     original_density = str(adb("shell", "wm", "density"))
     completed = False
@@ -191,6 +193,7 @@ def main() -> None:
                 adb("shell", "settings", "delete", namespace, key)
             else:
                 setting(namespace, key, value)
+        adb("shell", "cmd", "uimode", "night", original_night)
         for kind, original in (("size", original_size), ("density", original_density)):
             override = re.search(r"Override .*?: (.+)", original)
             adb("shell", "wm", kind, override.group(1) if override else "reset")
@@ -199,6 +202,7 @@ def main() -> None:
                   "apkSha256": apk_digest,
                   "device": args.serial, "androidRelease": str(adb("shell", "getprop", "ro.build.version.release")).strip(),
                   "captures": captures, "behavior": behavior, "touchTargets": targets,
+                  "themeControl": "Activity theme argument plus matching Android system night mode",
                   "limitations": "UIAutomator semantics and real emulator operation; no human TalkBack session or full release device matrix."}
         (args.output / "f1-android-report.json").write_text(json.dumps(report, indent=2) + "\n")
 
