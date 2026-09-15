@@ -23,6 +23,7 @@ import {
   birthdayInputParts,
   daysInMonth,
 } from '../client/relatedPersonBirthday';
+import { useEditorHistoryEntry } from '../client/useEditorHistoryEntry';
 import { useRelatedPersonAvatarUrl } from '../client/useRelatedPersonAvatarUrl';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
@@ -95,32 +96,49 @@ export function RelatedPersonEditorSheet({
   const nameInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const initialBirthdayParts = birthdayInputParts(person?.birthday ?? null);
+  const initialDraft = useMemo(() => {
+    const birthdayParts = birthdayInputParts(person?.birthday ?? null);
+    return {
+      avatarAttachmentId: person?.avatarAttachmentId ?? null,
+      birthdayDay: birthdayParts.dayValue,
+      birthdayMonth: birthdayParts.monthValue,
+      birthdayYearKnown: person?.birthday ? person.birthdayYearKnown : true,
+      displayName: person?.displayName ?? '',
+      knownBirthday:
+        person?.birthday && person.birthdayYearKnown
+          ? dateInputValue(person.birthday)
+          : '',
+      relationship: person?.relationship ?? PersonRelationship.OTHER,
+      showBirthdayOnDashboard: person?.birthday
+        ? person.showBirthdayOnDashboard
+        : false,
+      visibility: person?.visibility ?? ContentVisibility.SHARED,
+    };
+  }, [person]);
+  const [displayName, setDisplayName] = useState(initialDraft.displayName);
+  const [relationship, setRelationship] = useState(initialDraft.relationship);
   const [birthdayYearKnown, setBirthdayYearKnown] = useState(
-    person?.birthday ? person.birthdayYearKnown : true,
+    initialDraft.birthdayYearKnown,
   );
   const [knownBirthday, setKnownBirthday] = useState(
-    person?.birthday && person.birthdayYearKnown
-      ? dateInputValue(person.birthday)
-      : '',
+    initialDraft.knownBirthday,
   );
   const [birthdayMonth, setBirthdayMonth] = useState(
-    initialBirthdayParts.monthValue,
+    initialDraft.birthdayMonth,
   );
-  const [birthdayDay, setBirthdayDay] = useState(initialBirthdayParts.dayValue);
+  const [birthdayDay, setBirthdayDay] = useState(initialDraft.birthdayDay);
   const [showBirthdayOnDashboard, setShowBirthdayOnDashboard] = useState(
-    person?.birthday ? person.showBirthdayOnDashboard : false,
+    initialDraft.showBirthdayOnDashboard,
   );
-  const [visibility, setVisibility] = useState(
-    person?.visibility ?? ContentVisibility.SHARED,
-  );
+  const [visibility, setVisibility] = useState(initialDraft.visibility);
 
   const [currentAvatarId, setCurrentAvatarId] = useState<string | null>(
-    person?.avatarAttachmentId ?? null,
+    initialDraft.avatarAttachmentId,
   );
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [uploadPhase, setUploadPhase] = useState<DraftUploadPhase | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const { avatarUrl: existingAvatarUrl } = useRelatedPersonAvatarUrl(
     attachmentsApi,
@@ -149,6 +167,32 @@ export function RelatedPersonEditorSheet({
   const hasBirthday = birthdayYearKnown
     ? Boolean(knownBirthday)
     : Boolean(birthdayMonth && birthdayDay);
+  const isDirty = useMemo(
+    () =>
+      displayName !== initialDraft.displayName ||
+      relationship !== initialDraft.relationship ||
+      birthdayYearKnown !== initialDraft.birthdayYearKnown ||
+      knownBirthday !== initialDraft.knownBirthday ||
+      birthdayMonth !== initialDraft.birthdayMonth ||
+      birthdayDay !== initialDraft.birthdayDay ||
+      showBirthdayOnDashboard !== initialDraft.showBirthdayOnDashboard ||
+      visibility !== initialDraft.visibility ||
+      currentAvatarId !== initialDraft.avatarAttachmentId ||
+      avatarPreviewUrl !== null,
+    [
+      avatarPreviewUrl,
+      birthdayDay,
+      birthdayMonth,
+      birthdayYearKnown,
+      currentAvatarId,
+      displayName,
+      initialDraft,
+      knownBirthday,
+      relationship,
+      showBirthdayOnDashboard,
+      visibility,
+    ],
+  );
 
   useEffect(() => {
     if (!hasBirthday) setShowBirthdayOnDashboard(false);
@@ -188,27 +232,42 @@ export function RelatedPersonEditorSheet({
     };
   }, []);
 
-  const handleClose = useCallback(() => {
+  const closeEditor = useEditorHistoryEntry({
+    isDirty,
+    isCloseBlocked: pending || Boolean(uploadPhase),
+    onDiscardRequested: () => setShowDiscardConfirm(true),
+    onClose: onCancel,
+  });
+
+  const handleCloseAttempt = useCallback(() => {
     if (pending || uploadPhase) return;
-    onCancel();
-  }, [pending, uploadPhase, onCancel]);
+    if (isDirty) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    closeEditor();
+  }, [closeEditor, isDirty, pending, uploadPhase]);
 
   useEffect(() => {
     const backdrop = backdropRef.current;
     if (!backdrop) return;
 
     function handleBackdropClick(event: MouseEvent) {
-      if (event.target === backdrop) handleClose();
+      if (event.target === backdrop) handleCloseAttempt();
     }
 
     backdrop.addEventListener('click', handleBackdropClick);
     return () => backdrop.removeEventListener('click', handleBackdropClick);
-  }, [handleClose]);
+  }, [handleCloseAttempt]);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape' && !pending && !uploadPhase) {
       event.preventDefault();
-      onCancel();
+      if (showDiscardConfirm) {
+        setShowDiscardConfirm(false);
+      } else {
+        handleCloseAttempt();
+      }
       return;
     }
     if (event.key !== 'Tab' || !dialogRef.current) return;
@@ -306,7 +365,7 @@ export function RelatedPersonEditorSheet({
           <button
             type="button"
             className="focused-editor-close"
-            onClick={handleClose}
+            onClick={handleCloseAttempt}
             aria-label={t('people.closeDialogAria')}
             disabled={pending || Boolean(uploadPhase)}
           >
@@ -321,6 +380,32 @@ export function RelatedPersonEditorSheet({
         >
           <div className="focused-editor-scroll">
             <div className="focused-editor-stack">
+              {showDiscardConfirm ? (
+                <div
+                  className="inline-message inline-message-danger focused-editor-confirmation"
+                  role="alert"
+                >
+                  <strong>{t('people.discardTitle')}</strong>
+                  <span>{t('people.discardBody')}</span>
+                  <div className="form-actions choice-row">
+                    <button
+                      type="button"
+                      className="secondary compact-action"
+                      onClick={() => setShowDiscardConfirm(false)}
+                    >
+                      {t('people.keepEditing')}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger compact-action"
+                      onClick={closeEditor}
+                    >
+                      {t('people.discardConfirm')}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               <section
                 className="focused-editor-primary"
                 aria-labelledby="related-person-identity-title"
@@ -400,7 +485,10 @@ export function RelatedPersonEditorSheet({
                     name="displayName"
                     required
                     maxLength={120}
-                    defaultValue={person?.displayName ?? ''}
+                    value={displayName}
+                    onChange={(event) =>
+                      setDisplayName(event.currentTarget.value)
+                    }
                     autoComplete="off"
                   />
                 </div>
@@ -412,8 +500,11 @@ export function RelatedPersonEditorSheet({
                   <select
                     id="related-person-relationship"
                     name="relationship"
-                    defaultValue={
-                      person?.relationship ?? PersonRelationship.OTHER
+                    value={relationship}
+                    onChange={(event) =>
+                      setRelationship(
+                        event.currentTarget.value as PersonRelationship,
+                      )
                     }
                   >
                     {RELATIONSHIPS.map((relationship) => (
@@ -627,7 +718,7 @@ export function RelatedPersonEditorSheet({
             <button
               type="button"
               className="secondary"
-              onClick={handleClose}
+              onClick={handleCloseAttempt}
               disabled={pending || Boolean(uploadPhase)}
             >
               {t('common.cancel')}

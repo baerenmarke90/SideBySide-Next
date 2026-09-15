@@ -15,6 +15,10 @@ import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPerson
 import type { RelatedPersonFields } from '../api/generated/models/RelatedPersonFields';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import {
+  deleteFocusTarget,
+  type DeleteFocusTarget,
+} from '../client/deleteFocusTarget';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   canConfirmRelatedPersonDelete,
@@ -297,6 +301,10 @@ export function RelatedPeoplePage({
     null,
   );
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [pendingDeleteFocus, setPendingDeleteFocus] =
+    useState<DeleteFocusTarget | null>(null);
+  const createActionRef = useRef<HTMLButtonElement>(null);
+  const personCardRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const birthdayFormatter = useMemo(
     () =>
@@ -387,6 +395,11 @@ export function RelatedPeoplePage({
       }
     },
     onSuccess: async () => {
+      if (deleteTarget) {
+        setPendingDeleteFocus(
+          deleteFocusTarget(peopleQuery.data ?? [], deleteTarget.id),
+        );
+      }
       setDeleteTarget(null);
       setSavedMessage(t('people.deleted'));
       await Promise.all([
@@ -401,6 +414,16 @@ export function RelatedPeoplePage({
     },
   });
 
+  useEffect(() => {
+    if (!pendingDeleteFocus || deleteTarget) return;
+    const target =
+      pendingDeleteFocus.kind === 'item'
+        ? personCardRefs.current.get(pendingDeleteFocus.id)
+        : createActionRef.current;
+    target?.focus();
+    setPendingDeleteFocus(null);
+  }, [deleteTarget, pendingDeleteFocus]);
+
   return (
     <div className="page">
       <PageHeader
@@ -409,6 +432,7 @@ export function RelatedPeoplePage({
         description={t('people.intro')}
         action={
           <button
+            ref={createActionRef}
             type="button"
             className="primary compact-action"
             onClick={() => {
@@ -462,6 +486,10 @@ export function RelatedPeoplePage({
             {peopleQuery.data.map((person) => (
               <li key={person.id} className="people-card-item">
                 <button
+                  ref={(element) => {
+                    if (element) personCardRefs.current.set(person.id, element);
+                    else personCardRefs.current.delete(person.id);
+                  }}
                   type="button"
                   className="people-card"
                   onClick={() => {

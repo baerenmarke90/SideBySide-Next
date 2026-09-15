@@ -17,6 +17,7 @@ import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPerson
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import de from '../i18n/locales/de';
 import people from '../i18n/locales/people';
+import { EDITOR_HISTORY_STATE_KEY } from '../client/useEditorHistoryEntry';
 import {
   DeleteRelatedPersonDialogContent,
   RelatedPeoplePage,
@@ -39,6 +40,10 @@ const person: RelatedPersonView = {
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-02T00:00:00Z'),
 };
+
+function relatedPerson(id: string, displayName: string): RelatedPersonView {
+  return { ...person, id, displayName };
+}
 
 function renderChoice(
   policy:
@@ -215,6 +220,111 @@ describe('RelatedPeoplePage mobile-first surface', () => {
     expect(addButton).toBe(document.activeElement);
   });
 
+  it('confirms dirty Escape and keeps or discards the person draft explicitly', async () => {
+    renderRelatedPeoplePage();
+    await screen.findByRole('heading', { name: 'Lisa' });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(people.addPersonAction, 'i'),
+      }),
+    );
+    const dialog = screen.getByRole('dialog');
+    const nameInput = screen.getByLabelText(
+      people.nameLabel,
+    ) as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: 'Draft name' } });
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.getByText(people.discardTitle)).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: people.keepEditing }));
+    expect(nameInput.value).toBe('Draft name');
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    fireEvent.click(
+      screen.getByRole('button', { name: people.discardConfirm }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('confirms dirty backdrop dismissal for relationship and privacy changes', async () => {
+    const { container } = renderRelatedPeoplePage();
+    await screen.findByRole('heading', { name: 'Lisa' });
+    const personCard = screen
+      .getByRole('heading', { name: 'Lisa' })
+      .closest('.people-card');
+    if (!personCard) throw new Error('person card not found');
+    fireEvent.click(personCard);
+    fireEvent.change(screen.getByLabelText(people.relationshipLabel), {
+      target: { value: PersonRelationship.PARENT },
+    });
+    const visibility = screen.getByRole('combobox', {
+      name: people.visibilityLabel,
+    }) as HTMLSelectElement;
+    fireEvent.change(visibility, {
+      target: { value: ContentVisibility.PRIVATE },
+    });
+
+    const backdrop = container.querySelector('.focused-editor-backdrop');
+    if (!backdrop) throw new Error('editor backdrop not found');
+    fireEvent.click(backdrop);
+
+    expect(screen.getByText(people.discardTitle)).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: people.keepEditing }));
+    expect(visibility.value).toBe(ContentVisibility.PRIVATE);
+  });
+
+  it('uses Browser Back to close a clean person editor', async () => {
+    renderRelatedPeoplePage();
+    await screen.findByRole('heading', { name: 'Lisa' });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(people.addPersonAction, 'i'),
+      }),
+    );
+    await waitFor(() =>
+      expect(window.history.state?.[EDITOR_HISTORY_STATE_KEY]).toBeTruthy(),
+    );
+
+    window.history.back();
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('uses Browser Back to protect a dirty birthday draft', async () => {
+    const { container } = renderRelatedPeoplePage();
+    await screen.findByRole('heading', { name: 'Lisa' });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(people.addPersonAction, 'i'),
+      }),
+    );
+    await waitFor(() =>
+      expect(window.history.state?.[EDITOR_HISTORY_STATE_KEY]).toBeTruthy(),
+    );
+    const disclosure = container.querySelector(
+      '.focused-editor-disclosure',
+    ) as HTMLDetailsElement;
+    fireEvent.click(within(disclosure).getByText(people.birthdayLabel));
+    const birthdayInput = screen.getByLabelText(
+      people.birthdayDateLabel,
+    ) as HTMLInputElement;
+    fireEvent.change(birthdayInput, { target: { value: '1990-06-15' } });
+
+    window.history.back();
+
+    await screen.findByText(people.discardTitle);
+    fireEvent.click(screen.getByRole('button', { name: people.keepEditing }));
+    expect(birthdayInput.value).toBe('1990-06-15');
+    expect(screen.getByRole('dialog')).not.toBeNull();
+
+    window.history.back();
+    await screen.findByText(people.discardTitle);
+    fireEvent.click(
+      screen.getByRole('button', { name: people.discardConfirm }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
   it('opens W55 from the full person card and keeps destructive lifecycle separate', async () => {
     renderRelatedPeoplePage();
 
@@ -226,6 +336,7 @@ describe('RelatedPeoplePage mobile-first surface', () => {
       .getByRole('heading', { name: 'Lisa' })
       .closest('.people-card');
     if (!card) throw new Error('card not found');
+    (card as HTMLElement).focus();
     fireEvent.click(card);
 
     const editDialog = screen.getByRole('dialog');
@@ -342,6 +453,7 @@ describe('RelatedPeoplePage mobile-first surface', () => {
       .getByRole('heading', { name: 'Lisa' })
       .closest('.people-card');
     if (!card) throw new Error('card not found');
+    (card as HTMLElement).focus();
     fireEvent.click(card);
 
     const toggle = screen.getByLabelText(
@@ -357,6 +469,7 @@ describe('RelatedPeoplePage mobile-first surface', () => {
         peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut,
       ).toHaveBeenCalledTimes(1);
     });
+    await waitFor(() => expect(document.activeElement).toBe(card));
     const call = (
       peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut as ReturnType<
         typeof vi.fn
@@ -419,10 +532,70 @@ describe('RelatedPeoplePage mobile-first surface', () => {
       screen.getByRole('button', { name: people.closeDialogAria }),
     );
 
+    expect(screen.getByText(people.discardTitle)).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: people.discardConfirm }),
+    );
+
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-2');
     expect(document.body.style.overflow).toBe('visible');
 
     URL.createObjectURL = originalCreate;
     URL.revokeObjectURL = originalRevoke;
+  });
+
+  async function expectFocusAfterDelete(
+    peopleList: RelatedPersonView[],
+    deletedName: string,
+    expectedName: string | RegExp,
+  ) {
+    renderRelatedPeoplePage(createMockPeopleApi(peopleList));
+    const deletedCard = await screen.findByRole('button', {
+      name: new RegExp(deletedName, 'i'),
+    });
+    fireEvent.click(deletedCard);
+    fireEvent.click(screen.getByRole('button', { name: people.delete }));
+    fireEvent.click(
+      screen.getByRole('radio', {
+        name: new RegExp(people.deletePreserveTitle, 'i'),
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: people.deleteConfirm }));
+
+    const expectedTarget = await screen.findByRole('button', {
+      name: expectedName,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(expectedTarget));
+  }
+
+  it('focuses the next person after deleting a middle item', async () => {
+    await expectFocusAfterDelete(
+      [
+        relatedPerson('person-first', 'First person'),
+        relatedPerson('person-middle', 'Middle person'),
+        relatedPerson('person-last', 'Last person'),
+      ],
+      'Middle person',
+      /Last person/i,
+    );
+  });
+
+  it('focuses the previous person after deleting the last item', async () => {
+    await expectFocusAfterDelete(
+      [
+        relatedPerson('person-first', 'First person'),
+        relatedPerson('person-last', 'Last person'),
+      ],
+      'Last person',
+      /First person/i,
+    );
+  });
+
+  it('focuses the create action after deleting the only person', async () => {
+    await expectFocusAfterDelete(
+      [relatedPerson('person-only', 'Only person')],
+      'Only person',
+      new RegExp(people.addPersonAction, 'i'),
+    );
   });
 });

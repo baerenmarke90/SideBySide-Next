@@ -17,11 +17,17 @@ import type { ImportantDateView } from '../api/generated/models/ImportantDateVie
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import {
+  deleteFocusTarget,
+  type DeleteFocusTarget,
+} from '../client/deleteFocusTarget';
+import {
   EMPTY_IMPORTANT_DATE_DRAFT,
+  IMPORTANT_DATE_LABEL_MAX_LENGTH,
   type ImportantDateDraft,
   importantDateFieldsFromDraft,
 } from '../client/importantDateDraft';
 import { normalizeClientError } from '../client/problemDetails';
+import { useEditorHistoryEntry } from '../client/useEditorHistoryEntry';
 import { useTranslation } from '../i18n';
 import { AddIcon, DestinationIcon } from './DestinationIcon';
 import { ProblemState } from './ProblemState';
@@ -103,14 +109,21 @@ function ImportantDateEditorSheet({
     [dateVal, initialDraft, label, relatedPersonId, repeats, type, visibility],
   );
 
+  const closeEditor = useEditorHistoryEntry({
+    isDirty,
+    isCloseBlocked: pending || deletePending,
+    onDiscardRequested: () => setShowDiscardConfirm(true),
+    onClose,
+  });
+
   const handleCloseAttempt = useCallback(() => {
     if (pending || deletePending) return;
     if (isDirty) {
       setShowDiscardConfirm(true);
       return;
     }
-    onClose();
-  }, [deletePending, isDirty, onClose, pending]);
+    closeEditor();
+  }, [closeEditor, deletePending, isDirty, pending]);
 
   useEffect(() => {
     const previousFocus =
@@ -274,7 +287,7 @@ function ImportantDateEditorSheet({
                     <button
                       type="button"
                       className="danger compact-action"
-                      onClick={onClose}
+                      onClick={closeEditor}
                     >
                       {t('importantDates.discardConfirm')}
                     </button>
@@ -319,7 +332,7 @@ function ImportantDateEditorSheet({
                       id="important-date-label"
                       name="label"
                       required
-                      maxLength={160}
+                      maxLength={IMPORTANT_DATE_LABEL_MAX_LENGTH}
                       value={label}
                       onChange={(event: ChangeEvent<HTMLInputElement>) =>
                         setLabel(event.target.value)
@@ -522,6 +535,10 @@ export function ImportantDatesPanel({
   const [editing, setEditing] = useState<ImportantDateView | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [pendingDeleteFocus, setPendingDeleteFocus] =
+    useState<DeleteFocusTarget | null>(null);
+  const createActionRef = useRef<HTMLButtonElement>(null);
+  const dateCardRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const dateFormatter = useMemo(
     () =>
@@ -612,7 +629,10 @@ export function ImportantDatesPanel({
         throw await normalizeClientError(error);
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (_result, target) => {
+      setPendingDeleteFocus(
+        deleteFocusTarget(datesQuery.data ?? [], target.id),
+      );
       setEditing(null);
       setIsCreating(false);
       setSavedMessage(t('importantDates.deleted'));
@@ -627,6 +647,16 @@ export function ImportantDatesPanel({
 
   const editorOpen = isCreating || Boolean(editing);
 
+  useEffect(() => {
+    if (!pendingDeleteFocus || editorOpen) return;
+    const target =
+      pendingDeleteFocus.kind === 'item'
+        ? dateCardRefs.current.get(pendingDeleteFocus.id)
+        : createActionRef.current;
+    target?.focus();
+    setPendingDeleteFocus(null);
+  }, [editorOpen, pendingDeleteFocus]);
+
   return (
     <section
       className="important-dates-section"
@@ -638,6 +668,7 @@ export function ImportantDatesPanel({
           <p className="important-dates-intro">{t('importantDates.intro')}</p>
         </div>
         <button
+          ref={createActionRef}
           type="button"
           className="secondary compact-action important-dates-create-action"
           onClick={() => {
@@ -722,6 +753,10 @@ export function ImportantDatesPanel({
               return (
                 <li key={date.id} className="important-date-item">
                   <button
+                    ref={(element) => {
+                      if (element) dateCardRefs.current.set(date.id, element);
+                      else dateCardRefs.current.delete(date.id);
+                    }}
                     type="button"
                     className="important-date-card"
                     onClick={() => {
@@ -731,7 +766,19 @@ export function ImportantDatesPanel({
                       deleteMutation.reset();
                       setSavedMessage(null);
                     }}
-                    aria-label={`${dateFormatter.format(date.date)} – ${date.label} – ${t('importantDates.edit')}`}
+                    aria-label={[
+                      dateFormatter.format(date.date),
+                      date.label,
+                      linkedPersonName
+                        ? t('importantDates.linkedPerson', {
+                            name: linkedPersonName,
+                          })
+                        : null,
+                      t(`importantDates.visibility.${date.visibility}`),
+                      t('importantDates.edit'),
+                    ]
+                      .filter(Boolean)
+                      .join(' – ')}
                   >
                     <time
                       className="important-date-marker"
