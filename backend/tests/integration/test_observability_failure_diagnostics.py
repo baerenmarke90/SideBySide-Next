@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -178,10 +179,15 @@ def test_successful_projection_retry_clears_failure_diagnostic(
     session.flush()
     outbox_service.mark_failed(row, "RuntimeError")
     assert row.last_error == "RuntimeError"
+    assert row.next_attempt_at is not None
+
+    row.next_attempt_at = now() - timedelta(seconds=1)
+    session.flush()
 
     assert engagement_service.project_pending(session) == 1
     assert row.processed_at is not None
     assert row.last_error is None
+    assert row.next_attempt_at is None
 
 
 def test_unexpected_projection_failure_never_persists_private_content(
