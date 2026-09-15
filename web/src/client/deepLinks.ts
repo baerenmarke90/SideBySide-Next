@@ -19,6 +19,7 @@ import {
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
   SEARCH_ROUTE,
@@ -49,6 +50,15 @@ export type CanonicalDeepLinkKind =
 const AUTH_RETURN_STORAGE_KEY = 'sidebyside-auth-return-v1';
 const AUTH_RETURN_MAX_AGE_MS = 30 * 60 * 1000;
 
+export const SETTINGS_AUTH_RETURN_HASHES = [
+  '#settings-connection',
+  '#settings-notifications',
+  '#settings-dashboard',
+  '#settings-appearance',
+  '#settings-data',
+  '#settings-account',
+] as const;
+
 const CANONICAL_RETURN_PATTERNS = [
   appRoutePath('today'),
   ACTIVITY_ROUTE,
@@ -72,6 +82,7 @@ const CANONICAL_RETURN_PATTERNS = [
   MORE_PEOPLE_ROUTE,
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   PRIVATE_NOTES_PATH,
   `${PRIVATE_NOTES_PATH}/new`,
   `${PRIVATE_NOTES_PATH}/:noteId`,
@@ -129,7 +140,7 @@ function containsControlCharacter(value: string): boolean {
 export function validateAppRelativeReturnTarget(target: string): string | null {
   if (!target.startsWith('/') || target.startsWith('//')) return null;
   if (target.includes('\\') || containsControlCharacter(target)) return null;
-  if (target.includes('?') || target.includes('#')) return null;
+  if (target.includes('?')) return null;
 
   let parsed: URL;
   try {
@@ -139,12 +150,22 @@ export function validateAppRelativeReturnTarget(target: string): string | null {
   }
 
   if (parsed.origin !== 'https://sidebyside.invalid') return null;
-  if (parsed.pathname !== target) return null;
+  if (parsed.search) return null;
+
+  const canonicalTarget = `${parsed.pathname}${parsed.hash}`;
+  if (canonicalTarget !== target) return null;
+  if (
+    parsed.hash &&
+    (parsed.pathname !== MORE_SETTINGS_ROUTE ||
+      !SETTINGS_AUTH_RETURN_HASHES.some((hash) => hash === parsed.hash))
+  ) {
+    return null;
+  }
 
   const canonicalPattern = CANONICAL_RETURN_PATTERNS.find((pattern) =>
     Boolean(matchPath({ path: pattern, end: true }, parsed.pathname)),
   );
-  return canonicalPattern ? parsed.pathname : null;
+  return canonicalPattern ? canonicalTarget : null;
 }
 
 /**
@@ -156,8 +177,9 @@ export function validateAppRelativeReturnTarget(target: string): string | null {
  * currently active (#689).
  */
 function isResourceSpecificPattern(target: string): boolean {
+  const pathname = target.split('#', 1)[0];
   const canonicalPattern = CANONICAL_RETURN_PATTERNS.find((pattern) =>
-    Boolean(matchPath({ path: pattern, end: true }, target)),
+    Boolean(matchPath({ path: pattern, end: true }, pathname)),
   );
   return canonicalPattern?.includes(':') ?? false;
 }
@@ -184,7 +206,8 @@ export function rememberCurrentAuthReturnTarget(
   spaceId: string | null = null,
 ): string | null {
   if (typeof window === 'undefined') return null;
-  const target = validateAppRelativeReturnTarget(window.location.pathname);
+  const { pathname, search = '', hash = '' } = window.location;
+  const target = validateAppRelativeReturnTarget(`${pathname}${search}${hash}`);
   if (!target) {
     window.localStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
     return null;
@@ -261,7 +284,8 @@ export function restoreAuthReturnTarget(
 ): string | null {
   if (typeof window === 'undefined') return null;
   const target = consumeAuthReturnTarget(accountId, spaceId);
-  if (!target || target === window.location.pathname) return target;
+  const currentTarget = `${window.location.pathname}${window.location.hash ?? ''}`;
+  if (!target || target === currentTarget) return target;
 
   window.history.replaceState(window.history.state, '', target);
   window.dispatchEvent(new PopStateEvent('popstate'));
