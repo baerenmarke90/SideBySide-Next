@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -25,6 +26,9 @@ def main() -> None:
     parser.add_argument("--tokens", type=Path, default=Path(__file__).resolve().parents[2] / "design/tokens.json")
     args = parser.parse_args()
     tokens = json.loads(args.tokens.read_text())
+    capture_report = args.captures / "f1-android-report.json"
+    provenance = json.loads(capture_report.read_text()) if capture_report.is_file() else {}
+    expected_hashes = {item["name"]: item["pngSha256"] for item in provenance.get("captures", [])}
 
     def value(path: str) -> str:
         entry = tokens
@@ -79,8 +83,12 @@ def main() -> None:
                   "tokenContrastRatio": round(measured, 3), "minimum": 4.5}
         png = args.captures / f"f1-android-{scene}.png"
         xml = args.captures / f"f1-android-{scene}.xml"
-        if not png.is_file() or not xml.is_file():
+        if not provenance.get("completed"):
+            result.update(passed=False, reason="Capture run is not complete")
+        elif not png.is_file() or not xml.is_file():
             result.update(passed=False, reason="Missing screenshot or semantic hierarchy")
+        elif hashlib.sha256(png.read_bytes()).hexdigest() != expected_hashes.get(scene):
+            result.update(passed=False, reason="Screenshot does not match the completed capture report")
         else:
             nodes = ET.parse(xml).getroot().iter("node")
             node = next((item for item in nodes if item.get("resource-id", "").endswith(tag)), None)
@@ -90,7 +98,8 @@ def main() -> None:
                 bounds = tuple(int(number) for number in re.findall(r"-?\d+", node.attrib["bounds"]))
                 with Image.open(png) as image:
                     region = image.convert("RGB").crop(bounds)
-                    pixels = Counter(region.getdata())
+                    data = region.get_flattened_data() if hasattr(region, "get_flattened_data") else region.getdata()
+                    pixels = Counter(data)
                 counts = {"foreground": pixels[first], "background": pixels[second]}
                 observed = counts["foreground"] >= 3 and counts["background"] >= 3
                 result.update(bounds=bounds, exactTokenPixelCounts=counts,
@@ -98,6 +107,7 @@ def main() -> None:
                               reason="Token contrast and exact role pixels observed" if observed else "Expected exact role pixels absent")
         results.append(result)
     report = {"passed": all(item["passed"] for item in results), "samples": results,
+              "sourceCommit": provenance.get("sourceCommit"), "apkSha256": provenance.get("apkSha256"),
               "limitations": "Exact pixels in bounded semantics regions supplement token calculations; this does not prove adjacency, every text edge, focus appearance, or human assistive-technology operation."}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

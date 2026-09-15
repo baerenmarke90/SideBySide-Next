@@ -192,6 +192,7 @@ internal fun VisualRolesProof(initialState: String = "ready") {
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             shape = RoundedCornerShape(topStart = EimirTheme.radii.sheet, topEnd = EimirTheme.radii.sheet),
             containerColor = EimirTheme.colors.surfaceRaised,
+            contentColor = EimirTheme.colors.textPrimary,
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
