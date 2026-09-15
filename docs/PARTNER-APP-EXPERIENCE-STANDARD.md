@@ -1,12 +1,14 @@
 # eimir. Partner-App Experience Standard
 
 **Status:** Mandatory product UI standard  
-**Version:** 2.1  
+**Version:** 2.2<br/>
 **Effective from:** September 15, 2026
 
 This document is binding for every user-facing Web and Android change. It complements `DESIGN-PRINCIPLES.md`, `UX-PATTERNS.md`, `SCREEN-TEMPLATES.md`, `COMPONENT-CONTRACTS.md`, and `DESIGN-SYSTEM-DELIVERY.md`. Where any of those documents can be read as permitting a desktop-first, table-first, or "design desktop then shrink" interpretation, section 0 of this document governs and the conflicting wording must be corrected or explicitly documented as a conflict rather than followed literally.
 
 eimir. is not a generic productivity tool, admin console, CRM, spreadsheet, or CRUD frontend. It is a private digital place for two people. Functional correctness is necessary but not sufficient: a client feature is incomplete when it feels like database administration with nicer colors.
+
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md).
 
 ## 0. Smartphone is the normative product reference
 
@@ -42,7 +44,7 @@ When requirements conflict, product UI decisions resolve in this order:
 2. accessibility
 3. comprehensibility / usability
 4. **smartphone-first partner-app invariant** (this section)
-5. domain-specific product decision
+5. **Product Reference v1** and compatible domain-specific product decisions
 6. shared design-system consistency
 7. generic Screen Template default
 8. visual novelty
@@ -62,7 +64,7 @@ Every couple-facing surface MUST feel:
 - alive through restrained motion, feedback, and small moments of delight;
 - safe and understandable when privacy or relationship data is involved.
 
-The visual direction is **warm editorial intimacy**: soft layered surfaces, generous whitespace, meaningful typography, relationship context, tactile media, subtle gradients or glow where appropriate, carefully chosen illustrations or symbols, and motion that makes state changes feel intentional.
+Product Reference v1 makes **warm editorial intimacy** concrete as a personal, living relationship album with familiar mobile interaction. Warmth comes from personal content, varied composition, imagery, typography, purposeful color, and restrained motion. Layers, gradients, glow, and illustrations are optional supporting treatment, never a substitute for meaningful content or a reason to wrap every section in a card.
 
 Modern does **not** mean sterile. Clean layouts must retain warmth through typography, spacing, imagery, surface treatment, microcopy, relationship context, and subtle movement.
 
@@ -267,11 +269,11 @@ Every new or materially changed client feature MUST define the relevant motion/f
 
 ### Standard motion language
 
-- **Micro feedback:** 120-180 ms for press, selection, icon, and compact state feedback.
-- **Component transition:** 160-240 ms for cards, sheets, expansion, filtering, reordering, and local state changes.
-- **Context transition:** 220-320 ms for page/pane changes and larger hierarchy changes.
+- **Micro feedback:** use the `fast` duration role (currently 120 ms) for press, selection, icon, and compact state feedback.
+- **Component transition:** use `standard` (currently 180 ms) for expansion, filtering, reordering, and local changes.
+- **Context transition:** use `emphasized` (currently 280 ms) when a sheet/page transition needs stronger continuity; `maximum` (320 ms) is the normal upper bound. All values come from semantic tokens, not per-component ranges.
 - Use calm ease-out/ease-in-out curves from design tokens. Avoid aggressive bounce, elastic motion, or constant animation.
-- Elements may use subtle opacity plus 4-12 px translation or small scale changes when this clarifies causality.
+- Elements may use subtle opacity, translation, or scale only when this clarifies causality. Reduced motion removes movement and preserves the same focus, status, and result through instant or safe reduced feedback.
 - Drag-and-drop MUST visibly lift, move, settle, and confirm state; disappearing and reappearing in another list is insufficient.
 - Hover, press, selection, successful save, completed actions, and newly revealed relationship content SHOULD feel responsive rather than switching abruptly.
 
@@ -319,7 +321,7 @@ The Contract MUST cover at least:
 
 The Contract also implicitly identifies, and the issue/PR MUST still record:
 
-- the owning Screen Template, or why no existing template fits;
+- the relevant Product Reference v1 rules and calibrated reference experience, followed by the owning Screen Template or why no existing template fits;
 - the existing design-system components/patterns that will be reused, or a documented gap (section 16);
 - how the feature stays warm, modern, lively, and appropriate to a partner app;
 - whether relationship microcopy, playful detail, or a delight moment is appropriate.
@@ -354,7 +356,11 @@ Minimum evidence:
 - at least one representative Compact state;
 - at least one representative Expanded/Web state when the feature exists on Web;
 - Light and Dark when theme-sensitive styling changed;
-- any important interaction state that cannot be understood from a static default screenshot.
+- any important interaction state that cannot be understood from a static default screenshot;
+- the complete **Open → interact → save/complete → observe result → return** journey, including draft/interruption safety and restored scope/filter/scroll context where relevant;
+- relevant empty, sparse, dense, loading, error/retry, success, reduced-motion, and ~360/~390/~430 px states. Existing 320 CSS px reflow and native device/emulator checks remain cumulative.
+
+A screenshot alone cannot establish Product Reference v1 acceptance. Record behavioral continuity as well as visual evidence; the references define hierarchy and interaction, not immutable pixel locks.
 
 Evidence may be screenshots, a short recording, or stable visual-test output. A textual statement that the UI was reviewed is not sufficient by itself.
 
@@ -431,7 +437,9 @@ If the answer is **yes**, the design requires either a revision or an explicit, 
 
 This standard governs new and materially changed features going forward, and the issue/PR requirements that enforce it (`AGENTS.md`, `.github/ISSUE_TEMPLATE/feature.yml`, `.github/pull_request_template.md`, `.github/workflows/product-design-review.yml`).
 
-Applying this standard retrospectively to the entire currently implemented Web and Android product — inventorying every existing surface, classifying it, and remediating or explicitly excepting every noncompliant one — is owned by the dedicated retrospective audit issue (`#825`) and its remediation PRs, not by this document or by any PR that only changes governance. This document does not attempt to enumerate or redesign existing screens; it defines the standard that audit measures against. If a future revision of this standard changes what "compliant" means, `#825` re-checks its final acceptance against the revised standard.
+The earlier retrospective audit #825 and its dated classifications remain historical evidence for their stated baselines. The accepted 2026-09-15 direction and controlled remediation now belong to [#955](https://github.com/baerenmarke90/eimir/issues/955) and the [implementation roadmap](./product/design/implementation-roadmap.md); earlier PASS classifications do not prove v1 acceptance. This governance update does not run another audit or implement those slices.
+
+The final product audit [#946](https://github.com/baerenmarke90/eimir/issues/946) must use Product Reference v1, any later explicit Product Owner decisions, and this standard together. Its activation rule, complete runtime journeys, required auditor routing, and explicit final Product Owner acceptance remain unchanged. Documentation adoption or green CI does not close #955 or #946.
 
 ## Related documents
 

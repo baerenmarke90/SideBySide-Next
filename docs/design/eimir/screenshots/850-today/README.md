@@ -1,3 +1,5 @@
+**Reference status: HISTORICAL.** Captured implementation evidence for the stated issue/baseline. Terms such as "normative" or "authoritative" below apply only to that historical review; they do not lock current composition. [Product Reference v1](../../../../product/design/product-reference-v1.md) governs current design and interaction.
+
 # `/today` visual evidence — #850
 
 Rendered evidence for the #850 Today recomposition ("the living home of a

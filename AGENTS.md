@@ -17,13 +17,14 @@ Before relevant work, read at least these documents:
 
 For every user-facing Web or Android change, the following are additional mandatory sources before implementation starts:
 
-9. `docs/DESIGN-PRINCIPLES.md`
-10. `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`
-11. `docs/UX-PATTERNS.md`
-12. `docs/SCREEN-TEMPLATES.md`
-13. `docs/COMPONENT-CONTRACTS.md`
-14. `docs/DESIGN-SYSTEM-DELIVERY.md`
-15. `design/tokens.json`
+9. `docs/product/design/README.md`, `docs/product/design/product-reference-v1.md`, and the relevant reference experience/system direction
+10. `docs/DESIGN-PRINCIPLES.md`
+11. `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`
+12. `docs/UX-PATTERNS.md`
+13. `docs/SCREEN-TEMPLATES.md`
+14. `docs/COMPONENT-CONTRACTS.md`
+15. `docs/DESIGN-SYSTEM-DELIVERY.md`
+16. `design/tokens.json`
 
 ## Engineering language
 
@@ -103,11 +104,13 @@ User-facing client work is product-design work, not a functional implementation 
 
 eimir. is a private partner app. Couple-facing screens must follow `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and must not default to generic CRUD, admin-console, spreadsheet, or dashboard presentation.
 
+[eimir. Product Reference v1](docs/product/design/product-reference-v1.md), approved by #955, is the normative current product-design source. It takes precedence over conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. In particular, older near-1:1 Planen and Momente/Timeline references are no longer absolute constraints. Lower-level privacy, security, accessibility, domain/business contracts, tokens, and platform delivery gates remain binding. Start from the [design index](docs/product/design/README.md), then the relevant reference experience, pattern, and implementation evidence.
+
 ### Required before implementation starts
 
 For every new or materially changed user-facing Web or Android feature, identify in the issue or PR:
 
-- the owning Screen Template or the reason a new pattern is required;
+- the relevant Product Reference v1 rules/reference experience, followed by the owning Screen Template or the reason a new pattern is required;
 - the existing design-system components and tokens to reuse;
 - the primary human/content focal point;
 - the primary action and visual hierarchy;
@@ -154,7 +157,7 @@ All motion must remain non-blocking, accessible, and understandable with reduced
 
 A PR that changes couple-facing UI must include visual evidence sufficient to review the product result, including representative Compact and Expanded states where applicable. Theme-sensitive changes must be checked in Light and Dark. A textual assertion that the UI looks correct is not sufficient evidence by itself.
 
-A user-facing PR is not merge-ready when it is functionally correct but visibly violates the partner-app experience standard.
+A user-facing PR is not merge-ready when it is functionally correct but violates Product Reference v1 or the partner-app experience standard. Validate **Open → interact → save/complete → observe result → return**, including draft safety and restored context where applicable; screenshots alone cannot establish behavioral acceptance. Cover relevant ~360/~390/~430 px, sparse/dense, Light/Dark, and reduced-motion states alongside existing accessibility/reflow and native-device gates.
 
 ## Semantic design tokens
 

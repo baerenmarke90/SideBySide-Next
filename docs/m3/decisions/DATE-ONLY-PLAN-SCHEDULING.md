@@ -4,6 +4,8 @@
 
 Accepted implementation contract for eimir. / eimir. Planning.
 
+**Current product-design authority:** [Product Reference v1](../../product/design/product-reference-v1.md), especially R3, governs the Mobile Web Product Reference. This decision remains binding for date-only scheduling, timezone, and API/domain semantics; its scheduling controls must be composed within anticipation-first planning.
+
 ## Product states
 
 A Plan has exactly these scheduling states:

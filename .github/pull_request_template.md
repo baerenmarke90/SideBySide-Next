@@ -15,6 +15,8 @@ User-facing product copy remains governed by i18n and may be localized.
 
 ## Product Design / UX
 
+Current authority: [Product Reference v1](../docs/product/design/product-reference-v1.md), its [reference experiences](../docs/product/design/reference-screens.md), and [authority register](../docs/product/design/README.md). v1 wins over conflicting older design references unless a later explicit Product Owner decision supersedes it.
+
 Details: `docs/DESIGN-PRINCIPLES.md`, `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`, `docs/UX-PATTERNS.md`, `docs/SCREEN-TEMPLATES.md`, and `docs/DESIGN-SYSTEM-DELIVERY.md`.
 
 Exactly one of the following options must be checked:
@@ -52,13 +54,13 @@ Smartphone/Compact is the normative product reference (`docs/PARTNER-APP-EXPERIE
 
 **Design result / rationale**
 
-<!-- Name the selected template/pattern, focal point, key hierarchy decision, platform/mobile interaction pattern, typing/keyboard decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception (including administrative/diagnostic or table/list/master-detail justifications). -->
+<!-- Identify the relevant Product Reference v1 sections and reference experience; explain any older reference retained or superseded. Name the selected template/pattern, focal point, key hierarchy decision, platform/mobile interaction pattern, typing/keyboard decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception (including administrative/diagnostic or table/list/master-detail justifications). -->
 
 -
 
 **Visual evidence**
 
-<!-- Link or attach representative screenshots/recordings. Include Compact and Expanded where applicable; include Light/Dark when theme-sensitive styling changed; include large-text/reflow where relevant. -->
+<!-- Link representative screenshots/recordings and behavioral results for Open → interact → save/complete → observe result → return. Include draft/interruption safety and scope/filter/scroll restoration where relevant. Cover applicable ~360/~390/~430 px, sparse/dense/loading/error/success, Expanded, Light/Dark, reduced motion, large-text/reflow, and native device/emulator states. A static screenshot alone is not acceptance. -->
 
 -
 

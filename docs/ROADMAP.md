@@ -51,6 +51,8 @@ Optional relationship, integration, and location features are therefore **not pr
 | [M4 Evidence Map](./m4/M4-EVIDENCE.md) | Which M4 runtime slices and evidence complete M4? |
 | dated reviews under `docs/reviews/` | Historical gate/review snapshots; never rewritten retroactively |
 | GitHub Issues/PRs | Which concrete work packages are being handled? |
+| [Product Reference v1](./product/design/README.md) | Which product-design direction is binding, and how are older references classified? |
+| [Design remediation roadmap](./product/design/implementation-roadmap.md) | Which #955 foundation/reference/propagation slices implement the accepted direction? This does not renumber M0–M9 or replace release gates. |
 | [Product Specification](../specification/PRODUCT-SPEC.md) | Current compact binding product requirements and milestone mapping |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Binding Clean-Room, security, Privacy, Domain, architecture and technical requirements |
 

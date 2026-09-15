@@ -1,3 +1,5 @@
+**Reference status: HISTORICAL.** This dated baseline and its classifications or selected visual direction are evidence, not current product-design authority. The historical body below is preserved; a prior PASS or selected composition does not establish v1 acceptance. [Product Reference v1](../../product/design/product-reference-v1.md) governs conflicts unless a later explicit Product Owner decision supersedes it. See the [reference register](../../product/design/README.md).
+
 # #825 — Mobile-First Surface Audit: Rebaseline + #824 Classification
 
 **Repository:** `baerenmarke90/eimir`

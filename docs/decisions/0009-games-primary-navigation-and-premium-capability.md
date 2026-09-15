@@ -6,6 +6,8 @@
 **Parent product decision:** #866  
 **Amends:** `0003-primary-navigation-and-route-model.md`, `0008-product-ia-harmonization-and-domain-alignment.md`, and the affected primary-navigation/route tables in `../INFORMATION-ARCHITECTURE.md`
 
+**Current product-design authority:** [Product Reference v1](../product/design/product-reference-v1.md) now defines the Mobile Web Product Reference mentioned below. These decisions retain their compatible route, Games capability, and navigation-placement boundaries (Decision 0010 supersedes Decision 0009 placement); their dated screen descriptions are not independent pixel locks.
+
 ## Context
 
 The accepted `Gemeinsam spielen` product area now contains a deliberately bounded initial set of five relationship-native games under #866. Product Owner direction makes this area a first-class Premium destination rather than a utility hidden under `Mehr`.

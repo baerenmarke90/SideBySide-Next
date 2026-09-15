@@ -6,6 +6,8 @@
 **Amends:** `docs/INFORMATION-ARCHITECTURE.md` section 2,
 `docs/SCREEN-TEMPLATES.md` section 1
 
+**Current relationship:** The Android decision remains binding under [Product Reference v1](../product/design/product-reference-v1.md). The dated Web-sidebar description below was subsequently superseded by the accepted [A1 Web shell](../design/eimir/SHELL-RESCUE-A1.md); current navigation is consolidated in [Information Architecture](../INFORMATION-ARCHITECTURE.md).
+
 ## Context
 
 Both documents prescribed the navigation surface by window size class for every

@@ -1,7 +1,7 @@
 # eimir. UX Patterns
 
 **Status:** Binding product foundation  
-**Version:** 1.3  
+**Version:** 1.4<br/>
 **As of:** September 15, 2026
 
 This document defines recurring interaction patterns for the WebApp and
@@ -10,6 +10,8 @@ semantics, and state logic. Concrete presentation adapts to platform, window
 width, and input method.
 
 The patterns below are platform-appropriate defaults, not a mandatory formula: the human task decides the pattern, and a table/list/master-detail composition is used only when it is genuinely the correct interaction for that task (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` sections 0 and 16).
+
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md).
 
 ## 1. Core rules
 
@@ -48,9 +50,11 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 
 | Window class | Primary navigation | Secondary navigation | Detail view |
 |---|---|---|---|
-| Compact, up to 599 px | Bottom Navigation with at most 5 destinations | Tabs or local list | new page |
-| Medium, 600–839 px | Navigation Rail | Tabs or list | new page or second pane |
-| Expanded, from 840 px | persistent Sidebar/Rail | local navigation in content area | second or third pane |
+| Compact, up to 599 px | Bottom Navigation with at most 5 destinations | contextual tabs, filters, or task-appropriate navigation | new page |
+| Medium, 600–839 px | Bottom Navigation | task-appropriate local navigation | new page or optional supporting pane |
+| Expanded, from 840 px | Web horizontal header; Android Bottom Navigation | local navigation in content area | full page or justified supporting pane |
+
+The Web header follows the accepted [A1 shell decision](./design/eimir/SHELL-RESCUE-A1.md); Android follows [ADR 0004](./decisions/0004-android-uses-bottom-navigation-at-every-size.md). Product Reference v1 governs content hierarchy and interaction outcomes; it does not reintroduce a sidebar or require a pane at a particular width.
 
 - Primary destinations are the intentional de-DE product labels **Wir, Momente,
   Planen, Mehr**. Discovery experiences remain product behavior inside `Momente`
@@ -75,8 +79,8 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 
 | Task | Smartphone | WebApp |
 |---|---|---|
-| Primary navigation | Bottom Navigation | Rail or Sidebar |
-| List and detail | separate pages | List-Detail layout from Medium upward |
+| Primary navigation | Bottom Navigation | Compact/Medium Bottom Navigation; Expanded horizontal header |
+| List and detail | separate pages | focused page or justified List-Detail layout |
 | Short input | Bottom Sheet or Dialog | Dialog or Side Pane |
 | Long form | dedicated page | dedicated page or wide Side Pane |
 | Filters | Filter Sheet | Popover or persistent filter bar |
@@ -96,7 +100,7 @@ pattern is appropriate.
   interaction; an additional `Open` button is normally unnecessary.
 - Selection state remains visible on wide layouts.
 - Filters, sorting, and scroll position are preserved when navigating back.
-- On Compact, detail replaces the list; on Expanded, the list remains visible.
+- On Compact, detail replaces the browse surface; on Expanded, the browse surface may remain visible only when it supports the same human task. Reading does not expose editing controls by default.
 - Direct links open the target object and activate the appropriate navigation
   context.
 
@@ -105,8 +109,8 @@ pattern is appropriate.
 - Start from the human capture task rather than the persistence model. A Memory
   may begin with media, a HeartMoment with a thought, and a plan with the shared
   intention; a generic title-first field stack is not the default.
-- Short forms: at most five simple fields in a Sheet, Dialog, or Side Pane.
-- Long, branching, or media-heavy forms: dedicated page.
+- Choose content-first compose, inline editing, a picker, or a contextual sheet from the task. Field count alone does not justify a form. Explicit forms remain appropriate for structured tasks such as settings or account setup.
+- Long, branching, or media-heavy capture: a dedicated page. Create and edit are distinct tasks; reading comes before editing.
 - Request only information required for the current step. Optional metadata is
   progressively disclosed and must not delay the primary capture unnecessarily.
 - Prefer appropriate native/system pickers and direct selections to free-text
@@ -119,8 +123,7 @@ pattern is appropriate.
 - Changes are autosaved only when the state is unambiguous, visible, and
   recoverable.
 - If unsaved changes exist, the app asks before leaving.
-- After successful creation, the app navigates to the new content or back to
-  the refreshed product context.
+- After successful creation, show the persisted result and make it easy to find again. Return to the originating product context with scope, filters, selection, and scroll restored where applicable; explicitly offer a way to see the new item if the current filter excludes it. A success toast alone is insufficient continuity.
 
 ### 3.3 Dialog, Bottom Sheet, Side Pane, or page
 
@@ -243,7 +246,7 @@ Media passes through `selected → preparing → uploading → processing → re
 ## 11. Motion and feedback
 
 - Animation explains hierarchy, causality, or movement between places.
-- Standard duration: 120–280 ms; no normal transition lasts longer than 320 ms.
+- Reuse the semantic duration roles `fast` (120 ms), `standard` (180 ms), and `emphasized` (280 ms); `maximum` (320 ms) is the normal upper bound. Do not invent local duration ranges.
 - `prefers-reduced-motion` and the platform reduced-motion setting are
   respected.
 - No content is readable only during an animation.

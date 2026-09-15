@@ -1,10 +1,12 @@
 # eimir. Design System Delivery
 
 **Status:** Mandatory implementation framework  
-**Version:** 1.1  
-**As of:** August 26, 2026
+**Version:** 1.2<br/>
+**As of:** September 15, 2026
 
 This document turns design principles, tokens, and component contracts into an executable design system for React/TypeScript and Kotlin/Jetpack Compose. The goal is semantic parity, not pixel-identical platforms.
+
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md).
 
 ## 1. Target architecture
 
@@ -121,7 +123,7 @@ For colors, the following also applies:
 
 ### P1 — Product patterns
 
-- App Shell for Bottom Bar/Rail/Sidebar,
+- App Shell for Bottom Navigation and the Expanded Web header,
 - adaptive List-Detail structure,
 - form page with error summary,
 - Story Timeline Item and month group,
@@ -186,8 +188,8 @@ Web may implement this as a native `<button>`; Android may use a Compose Button 
 ## 9. Adaptive layout delivery
 
 - Breakpoints come from tokens.
-- Navigation changes Bottom Bar → Rail → Sidebar without changing route IDs.
-- List-Detail is enabled from Medium only when selection and focus are preserved.
+- Web uses Compact/Medium Bottom Navigation and Expanded horizontal header navigation under the accepted A1 shell decision; Android keeps Bottom Navigation at every size under ADR 0004. Route IDs remain stable.
+- List-Detail may be used from Medium only when justified by the human task and when selection, focus, and return context are preserved.
 - Screen templates are implemented as reusable layout patterns, not copied per domain.
 - Android uses Window Size Classes; Web follows the available container/window width.
 - A size change does not discard a draft and does not trigger a new domain action.
@@ -244,6 +246,8 @@ For each P0/P1 component, the following are named:
 - current status in the manifest.
 
 New patterns are documented first as a contract/decision. A local special case in a screen does not automatically become part of the system.
+
+The original DS0–DS4 phases below describe the system delivery framework; they do not replace the current [F1 → F2 → R1–R5 → P1–P3 → C1 sequence](./product/design/implementation-roadmap.md). F1 establishes only missing visual roles needed by v1; F2 establishes only needed interaction boundaries. Neither authorizes a blanket CSS/component rewrite. Reuse correct existing primitives, prove them on bounded surfaces, and retire weak mechanisms after replacements are accepted.
 
 ## 13. Delivery phases
 

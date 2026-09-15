@@ -1,8 +1,8 @@
 # Information Architecture for eimir.
 
 **Status:** Binding foundation for Web and App  
-**Version:** 1.5  
-**Effective from:** September 12, 2026  
+**Version:** 1.6<br/>
+**Effective from:** September 15, 2026<br/>
 **Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`  
 **Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`  
 **Games placement decided by:** `decisions/0010-games-secondary-navigation-under-more.md`  
@@ -12,6 +12,8 @@ This document defines navigation, naming, routes, and product-function
 assignment. Web and Android use the same domain architecture and stable route
 IDs while adapting persistent navigation and utility placement to platform
 conventions.
+
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md). Navigation/domain ownership and stable routes remain binding here; screen composition follows v1. This reconciliation preserves the accepted A1 Web shell and ADR 0004 native navigation decisions.
 
 ## 1. Core rules
 
@@ -60,8 +62,8 @@ their route IDs are not.
 
 - **App:** Bottom Navigation with icon and text label, at every window size.
   See `decisions/0004-android-uses-bottom-navigation-at-every-size.md`.
-- **Web, compact windows:** Bottom Navigation with icon and text label.
-- **Web, from the medium window class:** fixed sidebar with text labels.
+- **Web, Compact/Medium windows below 840 px:** Bottom Navigation with icon and text label.
+- **Web, Expanded from 840 px:** horizontal header navigation, as accepted in [A1](./design/eimir/SHELL-RESCUE-A1.md); older sidebar wording is superseded.
 - **Web persistent header:** global utilities and the current-user account
   affordance live top-right rather than consuming primary navigation slots.
 - Order remains identical on all platforms.
@@ -122,7 +124,7 @@ Deep-Linkable.
 
 ## 4. Planen as shared hub
 
-`Planen` focuses on ideas and execution for shared couple time:
+`Planen` leads with anticipation of shared couple time under [v1 R3](./product/design/reference-screens.md); its domain distinctions remain:
 
 1. **Wish:** an idea without a binding date.
 2. **Plan:** a concretized idea with status, date, or tasks.
@@ -139,10 +141,8 @@ lists (Gemeinsame Listen) are organized under Mehr.
 
 ### Secondary navigation
 
-- Smartphone: initially segmented control or tabs **Wünsche | Pläne**; Shopping
-  is added only with an implemented and enabled shopping domain.
-- Web: same tabs inside the Planen area; large windows may use list plus detail
-  pane.
+- Wishes and Plans remain discoverable secondary destinations. A segmented control or tabs may serve the task, but must not displace the upcoming experience as the focal point. Shopping appears only with an implemented and enabled shopping domain.
+- Web preserves that same hierarchy; any list/detail pane must justify its value rather than follow available width.
 - The last selected sub-area may be restored locally.
 - Deep Links always open the concrete sub-area and content.
 
@@ -311,7 +311,7 @@ Before M1, decide:
 - [ ] Every feature belongs to exactly one primary area or a documented
       secondary/utility/account surface.
 - [ ] Web and App use stable shared route IDs and domain terminology.
-- [ ] Bottom Bar and Sidebar use the same primary destination order.
+- [ ] Bottom Navigation and the Expanded Web header use the same primary destination order.
 - [ ] Detail routes support Deep Links.
 - [ ] Authentication, membership, and deletion states are defined.
 - [ ] Back behavior works across single- and multi-window layouts.

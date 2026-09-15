@@ -35,7 +35,8 @@ localized product content.
 
 ### Design and UX foundations
 
-- [Design Principles](docs/DESIGN-PRINCIPLES.md) — visual language, Accessibility, and Privacy-first guidance
+- [Product Reference v1 and design authority](docs/product/design/README.md) — current eimir. direction, five reference experiences, legacy precedence, and implementation sequence
+- [Design Principles](docs/DESIGN-PRINCIPLES.md) — compatible visual, Accessibility, and Privacy-first foundations
 - [Information Architecture](docs/INFORMATION-ARCHITECTURE.md) — navigation, areas, routes, and Deep Links
 - [Critical User Flows](docs/USER-FLOWS.md) — end-to-end flows for Auth, invitations, content, Offline, and conflicts
 - [UX Patterns](docs/UX-PATTERNS.md) — cross-platform interaction and state patterns
