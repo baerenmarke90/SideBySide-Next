@@ -706,6 +706,65 @@ test('Place, Collection, and Chapter editors honor browser focus and history', a
   expect(unexpectedRequests).toEqual([]);
 });
 
+test('Place coordinate guidance meets AA contrast in compact light and dark editors', async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('sidebyside.theme', 'system');
+  });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+  await page.goto('/');
+  await signIn(page);
+
+  const scenarios = [
+    { colorScheme: 'light' as const, width: 390, height: 844 },
+    { colorScheme: 'light' as const, width: 390, height: 520 },
+    { colorScheme: 'dark' as const, width: 390, height: 844 },
+    { colorScheme: 'light' as const, width: 1440, height: 900 },
+  ];
+
+  for (const { colorScheme, width, height } of scenarios) {
+    await page.setViewportSize({ width, height });
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+
+    await page.goto('/more/places');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      colorScheme,
+    );
+    await page.locator('summary', { hasText: m5s3.place.create }).click();
+    const createHelp = page.locator('#create-place-coordinate-help');
+    await expect(createHelp).toHaveClass(
+      /(?:^|\s)planning-coordinate-help(?:\s|$)/,
+    );
+    await expectNoHorizontalOverflow(page);
+    await expectNoWcagViolations(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `planning-place-coordinate-create-${colorScheme}-${width}x${height}.png`,
+      ),
+      fullPage: true,
+    });
+
+    await page.goto('/plan/places/place-1');
+    await page.getByRole('button', { name: de.common.edit }).click();
+    const editHelp = page.locator('#place-edit-coordinate-help');
+    await expect(editHelp).toHaveClass(
+      /(?:^|\s)planning-coordinate-help(?:\s|$)/,
+    );
+    await expectNoHorizontalOverflow(page);
+    await expectNoWcagViolations(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `planning-place-coordinate-edit-${colorScheme}-${width}x${height}.png`,
+      ),
+      fullPage: true,
+    });
+  }
+
+  expect(unexpectedRequests).toEqual([]);
+});
+
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`shell navigation and utilities reflow in ${colorScheme} mode`, async ({
     page,

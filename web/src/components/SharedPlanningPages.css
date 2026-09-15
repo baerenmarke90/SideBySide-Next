@@ -28,6 +28,10 @@
   color: var(--color-text-secondary);
 }
 
+.field-help.planning-coordinate-help {
+  color: var(--color-text-secondary);
+}
+
 .planning-list,
 .planning-relation-list,
 .planning-collection-items {

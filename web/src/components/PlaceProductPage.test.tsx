@@ -116,6 +116,43 @@ beforeEach(() => {
 });
 
 describe('PlaceProductPage editor lifecycle', () => {
+  it('uses the shared contrast modifier for create and edit coordinate guidance', async () => {
+    const user = userEvent.setup();
+    renderPlacesOverview(createApis());
+
+    await user.click(await screen.findByText(i18n.t('m5s3.place.create')));
+    const createHelp = document.querySelector('#create-place-coordinate-help');
+    expect(createHelp?.className).toBe('field-help planning-coordinate-help');
+    expect(
+      screen
+        .getByLabelText(i18n.t('m5s3.place.latitude'))
+        .getAttribute('aria-describedby'),
+    ).toBe('create-place-coordinate-help');
+    expect(
+      screen
+        .getByLabelText(i18n.t('m5s3.place.longitude'))
+        .getAttribute('aria-describedby'),
+    ).toBe('create-place-coordinate-help');
+    cleanup();
+
+    renderPlace();
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('common.edit') }),
+    );
+    const editHelp = document.querySelector('#place-edit-coordinate-help');
+    expect(editHelp?.className).toBe('field-help planning-coordinate-help');
+    expect(
+      screen
+        .getByLabelText(i18n.t('m5s3.place.latitude'))
+        .getAttribute('aria-describedby'),
+    ).toBe('place-edit-coordinate-help');
+    expect(
+      screen
+        .getByLabelText(i18n.t('m5s3.place.longitude'))
+        .getAttribute('aria-describedby'),
+    ).toBe('place-edit-coordinate-help');
+  });
+
   it('invalidates the canonical Place family after create and edit mutations', async () => {
     const user = userEvent.setup();
     const createdPlace = { ...PLACE, id: 'place-created', name: 'Café' };

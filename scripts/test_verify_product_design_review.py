@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the mandatory Product Design / UX review gate (Issue #824)."""
+"""Unit tests for the mandatory Product Design / UX review gate (Issues #824/#947)."""
 
 from __future__ import annotations
 
@@ -78,6 +78,33 @@ class TestMandatoryDesignReview(unittest.TestCase):
         errors = verify_mandatory_design_review(body)
         self.assertTrue(
             any("Mobile Interaction Contract implemented or deviations documented" in e for e in errors)
+        )
+
+    def test_fail_missing_established_mobile_pattern_declaration(self) -> None:
+        body = _checked_design_review_body().replace(
+            "- [x] Established platform/mobile interaction pattern reused or deviation justified\n",
+            "",
+        )
+        errors = verify_mandatory_design_review(body)
+        self.assertTrue(
+            any(
+                "Established platform/mobile interaction pattern reused or deviation justified"
+                in e
+                for e in errors
+            )
+        )
+
+    def test_fail_missing_typing_keyboard_burden_declaration(self) -> None:
+        body = _checked_design_review_body().replace(
+            "- [x] Typing and keyboard burden minimized for Compact where applicable\n",
+            "",
+        )
+        errors = verify_mandatory_design_review(body)
+        self.assertTrue(
+            any(
+                "Typing and keyboard burden minimized for Compact where applicable" in e
+                for e in errors
+            )
         )
 
     def test_fail_missing_visual_evidence_section(self) -> None:

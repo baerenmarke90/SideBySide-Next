@@ -266,7 +266,10 @@ export function PlacesOverviewPage({
                 />
               </div>
             </div>
-            <p id="create-place-coordinate-help" className="field-help">
+            <p
+              id="create-place-coordinate-help"
+              className="field-help planning-coordinate-help"
+            >
               {t('m5s3.place.coordinateHelp')}
             </p>
             {coordinateError ? (
