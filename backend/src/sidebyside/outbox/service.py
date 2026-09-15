@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
@@ -32,15 +33,28 @@ def record(session: Session, event: DomainEvent) -> OutboxEvent:
 
 
 def claim_unprocessed(session: Session, limit: int = 50) -> Sequence[OutboxEvent]:
-    """Claim unprocessed events for delivery.
+    """Claim unprocessed, currently-eligible events for delivery.
 
     `FOR UPDATE SKIP LOCKED` ensures two workers never claim the same row and
     neither waits for the other. Without it, delivery would either duplicate
     or the second worker would block.
+
+    A row backed off by `mark_failed` (`next_attempt_at` in the future) is
+    excluded rather than merely deprioritized: without this, a persistently
+    failing event -- always the oldest unprocessed row -- would occupy a
+    claim slot on every poll, starving newer events out of this batch once
+    enough such rows accumulate.
     """
+    current_time = now()
     stmt = (
         select(OutboxEvent)
-        .where(OutboxEvent.processed_at.is_(None))
+        .where(
+            OutboxEvent.processed_at.is_(None),
+            or_(
+                OutboxEvent.next_attempt_at.is_(None),
+                OutboxEvent.next_attempt_at <= current_time,
+            ),
+        )
         .order_by(OutboxEvent.created_at)
         .limit(limit)
         .with_for_update(skip_locked=True)
@@ -51,13 +65,24 @@ def claim_unprocessed(session: Session, limit: int = 50) -> Sequence[OutboxEvent
 def mark_processed(event: OutboxEvent) -> None:
     event.processed_at = now()
     event.last_error = None
+    event.next_attempt_at = None
 
 
 def mark_failed(event: OutboxEvent, error: str) -> None:
     """Record a failed delivery without completing the row.
 
-    `processed_at` remains empty so the event is retried. The message is
-    truncated so an excessively long error cannot make the row unbounded.
+    `processed_at` remains empty so the event is retried, but not before an
+    exponential backoff elapses -- otherwise a persistently broken event
+    would be reclaimed and retried at full speed on every poll forever. The
+    message is truncated so an excessively long error cannot make the row
+    unbounded.
     """
     event.attempts += 1
     event.last_error = error[:2000]
+    event.next_attempt_at = now() + _backoff_for(event.attempts)
+
+
+def _backoff_for(attempts: int) -> timedelta:
+    """Use exponential backoff capped at one hour, mirroring jobs.queue."""
+    seconds = min(2 ** min(attempts, 12) * 5, 3600)
+    return timedelta(seconds=seconds)
