@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { i18n } from '../i18n';
 import { CollectionsOverviewPage } from './CollectionsOverviewPage';
@@ -172,7 +173,10 @@ describe('SharedPlanningOverviewPage', () => {
       ['m5-s3', 'wishes', 'space-1'],
       emptyInfinitePage(),
     );
-    planningClient.setQueryData(['m5-s3', 'places', 'space-1', 'options'], []);
+    planningClient.setQueryData(
+      authorSummaryQueryKeys.placeOptions('space-1'),
+      [],
+    );
 
     const planningHtml = renderToStaticMarkup(
       <QueryClientProvider client={planningClient}>
@@ -211,7 +215,7 @@ describe('SharedPlanningOverviewPage', () => {
       defaultOptions: { queries: { retry: false } },
     });
     placesClient.setQueryData(
-      ['m5-s3', 'places', 'space-1'],
+      authorSummaryQueryKeys.placesOverview('space-1'),
       emptyInfinitePage(),
     );
     const placesHtml = renderToStaticMarkup(

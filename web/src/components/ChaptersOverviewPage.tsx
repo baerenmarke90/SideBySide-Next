@@ -1,6 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
+import {
+  type DeleteFocusTarget,
+  PLANNING_DELETE_FOCUS_STATE_KEY,
+} from '../client/deleteFocusTarget';
 import { normalizeClientError } from '../client/problemDetails';
 import {
   appRoutePath,
@@ -46,6 +51,10 @@ export function ChaptersOverviewPage({
   spaceId: string;
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const createActionRef = useRef<HTMLAnchorElement>(null);
+  const chapterRefs = useRef(new Map<string, HTMLAnchorElement>());
+  const restoredDeleteFocusRef = useRef(false);
 
   const chapters = useInfiniteQuery({
     queryKey: ['m5-s3', 'chapters', spaceId],
@@ -63,6 +72,20 @@ export function ChaptersOverviewPage({
   });
 
   const chapterItems = chapters.data?.pages.flatMap((page) => page.items) ?? [];
+  const deleteFocusTarget = (
+    location.state as Record<string, unknown> | null
+  )?.[PLANNING_DELETE_FOCUS_STATE_KEY] as DeleteFocusTarget | undefined;
+
+  useEffect(() => {
+    if (restoredDeleteFocusRef.current || !deleteFocusTarget) return;
+    const requestedTarget =
+      deleteFocusTarget.kind === 'item'
+        ? chapterRefs.current.get(deleteFocusTarget.id)
+        : createActionRef.current;
+    if (!requestedTarget && chapters.isFetching) return;
+    (requestedTarget ?? createActionRef.current)?.focus();
+    restoredDeleteFocusRef.current = true;
+  }, [chapters.isFetching, deleteFocusTarget]);
 
   return (
     <div className="page planning-page">
@@ -76,7 +99,11 @@ export function ChaptersOverviewPage({
         title={t('m5s3.chapter.heading')}
         description={t('m5s3.chapter.intro')}
         action={
-          <Link className="button-link" to={CHAPTER_CREATE_ROUTE}>
+          <Link
+            ref={createActionRef}
+            className="button-link"
+            to={CHAPTER_CREATE_ROUTE}
+          >
             {t('m5s3.chapter.create')}
           </Link>
         }
@@ -100,6 +127,10 @@ export function ChaptersOverviewPage({
             {chapterItems.map((chapter) => (
               <li className="planning-card-item" key={chapter.id}>
                 <Link
+                  ref={(element) => {
+                    if (element) chapterRefs.current.set(chapter.id, element);
+                    else chapterRefs.current.delete(chapter.id);
+                  }}
                   className="planning-card planning-card-link"
                   to={chapterDetailPath(chapter.id)}
                 >

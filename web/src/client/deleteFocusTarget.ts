@@ -2,6 +2,12 @@ export type DeleteFocusTarget =
   | { kind: 'item'; id: string }
   | { kind: 'create' };
 
+export const PLANNING_DELETE_FOCUS_STATE_KEY = 'planningDeleteFocus';
+
+export type InfiniteItemsData<T> = {
+  pages: ReadonlyArray<{ items: ReadonlyArray<T> }>;
+};
+
 export function deleteFocusTarget(
   items: ReadonlyArray<{ id: string }>,
   deletedId: string,
@@ -16,4 +22,14 @@ export function deleteFocusTarget(
   if (previousItem) return { kind: 'item', id: previousItem.id };
 
   return { kind: 'create' };
+}
+
+export function deleteFocusTargetFromInfiniteData(
+  data: InfiniteItemsData<{ id: string }> | undefined,
+  deletedId: string,
+): DeleteFocusTarget {
+  return deleteFocusTarget(
+    data?.pages.flatMap((page) => [...page.items]) ?? [],
+    deletedId,
+  );
 }

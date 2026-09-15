@@ -10,7 +10,10 @@ import {
   HeartMomentDetailToJSON,
 } from '../api/generated/models/HeartMomentDetail';
 import type { HeartMomentUpdate } from '../api/generated/models/HeartMomentUpdate';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import {
+  authorSummaryQueryKeys,
+  invalidateStoryProjections,
+} from '../client/authorSummaryConsumers';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { localDateInputValue, openNativeDatePicker } from '../client/dateInput';
 import { normalizeClientError } from '../client/problemDetails';
@@ -172,7 +175,7 @@ export function HeartMomentProductPage({
     onSuccess: async (heartMoment) => {
       attachments.clear();
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(heartMomentDetailPath(heartMoment.id), {
@@ -229,7 +232,7 @@ export function HeartMomentProductPage({
         source: 'network',
       });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         queryClient.invalidateQueries({ queryKey }),
         invalidateDashboard(queryClient, spaceId),
       ]);
@@ -280,7 +283,7 @@ export function HeartMomentProductPage({
         source: 'network',
       });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         queryClient.invalidateQueries({
           queryKey: ['comments', spaceId, 'heartMoment', heartMoment.id],
         }),
@@ -311,7 +314,7 @@ export function HeartMomentProductPage({
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('story'), { replace: true });

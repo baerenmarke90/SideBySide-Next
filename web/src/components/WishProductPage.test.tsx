@@ -45,6 +45,7 @@ function LocationProbe() {
 function renderWish(
   wish: WishDetail,
   completeWish = vi.fn().mockResolvedValue(completedWish()),
+  places: Array<{ id: string; name: string }> = [],
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -56,7 +57,10 @@ function renderWish(
     authorSummaryQueryKeys.wishDetail('space-1', wish.id),
     wish,
   );
-  queryClient.setQueryData(['m5-s3', 'wish-conversion-places', 'space-1'], []);
+  queryClient.setQueryData(
+    authorSummaryQueryKeys.placeOptions('space-1'),
+    places,
+  );
 
   const apis = {
     wishes: {
@@ -83,6 +87,12 @@ function renderWish(
 }
 
 describe('WishProductPage direct completion', () => {
+  it('reads conversion places from the canonical selector cache', () => {
+    renderWish(OPEN_WISH, undefined, [{ id: 'place-lake', name: 'Lake' }]);
+
+    expect(screen.getByRole('option', { name: 'Lake' })).toBeTruthy();
+  });
+
   it('offers direct completion only while the Wish is open', () => {
     renderWish(OPEN_WISH);
 

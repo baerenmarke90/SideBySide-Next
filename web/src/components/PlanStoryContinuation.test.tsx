@@ -11,6 +11,7 @@ import {
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { formatDateInputValue } from '../client/dateInput';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { i18n, resolvedLocale } from '../i18n';
@@ -87,13 +88,14 @@ function renderContinuation(apis: SharedPlanningApis) {
     },
   });
 
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <PlanStoryContinuation apis={apis} spaceId="space-1" plan={plan} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 afterEach(() => cleanup());
@@ -101,7 +103,11 @@ afterEach(() => cleanup());
 describe('PlanStoryContinuation', () => {
   it('prefills a Memory from the completed Plan and links the saved Memory to an existing Chapter', async () => {
     const mocks = makeApis();
-    renderContinuation(mocks.apis);
+    const { queryClient } = renderContinuation(mocks.apis);
+    queryClient.setQueryData(
+      authorSummaryQueryKeys.relationTargets('space-1'),
+      ['stale-memory-target'],
+    );
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -133,6 +139,13 @@ describe('PlanStoryContinuation', () => {
       date: formatDateInputValue('2026-09-14', resolvedLocale()),
     });
     await waitFor(() => expect(mocks.createMemory).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryState(
+          authorSummaryQueryKeys.relationTargets('space-1'),
+        )?.isInvalidated,
+      ).toBe(true),
+    );
     expect(mocks.createMemory).toHaveBeenCalledWith({
       spaceId: 'space-1',
       memoryCreate: {
@@ -167,7 +180,11 @@ describe('PlanStoryContinuation', () => {
 
   it('creates a Milestone from the completed Plan and uses the typed Milestone Chapter relation', async () => {
     const mocks = makeApis();
-    renderContinuation(mocks.apis);
+    const { queryClient } = renderContinuation(mocks.apis);
+    queryClient.setQueryData(
+      authorSummaryQueryKeys.relationTargets('space-1'),
+      ['stale-milestone-target'],
+    );
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -183,6 +200,13 @@ describe('PlanStoryContinuation', () => {
     );
 
     await waitFor(() => expect(mocks.createMilestone).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryState(
+          authorSummaryQueryKeys.relationTargets('space-1'),
+        )?.isInvalidated,
+      ).toBe(true),
+    );
     expect(mocks.createMilestone).toHaveBeenCalledWith({
       spaceId: 'space-1',
       milestoneCreate: {

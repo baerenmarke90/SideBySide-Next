@@ -206,12 +206,94 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    const planningCapabilities = {
+      canComment: false,
+      canDelete: true,
+      canEdit: true,
+    };
+    const planningCreator = { id: ACCOUNT_ID, displayName: 'Anna' };
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/places/place-1`
+    ) {
+      await fulfillJson({
+        address: 'Parkweg 1',
+        capabilities: planningCapabilities,
+        createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: planningCreator,
+        description: 'Unser Picknickplatz',
+        id: 'place-1',
+        latitude: null,
+        longitude: null,
+        name: 'Volkspark',
+        spaceId: SPACE_ID,
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname.startsWith(`/api/v1/spaces/${SPACE_ID}/places/place-1/`)
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/collections/collection-1`
+    ) {
+      await fulfillJson({
+        capabilities: planningCapabilities,
+        createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: planningCreator,
+        id: 'collection-1',
+        items: [],
+        spaceId: SPACE_ID,
+        title: 'Packliste',
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/chapters/chapter-1`
+    ) {
+      await fulfillJson({
+        capabilities: planningCapabilities,
+        createdAt: TEST_NOW,
+        createdBy: ACCOUNT_ID,
+        creator: planningCreator,
+        description: 'Sommergeschichten',
+        endOn: null,
+        id: 'chapter-1',
+        placeId: null,
+        spaceId: SPACE_ID,
+        startOn: '2026-06-01',
+        title: 'Sommer',
+        updatedAt: TEST_NOW,
+        version: 1,
+      });
+      return;
+    }
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/chapters/chapter-1/content`
+    ) {
+      await fulfillJson({ items: [] });
+      return;
+    }
+
     if (
       method === 'GET' &&
       [
         `/api/v1/spaces/${SPACE_ID}/search`,
         `/api/v1/spaces/${SPACE_ID}/notifications`,
         `/api/v1/spaces/${SPACE_ID}/story`,
+        `/api/v1/spaces/${SPACE_ID}/timeline`,
         `/api/v1/spaces/${SPACE_ID}/collections`,
         `/api/v1/spaces/${SPACE_ID}/plans`,
         `/api/v1/spaces/${SPACE_ID}/places`,
@@ -560,6 +642,67 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
 
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('Place, Collection, and Chapter editors honor browser focus and history', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+  await page.goto('/');
+  await signIn(page);
+
+  await page.goto('/plan/places/place-1');
+  const placeEdit = page.getByRole('button', { name: de.common.edit });
+  await placeEdit.click();
+  const placeName = page.getByLabel(m5s3.place.name);
+  await expect(placeName).toBeFocused();
+  await placeName.fill('Lakeside park');
+  await page.goBack();
+  const placeDiscard = page.getByRole('alertdialog');
+  await expect(placeDiscard).toBeVisible();
+  await placeDiscard
+    .getByRole('button', { name: m5s3.common.keepEditing })
+    .click();
+  await expect(placeName).toHaveValue('Lakeside park');
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: m5s3.common.discardConfirm })
+    .click();
+  await expect(placeEdit).toBeFocused();
+
+  await page.goto('/plan/collections/collection-1');
+  const collectionEdit = page.getByRole('button', { name: de.common.edit });
+  await collectionEdit.click();
+  await expect(page.getByLabel(m5s3.common.title)).toBeFocused();
+  await page.goBack();
+  await expect(collectionEdit).toBeFocused();
+
+  await page.goto('/plan/chapters/chapter-1');
+  const chapterEdit = page.getByRole('button', { name: de.common.edit });
+  await chapterEdit.click();
+  await expect(page.getByLabel(m5s3.common.title)).toBeFocused();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-wave5-editor-history-compact.png'),
+    fullPage: false,
+  });
+  await page.keyboard.press('Escape');
+  await expect(chapterEdit).toBeFocused();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await chapterEdit.click();
+  await expect(page.getByLabel(m5s3.common.title)).toBeFocused();
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  await page.screenshot({
+    path: testInfo.outputPath('planning-wave5-editor-history-expanded.png'),
+    fullPage: false,
+  });
   expect(unexpectedRequests).toEqual([]);
 });
 

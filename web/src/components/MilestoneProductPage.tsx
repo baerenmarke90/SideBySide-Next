@@ -20,7 +20,10 @@ import {
   milestoneEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import {
+  authorSummaryQueryKeys,
+  invalidateStoryProjections,
+} from '../client/authorSummaryConsumers';
 import { localDateInputValue, openNativeDatePicker } from '../client/dateInput';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { CommentsPanel } from './CommentsPanel';
@@ -101,7 +104,7 @@ export function MilestoneProductPage({
     },
     onSuccess: async (milestone) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(milestoneDetailPath(milestone.id), {
@@ -155,7 +158,7 @@ export function MilestoneProductPage({
         source: 'network',
       });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         queryClient.invalidateQueries({ queryKey }),
         invalidateDashboard(queryClient, spaceId),
       ]);
@@ -184,7 +187,7 @@ export function MilestoneProductPage({
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('story'), { replace: true });

@@ -27,7 +27,10 @@ import {
   memoryEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
-import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import {
+  authorSummaryQueryKeys,
+  invalidateStoryProjections,
+} from '../client/authorSummaryConsumers';
 import { postSnackbar } from '../client/snackbar';
 import {
   formatAttachmentDraftContextKey,
@@ -221,7 +224,7 @@ export function MemoryProductPage({
       setRemovedAttachmentIds(new Set());
       queryClient.setQueryData(memoryKey, { value: memory, source: 'network' });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         queryClient.invalidateQueries({ queryKey: memoryKey }),
         invalidateDashboard(queryClient, spaceId),
       ]);
@@ -250,7 +253,7 @@ export function MemoryProductPage({
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: memoryKey });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateStoryProjections(queryClient, spaceId),
         invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('story'), { replace: true });

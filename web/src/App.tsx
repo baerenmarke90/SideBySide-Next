@@ -40,6 +40,7 @@ import { createPrivateAreaApi } from './client/privateArea';
 import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCacheInBackground } from './client/productReadCache';
+import { invalidateStoryProjections } from './client/authorSummaryConsumers';
 import {
   rememberCurrentAuthReturnTarget,
   restoreAuthReturnTarget,
@@ -527,7 +528,7 @@ function AuthenticatedApp({
 
   async function refreshStory() {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+      invalidateStoryProjections(queryClient, spaceId),
       invalidateDashboard(queryClient, spaceId),
     ]);
   }

@@ -22,6 +22,10 @@ import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import type { PlanSchedule } from '../api/generated/models/PlanSchedule';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import { WishStatus } from '../api/generated/models/WishStatus';
+import {
+  authorSummaryQueryKeys,
+  invalidatePlaceConsumers,
+} from '../client/authorSummaryConsumers';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import {
   loadPlanningOverviewPlans,
@@ -460,7 +464,7 @@ export function SharedPlanningOverviewPage({
   });
 
   const placesQuery = useQuery({
-    queryKey: ['m5-s3', 'places', spaceId, 'options'],
+    queryKey: authorSummaryQueryKeys.placeOptions(spaceId),
     queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),
     staleTime: 30_000,
     retry: false,
@@ -502,9 +506,7 @@ export function SharedPlanningOverviewPage({
     mutationFn: (values: { name: string; address?: string }) =>
       apiCall(() => apis.places.createPlace({ spaceId, placeCreate: values })),
     onSuccess: async (created) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['m5-s3', 'places', spaceId, 'options'],
-      });
+      await invalidatePlaceConsumers(queryClient, spaceId);
       setSelectedPlanPlaceId(created.id);
       setIsCreatingPlanPlace(false);
       setNewPlanPlaceName('');

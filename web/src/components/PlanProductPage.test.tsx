@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { i18n } from '../i18n';
 import { PlanProductPage } from './PlanProductPage';
@@ -35,7 +36,10 @@ function renderPlan(plan: ReturnType<typeof basePlan>, places: unknown[] = []) {
     defaultOptions: { queries: { retry: false } },
   });
   queryClient.setQueryData(['m5-s3', 'plan', 'space-1', plan.id], plan);
-  queryClient.setQueryData(['m5-s3', 'plan-places', 'space-1'], places);
+  queryClient.setQueryData(
+    authorSummaryQueryKeys.placeOptions('space-1'),
+    places,
+  );
 
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>

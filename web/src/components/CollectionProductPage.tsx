@@ -2,6 +2,7 @@ import {
   type ButtonHTMLAttributes,
   type FormEvent,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,9 +16,18 @@ import {
 } from '../client/sharedPlanning';
 import { MORE_COLLECTIONS_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
+import {
+  deleteFocusTargetFromInfiniteData,
+  type InfiniteItemsData,
+  PLANNING_DELETE_FOCUS_STATE_KEY,
+} from '../client/deleteFocusTarget';
 import { useTranslation } from '../i18n';
 import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
+import {
+  PlanningDiscardConfirmation,
+  usePlanningEditorLifecycle,
+} from './PlanningEditorLifecycle';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -153,6 +163,11 @@ export function CollectionProductPage({
   const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [showTitleSaved, setShowTitleSaved] = useState(false);
+  const editTriggerRef = useRef<HTMLButtonElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const deleteHeadingRef = useRef<HTMLHeadingElement>(null);
+  const restoreDeleteTriggerRef = useRef(false);
   const key = authorSummaryQueryKeys.collectionDetail(spaceId, collectionId);
 
   const collectionQuery = useQuery({
@@ -175,8 +190,7 @@ export function CollectionProductPage({
 
   const isTitleDirty =
     Boolean(collectionQuery.data?.title) &&
-    titleDraft.trim().length > 0 &&
-    titleDraft.trim() !== collectionQuery.data?.title;
+    titleDraft !== collectionQuery.data?.title;
 
   const commitCollection = async (collection: CollectionDetail) => {
     queryClient.setQueryData(key, collection);
@@ -314,14 +328,56 @@ export function CollectionProductPage({
           ifMatch: planningIfMatch(collection),
         }),
       ),
-    onSuccess: async () => {
+    onMutate: (collection) => ({
+      focusTarget: deleteFocusTargetFromInfiniteData(
+        queryClient.getQueryData<InfiniteItemsData<CollectionDetail>>(
+          authorSummaryQueryKeys.collections(spaceId),
+        ),
+        collection.id,
+      ),
+    }),
+    onSuccess: async (_result, _collection, context) => {
       queryClient.removeQueries({ queryKey: key });
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'collections', spaceId],
       });
-      navigate(MORE_COLLECTIONS_ROUTE, { replace: true });
+      navigate(MORE_COLLECTIONS_ROUTE, {
+        replace: true,
+        state: {
+          [PLANNING_DELETE_FOCUS_STATE_KEY]: context.focusTarget,
+        },
+      });
     },
   });
+
+  const editorLifecycle = usePlanningEditorLifecycle({
+    isActive: isEditing,
+    isDirty: isTitleDirty,
+    isPending: updateCollection.isPending || deleteCollection.isPending,
+    initialFocusRef: titleInputRef,
+    restoreFocusRef: editTriggerRef,
+    onEscape: () => {
+      if (!confirmDelete) return false;
+      restoreDeleteTriggerRef.current = true;
+      setConfirmDelete(false);
+      return true;
+    },
+    onClose: () => {
+      setIsEditing(false);
+      setConfirmDelete(false);
+      setTitleDraft(collectionQuery.data?.title ?? '');
+      updateCollection.reset();
+      deleteCollection.reset();
+    },
+  });
+
+  useEffect(() => {
+    if (confirmDelete) deleteHeadingRef.current?.focus();
+    else if (restoreDeleteTriggerRef.current) {
+      restoreDeleteTriggerRef.current = false;
+      deleteTriggerRef.current?.focus();
+    }
+  }, [confirmDelete]);
 
   const baseItemIds = [...(collectionQuery.data?.items ?? [])]
     .sort((left, right) => left.position - right.position)
@@ -421,10 +477,14 @@ export function CollectionProductPage({
         titleAction={
           collection.capabilities.canEdit && !isEditing ? (
             <ListEntryIconButton
+              ref={editTriggerRef}
               icon="edit"
               className="tertiary"
               label={t('common.edit')}
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setTitleDraft(collection.title);
+                setIsEditing(true);
+              }}
             />
           ) : undefined
         }
@@ -442,6 +502,7 @@ export function CollectionProductPage({
               </label>
               <div className="planning-collection-title-row">
                 <input
+                  ref={titleInputRef}
                   id="collection-edit-title"
                   name="title"
                   required
@@ -460,21 +521,29 @@ export function CollectionProductPage({
                       ? t('m5s3.common.saving')
                       : t('m5s3.common.saveChanges')
                   }
-                  disabled={!isTitleDirty || updateCollection.isPending}
+                  disabled={
+                    !isTitleDirty ||
+                    updateCollection.isPending ||
+                    deleteCollection.isPending
+                  }
                 />
                 <button
                   type="button"
                   className="button-link secondary-link"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setConfirmDelete(false);
-                    setTitleDraft(collection.title);
-                  }}
-                  disabled={updateCollection.isPending}
+                  onClick={editorLifecycle.requestClose}
+                  disabled={
+                    updateCollection.isPending || deleteCollection.isPending
+                  }
                 >
                   {t('common.cancel')}
                 </button>
               </div>
+              {editorLifecycle.showDiscardConfirm ? (
+                <PlanningDiscardConfirmation
+                  onKeepEditing={editorLifecycle.keepEditing}
+                  onDiscard={editorLifecycle.discard}
+                />
+              ) : null}
               {updateCollection.error ? (
                 <ProblemState
                   error={updateCollection.error}
@@ -573,14 +642,24 @@ export function CollectionProductPage({
           <p>{t('m5s3.collection.deleteConsequence')}</p>
           {!confirmDelete ? (
             <button
+              ref={deleteTriggerRef}
               type="button"
               className="danger"
               onClick={() => setConfirmDelete(true)}
+              disabled={updateCollection.isPending}
             >
               {t('m5s3.common.delete')}
             </button>
           ) : (
             <div className="planning-confirm-row">
+              <h2
+                ref={deleteHeadingRef}
+                id="collection-delete-confirmation-heading"
+                className="sr-only"
+                tabIndex={-1}
+              >
+                {t('m5s3.common.deleteHeading')}
+              </h2>
               <button
                 type="button"
                 className="danger"
@@ -594,7 +673,11 @@ export function CollectionProductPage({
               <button
                 type="button"
                 className="tertiary"
-                onClick={() => setConfirmDelete(false)}
+                onClick={() => {
+                  restoreDeleteTriggerRef.current = true;
+                  setConfirmDelete(false);
+                }}
+                disabled={deleteCollection.isPending}
               >
                 {t('common.cancel')}
               </button>
