@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { i18n } from '../i18n';
 import games from '../i18n/locales/games';
@@ -25,12 +26,14 @@ function setup(momentCount: number): OurMomentsGameSetup {
   };
 }
 
-function renderPage(value: OurMomentsGameSetup) {
+function renderPage(
+  value: OurMomentsGameSetup,
+  { strictMode = false }: { strictMode?: boolean } = {},
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-
-  return render(
+  const ui = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/games/our-moments']}>
         <OurMomentsGamePage
@@ -41,8 +44,10 @@ function renderPage(value: OurMomentsGameSetup) {
           loadSetup={async () => value}
         />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+
+  return render(strictMode ? <StrictMode>{ui}</StrictMode> : ui);
 }
 
 describe('OurMomentsGamePage', () => {
@@ -92,5 +97,27 @@ describe('OurMomentsGamePage', () => {
     expect(
       screen.queryByRole('region', { name: games.momentsGame.boardAria }),
     ).toBeNull();
+  });
+
+  it('keeps the session interactive under React StrictMode', async () => {
+    renderPage(setup(3), { strictMode: true });
+
+    await screen.findByRole('heading', {
+      name: games.entries.moments.title,
+      level: 1,
+    });
+    const hiddenCardName = i18n.t('games.momentsGame.cardHidden', {
+      index: 1,
+      total: 6,
+    });
+    const firstCard = await screen.findByRole('button', {
+      name: hiddenCardName,
+    });
+
+    fireEvent.click(firstCard);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: hiddenCardName })).toBeNull();
+    });
   });
 });
