@@ -346,3 +346,44 @@ test('private area remains usable at 200 percent layout zoom', async ({
   await expectNoWcagViolations(page);
   expect(unexpectedRequests).toEqual([]);
 });
+
+for (const viewport of [
+  { name: 'compact', width: 390, height: 844 },
+  { name: 'expanded', width: 1440, height: 900 },
+] as const) {
+  test(`private note title errors remain associated and focused in ${viewport.name} Web`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    const unexpectedRequests = await signInAndOpenPrivateArea(page);
+    await page.goto('/more/private/notes/new');
+
+    const title = page.getByLabel(privateArea.notes.titleLabel);
+    await title.fill('   ');
+    await page
+      .getByRole('button', { name: privateArea.save, exact: true })
+      .click();
+
+    await expect(title).toHaveValue('   ');
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+    await expect(title).toHaveAttribute(
+      'aria-describedby',
+      'private-note-title-error',
+    );
+    await expect(title).toBeFocused();
+    await expect(page.getByText(privateArea.titleRequired)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectNoWcagViolations(page);
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `private-area-note-error-${viewport.name}-light.png`,
+      ),
+      fullPage: true,
+    });
+    expect(unexpectedRequests).toEqual([]);
+  });
+}

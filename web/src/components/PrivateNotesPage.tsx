@@ -24,6 +24,7 @@ import {
   PrivateAreaBackToMore,
 } from './PrivateAreaLayout';
 import { UiState } from './UiState';
+import { useRequiredTitleValidation } from './useRequiredTitleValidation';
 
 const PAGE_SIZE = 20;
 
@@ -55,7 +56,13 @@ function usePrivateNote(
   return { noteId, query };
 }
 
-function PrivateNoteFields({ note }: { note?: PrivateNoteDetail }) {
+function PrivateNoteFields({
+  note,
+  titleValidation,
+}: {
+  note?: PrivateNoteDetail;
+  titleValidation: ReturnType<typeof useRequiredTitleValidation>;
+}) {
   const { t } = useTranslation();
   return (
     <>
@@ -64,12 +71,29 @@ function PrivateNoteFields({ note }: { note?: PrivateNoteDetail }) {
           {t('privateArea.notes.titleLabel')}
         </label>
         <input
+          ref={titleValidation.inputRef}
           id="private-note-title"
           name="title"
           required
           maxLength={200}
           defaultValue={note?.title ?? ''}
+          aria-invalid={titleValidation.invalid || undefined}
+          aria-describedby={
+            titleValidation.invalid ? 'private-note-title-error' : undefined
+          }
+          onChange={(event) =>
+            titleValidation.handleChange(event.currentTarget.value)
+          }
         />
+        {titleValidation.invalid ? (
+          <p
+            id="private-note-title-error"
+            className="status status-error"
+            role="alert"
+          >
+            {t('privateArea.titleRequired')}
+          </p>
+        ) : null}
       </div>
       <div className="field-group">
         <label htmlFor="private-note-body">
@@ -193,12 +217,20 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
       navigate(privateNotePath(note.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'PRIVATE_NOTE_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     const data = new FormData(event.currentTarget);
+    const title = titleValidation.validate(String(data.get('title') || ''));
+    if (title === null) return;
     mutation.mutate({
-      title: String(data.get('title') || '').trim(),
+      title,
       body: String(data.get('body') || '').trim(),
       pinned: data.get('pinned') === 'on',
     });
@@ -217,7 +249,7 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <PrivateNoteFields />
+          <PrivateNoteFields titleValidation={titleValidation} />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -232,7 +264,9 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
     </>
   );
@@ -341,6 +375,11 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
       navigate(privateNotePath(note.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'PRIVATE_NOTE_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
@@ -363,11 +402,14 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     const data = new FormData(event.currentTarget);
+    const title = titleValidation.validate(String(data.get('title') || ''));
+    if (title === null) return;
     mutation.mutate({
       note: editableNote,
       values: {
-        title: String(data.get('title') || '').trim(),
+        title,
         body: String(data.get('body') || '').trim(),
         pinned: data.get('pinned') === 'on',
       },
@@ -387,7 +429,7 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <PrivateNoteFields note={note} />
+          <PrivateNoteFields note={note} titleValidation={titleValidation} />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -402,7 +444,9 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
 
       {note.capabilities.canDelete ? (

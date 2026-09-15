@@ -9,6 +9,8 @@ const privateArea = {
   loadingMore: 'Wird geladen …',
   saving: 'Wird gespeichert …',
   save: 'Speichern',
+  titleRequired:
+    'Bitte gib einen Titel ein, der nicht nur aus Leerzeichen besteht.',
   edit: 'Bearbeiten',
   delete: 'Löschen',
   deleting: 'Wird gelöscht …',
