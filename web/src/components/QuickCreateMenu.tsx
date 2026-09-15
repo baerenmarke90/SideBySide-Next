@@ -366,7 +366,7 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
               <div
                 ref={sheetRef}
                 id={menuId}
-                className="quick-create-mobile-sheet sbs-motion-reveal"
+                className="quick-create-mobile-sheet eimir-motion-reveal"
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('navigation.quickCreateTitle')}

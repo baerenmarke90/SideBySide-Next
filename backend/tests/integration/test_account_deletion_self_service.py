@@ -7,20 +7,20 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from sidebyside.auth import recent_auth, sessions
-from sidebyside.config import Environment, get_settings
-from sidebyside.core.clock import now
-from sidebyside.identity import deletion_jobs, deletion_self_service
-from sidebyside.identity.deletion_journal import DeletionJournal
-from sidebyside.identity.deletion_models import (
+from eimir.auth import recent_auth, sessions
+from eimir.config import Environment, get_settings
+from eimir.core.clock import now
+from eimir.identity import deletion_jobs, deletion_self_service
+from eimir.identity.deletion_journal import DeletionJournal
+from eimir.identity.deletion_models import (
     AccountDeletion,
     AccountDeletionStatus,
     DeletionConfirmationMailStatus,
 )
-from sidebyside.identity.models import Account, AccountEmail, DeviceSession
-from sidebyside.jobs.models import Job, JobStatus
-from sidebyside.jobs.worker import run_once
-from sidebyside.mail import MailMessage, MailSender, MailUnavailableError
+from eimir.identity.models import Account, AccountEmail, DeviceSession
+from eimir.jobs.models import Job, JobStatus
+from eimir.jobs.worker import run_once
+from eimir.mail import MailMessage, MailSender, MailUnavailableError
 from tests.conftest import auth, requires_database
 
 

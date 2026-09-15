@@ -68,7 +68,7 @@ def github_issue_state_fetcher(repository: str, token: str) -> IssueStateFetcher
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {token}",
                 "X-GitHub-Api-Version": "2022-11-28",
-                "User-Agent": "sidebyside-status-drift-guard",
+                "User-Agent": "eimir-status-drift-guard",
             },
         )
         try:

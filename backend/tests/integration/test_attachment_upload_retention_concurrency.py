@@ -14,13 +14,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.api.v1 import attachments as attachment_api
-from sidebyside.attachments import cleanup, service, upload_ownership
-from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
-from sidebyside.authorization import AuthorizationContext
-from sidebyside.core.clock import now
-from sidebyside.core.errors import DomainError
-from sidebyside.media import (
+from eimir.api.v1 import attachments as attachment_api
+from eimir.attachments import cleanup, service, upload_ownership
+from eimir.attachments.models import Attachment, AttachmentStatus, MediaType
+from eimir.authorization import AuthorizationContext
+from eimir.core.clock import now
+from eimir.core.errors import DomainError
+from eimir.media import (
     ByteSource,
     MediaStore,
     SignedUpload,

@@ -7,7 +7,7 @@ Create Date: 2026-09-14
 #633: `display_name` is ordinary mutable presentation data and must stop being
 the durable invariant create/ensure/reset use to recognize the two canonical
 demo personas. This table is the stable alternative. It starts empty even on
-an existing deployment; `sidebyside.demo.service` adopts the already-verified
+an existing deployment; `eimir.demo.service` adopts the already-verified
 reserved-address Accounts into it the next time `ensure`/`create`/`reset` runs,
 so no manual data migration is required. Dropping the table is a full,
 lossless rollback: the marker carries no data that anything else depends on.

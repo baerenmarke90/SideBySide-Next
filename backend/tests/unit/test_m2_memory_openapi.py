@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 
 def _schema() -> dict[str, object]:

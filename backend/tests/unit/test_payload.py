@@ -10,8 +10,8 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 
-from sidebyside.db.protected_payload import ProtectedPayloadJSON
-from sidebyside.domain.payload import (
+from eimir.db.protected_payload import ProtectedPayloadJSON
+from eimir.domain.payload import (
     CRYPTO_VERSION_CLIENT_SEALED,
     CRYPTO_VERSION_PLAINTEXT,
     ProtectedPayload,

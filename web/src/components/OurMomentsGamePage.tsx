@@ -145,7 +145,7 @@ function ActiveOurMomentsSessionView({
   if (snapshot.status === 'finished') {
     return (
       <section
-        className="our-moments-finish sbs-motion-reveal"
+        className="our-moments-finish eimir-motion-reveal"
         aria-labelledby="our-moments-finish-title"
       >
         <p className="eyebrow">{t('games.momentsGame.finishEyebrow')}</p>
@@ -200,7 +200,7 @@ function ActiveOurMomentsSessionView({
 
       {snapshot.status === 'match-reveal' && snapshot.revealedMatch ? (
         <section
-          className="our-moments-match-reveal sbs-motion-reveal"
+          className="our-moments-match-reveal eimir-motion-reveal"
           aria-live="polite"
           aria-labelledby="our-moments-match-title"
         >

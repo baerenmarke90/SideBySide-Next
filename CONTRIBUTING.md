@@ -1,4 +1,4 @@
-# Contributing to SideBySide Next
+# Contributing to eimir.
 
 Contributions are welcome through GitHub Pull Requests.
 

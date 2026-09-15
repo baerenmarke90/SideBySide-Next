@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.relationship import offboarding, policy, service
+from eimir.relationship import offboarding, policy, service
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

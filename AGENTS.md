@@ -1,4 +1,4 @@
-# SideBySide Next - Implementation Rules
+# eimir. - Implementation Rules
 
 These rules apply to AI-assisted and human implementation work in this repository.
 
@@ -63,7 +63,7 @@ When the change is relevant, the issue or pull request must document:
 
 Consistency with `docs/BUSINESS-MODEL.md` and `docs/FREEMIUM-FEATURE-MATRIX.md` is a mandatory development invariant, not a launch-only or monetization-only review.
 
-Every development issue and pull request must explicitly assess whether the change is consistent with the current SideBySide Next business/freemium model. The review is mandatory even when the conclusion is that the change has no business-model impact.
+Every development issue and pull request must explicitly assess whether the change is consistent with the current eimir. business/freemium model. The review is mandatory even when the conclusion is that the change has no business-model impact.
 
 For capabilities already classified in `docs/FREEMIUM-FEATURE-MATRIX.md`, that versioned matrix is the authoritative product-tier baseline. Until remaining future/unimplemented Free/Premium decisions from #262 are promoted into authoritative repository documentation, #262 remains the working source for those pending decisions. It must not become a permanent substitute for versioned repository documentation.
 
@@ -73,7 +73,7 @@ Assess at least the following when relevant:
 
 - Free, Premium, Mixed, or explicitly non-paywallable capability classification, including the current matrix row or the need to add/update one;
 - entitlement/capability boundaries and relationship/couple ownership semantics;
-- Self-Hosted versus SideBySide Cloud/Managed behavior;
+- Self-Hosted versus eimir. Cloud/Managed behavior;
 - managed infrastructure, storage, compute, rendering, provider/API, inference, email/push, or support cost;
 - quotas, storage limits, fair-use rules, retention, or other managed-resource constraints;
 - downgrade, trial, grandfathering, restore, export, and existing-data behavior;
@@ -101,7 +101,7 @@ Business-model consistency does not replace security, privacy, architecture, acc
 
 User-facing client work is product-design work, not a functional implementation followed by optional styling.
 
-SideBySide is a private partner app. Couple-facing screens must follow `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and must not default to generic CRUD, admin-console, spreadsheet, or dashboard presentation.
+eimir. is a private partner app. Couple-facing screens must follow `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and must not default to generic CRUD, admin-console, spreadsheet, or dashboard presentation.
 
 ### Required before implementation starts
 

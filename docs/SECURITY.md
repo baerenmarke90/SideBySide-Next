@@ -29,7 +29,7 @@ Space. The query must not load foreign rows in the first place.
 
 ## 404 instead of 403
 
-For privacy-relevant resources, SideBySide deliberately returns **404** where
+For privacy-relevant resources, eimir. deliberately returns **404** where
 403 might be more technically precise. A 403 confirms existence. Someone
 probing foreign IDs must not learn which resources exist.
 
@@ -56,7 +56,7 @@ in memory, logs, or response-size behavior.
 ### Enforcement
 
 The tenant guard determines whether an account belongs to a Space. The
-owner/privacy authorization in `sidebyside.authorization` then determines
+owner/privacy authorization in `eimir.authorization` then determines
 what the account may read and modify within that Space. Both conditions are
 part of the query, not post-query checks.
 
@@ -128,14 +128,14 @@ necessarily expose the same authentication methods. The target is a
 | Managed/Cloud | Passkey, Magic Link, and later managed providers such as Google and Apple |
 | Self-Hosted | local password, Passkey, and freely configurable OIDC; Magic Link only when mail delivery is deliberately configured |
 
-The `SBS_DEPLOYMENT` configuration value governs deployment mode enforcement.
+The `EIMIR_DEPLOYMENT` configuration value governs deployment mode enforcement.
 **The route/provider policy above is strictly enforced server-authoritatively by
-the runtime router and domain services.** On Managed/Cloud (`SBS_DEPLOYMENT=cloud`),
+the runtime router and domain services.** On Managed/Cloud (`EIMIR_DEPLOYMENT=cloud`),
 local password registration, sign-in, recovery, and password changes are rejected
 with HTTP 403 `AUTH_METHOD_DISABLED` prior to credential checks or user lookup,
 ensuring privacy without account enumeration. Pre-existing local identities from
 restored databases are likewise rejected. Magic Link is available when mail
-transport is configured (`SBS_MAIL_TRANSPORT != none`), and OIDC is enabled when
+transport is configured (`EIMIR_MAIL_TRANSPORT != none`), and OIDC is enabled when
 one or more OIDC connections are configured. Capability projections (`/api/v1/instance/status`
 and `/api/v1/auth/capabilities`) reflect this policy to official clients, but
 the server remains authoritative. This enforces the security boundary tracked by
@@ -315,7 +315,7 @@ applies identically to both; otherwise the behavior difference would itself
 disclose existence. A mail-server delivery failure is logged without message
 content and does not change the response.
 
-With `SBS_MAIL_TRANSPORT=none`, mail-dependent endpoints fail at the common mail
+With `EIMIR_MAIL_TRANSPORT=none`, mail-dependent endpoints fail at the common mail
 dependency before address lookup, token issuance, or rate-limit reservation.
 They therefore do not create undeliverable proofs and do not turn the disabled
 mail capability into an account-existence oracle.
@@ -387,9 +387,9 @@ Action-token plaintext is transient only. It exists while an issuance result is
 being turned into a mail message; persisted token material is hashed. General
 application logging and error tracking must redact authentication tokens.
 
-Production and Demo permit `SBS_MAIL_TRANSPORT=smtp` or
-`SBS_MAIL_TRANSPORT=none`; the development `log` adapter is forbidden there.
-`SBS_PUBLIC_BASE_URL` must also start with `https://` in a public runtime, or
+Production and Demo permit `EIMIR_MAIL_TRANSPORT=smtp` or
+`EIMIR_MAIL_TRANSPORT=none`; the development `log` adapter is forbidden there.
+`EIMIR_PUBLIC_BASE_URL` must also start with `https://` in a public runtime, or
 the application refuses to start.
 
 `none` is an explicit supported no-mail mode, not a degraded SMTP adapter. Mail
@@ -426,7 +426,7 @@ single use, and one live generation per address.
 **Request.** `POST /auth/signup/request` checks the deployment policy, validates
 the address format, reserves a per-address slot (the Magic Link budget) and a
 per-network slot (30 per 15 minutes, keyed like the passkey start limit), issues
-a proof, and mails a link built from `SBS_PUBLIC_BASE_URL`. It reads neither
+a proof, and mails a link built from `EIMIR_PUBLIC_BASE_URL`. It reads neither
 Accounts nor the registration state, so a known and an unknown address produce
 the same response and the same work.
 
@@ -466,7 +466,7 @@ requests produce exactly one Space and `409 ACCOUNT_HAS_ACTIVE_SPACE` otherwise.
 Ended relationship history is not reused. The partner joins through the ordinary
 Invitation, with its unchanged one-time, expiry, revocation, and two-partner rules.
 
-**ServerAdmin.** The `SBS_SERVER_ADMIN_EMAILS` allowlist still matches only
+**ServerAdmin.** The `EIMIR_SERVER_ADMIN_EMAILS` allowlist still matches only
 verified addresses. A signup proof verifies the address it was mailed to, so the
 mailbox owner of an allowlisted address becomes ServerAdmin exactly as through a
 Magic Link; no bootstrap secret is involved on Cloud.
@@ -514,7 +514,7 @@ worker therefore also checks periodically whether any run is scheduled and
 creates one if not. A permanently absent cleanup must not fail silently.
 
 **Operational consequence:** retention depends on a running worker process
-(`python -m sidebyside.jobs.runner`, service `worker` in the Compose setup).
+(`python -m eimir.jobs.runner`, service `worker` in the Compose setup).
 Running only the API retains data longer than documented.
 
 ### Two expiry times per session
@@ -619,15 +619,15 @@ bytes are first loaded through authorized `fetch()` requests and therefore
 fall under `connect-src`.
 
 In the normal Self-Hosted/reverse-proxy path, Web and API use the same public
-origin. With `SBS_MEDIA_STORE=s3`, Compose automatically carries the already
-configured `SBS_S3_ENDPOINT` into `SBS_WEB_CSP_CONNECT_ORIGINS`. Other hosting
+origin. With `EIMIR_MEDIA_STORE=s3`, Compose automatically carries the already
+configured `EIMIR_S3_ENDPOINT` into `EIMIR_WEB_CSP_CONNECT_ORIGINS`. Other hosting
 platforms may set a whitespace-separated list of exact HTTP(S) origins there.
 The Web entrypoint normalizes this list and refuses startup for wildcards,
 paths, credentials, free-form CSP expressions, or invalid ports. This value is
 host/admin configuration, not a user field.
 
-A `VITE_SBS_API_BASE_URL` whose origin differs from the Web frontend must also
-have its exact origin included in `SBS_WEB_CSP_CONNECT_ORIGINS`.
+A `VITE_EIMIR_API_BASE_URL` whose origin differs from the Web frontend must also
+have its exact origin included in `EIMIR_WEB_CSP_CONNECT_ORIGINS`.
 
 An upstream reverse proxy must forward exactly this header unchanged and must
 neither replace nor duplicate it. Multiple CSP policies are evaluated together

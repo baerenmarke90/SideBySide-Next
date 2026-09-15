@@ -1,6 +1,6 @@
 # #825 — Mobile-First Surface Audit: Rebaseline + #824 Classification
 
-**Repository:** `baerenmarke90/SideBySide-Next`  
+**Repository:** `baerenmarke90/eimir`
 **Authoritative classification baseline:** `main@98096750c93e93ff3ba987540679b9753ee8427e`
 
 **Web reconciliation:** PR #832 (`b8fafad603bc0908b694926bf8affbbd0bd25e67`) plus PR #943 (`080caeb5562e56d30ede4e3899d615ed46663cdb`)

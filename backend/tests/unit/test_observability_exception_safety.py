@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from sidebyside.observability import safe_exception_summary, safe_traceback_text
+from eimir.observability import safe_exception_summary, safe_traceback_text
 
 
 def test_machine_code_shaped_runtime_text_is_not_implicitly_trusted() -> None:

@@ -412,7 +412,7 @@ export function StoryProductPage({
         />
       )}
 
-      <div className="momente-tabs-container sbs-motion-reveal">
+      <div className="momente-tabs-container eimir-motion-reveal">
         <div
           className="momente-tabs"
           role="tablist"
@@ -473,7 +473,7 @@ export function StoryProductPage({
       items.length === 0 &&
       availableYears.length === 0 &&
       !hasActiveFilters ? (
-        <div className="new-space-experience sbs-motion-reveal">
+        <div className="new-space-experience eimir-motion-reveal">
           <div className="new-space-mark" aria-hidden="true">
             <svg
               viewBox="0 0 24 24"
@@ -497,7 +497,7 @@ export function StoryProductPage({
           </div>
         </div>
       ) : combinedStory && activeView === 'discover' && items.length > 0 ? (
-        <div className="momente-discover-page sbs-motion-reveal">
+        <div className="momente-discover-page eimir-motion-reveal">
           {/* 1. Featured Editorial Highlight */}
           {featuredItem && featuredPresentation ? (
             <article className="momente-hero-highlight">
@@ -848,7 +848,7 @@ export function StoryProductPage({
           ) : null}
         </div>
       ) : combinedStory && (activeView === 'timeline' || hasActiveFilters) ? (
-        <div className="layout-single-column sbs-motion-reveal">
+        <div className="layout-single-column eimir-motion-reveal">
           <div className="story-filter-container">
             <div className="story-timeline-toolbar">
               <button
@@ -1052,7 +1052,7 @@ export function StoryProductPage({
               </h2>
 
               {items.length === 0 ? (
-                <div className="story-filter-empty-state sbs-motion-reveal">
+                <div className="story-filter-empty-state eimir-motion-reveal">
                   <p className="story-filter-empty-text">
                     {t('storyFilters.noMatches')}
                   </p>

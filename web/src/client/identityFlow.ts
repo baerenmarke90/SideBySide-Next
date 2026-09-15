@@ -5,7 +5,7 @@ import { Configuration } from '../api/generated/runtime';
 import { normalizeClientError } from './problemDetails';
 import { createReferenceApis } from './referenceFlow';
 
-const WEB_DEVICE_NAME = 'SideBySide Web';
+const WEB_DEVICE_NAME = 'eimir. Web';
 const WEB_PLATFORM = 'web';
 
 // Auth-return restoration deliberately does not happen here (#689): the

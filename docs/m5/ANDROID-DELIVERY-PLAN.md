@@ -19,7 +19,7 @@ contracts remain outside the M5/G4 boundary.
 ## Starting position
 
 Android is still the M2-S8 thin vertical reference flow. The whole client is one
-package, `de.sidebyside.next.reference`, with a single screen, a build-time
+package, `de.eimir.app.reference`, with a single screen, a build-time
 Space ID, and a Material 3 colour scheme whose values are written as literal
 `Color(0x…)` constants rather than derived from the shared token set.
 

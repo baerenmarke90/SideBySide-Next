@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from sidebyside.identity import deletion_bootstrap
-from sidebyside.identity.deletion_journal import DeletionJournal
-from sidebyside.identity.deletion_self_service import DeletionAuthoritySettings
+from eimir.identity import deletion_bootstrap
+from eimir.identity.deletion_journal import DeletionJournal
+from eimir.identity.deletion_self_service import DeletionAuthoritySettings
 
 
 def test_bootstrap_creates_new_journal_and_returns_its_instance_id(

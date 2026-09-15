@@ -194,7 +194,7 @@ function waitForOidcCallback(
         resolve({ code, state });
       } catch {
         // Cross-origin reads fail while the popup is at the identity provider.
-        // Once it reaches the configured SideBySide redirect URI the URL is
+        // Once it reaches the configured Eimir redirect URI the URL is
         // same-origin again and can be consumed without exposing provider data.
       }
     }, OIDC_POPUP_POLL_MS);
@@ -214,7 +214,7 @@ export async function authenticateRecentOidc(
       );
     const popup = window.open(
       started.authorizationUrl,
-      'sidebyside-recent-authentication',
+      'eimir-recent-authentication',
       'popup,width=520,height=720',
     );
     if (!popup) {
@@ -224,7 +224,7 @@ export async function authenticateRecentOidc(
     return authApi.completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(
       {
         connectionId,
-        sidebysideApiV1RecentAuthenticationOidcCallbackRequest: callback,
+        eimirApiV1RecentAuthenticationOidcCallbackRequest: callback,
       },
     );
   });

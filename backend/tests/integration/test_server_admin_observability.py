@@ -6,16 +6,16 @@ from datetime import timedelta
 
 import pytest
 
-from sidebyside.attachments.models import (
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.config import get_settings
-from sidebyside.core.clock import now
-from sidebyside.identity.models import AccountEmail
-from sidebyside.jobs.models import Job, JobStatus
+from eimir.config import get_settings
+from eimir.core.clock import now
+from eimir.identity.models import AccountEmail
+from eimir.jobs.models import Job, JobStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -24,7 +24,7 @@ ADMIN_EMAIL = "observability-operator@example.test"
 
 @pytest.fixture
 def server_admin_allowlist(monkeypatch):  # type: ignore[no-untyped-def]
-    monkeypatch.setenv("SBS_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
+    monkeypatch.setenv("EIMIR_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

@@ -1,7 +1,7 @@
 [project]
-name = "sidebyside"
+name = "eimir"
 version = "0.1.0"
-description = "SideBySide Next — Application Core"
+description = "eimir. — Application Core"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.141",
@@ -87,7 +87,7 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.isort]
 # Ausdruecklich, nicht geraten: in der CI ist das Paket installiert und
 # waere sonst Fremdcode, lokal liegt es unter src und waere eigener.
-known-first-party = ["sidebyside", "tests", "scripts"]
+known-first-party = ["eimir", "tests", "scripts"]
 
 [tool.mypy]
 python_version = "3.12"

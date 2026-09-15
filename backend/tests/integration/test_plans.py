@@ -19,10 +19,10 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from sidebyside.core.clock import today_in
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.plans.models import Plan, PlanStatus
-from sidebyside.relationship import service as relationship_service
+from eimir.core.clock import today_in
+from eimir.outbox.models import OutboxEvent
+from eimir.plans.models import Plan, PlanStatus
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -618,7 +618,7 @@ class TestComplete:
         couple,
         session,
     ) -> None:
-        from sidebyside.wishes.models import Wish
+        from eimir.wishes.models import Wish
 
         p = create_plan(client, couple).json()
         perform_action(

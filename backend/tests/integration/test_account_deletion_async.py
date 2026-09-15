@@ -11,39 +11,39 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import AuthorizationContext, PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.engagement import push, thinking
-from sidebyside.engagement import service as engagement_service
-from sidebyside.engagement.models import (
+from eimir.authorization import AuthorizationContext, PrivacyClass
+from eimir.core.clock import now
+from eimir.engagement import push, thinking
+from eimir.engagement import service as engagement_service
+from eimir.engagement.models import (
     Notification,
     NotificationKind,
     PushDelivery,
     PushDeliveryStatus,
 )
-from sidebyside.identity import deletion_async
-from sidebyside.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
-from sidebyside.identity.deletion_async import (
+from eimir.identity import deletion_async
+from eimir.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
+from eimir.identity.deletion_async import (
     ASYNC_CLEANUP_FAILURE_CODE,
     PUSH_ACCOUNT_DELETED_CODE,
     apply_account_async_cleanup,
 )
-from sidebyside.identity.deletion_models import AccountDeletionStatus
-from sidebyside.media.local import LocalMediaStore
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship.service import add_member
-from sidebyside.reminders import runtime as reminder_runtime
-from sidebyside.reminders.models import (
+from eimir.identity.deletion_models import AccountDeletionStatus
+from eimir.media.local import LocalMediaStore
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship.service import add_member
+from eimir.reminders import runtime as reminder_runtime
+from eimir.reminders.models import (
     Reminder,
     ReminderPayload,
     ReminderPreference,
     ReminderScheduleType,
     ReminderSource,
 )
-from sidebyside.reminders.runtime_models import OccurrenceState, ReminderOccurrence, RulePreference
-from sidebyside.transfer import jobs as transfer_jobs
-from sidebyside.transfer import service as transfer_service
-from sidebyside.transfer.models import (
+from eimir.reminders.runtime_models import OccurrenceState, ReminderOccurrence, RulePreference
+from eimir.transfer import jobs as transfer_jobs
+from eimir.transfer import service as transfer_service
+from eimir.transfer.models import (
     ExportStatus,
     ImportStatus,
     TransferExport,

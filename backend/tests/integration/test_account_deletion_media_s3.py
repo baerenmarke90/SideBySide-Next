@@ -9,18 +9,18 @@ import httpx
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import service
-from sidebyside.attachments.models import (
+from eimir.attachments import service
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
-from sidebyside.identity.deletion_media import apply_account_media_cleanup
-from sidebyside.media.s3 import S3MediaStore
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
+from eimir.identity.deletion_media import apply_account_media_cleanup
+from eimir.media.s3 import S3MediaStore
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -76,7 +76,7 @@ def test_account_media_cleanup_uses_s3_delete_semantics(
     store = S3MediaStore(
         endpoint="https://s3.example.test",
         region="eu-central-1",
-        bucket="sidebyside-private",
+        bucket="eimir-private",
         access_key_id="AKIATEST",
         secret_access_key="very-secret-value",
         client=client,

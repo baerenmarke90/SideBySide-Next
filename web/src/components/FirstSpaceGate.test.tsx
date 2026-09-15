@@ -13,7 +13,7 @@ import de from '../i18n/locales/de';
 import { FirstSpaceGate } from './FirstSpaceGate';
 
 describe('FirstSpaceGate', () => {
-  const apiBaseUrl = 'https://cloud.sidebyside.invalid';
+  const apiBaseUrl = 'https://cloud.eimir.invalid';
   const accessToken = 'test-token-123';
 
   beforeEach(() => {

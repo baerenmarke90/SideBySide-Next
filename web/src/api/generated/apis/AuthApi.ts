@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * SideBySide Next
+ * eimir.
  * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
@@ -38,6 +38,16 @@ import {
     ChangePasswordRequestFromJSON,
     ChangePasswordRequestToJSON,
 } from '../models/ChangePasswordRequest';
+import {
+    type EimirApiV1AuthOidcCallbackRequest,
+    EimirApiV1AuthOidcCallbackRequestFromJSON,
+    EimirApiV1AuthOidcCallbackRequestToJSON,
+} from '../models/EimirApiV1AuthOidcCallbackRequest';
+import {
+    type EimirApiV1RecentAuthenticationOidcCallbackRequest,
+    EimirApiV1RecentAuthenticationOidcCallbackRequestFromJSON,
+    EimirApiV1RecentAuthenticationOidcCallbackRequestToJSON,
+} from '../models/EimirApiV1RecentAuthenticationOidcCallbackRequest';
 import {
     type EmailRequest,
     EmailRequestFromJSON,
@@ -119,16 +129,6 @@ import {
     SessionViewToJSON,
 } from '../models/SessionView';
 import {
-    type SidebysideApiV1AuthOidcCallbackRequest,
-    SidebysideApiV1AuthOidcCallbackRequestFromJSON,
-    SidebysideApiV1AuthOidcCallbackRequestToJSON,
-} from '../models/SidebysideApiV1AuthOidcCallbackRequest';
-import {
-    type SidebysideApiV1RecentAuthenticationOidcCallbackRequest,
-    SidebysideApiV1RecentAuthenticationOidcCallbackRequestFromJSON,
-    SidebysideApiV1RecentAuthenticationOidcCallbackRequestToJSON,
-} from '../models/SidebysideApiV1RecentAuthenticationOidcCallbackRequest';
-import {
     type SignInRequest,
     SignInRequestFromJSON,
     SignInRequestToJSON,
@@ -164,12 +164,12 @@ export interface ChangePasswordApiV1AuthPasswordPostRequest {
 
 export interface CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest {
     connectionId: string;
-    sidebysideApiV1AuthOidcCallbackRequest: SidebysideApiV1AuthOidcCallbackRequest;
+    eimirApiV1AuthOidcCallbackRequest: EimirApiV1AuthOidcCallbackRequest;
 }
 
 export interface CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest {
     connectionId: string;
-    sidebysideApiV1RecentAuthenticationOidcCallbackRequest: SidebysideApiV1RecentAuthenticationOidcCallbackRequest;
+    eimirApiV1RecentAuthenticationOidcCallbackRequest: EimirApiV1RecentAuthenticationOidcCallbackRequest;
 }
 
 export interface ConfirmEmailApiV1AuthEmailVerificationConfirmPostRequest {
@@ -347,10 +347,10 @@ export class AuthApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['sidebysideApiV1AuthOidcCallbackRequest'] == null) {
+        if (requestParameters['eimirApiV1AuthOidcCallbackRequest'] == null) {
             throw new runtime.RequiredError(
-                'sidebysideApiV1AuthOidcCallbackRequest',
-                'Required parameter "sidebysideApiV1AuthOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthOidcConnectionIdCallbackPost().'
+                'eimirApiV1AuthOidcCallbackRequest',
+                'Required parameter "eimirApiV1AuthOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthOidcConnectionIdCallbackPost().'
             );
         }
 
@@ -369,7 +369,7 @@ export class AuthApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: SidebysideApiV1AuthOidcCallbackRequestToJSON(requestParameters['sidebysideApiV1AuthOidcCallbackRequest']),
+            body: EimirApiV1AuthOidcCallbackRequestToJSON(requestParameters['eimirApiV1AuthOidcCallbackRequest']),
         };
     }
 
@@ -404,10 +404,10 @@ export class AuthApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['sidebysideApiV1RecentAuthenticationOidcCallbackRequest'] == null) {
+        if (requestParameters['eimirApiV1RecentAuthenticationOidcCallbackRequest'] == null) {
             throw new runtime.RequiredError(
-                'sidebysideApiV1RecentAuthenticationOidcCallbackRequest',
-                'Required parameter "sidebysideApiV1RecentAuthenticationOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost().'
+                'eimirApiV1RecentAuthenticationOidcCallbackRequest',
+                'Required parameter "eimirApiV1RecentAuthenticationOidcCallbackRequest" was null or undefined when calling completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost().'
             );
         }
 
@@ -426,7 +426,7 @@ export class AuthApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: SidebysideApiV1RecentAuthenticationOidcCallbackRequestToJSON(requestParameters['sidebysideApiV1RecentAuthenticationOidcCallbackRequest']),
+            body: EimirApiV1RecentAuthenticationOidcCallbackRequestToJSON(requestParameters['eimirApiV1RecentAuthenticationOidcCallbackRequest']),
         };
     }
 

@@ -6,11 +6,11 @@ from datetime import date
 
 import pytest
 
-from sidebyside.api.v1 import demo as demo_api
-from sidebyside.config import Environment, Settings
-from sidebyside.demo.service import LEA_NAME, create_demo_space
-from sidebyside.identity import service as identity_service
-from sidebyside.identity.models import Account
+from eimir.api.v1 import demo as demo_api
+from eimir.config import Environment, Settings
+from eimir.demo.service import LEA_NAME, create_demo_space
+from eimir.identity import service as identity_service
+from eimir.identity.models import Account
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

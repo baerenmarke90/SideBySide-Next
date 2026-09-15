@@ -13,13 +13,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import passwords
-from sidebyside.config import Deployment, MailTransport, get_settings
-from sidebyside.core.errors import ErrorCode
-from sidebyside.db.session import get_session
-from sidebyside.identity.models import Account, AccountEmail, AuthIdentity, AuthProvider
-from sidebyside.mail import MailMessage, MailSender, sender
-from sidebyside.main import create_app
+from eimir.auth import passwords
+from eimir.config import Deployment, MailTransport, get_settings
+from eimir.core.errors import ErrorCode
+from eimir.db.session import get_session
+from eimir.identity.models import Account, AccountEmail, AuthIdentity, AuthProvider
+from eimir.mail import MailMessage, MailSender, sender
+from eimir.main import create_app
 from tests.conftest import TEST_BOOTSTRAP_TOKEN, auth, make_account, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -52,12 +52,12 @@ def cloud_client(
             "oidc_connections": [],
         }
     )
-    monkeypatch.setattr("sidebyside.config.get_settings", lambda: settings)
+    monkeypatch.setattr("eimir.config.get_settings", lambda: settings)
 
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[sender] = lambda: mailbox
-    from sidebyside.auth.policy import get_auth_capabilities, resolve_auth_capabilities
+    from eimir.auth.policy import get_auth_capabilities, resolve_auth_capabilities
 
     app.dependency_overrides[get_auth_capabilities] = lambda: resolve_auth_capabilities(settings)
     with TestClient(app, raise_server_exceptions=False) as client:
@@ -75,12 +75,12 @@ def self_hosted_client(
             "oidc_connections": [],
         }
     )
-    monkeypatch.setattr("sidebyside.config.get_settings", lambda: settings)
+    monkeypatch.setattr("eimir.config.get_settings", lambda: settings)
 
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[sender] = lambda: mailbox
-    from sidebyside.auth.policy import get_auth_capabilities, resolve_auth_capabilities
+    from eimir.auth.policy import get_auth_capabilities, resolve_auth_capabilities
 
     app.dependency_overrides[get_auth_capabilities] = lambda: resolve_auth_capabilities(settings)
     with TestClient(app, raise_server_exceptions=False) as client:
@@ -256,11 +256,11 @@ class TestSelfHostedDeploymentAuthEnforcement:
                 "oidc_connections": [],
             }
         )
-        monkeypatch.setattr("sidebyside.config.get_settings", lambda: settings)
+        monkeypatch.setattr("eimir.config.get_settings", lambda: settings)
 
         app = create_app()
         app.dependency_overrides[get_session] = lambda: session
-        from sidebyside.auth.policy import get_auth_capabilities, resolve_auth_capabilities
+        from eimir.auth.policy import get_auth_capabilities, resolve_auth_capabilities
 
         app.dependency_overrides[get_auth_capabilities] = lambda: resolve_auth_capabilities(
             settings

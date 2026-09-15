@@ -9,7 +9,7 @@ try {
     chromium = require('../../../../web/e2e/node_modules/playwright').chromium;
   } catch {
     const fallback = require.resolve('playwright', {
-      paths: [path.resolve(__dirname, '../../../../web/e2e/node_modules'), '/Users/philipp/Projekte/SideBySide-Next/web/e2e/node_modules'],
+      paths: [path.resolve(__dirname, '../../../../web/e2e/node_modules'), '/Users/philipp/Projekte/eimir/web/e2e/node_modules'],
     });
     chromium = require(fallback).chromium;
   }

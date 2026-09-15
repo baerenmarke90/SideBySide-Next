@@ -12,11 +12,11 @@ enumPropertyNaming: original
 sourceFolder: .
 
 # The generator placeholder `org.openapitools.client` would introduce an
-# unrelated namespace into the Android project. `sidebyside.api` mirrors the
-# backend package name (`sidebyside`) without claiming an application domain;
+# unrelated namespace into the Android project. `eimir.api` mirrors the
+# backend package name (`eimir`) without claiming an application domain;
 # the Android application ID is a separate decision.
-packageName: sidebyside.api
-modelPackage: sidebyside.api.models
+packageName: eimir.api
+modelPackage: eimir.api.models
 
 # Generate real wrapper/subtype models for discriminated oneOf/anyOf schemas.
 # Kotlin supports this generator option with jvm-retrofit2 and

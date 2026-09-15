@@ -113,7 +113,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Mit Partner geteilt",
         "Private Inhalte werden nicht für Produkt-Analytics verwendet.",
         "Medien sind nicht öffentlich zugänglich.",
-        "SideBySide ist privacy-first gestaltet.",
+        "eimir. ist privacy-first gestaltet.",
         "Ende-zu-Ende verschlüsselt",
         "Nur ihr könnt das lesen",
         "Vollständig anonym",
@@ -144,7 +144,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Haltet einen gemeinsamen Moment fest, wenn es für euch passt.",
         "Wähle ein Foto für diese Erinnerung aus. Ohne Zugriff kannst du die Erinnerung weiterhin ohne Bild speichern.",
         "Gemeinsame Momente nicht verpassen",
-        "SideBySide kann dich an ausgewählte Termine erinnern. Sensible Inhalte bleiben in der Vorschau standardmäßig verborgen.",
+        "eimir. kann dich an ausgewählte Termine erinnern. Sensible Inhalte bleiben in der Vorschau standardmäßig verborgen.",
     ),
     Path("docs/DESIGN-PRINCIPLES.md"): (
         "Where am I?",

@@ -1,19 +1,19 @@
-# SideBySide Next – Product and Business Model
+# eimir. – Product and Business Model
 
 ## Goal
 
-SideBySide Next is intended to combine two models:
+eimir. is intended to combine two models:
 
 1. technically proficient private users can operate the application themselves;
-2. private users who do not want to administer their own server can use the officially operated SideBySide Cloud service.
+2. private users who do not want to administer their own server can use the officially operated eimir. Cloud service.
 
 Cloud monetization is based on operations, convenience, and service — not on artificially degrading the functionality of the Self-Hosted build.
 
 ## Operating models
 
-### SideBySide Self-Hosted
+### eimir. Self-Hosted
 
-SideBySide Self-Hosted is intended for private users who want to install and operate SideBySide Next themselves.
+eimir. Self-Hosted is intended for private users who want to install and operate eimir. themselves.
 
 Personal and other noncommercial use is governed by the [PolyForm Noncommercial License 1.0.0](../LICENSE).
 
@@ -29,9 +29,9 @@ Self-Hosted users are responsible in particular for:
 
 Self-Hosted should use the shared Application Core and must not be artificially stripped of Core functionality solely to promote the Cloud. Differences may result from the operating model, for example managed infrastructure, available integrations, storage, or service offerings.
 
-### SideBySide Cloud
+### eimir. Cloud
 
-SideBySide Cloud is the officially operated Managed Service for users who want to use SideBySide without administering infrastructure themselves.
+eimir. Cloud is the officially operated Managed Service for users who want to use eimir. without administering infrastructure themselves.
 
 Users primarily pay for operations and the associated services, for example:
 
@@ -88,9 +88,9 @@ The detailed packaging, provider-adapter, downgrade, restore, Self-Hosted licens
 
 ## Official apps and clients
 
-Official Web, Android, and potentially additional clients are part of the SideBySide product.
+Official Web, Android, and potentially additional clients are part of the eimir. product.
 
-The commercial value of the official Cloud does not come from technically excluding Self-Hosted users from the official clients, but from the convenience of a fully operated service. Where technically and securely appropriate, the official clients should therefore be able to work with both SideBySide Cloud and compatible Self-Hosted instances.
+The commercial value of the official Cloud does not come from technically excluding Self-Hosted users from the official clients, but from the convenience of a fully operated service. Where technically and securely appropriate, the official clients should therefore be able to work with both eimir. Cloud and compatible Self-Hosted instances.
 
 App-store publication, signing, update channels, push infrastructure, and other distribution or platform services provided by the project operator may be tied separately to the official operation where this is required for technical, security, or economic reasons.
 
@@ -100,7 +100,7 @@ Publishing the source code does not grant general permission for commercial use.
 
 Third parties require a separate commercial license in particular for:
 
-- a paid SideBySide hosting or SaaS service;
+- a paid eimir. hosting or SaaS service;
 - integration into a commercial product;
 - White-Label or OEM offerings;
 - commercial redistribution or marketing.
@@ -126,7 +126,7 @@ The review must be revisited before merge if implementation decisions changed an
 - Free/Premium/Mixed/non-paywallable feature classification;
 - entitlement or capability boundaries;
 - relationship/couple ownership of commercial entitlements;
-- Self-Hosted versus SideBySide Cloud/Managed behavior;
+- Self-Hosted versus eimir. Cloud/Managed behavior;
 - managed storage, compute, rendering, provider/API, inference, email/push, support, or comparable ongoing cost;
 - quotas, storage limits, fair-use rules, retention, or other managed-resource behavior;
 - trial, grandfathering, downgrade, restore, export, or existing-data semantics;
@@ -159,11 +159,11 @@ The business model follows these principles:
 
 Future communication may explain the operating model along these lines:
 
-> You can self-host SideBySide Next for personal, noncommercial use. If you do not want to operate your own server, install updates, or manage backups, you can instead use SideBySide Cloud as a fully operated service.
+> You can self-host eimir. for personal, noncommercial use. If you do not want to operate your own server, install updates, or manage backups, you can instead use eimir. Cloud as a fully operated service.
 
 A compatible product-tier message is:
 
-> Free lets a couple meaningfully use SideBySide. eimir. Pro helps them turn their shared data into richer experiences through presentation, automation, insights, personalization, integrations, and relationship-native Premium experiences.
+> Free lets a couple meaningfully use eimir. eimir. Pro helps them turn their shared data into richer experiences through presentation, automation, insights, personalization, integrations, and relationship-native Premium experiences.
 
 A compatible consumer price message is:
 

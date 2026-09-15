@@ -12,16 +12,16 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select, text
 
-from sidebyside.authorization import AuthorizationContext, ContentVisibility, PrivacyClass
-from sidebyside.people import service as people_service
-from sidebyside.people.models import (
+from eimir.authorization import AuthorizationContext, ContentVisibility, PrivacyClass
+from eimir.people import service as people_service
+from eimir.people.models import (
     DateRepeat,
     ImportantDate,
     ImportantDateType,
     PersonRelationship,
     RelatedPerson,
 )
-from sidebyside.relationship import service as relationship_service
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

@@ -8,11 +8,11 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.core.clock import now
-from sidebyside.core.errors import ConflictError
-from sidebyside.identity.deletion import apply_accepted_tombstone
-from sidebyside.relationship import policy, service
-from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
+from eimir.core.clock import now
+from eimir.core.errors import ConflictError
+from eimir.identity.deletion import apply_accepted_tombstone
+from eimir.relationship import policy, service
+from eimir.relationship.models import Invitation, Membership, MembershipStatus
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

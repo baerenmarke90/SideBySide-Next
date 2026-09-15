@@ -10,7 +10,7 @@ remain separate concerns.
 
 ## Decision: build once, publish immutable artifacts
 
-SideBySide/eimir. uses **build-once release artifacts** while preserving the exact Git
+eimir. uses **build-once release artifacts** while preserving the exact Git
 commit SHA as source identity.
 
 The launch artifact set is:
@@ -82,7 +82,7 @@ a `v<version>` value longer than the OCI 128-character tag limit.
 `android/app/build.gradle.kts` remains authoritative for `versionName`. Android
 `versionCode` is a positive monotonically increasing integer supplied by publication.
 
-For Self-Hosted Production, `SBS_RELEASE_VERSION` is mandatory. Versioned or
+For Self-Hosted Production, `EIMIR_RELEASE_VERSION` is mandatory. Versioned or
 digest-qualified image references must still carry exactly that same release version.
 The Production launcher validates this before pull/bootstrap/start.
 
@@ -111,7 +111,7 @@ the actual push becomes the exact pull identity.
 ## Previous known-good release and rollback boundary
 
 For every non-initial release, the workflow downloads the previous published
-`sidebyside-release-manifest.json` and records its product version, release tag, immutable
+`eimir-release-manifest.json` and records its product version, release tag, immutable
 source revision and manifest hash. A free-form operator SHA is not accepted as known-good.
 
 Application rollback does **not** imply database rollback. Schema compatibility remains
@@ -129,7 +129,7 @@ An unsigned Android candidate is never a launch/store artifact.
 
 ## Android signing custody
 
-Google Play App Signing owns the production application-signing key. SideBySide release
+Google Play App Signing owns the production application-signing key. eimir. release
 automation uses a distinct upload key supplied only by the protected GitHub Actions
 environment:
 
@@ -139,10 +139,10 @@ production-release
 
 Required environment secrets are:
 
-- `SBS_RELEASE_KEYSTORE_BASE64`;
-- `SBS_RELEASE_KEYSTORE_PASSWORD`;
-- `SBS_RELEASE_KEY_ALIAS`;
-- `SBS_RELEASE_KEY_PASSWORD`.
+- `EIMIR_RELEASE_KEYSTORE_BASE64`;
+- `EIMIR_RELEASE_KEYSTORE_PASSWORD`;
+- `EIMIR_RELEASE_KEY_ALIAS`;
+- `EIMIR_RELEASE_KEY_PASSWORD`.
 
 The workflow materializes the keystore only under `$RUNNER_TEMP`, removes it after use,
 and never copies signing material into evidence/logs/SBOMs/manifests/registry metadata.
@@ -240,7 +240,7 @@ application services contain no `build:` fallback:
 - `postgres` remains the upstream image;
 - `demo-init` is not part of normal `self-hosted` startup.
 
-The release env template selects `SBS_RELEASE_VERSION`; digest-qualified references carry
+The release env template selects `EIMIR_RELEASE_VERSION`; digest-qualified references carry
 that version for operator readability but are bound by their digest.
 
 ### Mandatory Production launcher
@@ -266,7 +266,7 @@ Development/CI may build local images through `scripts/build_self_hosted_source.
 then run canonical Compose with pull disabled. The builder:
 
 - rejects Production declared by dotenv **or** process environment;
-- accepts only local SideBySide image repositories/tags as build targets;
+- accepts only local eimir. image repositories/tags as build targets;
 - rejects credential/query-bearing remote source URLs before they reach plan output.
 
 `scripts/compose_checked.py` exports one exact clean Git snapshot, builds verified local

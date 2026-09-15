@@ -1,4 +1,4 @@
-# Canonical Docker Compose contract for every SideBySide Compose deployment.
+# Canonical Docker Compose contract for every eimir. Compose deployment.
 #
 # Profiles:
 #   self-hosted  released Self-Hosted runtime using versioned OCI images
@@ -12,54 +12,58 @@
 # tracked Compose topology exists.
 
 x-self-hosted-database-environment: &self-hosted-database-environment
-  SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
+  # POSTGRES_USER/POSTGRES_DB deliberately retain their old defaults. Existing
+  # named volumes contain that role/database and must remain bootable.
+  EIMIR_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
 
+# ``SBS_*`` fallbacks are deprecated read-only aliases for existing operator
+# env files. Compose always passes the canonical ``EIMIR_*`` key to containers.
 # Keys every profile agrees on, so a change to one profile cannot silently
 # diverge from the other the way separate deployment manifests once did.
 x-shared-runtime-environment: &shared-runtime-environment
-  SBS_CURSOR_SIGNING_KEY: "${SBS_CURSOR_SIGNING_KEY:-}"
-  SBS_SERVER_ADMIN_EMAILS: '${SBS_SERVER_ADMIN_EMAILS:-[]}'
-  SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"
-  SBS_MEDIA_ROOT: /var/lib/sidebyside/media
-  SBS_S3_ENDPOINT: "${SBS_S3_ENDPOINT:-}"
-  SBS_S3_REGION: "${SBS_S3_REGION:-us-east-1}"
-  SBS_S3_BUCKET: "${SBS_S3_BUCKET:-}"
-  SBS_S3_ACCESS_KEY_ID: "${SBS_S3_ACCESS_KEY_ID:-}"
-  SBS_S3_SECRET_ACCESS_KEY: "${SBS_S3_SECRET_ACCESS_KEY:-}"
-  SBS_S3_SESSION_TOKEN: "${SBS_S3_SESSION_TOKEN:-}"
-  SBS_ACCOUNT_DELETION_JOURNAL_PATH: /var/lib/sidebyside/deletion-journal/account-deletions.journal
-  SBS_ACCOUNT_DELETION_INSTANCE_ID: "${SBS_ACCOUNT_DELETION_INSTANCE_ID:-}"
-  SBS_OIDC_CONNECTIONS: '${SBS_OIDC_CONNECTIONS:-[]}'
-  SBS_WEBAUTHN_RP_ID: "${SBS_WEBAUTHN_RP_ID:-}"
-  SBS_WEBAUTHN_RP_NAME: "${SBS_WEBAUTHN_RP_NAME:-SideBySide}"
-  SBS_WEBAUTHN_ORIGINS: '${SBS_WEBAUTHN_ORIGINS:-[]}'
-  SBS_MAIL_FROM: "${SBS_MAIL_FROM:-no-reply@localhost}"
-  SBS_SMTP_HOST: "${SBS_SMTP_HOST:-localhost}"
-  SBS_SMTP_PORT: "${SBS_SMTP_PORT:-587}"
-  SBS_SMTP_USERNAME: "${SBS_SMTP_USERNAME:-}"
-  SBS_SMTP_PASSWORD: "${SBS_SMTP_PASSWORD:-}"
-  SBS_SMTP_STARTTLS: "${SBS_SMTP_STARTTLS:-true}"
+  EIMIR_CURSOR_SIGNING_KEY: "${EIMIR_CURSOR_SIGNING_KEY:-${SBS_CURSOR_SIGNING_KEY:-}}"
+  EIMIR_SERVER_ADMIN_EMAILS: '${EIMIR_SERVER_ADMIN_EMAILS:-${SBS_SERVER_ADMIN_EMAILS:-[]}}'
+  EIMIR_MEDIA_STORE: "${EIMIR_MEDIA_STORE:-${SBS_MEDIA_STORE:-local}}"
+  EIMIR_MEDIA_ROOT: /var/lib/eimir/media
+  EIMIR_S3_ENDPOINT: "${EIMIR_S3_ENDPOINT:-${SBS_S3_ENDPOINT:-}}"
+  EIMIR_S3_REGION: "${EIMIR_S3_REGION:-${SBS_S3_REGION:-us-east-1}}"
+  EIMIR_S3_BUCKET: "${EIMIR_S3_BUCKET:-${SBS_S3_BUCKET:-}}"
+  EIMIR_S3_ACCESS_KEY_ID: "${EIMIR_S3_ACCESS_KEY_ID:-${SBS_S3_ACCESS_KEY_ID:-}}"
+  EIMIR_S3_SECRET_ACCESS_KEY: "${EIMIR_S3_SECRET_ACCESS_KEY:-${SBS_S3_SECRET_ACCESS_KEY:-}}"
+  EIMIR_S3_SESSION_TOKEN: "${EIMIR_S3_SESSION_TOKEN:-${SBS_S3_SESSION_TOKEN:-}}"
+  EIMIR_ACCOUNT_DELETION_JOURNAL_PATH: /var/lib/eimir/deletion-journal/account-deletions.journal
+  EIMIR_ACCOUNT_DELETION_INSTANCE_ID: "${EIMIR_ACCOUNT_DELETION_INSTANCE_ID:-${SBS_ACCOUNT_DELETION_INSTANCE_ID:-}}"
+  EIMIR_OIDC_CONNECTIONS: '${EIMIR_OIDC_CONNECTIONS:-${SBS_OIDC_CONNECTIONS:-[]}}'
+  EIMIR_WEBAUTHN_RP_ID: "${EIMIR_WEBAUTHN_RP_ID:-${SBS_WEBAUTHN_RP_ID:-}}"
+  EIMIR_WEBAUTHN_RP_NAME: "${EIMIR_WEBAUTHN_RP_NAME:-${SBS_WEBAUTHN_RP_NAME:-eimir.}}"
+  EIMIR_WEBAUTHN_ORIGINS: '${EIMIR_WEBAUTHN_ORIGINS:-${SBS_WEBAUTHN_ORIGINS:-[]}}'
+  EIMIR_MAIL_FROM: "${EIMIR_MAIL_FROM:-${SBS_MAIL_FROM:-no-reply@localhost}}"
+  EIMIR_SMTP_HOST: "${EIMIR_SMTP_HOST:-${SBS_SMTP_HOST:-localhost}}"
+  EIMIR_SMTP_PORT: "${EIMIR_SMTP_PORT:-${SBS_SMTP_PORT:-587}}"
+  EIMIR_SMTP_USERNAME: "${EIMIR_SMTP_USERNAME:-${SBS_SMTP_USERNAME:-}}"
+  EIMIR_SMTP_PASSWORD: "${EIMIR_SMTP_PASSWORD:-${SBS_SMTP_PASSWORD:-}}"
+  EIMIR_SMTP_STARTTLS: "${EIMIR_SMTP_STARTTLS:-${SBS_SMTP_STARTTLS:-true}}"
 
 x-self-hosted-runtime-environment: &self-hosted-runtime-environment
   <<: [*self-hosted-database-environment, *shared-runtime-environment]
-  SBS_ENVIRONMENT: "${SBS_ENVIRONMENT:-development}"
-  SBS_DEPLOYMENT: self_hosted
-  SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
-  SBS_DEMO_MODE_RESET_TIMER: "${SBS_DEMO_MODE_RESET_TIMER:-false}"
-  SBS_DEMO_MODE_RESET_INTERVAL: "${SBS_DEMO_MODE_RESET_INTERVAL:-6h}"
-  SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
-  SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8080}"
-  SBS_MAIL_TRANSPORT: "${SBS_MAIL_TRANSPORT:-log}"
+  EIMIR_ENVIRONMENT: "${EIMIR_ENVIRONMENT:-${SBS_ENVIRONMENT:-development}}"
+  EIMIR_DEPLOYMENT: self_hosted
+  EIMIR_DEMO_MODE: "${EIMIR_DEMO_MODE:-${SBS_DEMO_MODE:-false}}"
+  EIMIR_DEMO_MODE_RESET_TIMER: "${EIMIR_DEMO_MODE_RESET_TIMER:-${SBS_DEMO_MODE_RESET_TIMER:-false}}"
+  EIMIR_DEMO_MODE_RESET_INTERVAL: "${EIMIR_DEMO_MODE_RESET_INTERVAL:-${SBS_DEMO_MODE_RESET_INTERVAL:-6h}}"
+  EIMIR_ALLOWED_HOSTS: '${EIMIR_ALLOWED_HOSTS:-${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}}'
+  EIMIR_PUBLIC_BASE_URL: "${EIMIR_PUBLIC_BASE_URL:-${SBS_PUBLIC_BASE_URL:-http://localhost:8080}}"
+  EIMIR_MAIL_TRANSPORT: "${EIMIR_MAIL_TRANSPORT:-${SBS_MAIL_TRANSPORT:-log}}"
 
 x-cloud-runtime-environment: &cloud-runtime-environment
   <<: *shared-runtime-environment
-  SBS_DATABASE_URL: "${SBS_DATABASE_URL:-}"
-  SBS_ENVIRONMENT: "${SBS_ENVIRONMENT:-production}"
-  SBS_DEPLOYMENT: cloud
-  SBS_DEMO_MODE: "false"
-  SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-[]}'
-  SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-}"
-  SBS_MAIL_TRANSPORT: "${SBS_MAIL_TRANSPORT:-none}"
+  EIMIR_DATABASE_URL: "${EIMIR_DATABASE_URL:-${SBS_DATABASE_URL:-}}"
+  EIMIR_ENVIRONMENT: "${EIMIR_ENVIRONMENT:-${SBS_ENVIRONMENT:-production}}"
+  EIMIR_DEPLOYMENT: cloud
+  EIMIR_DEMO_MODE: "false"
+  EIMIR_ALLOWED_HOSTS: '${EIMIR_ALLOWED_HOSTS:-${SBS_ALLOWED_HOSTS:-[]}}'
+  EIMIR_PUBLIC_BASE_URL: "${EIMIR_PUBLIC_BASE_URL:-${SBS_PUBLIC_BASE_URL:-}}"
+  EIMIR_MAIL_TRANSPORT: "${EIMIR_MAIL_TRANSPORT:-${SBS_MAIL_TRANSPORT:-none}}"
 
 # Released Self-Hosted consumes first-class release images. The SemVer default is
 # the repository's current product version; operators may use the exact digest-
@@ -68,21 +72,21 @@ x-cloud-runtime-environment: &cloud-runtime-environment
 # default; local source development deliberately sets `never` after building its
 # local tags with scripts/build_self_hosted_source.py.
 x-self-hosted-backend-image: &self-hosted-backend-image
-  image: "${SBS_SELF_HOSTED_BACKEND_IMAGE:-ghcr.io/baerenmarke90/eimir-backend:v${SBS_RELEASE_VERSION:-0.1.0}}"
-  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
+  image: "${EIMIR_SELF_HOSTED_BACKEND_IMAGE:-${SBS_SELF_HOSTED_BACKEND_IMAGE:-ghcr.io/baerenmarke90/eimir-backend:v${EIMIR_RELEASE_VERSION:-${SBS_RELEASE_VERSION:-0.1.0}}}}"
+  pull_policy: "${EIMIR_SELF_HOSTED_PULL_POLICY:-${SBS_SELF_HOSTED_PULL_POLICY:-always}}"
 
 x-self-hosted-web-image: &self-hosted-web-image
-  image: "${SBS_SELF_HOSTED_WEB_IMAGE:-ghcr.io/baerenmarke90/eimir-web:v${SBS_RELEASE_VERSION:-0.1.0}}"
-  pull_policy: "${SBS_SELF_HOSTED_PULL_POLICY:-always}"
+  image: "${EIMIR_SELF_HOSTED_WEB_IMAGE:-${SBS_SELF_HOSTED_WEB_IMAGE:-ghcr.io/baerenmarke90/eimir-web:v${EIMIR_RELEASE_VERSION:-${SBS_RELEASE_VERSION:-0.1.0}}}}"
+  pull_policy: "${EIMIR_SELF_HOSTED_PULL_POLICY:-${SBS_SELF_HOSTED_PULL_POLICY:-always}}"
 
 # Cloud/Managed intentionally has image-only process services. The sentinel
 # defaults keep inactive profiles renderable; the Cloud env contract and CI
 # require exact immutable release references before the cloud profile is used.
 x-cloud-backend-image: &cloud-backend-image
-  image: "${SBS_BACKEND_IMAGE:-invalid.invalid/sidebyside-backend:configuration-required}"
+  image: "${EIMIR_BACKEND_IMAGE:-${SBS_BACKEND_IMAGE:-invalid.invalid/eimir-backend:configuration-required}}"
 
 x-cloud-web-image: &cloud-web-image
-  image: "${SBS_WEB_IMAGE:-invalid.invalid/sidebyside-web:configuration-required}"
+  image: "${EIMIR_WEB_IMAGE:-${SBS_WEB_IMAGE:-invalid.invalid/eimir-web:configuration-required}}"
 
 x-api-healthcheck: &api-healthcheck
   healthcheck:
@@ -139,7 +143,7 @@ services:
     environment:
       <<: *self-hosted-runtime-environment
     volumes:
-      - media_data:/var/lib/sidebyside/media
+      - media_data:/var/lib/eimir/media
     networks:
       - app
     depends_on:
@@ -152,18 +156,18 @@ services:
     restart: unless-stopped
     environment:
       <<: *self-hosted-runtime-environment
-      SBS_BOOTSTRAP_TOKEN: "${SBS_BOOTSTRAP_TOKEN:-}"
+      EIMIR_BOOTSTRAP_TOKEN: "${EIMIR_BOOTSTRAP_TOKEN:-${SBS_BOOTSTRAP_TOKEN:-}}"
       FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-127.0.0.1}"
     volumes:
-      - media_data:/var/lib/sidebyside/media
-      - deletion_journal_data:/var/lib/sidebyside/deletion-journal
+      - media_data:/var/lib/eimir/media
+      - deletion_journal_data:/var/lib/eimir/deletion-journal
     networks:
       - app
     ports:
       - name: api-loopback
         target: 8000
         published: "${API_PORT:-8000}"
-        host_ip: "${SBS_BIND_IP:-127.0.0.1}"
+        host_ip: "${EIMIR_BIND_IP:-${SBS_BIND_IP:-127.0.0.1}}"
         protocol: tcp
     depends_on:
       migrate:
@@ -173,11 +177,11 @@ services:
     profiles: ["self-hosted"]
     <<: *self-hosted-backend-image
     restart: unless-stopped
-    command: ["python", "-m", "sidebyside.jobs.runner"]
+    command: ["python", "-m", "eimir.jobs.runner"]
     environment:
       <<: *self-hosted-runtime-environment
     volumes:
-      - media_data:/var/lib/sidebyside/media
+      - media_data:/var/lib/eimir/media
     networks:
       - app
     depends_on:
@@ -189,14 +193,14 @@ services:
     <<: *self-hosted-web-image
     restart: unless-stopped
     environment:
-      SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:-}"
+      EIMIR_WEB_CSP_CONNECT_ORIGINS: "${EIMIR_S3_ENDPOINT:-${SBS_S3_ENDPOINT:-}}"
     networks:
       - app
     ports:
       - name: web-loopback
         target: 8080
         published: "${WEB_PORT:-8080}"
-        host_ip: "${SBS_BIND_IP:-127.0.0.1}"
+        host_ip: "${EIMIR_BIND_IP:-${SBS_BIND_IP:-127.0.0.1}}"
         protocol: tcp
     depends_on:
       api:
@@ -208,7 +212,7 @@ services:
     restart: "no"
     command: ["alembic", "upgrade", "head"]
     environment:
-      SBS_DATABASE_URL: "${SBS_DATABASE_URL:-}"
+      EIMIR_DATABASE_URL: "${EIMIR_DATABASE_URL:-${SBS_DATABASE_URL:-}}"
     networks:
       - app
 
@@ -220,8 +224,8 @@ services:
       <<: *cloud-runtime-environment
       FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-}"
     volumes:
-      - cloud_media_data:/var/lib/sidebyside/media
-      - cloud_deletion_journal_data:/var/lib/sidebyside/deletion-journal
+      - cloud_media_data:/var/lib/eimir/media
+      - cloud_deletion_journal_data:/var/lib/eimir/deletion-journal
     networks:
       - app
     depends_on:
@@ -232,12 +236,12 @@ services:
     profiles: ["cloud"]
     <<: *cloud-backend-image
     restart: unless-stopped
-    command: ["python", "-m", "sidebyside.jobs.runner"]
+    command: ["python", "-m", "eimir.jobs.runner"]
     environment:
       <<: *cloud-runtime-environment
     volumes:
-      - cloud_media_data:/var/lib/sidebyside/media
-      - cloud_deletion_journal_data:/var/lib/sidebyside/deletion-journal
+      - cloud_media_data:/var/lib/eimir/media
+      - cloud_deletion_journal_data:/var/lib/eimir/deletion-journal
     networks:
       - app
     depends_on:
@@ -249,7 +253,7 @@ services:
     <<: *cloud-web-image
     restart: unless-stopped
     environment:
-      SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:-}"
+      EIMIR_WEB_CSP_CONNECT_ORIGINS: "${EIMIR_S3_ENDPOINT:-${SBS_S3_ENDPOINT:-}}"
     networks:
       - app
     depends_on:
@@ -260,6 +264,8 @@ services:
     profiles: ["dev-db"]
     image: postgres:17-alpine
     environment:
+      # Development keeps the established role/database because postgres_dev
+      # is also an existing named volume for contributors upgrading in place.
       POSTGRES_USER: sidebyside
       POSTGRES_PASSWORD: sidebyside
       POSTGRES_DB: sidebyside

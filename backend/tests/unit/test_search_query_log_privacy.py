@@ -13,7 +13,7 @@ from pathlib import Path
 
 from starlette.testclient import TestClient
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 NGINX_CONF = Path(__file__).parents[3] / "web" / "nginx.conf"
 
@@ -49,14 +49,14 @@ def test_request_logging_middleware_emits_path_only_never_the_query_string(caplo
 
     with (
         TestClient(create_app(), raise_server_exceptions=False) as client,
-        caplog.at_level(logging.INFO, logger="sidebyside.access"),
+        caplog.at_level(logging.INFO, logger="eimir.access"),
     ):
         client.get(
             "/api/v1/health",
             params={"q": canary, "unrelated": "value"},
         )
 
-    access_records = [record for record in caplog.records if record.name == "sidebyside.access"]
+    access_records = [record for record in caplog.records if record.name == "eimir.access"]
     assert access_records, "expected the request-logging middleware to emit a record"
     for record in access_records:
         assert canary not in record.getMessage()

@@ -6,18 +6,18 @@ import unittest
 from change_scope import SCOPES, classify_paths
 
 ACCOUNT_DELETION_RECOVERY_RUNTIME_PATHS = (
-    "backend/src/sidebyside/identity/deletion.py",
-    "backend/src/sidebyside/identity/deletion_async.py",
-    "backend/src/sidebyside/identity/deletion_jobs.py",
-    "backend/src/sidebyside/identity/deletion_journal.py",
-    "backend/src/sidebyside/identity/deletion_lifecycle.py",
-    "backend/src/sidebyside/identity/deletion_media.py",
-    "backend/src/sidebyside/identity/deletion_models.py",
-    "backend/src/sidebyside/identity/deletion_reconcile.py",
-    "backend/src/sidebyside/identity/deletion_self_service.py",
-    "backend/src/sidebyside/authorization/retention.py",
-    "backend/src/sidebyside/attachments/retention.py",
-    "backend/src/sidebyside/jobs/runner.py",
+    "backend/src/eimir/identity/deletion.py",
+    "backend/src/eimir/identity/deletion_async.py",
+    "backend/src/eimir/identity/deletion_jobs.py",
+    "backend/src/eimir/identity/deletion_journal.py",
+    "backend/src/eimir/identity/deletion_lifecycle.py",
+    "backend/src/eimir/identity/deletion_media.py",
+    "backend/src/eimir/identity/deletion_models.py",
+    "backend/src/eimir/identity/deletion_reconcile.py",
+    "backend/src/eimir/identity/deletion_self_service.py",
+    "backend/src/eimir/authorization/retention.py",
+    "backend/src/eimir/attachments/retention.py",
+    "backend/src/eimir/jobs/runner.py",
 )
 
 RECOVERY_TOOLING_PATHS = (
@@ -58,13 +58,13 @@ class ChangeScopeTest(unittest.TestCase):
 
     def test_backend_runtime_change_enables_postgres_integration(self) -> None:
         self.assert_scope(
-            ["backend/src/sidebyside/memories/service.py"],
+            ["backend/src/eimir/memories/service.py"],
             enabled={"backend", "backend_integration"},
         )
 
     def test_backend_runtime_entrypoint_also_enables_deployment_gates(self) -> None:
         self.assert_scope(
-            ["backend/src/sidebyside/main.py"],
+            ["backend/src/eimir/main.py"],
             enabled={
                 "backend",
                 "backend_integration",
@@ -140,19 +140,19 @@ class ChangeScopeTest(unittest.TestCase):
 
     def test_future_account_deletion_recovery_module_fails_closed_to_recovery(self) -> None:
         self.assert_scope(
-            ["backend/src/sidebyside/identity/deletion_future_authority.py"],
+            ["backend/src/eimir/identity/deletion_future_authority.py"],
             enabled={"backend", "backend_integration", "recovery"},
         )
 
     def test_unrelated_identity_runtime_does_not_enable_recovery(self) -> None:
         self.assert_scope(
-            ["backend/src/sidebyside/identity/preferences.py"],
+            ["backend/src/eimir/identity/preferences.py"],
             enabled={"backend", "backend_integration"},
         )
 
     def test_unrelated_attachment_runtime_does_not_enable_recovery(self) -> None:
         self.assert_scope(
-            ["backend/src/sidebyside/attachments/service.py"],
+            ["backend/src/eimir/attachments/service.py"],
             enabled={"backend", "backend_integration"},
         )
 

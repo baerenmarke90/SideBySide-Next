@@ -4,19 +4,23 @@
 Released Self-Hosted never uses this helper. Development, CI and verified-source
 acceptance may build backend/Web from a checkout or explicit remote Git contexts,
 then point canonical ``compose.yaml`` at the resulting local tags with
-``SBS_SELF_HOSTED_PULL_POLICY=never``.
+``EIMIR_SELF_HOSTED_PULL_POLICY=never``.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
+
+try:
+    from scripts._identity_environment import canonicalize, process_value
+except ModuleNotFoundError:  # Direct ``python scripts/...`` execution.
+    from _identity_environment import canonicalize, process_value
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCAL_TAG_COMPONENT_RE = re.compile(r"^[a-z0-9_][a-z0-9_.-]{0,127}$")
@@ -77,25 +81,26 @@ def read_dotenv(path: Path) -> dict[str, str]:
             values[key] = compose_dotenv_value(value)
         except SourceBuildError as exc:
             raise SourceBuildError(f"invalid dotenv value for {key} on line {lineno}") from exc
-    return values
+    return canonicalize(values)
 
 
 def effective(values: dict[str, str], key: str, default: str = "") -> str:
-    if key in os.environ:
-        return os.environ[key]
+    process_setting = process_value(key)
+    if process_setting is not None:
+        return process_setting
     return values.get(key, default)
 
 
 def reject_production_source_build(values: dict[str, str]) -> None:
     """Accept only explicit non-Production source-build modes from both sources."""
 
-    dotenv_environment = values.get("SBS_ENVIRONMENT", "development").strip().lower()
-    process_raw = os.environ.get("SBS_ENVIRONMENT")
+    dotenv_environment = values.get("EIMIR_ENVIRONMENT", "development").strip().lower()
+    process_raw = process_value("EIMIR_ENVIRONMENT")
     process_environment = process_raw.strip().lower() if process_raw is not None else None
 
     if dotenv_environment == "production" or process_environment == "production":
         raise SourceBuildError(
-            "source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+            "source builds are not allowed when EIMIR_ENVIRONMENT=production is declared"
         )
     if dotenv_environment not in SOURCE_ENVIRONMENTS:
         raise SourceBuildError(
@@ -103,12 +108,12 @@ def reject_production_source_build(values: dict[str, str]) -> None:
         )
     if process_environment is not None and process_environment not in SOURCE_ENVIRONMENTS:
         raise SourceBuildError(
-            "process SBS_ENVIRONMENT must be development, demo, or test for source builds"
+            "process EIMIR_ENVIRONMENT must be development, demo, or test for source builds"
         )
 
 
 def require_local_tag(reference: str, label: str, repository: str) -> str:
-    """Accept only an unqualified SideBySide-local repository and explicit tag."""
+    """Accept only an unqualified eimir.-local repository and explicit tag."""
 
     prefix = f"{repository}:"
     if not reference.startswith(prefix):
@@ -148,36 +153,36 @@ def plan(
     reject_production_source_build(values)
 
     resolved_revision = revision or effective(
-        values, "SBS_BUILD_REVISION", "unverified-local-checkout"
+        values, "EIMIR_BUILD_REVISION", "unverified-local-checkout"
     )
     resolved_backend_context = require_safe_source_context(
         backend_context
-        or effective(values, "SBS_BACKEND_BUILD_CONTEXT", str(ROOT / "backend")),
-        "SBS_BACKEND_BUILD_CONTEXT",
+        or effective(values, "EIMIR_BACKEND_BUILD_CONTEXT", str(ROOT / "backend")),
+        "EIMIR_BACKEND_BUILD_CONTEXT",
     )
     resolved_web_context = require_safe_source_context(
-        web_context or effective(values, "SBS_WEB_BUILD_CONTEXT", str(ROOT / "web")),
-        "SBS_WEB_BUILD_CONTEXT",
+        web_context or effective(values, "EIMIR_WEB_BUILD_CONTEXT", str(ROOT / "web")),
+        "EIMIR_WEB_BUILD_CONTEXT",
     )
     resolved_backend_image = require_local_tag(
         backend_image
         or effective(
             values,
-            "SBS_SELF_HOSTED_BACKEND_IMAGE",
-            "sidebyside-backend:source-local",
+            "EIMIR_SELF_HOSTED_BACKEND_IMAGE",
+            "eimir-backend:source-local",
         ),
-        "SBS_SELF_HOSTED_BACKEND_IMAGE",
-        "sidebyside-backend",
+        "EIMIR_SELF_HOSTED_BACKEND_IMAGE",
+        "eimir-backend",
     )
     resolved_web_image = require_local_tag(
         web_image
         or effective(
             values,
-            "SBS_SELF_HOSTED_WEB_IMAGE",
-            "sidebyside-web:source-local",
+            "EIMIR_SELF_HOSTED_WEB_IMAGE",
+            "eimir-web:source-local",
         ),
-        "SBS_SELF_HOSTED_WEB_IMAGE",
-        "sidebyside-web",
+        "EIMIR_SELF_HOSTED_WEB_IMAGE",
+        "eimir-web",
     )
     return {
         "revision": resolved_revision,
@@ -186,14 +191,14 @@ def plan(
         "backendImage": resolved_backend_image,
         "webImage": resolved_web_image,
         "webBuildArgs": {
-            "VITE_SBS_API_BASE_URL": "",
-            "VITE_SBS_DEMO_MODE": effective(values, "SBS_DEMO_MODE", "false"),
-            "VITE_SBS_DEMO_URL": effective(values, "SBS_DEMO_PUBLIC_URL", ""),
-            "VITE_SBS_DEMO_RESET_TIMER": effective(
-                values, "SBS_DEMO_MODE_RESET_TIMER", "false"
+            "VITE_EIMIR_API_BASE_URL": "",
+            "VITE_EIMIR_DEMO_MODE": effective(values, "EIMIR_DEMO_MODE", "false"),
+            "VITE_EIMIR_DEMO_URL": effective(values, "EIMIR_DEMO_PUBLIC_URL", ""),
+            "VITE_EIMIR_DEMO_RESET_TIMER": effective(
+                values, "EIMIR_DEMO_MODE_RESET_TIMER", "false"
             ),
-            "VITE_SBS_DEMO_RESET_INTERVAL": effective(
-                values, "SBS_DEMO_MODE_RESET_INTERVAL", "6h"
+            "VITE_EIMIR_DEMO_RESET_INTERVAL": effective(
+                values, "EIMIR_DEMO_MODE_RESET_INTERVAL", "6h"
             ),
         },
     }
@@ -205,12 +210,12 @@ def run_build(build_plan: dict[str, object]) -> None:
         "docker",
         "build",
         "--build-arg",
-        f"SBS_BUILD_REVISION={revision}",
+        f"EIMIR_BUILD_REVISION={revision}",
         "--tag",
         str(build_plan["backendImage"]),
         str(build_plan["backendContext"]),
     ]
-    web = ["docker", "build", "--build-arg", f"SBS_BUILD_REVISION={revision}"]
+    web = ["docker", "build", "--build-arg", f"EIMIR_BUILD_REVISION={revision}"]
     for key, value in dict(build_plan["webBuildArgs"]).items():
         web.extend(["--build-arg", f"{key}={value}"])
     web.extend(

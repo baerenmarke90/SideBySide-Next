@@ -814,7 +814,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'dark');
+      localStorage.setItem('eimir.theme', 'dark');
       document.documentElement.setAttribute('data-theme', 'dark');
       document.documentElement.style.colorScheme = 'dark';
     });
@@ -826,7 +826,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.emulateMedia({ colorScheme: 'light' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'light');
+      localStorage.setItem('eimir.theme', 'light');
       document.documentElement.setAttribute('data-theme', 'light');
       document.documentElement.style.colorScheme = 'light';
     });
@@ -838,7 +838,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'dark');
+      localStorage.setItem('eimir.theme', 'dark');
       document.documentElement.setAttribute('data-theme', 'dark');
       document.documentElement.style.colorScheme = 'dark';
     });
@@ -850,7 +850,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.emulateMedia({ colorScheme: 'light' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'light');
+      localStorage.setItem('eimir.theme', 'light');
       document.documentElement.setAttribute('data-theme', 'light');
       document.documentElement.style.colorScheme = 'light';
     });
@@ -915,7 +915,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: 'light' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'light');
+      localStorage.setItem('eimir.theme', 'light');
       document.documentElement.setAttribute('data-theme', 'light');
       document.documentElement.style.colorScheme = 'light';
     });
@@ -932,7 +932,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'dark');
+      localStorage.setItem('eimir.theme', 'dark');
       document.documentElement.setAttribute('data-theme', 'dark');
       document.documentElement.style.colorScheme = 'dark';
     });
@@ -948,7 +948,7 @@ test.describe('Floating Bottom Navigation (#882/#905)', () => {
 
     await page.setViewportSize({ width: 320, height: 640 });
     await page.evaluate(() => {
-      localStorage.setItem('sidebyside.theme', 'light');
+      localStorage.setItem('eimir.theme', 'light');
       document.documentElement.setAttribute('data-theme', 'light');
       document.documentElement.style.colorScheme = 'light';
     });

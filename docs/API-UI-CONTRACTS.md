@@ -1,4 +1,4 @@
-# SideBySide API/UI Contracts
+# eimir. API/UI Contracts
 
 **Status:** Binding integration foundation  
 **Version:** 1.0  

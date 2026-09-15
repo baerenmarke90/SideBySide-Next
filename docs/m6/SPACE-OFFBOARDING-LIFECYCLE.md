@@ -208,7 +208,7 @@ The authoritative V1 policy is **exactly 30 days** after the Space becomes zero-
 - before `offboarding_purge_at`, whole-Space retention purge is not eligible;
 - at `offboarding_purge_at`, the Space becomes purge-eligible;
 - physical convergence may occur after that instant because the bounded worker runs on a schedule and provider cleanup can retry, but no product rule may intentionally extend the deadline;
-- the authoritative runtime source is `sidebyside.relationship.policy.SPACE_OFFBOARDING_RETENTION`;
+- the authoritative runtime source is `eimir.relationship.policy.SPACE_OFFBOARDING_RETENTION`;
 - the value is a fixed Product/Privacy policy, **not** an environment variable, deployment option, ServerAdmin setting, Self-Hosted preference, Cloud override, or entitlement capability.
 
 At the transition to zero-active, the runtime writes `Space.offboarding_purge_at` once. The worker consumes that stored timestamp and does not re-derive it from the current policy. Existing zero-active Spaces predating the persisted field are backfilled using the historical V1 30-day promise.

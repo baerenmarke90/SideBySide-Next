@@ -9,15 +9,15 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from sidebyside.core.clock import now
-from sidebyside.domain.events import DomainEvent, EventType
-from sidebyside.engagement import service as engagement_service
-from sidebyside.jobs import queue
-from sidebyside.jobs.errors import RetryableJobError
-from sidebyside.jobs.models import Job, JobStatus
-from sidebyside.jobs.worker import registry, run_once
-from sidebyside.outbox import service as outbox_service
-from sidebyside.outbox.models import OutboxEvent
+from eimir.core.clock import now
+from eimir.domain.events import DomainEvent, EventType
+from eimir.engagement import service as engagement_service
+from eimir.jobs import queue
+from eimir.jobs.errors import RetryableJobError
+from eimir.jobs.models import Job, JobStatus
+from eimir.jobs.worker import registry, run_once
+from eimir.outbox import service as outbox_service
+from eimir.outbox.models import OutboxEvent
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

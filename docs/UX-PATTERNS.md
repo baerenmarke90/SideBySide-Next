@@ -1,4 +1,4 @@
-# SideBySide UX Patterns
+# eimir. UX Patterns
 
 **Status:** Binding product foundation  
 **Version:** 1.3  

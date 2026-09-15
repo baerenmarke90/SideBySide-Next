@@ -9,10 +9,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from sidebyside.core.ids import new_id
-from sidebyside.media.base import MediaStore, build_account_storage_key, build_storage_key
-from sidebyside.media.local import LocalMediaStore
-from sidebyside.media.s3 import S3MediaStore
+from eimir.core.ids import new_id
+from eimir.media.base import MediaStore, build_account_storage_key, build_storage_key
+from eimir.media.local import LocalMediaStore
+from eimir.media.s3 import S3MediaStore
 
 
 class MemoryS3:

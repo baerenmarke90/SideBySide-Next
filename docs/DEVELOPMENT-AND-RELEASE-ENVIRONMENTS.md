@@ -4,7 +4,7 @@
 **Scope:** Self-Hosted / Arcane / Docker Compose  
 **Related:** #375, #519, #827, #304
 
-This document defines how SideBySide remains continuously developable after a real
+This document defines how eimir. remains continuously developable after a real
 Production instance exists. `ARCANE.md`, `SELF-HOSTING.md`, and environment templates
 must point here rather than defining competing release rules.
 
@@ -79,10 +79,10 @@ remains image-only for application services.
 The local template uses:
 
 ```dotenv
-SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local
-SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local
-SBS_SELF_HOSTED_PULL_POLICY=never
-SBS_BUILD_REVISION=unverified-local-checkout
+EIMIR_SELF_HOSTED_BACKEND_IMAGE=eimir-backend:source-local
+EIMIR_SELF_HOSTED_WEB_IMAGE=eimir-web:source-local
+EIMIR_SELF_HOSTED_PULL_POLICY=never
+EIMIR_BUILD_REVISION=unverified-local-checkout
 ```
 
 Build then start:
@@ -100,23 +100,23 @@ remote source URLs before they can enter diagnostic output.
 
 ### 4.2 Persistent Arcane Development
 
-Create a dedicated Arcane project, for example `sidebyside-development`, separate from
+Create a dedicated Arcane project, for example `eimir-development`, separate from
 Production and Demo. Start from `deploy/persistent-development.env.example`.
 
 For ordinary integration it may follow `main`:
 
 ```dotenv
-SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
-SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
-SBS_BUILD_REVISION=main
-SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-development
-SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-development
-SBS_SELF_HOSTED_PULL_POLICY=never
+EIMIR_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:backend
+EIMIR_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:web
+EIMIR_BUILD_REVISION=main
+EIMIR_SELF_HOSTED_BACKEND_IMAGE=eimir-backend:source-development
+EIMIR_SELF_HOSTED_WEB_IMAGE=eimir-web:source-development
+EIMIR_SELF_HOSTED_PULL_POLICY=never
 ```
 
 Run `scripts/build_self_hosted_source.py` in the workspace/build environment, then start
 canonical `compose.yaml`. For release-candidate verification, pin both build contexts and
-`SBS_BUILD_REVISION` to the same exact candidate SHA before rebuilding the Development
+`EIMIR_BUILD_REVISION` to the same exact candidate SHA before rebuilding the Development
 images.
 
 ### 4.3 Exposure policy
@@ -150,7 +150,7 @@ product version -> Git tag -> source SHA -> release manifest -> artifact hashes 
 ```
 
 The released Self-Hosted launcher validates the selected OCI image versions against
-`SBS_RELEASE_VERSION` before pull/bootstrap/start. Matching backend/Web overrides cannot
+`EIMIR_RELEASE_VERSION` before pull/bootstrap/start. Matching backend/Web overrides cannot
 silently select a different release version.
 
 ## 6. Deployed revision observability
@@ -160,16 +160,16 @@ Backend and Web carry source build identities so mixed releases cannot pass smok
 API health responses include:
 
 ```text
-X-SideBySide-Revision: <source-revision>
+X-Eimir-Revision: <source-revision>
 ```
 
 Web exposes:
 
 ```text
-/.well-known/sidebyside-revision
+/.well-known/eimir-revision
 ```
 
-For Development source images both identities derive from `SBS_BUILD_REVISION`. For a
+For Development source images both identities derive from `EIMIR_BUILD_REVISION`. For a
 published release they derive from the source revision that produced the #193 archives.
 Release smoke requires both identities to equal the selected release/candidate source
 SHA. A healthy stale component is still a failed promotion.
@@ -205,12 +205,12 @@ Use:
 
 ```bash
 python3 scripts/deployment_smoke.py \
-  --base-url https://dev.sidebyside.example \
+  --base-url https://dev.eimir.example \
   --expected-revision <candidate-sha>
 ```
 
 It verifies Web health/revision, API/database readiness and API revision. With
-`SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD`, it also performs password sign-in and a
+`EIMIR_SMOKE_EMAIL` and `EIMIR_SMOKE_PASSWORD`, it also performs password sign-in and a
 non-destructive authenticated membership read.
 
 Smoke credentials must be fictional/operator test credentials appropriate to that
@@ -264,18 +264,18 @@ Extract the Self-Hosted operator bundle from the selected GitHub Release, copy t
 template, configure instance-specific values and select the product release:
 
 ```dotenv
-SBS_ENVIRONMENT=production
-SBS_RELEASE_VERSION=X.Y.Z
+EIMIR_ENVIRONMENT=production
+EIMIR_RELEASE_VERSION=X.Y.Z
 ```
 
 For strict locking, set the two digest-qualified references from the same release:
 
 ```dotenv
-SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
-SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
+EIMIR_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
+EIMIR_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
 ```
 
-On a brand-new installation, leave `SBS_ACCOUNT_DELETION_INSTANCE_ID` blank initially
+On a brand-new installation, leave `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` blank initially
 and run:
 
 ```bash

@@ -24,7 +24,11 @@
 ### Canonical Name: `eimir.`
 - **Strictly lowercase with terminal dot:** The public consumer brand name is always written as `eimir.` (lowercase "e", followed by "imir", terminated with a period/dot).
 - **The Terminal Dot:** In display and brand lockups, the terminal dot is accented with the primary brand color (`Brand Strong` / `Brand Coral`). The dot symbolizes a deliberate pause, an anchor, and the grounding center of a shared space.
-- **Code & Namespaces:** Technical namespaces (`de.sidebyside.next`), database schemas, and existing internal classes (`SideBySideTheme`) remain stable to ensure platform reliability. Only public, user-facing touchpoints use `eimir.`.
+- **Code & Namespaces:** Machine-safe identifiers use `eimir` without the
+  terminal dot, including `eimir.*` on the backend and `de.eimir.app.*` on
+  Android. Only public, user-facing touchpoints use `eimir.`. Narrow legacy
+  identifiers retained for upgrade continuity are documented in
+  [Project Identity Migration](PROJECT-IDENTITY-MIGRATION.md).
 
 ### Wordmark Usage
 - In headers and navigation, the wordmark uses `Instrument Sans` with bold weight and tight letter spacing (`-0.035em`).

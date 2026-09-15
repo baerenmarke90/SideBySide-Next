@@ -19,6 +19,11 @@ import tarfile
 import tempfile
 from pathlib import Path
 
+try:
+    from scripts._identity_environment import legacy_key, process_value
+except ModuleNotFoundError:  # Direct ``python scripts/...`` execution.
+    from _identity_environment import legacy_key, process_value
+
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 REQUIRED_SELF_HOSTED_ENV = ("POSTGRES_USER", "POSTGRES_PASSWORD")
@@ -44,7 +49,7 @@ def repository_root() -> Path:
     script_root = Path(__file__).resolve().parents[1]
     reported = Path(run_git(script_root, "rev-parse", "--show-toplevel")).resolve()
     if reported != script_root:
-        raise CheckoutError("compose_checked.py must run from its own SideBySide checkout")
+        raise CheckoutError("compose_checked.py must run from its own eimir. checkout")
     return script_root
 
 
@@ -143,23 +148,27 @@ def dotenv_value(path: Path, key: str) -> str | None:
         if line.startswith("export "):
             line = line[len("export ") :].lstrip()
         candidate, value = line.split("=", 1)
-        if candidate.strip() != key:
+        candidate_key = candidate.strip()
+        if candidate_key not in {key, legacy_key(key)}:
             continue
         try:
-            found = compose_dotenv_value(value)
+            parsed = compose_dotenv_value(value)
+            # Canonical assignments win even if a deprecated alias follows.
+            if candidate_key == key or found is None:
+                found = parsed
         except CheckoutError as exc:
             raise CheckoutError(f"invalid dotenv value for {key} on line {lineno}") from exc
     return found
 
 
 def reject_production_environment(env_file: Path) -> None:
-    dotenv_environment = (dotenv_value(env_file, "SBS_ENVIRONMENT") or "development").strip().lower()
-    process_raw = os.environ.get("SBS_ENVIRONMENT")
+    dotenv_environment = (dotenv_value(env_file, "EIMIR_ENVIRONMENT") or "development").strip().lower()
+    process_raw = process_value("EIMIR_ENVIRONMENT")
     process_environment = process_raw.strip().lower() if process_raw is not None else None
 
     if dotenv_environment == "production" or process_environment == "production":
         raise CheckoutError(
-            "verified source builds are not allowed when SBS_ENVIRONMENT=production is declared"
+            "verified source builds are not allowed when EIMIR_ENVIRONMENT=production is declared"
         )
     if dotenv_environment not in SOURCE_ENVIRONMENTS:
         raise CheckoutError(
@@ -167,7 +176,7 @@ def reject_production_environment(env_file: Path) -> None:
         )
     if process_environment is not None and process_environment not in SOURCE_ENVIRONMENTS:
         raise CheckoutError(
-            "process SBS_ENVIRONMENT must be development, demo, or test for verified source builds"
+            "process EIMIR_ENVIRONMENT must be development, demo, or test for verified source builds"
         )
 
 
@@ -219,20 +228,20 @@ def command_needs_images(arguments: list[str]) -> bool:
 
 
 def build_verified_images(snapshot_root: Path, revision: str, env_file: Path) -> tuple[str, str]:
-    backend_image = f"sidebyside-backend:verified-{revision[:12]}"
-    web_image = f"sidebyside-web:verified-{revision[:12]}"
+    backend_image = f"eimir-backend:verified-{revision[:12]}"
+    web_image = f"eimir-web:verified-{revision[:12]}"
     web_args = {
-        "VITE_SBS_API_BASE_URL": "",
-        "VITE_SBS_DEMO_MODE": dotenv_value(env_file, "SBS_DEMO_MODE") or "false",
-        "VITE_SBS_DEMO_URL": dotenv_value(env_file, "SBS_DEMO_PUBLIC_URL") or "",
-        "VITE_SBS_DEMO_RESET_TIMER": dotenv_value(env_file, "SBS_DEMO_MODE_RESET_TIMER") or "false",
-        "VITE_SBS_DEMO_RESET_INTERVAL": dotenv_value(env_file, "SBS_DEMO_MODE_RESET_INTERVAL") or "6h",
+        "VITE_EIMIR_API_BASE_URL": "",
+        "VITE_EIMIR_DEMO_MODE": dotenv_value(env_file, "EIMIR_DEMO_MODE") or "false",
+        "VITE_EIMIR_DEMO_URL": dotenv_value(env_file, "EIMIR_DEMO_PUBLIC_URL") or "",
+        "VITE_EIMIR_DEMO_RESET_TIMER": dotenv_value(env_file, "EIMIR_DEMO_MODE_RESET_TIMER") or "false",
+        "VITE_EIMIR_DEMO_RESET_INTERVAL": dotenv_value(env_file, "EIMIR_DEMO_MODE_RESET_INTERVAL") or "6h",
     }
     backend = [
-        "docker", "build", "--build-arg", f"SBS_BUILD_REVISION={revision}",
+        "docker", "build", "--build-arg", f"EIMIR_BUILD_REVISION={revision}",
         "--tag", backend_image, str(snapshot_root / "backend"),
     ]
-    web = ["docker", "build", "--build-arg", f"SBS_BUILD_REVISION={revision}"]
+    web = ["docker", "build", "--build-arg", f"EIMIR_BUILD_REVISION={revision}"]
     for key, value in web_args.items():
         web.extend(["--build-arg", f"{key}={value}"])
     web.extend(["--tag", web_image, str(snapshot_root / "web")])
@@ -254,11 +263,11 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
     project_name = compose_project_name(root, env_file)
 
     try:
-        with tempfile.TemporaryDirectory(prefix="sidebyside-source-") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="eimir-source-") as temp_dir:
             snapshot_root = Path(temp_dir)
             export_verified_snapshot(root, revision, snapshot_root)
-            backend_image = f"sidebyside-backend:verified-{revision[:12]}"
-            web_image = f"sidebyside-web:verified-{revision[:12]}"
+            backend_image = f"eimir-backend:verified-{revision[:12]}"
+            web_image = f"eimir-web:verified-{revision[:12]}"
             if command_needs_images(compose_args):
                 backend_image, web_image = build_verified_images(snapshot_root, revision, env_file)
 
@@ -270,9 +279,9 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
             compose_env = dict(os.environ)
             compose_env.pop("COMPOSE_FILE", None)
             compose_env["COMPOSE_PROFILES"] = "self-hosted"
-            compose_env["SBS_SELF_HOSTED_BACKEND_IMAGE"] = backend_image
-            compose_env["SBS_SELF_HOSTED_WEB_IMAGE"] = web_image
-            compose_env["SBS_SELF_HOSTED_PULL_POLICY"] = "never"
+            compose_env["EIMIR_SELF_HOSTED_BACKEND_IMAGE"] = backend_image
+            compose_env["EIMIR_SELF_HOSTED_WEB_IMAGE"] = web_image
+            compose_env["EIMIR_SELF_HOSTED_PULL_POLICY"] = "never"
             completed = subprocess.run(command, cwd=root, check=False, env=compose_env)
             return completed.returncode
     except OSError as exc:

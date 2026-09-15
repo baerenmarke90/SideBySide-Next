@@ -21,9 +21,9 @@ function readSource(relativePath: string): string {
 }
 
 describe('MAX_MEMORY_ATTACHMENTS parity with the backend (#701)', () => {
-  it('matches MAX_MEMORY_ATTACHMENTS in backend/src/sidebyside/attachments/binding.py', () => {
+  it('matches MAX_MEMORY_ATTACHMENTS in backend/src/eimir/attachments/binding.py', () => {
     const backendSource = readSource(
-      '../../../backend/src/sidebyside/attachments/binding.py',
+      '../../../backend/src/eimir/attachments/binding.py',
     );
     const match = backendSource.match(/^MAX_MEMORY_ATTACHMENTS = (\d+)$/m);
     if (!match)

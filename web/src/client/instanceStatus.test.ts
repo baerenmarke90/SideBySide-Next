@@ -108,13 +108,13 @@ describe('instance registration availability', () => {
 
   it('keeps connectivity failure distinct and fails closed for registration UI', async () => {
     await expect(
-      loadRegistrationAvailability('https://sidebyside.invalid', async () => {
+      loadRegistrationAvailability('https://eimir.invalid', async () => {
         throw new TypeError('network unavailable');
       }),
     ).resolves.toBe('unreachable');
 
     const closed = await loadInstanceAccessStatus(
-      'https://sidebyside.invalid',
+      'https://eimir.invalid',
       async () => {
         throw new TypeError('network unavailable');
       },

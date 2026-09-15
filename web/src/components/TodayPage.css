@@ -939,7 +939,7 @@
  * `today-monthly-strip-1` stays the plain, non-scrolling wide band above.
  *
  * `contain: paint` makes the scroll boundary airtight: without it, the
- * section's own `sbs-motion-reveal` transform (elsewhere purely cosmetic)
+ * section's own `eimir-motion-reveal` transform (elsewhere purely cosmetic)
  * lets the swiped-off photos leak into the section's own scrollable
  * overflow and widen the document horizontally, even though the strip's
  * `overflow-x: auto` already clips them visually.

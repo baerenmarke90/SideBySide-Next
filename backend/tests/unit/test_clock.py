@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
-from sidebyside.core.clock import (
+from eimir.core.clock import (
     annual_occurrence,
     ensure_utc,
     now,

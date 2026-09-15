@@ -1,4 +1,4 @@
-name: SideBySide Next CodeQL
+name: eimir. CodeQL
 
 # The built-in default query suite is intentionally used. It is CodeQL's
 # high-precision security baseline; security-extended is not enabled for the

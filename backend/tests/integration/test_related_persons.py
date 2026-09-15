@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from sidebyside.relationship import service as relationship_service
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -492,8 +492,8 @@ class TestDateNeverMoreVisibleThanPerson:
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
         """The rule is a schema fact, not only a service validation."""
-        from sidebyside.core.ids import new_id
-        from sidebyside.people.models import RelatedPerson, RelatedPersonPayload
+        from eimir.core.ids import new_id
+        from eimir.people.models import RelatedPerson, RelatedPersonPayload
 
         person = RelatedPerson(
             space_id=couple["space"].id,

@@ -10,9 +10,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from sidebyside.identity.deletion_journal import (
+from eimir.identity.deletion_journal import (
     JOURNAL_FORMAT,
     JOURNAL_VERSION,
+    LEGACY_JOURNAL_FORMAT,
     DeletionJournal,
     DeletionJournalError,
 )
@@ -69,6 +70,21 @@ def test_read_all_supports_read_only_recovery_mount(tmp_path: Path) -> None:
     recovered = DeletionJournal(path, instance_id=instance_id).read_all()
 
     assert tuple(record.account_id for record in recovered) == (account_id,)
+
+
+def test_existing_legacy_journal_remains_readable_and_appendable(tmp_path: Path) -> None:
+    _journal, instance_id, path = _initialize(tmp_path)
+    header = json.loads(path.read_text(encoding="utf-8"))
+    header["format"] = LEGACY_JOURNAL_FORMAT
+    path.write_text(
+        json.dumps(header, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    legacy_journal = DeletionJournal(path, instance_id=instance_id)
+
+    legacy_journal.accept(uuid4(), accepted_at=datetime.now(UTC))
+
+    assert len(legacy_journal.read_all()) == 1
 
 
 def test_open_rejects_foreign_instance_identity(tmp_path: Path) -> None:

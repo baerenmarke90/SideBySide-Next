@@ -7,13 +7,13 @@ from uuid import uuid4
 
 import pytest
 
-from sidebyside.auth import sessions
-from sidebyside.config import Environment
-from sidebyside.core.clock import now
-from sidebyside.identity import deletion_self_service
-from sidebyside.identity.deletion_journal import DeletionJournal
-from sidebyside.identity.deletion_models import AccountDeletion
-from sidebyside.identity.models import Account, DeviceSession
+from eimir.auth import sessions
+from eimir.config import Environment
+from eimir.core.clock import now
+from eimir.identity import deletion_self_service
+from eimir.identity.deletion_journal import DeletionJournal
+from eimir.identity.deletion_models import AccountDeletion
+from eimir.identity.models import Account, DeviceSession
 from tests.conftest import requires_database
 
 

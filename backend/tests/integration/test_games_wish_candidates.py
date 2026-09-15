@@ -7,18 +7,18 @@ from datetime import timedelta
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.entitlements import service as entitlement_service
-from sidebyside.entitlements.models import (
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.entitlements import service as entitlement_service
+from eimir.entitlements.models import (
     Capability,
     EntitlementSourceType,
     EntitlementStatus,
     EntitlementTier,
 )
-from sidebyside.games.service import MAX_WISH_CANDIDATES
-from sidebyside.relationship import service as relationship_service
-from sidebyside.wishes.models import Wish, WishPayload, WishStatus
+from eimir.games.service import MAX_WISH_CANDIDATES
+from eimir.relationship import service as relationship_service
+from eimir.wishes.models import Wish, WishPayload, WishStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

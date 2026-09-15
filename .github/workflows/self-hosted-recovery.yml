@@ -73,10 +73,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      SBS_SELF_HOSTED_BACKEND_IMAGE: sidebyside-backend:source-recovery
-      SBS_SELF_HOSTED_WEB_IMAGE: sidebyside-web:source-recovery
-      SBS_SELF_HOSTED_PULL_POLICY: never
-      SBS_BUILD_REVISION: unverified-local-checkout
+      EIMIR_SELF_HOSTED_BACKEND_IMAGE: eimir-backend:source-recovery
+      EIMIR_SELF_HOSTED_WEB_IMAGE: eimir-web:source-recovery
+      EIMIR_SELF_HOSTED_PULL_POLICY: never
+      EIMIR_BUILD_REVISION: unverified-local-checkout
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,7 +93,7 @@ jobs:
             scripts/test_self_hosted_recovery.py \
             scripts/test_self_hosted_deletion_reconcile.py \
             backend/scripts/recovery_fixture.py \
-            backend/src/sidebyside/identity/deletion_reconcile.py
+            backend/src/eimir/identity/deletion_reconcile.py
           python3 -m unittest \
             scripts.test_self_hosted_recovery \
             scripts.test_self_hosted_deletion_reconcile

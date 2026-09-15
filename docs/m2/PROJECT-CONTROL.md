@@ -28,7 +28,7 @@ The minimum G2 evidence was fully delivered:
 
 - M2 Domain and versioned API contract complete for the G2 scope; Attachment/Media is limited to images,
 - Tenant/owner-only/Media Security gates green,
-- real critical Memory/Media/Story flow on Web and Android validated against the same SideBySide stack,
+- real critical Memory/Media/Story flow on Web and Android validated against the same eimir. stack,
 - no high/critical open M2 Security/Privacy/data-integrity gap,
 - current CI, Secret Scan, Supply Chain, and Deployment gates green.
 

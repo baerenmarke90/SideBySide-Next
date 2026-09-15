@@ -420,7 +420,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   }, testInfo) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await page.addInitScript(() =>
-      window.localStorage.setItem('sidebyside.theme', 'system'),
+      window.localStorage.setItem('eimir.theme', 'system'),
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await installMocks(page, { plannedEnd: '2026-09-14T16:30:00Z' });
@@ -476,7 +476,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   }) => {
     await page.emulateMedia({ colorScheme });
     await page.addInitScript(() =>
-      window.localStorage.setItem('sidebyside.theme', 'system'),
+      window.localStorage.setItem('eimir.theme', 'system'),
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await installMocks(page);

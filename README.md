@@ -1,12 +1,12 @@
-# SideBySide Next
+# eimir.
 
 A private digital companion for a couple's shared life.
 
-SideBySide Next is an independent reimplementation. It is offered in two
+eimir. is an independent reimplementation. It is offered in two
 operating models:
 
-- **SideBySide Cloud** — a managed service for users who do not want to administer their own infrastructure
-- **SideBySide Self-Hosted** — a self-operated installation for personal and noncommercial use
+- **eimir. Cloud** — a managed service for users who do not want to administer their own infrastructure
+- **eimir. Self-Hosted** — a self-operated installation for personal and noncommercial use
 
 Both share the same Application Core. The Cloud monetizes operations,
 convenience, and service; Self-Hosted must not be artificially deprived of
@@ -19,11 +19,11 @@ The product-preview artwork and labels below intentionally remain de-DE
 localized product content.
 
 <p align="center">
-  <img src="docs/assets/playstore/app-icon.png" alt="SideBySide Next App-Icon" width="112">
+  <img src="docs/assets/playstore/app-icon.png" alt="eimir. App-Icon" width="112">
 </p>
 
 <p align="center">
-  <img src="docs/assets/playstore/feature-graphic.png" alt="SideBySide Next – gemeinsam leben, privat verbunden" width="100%">
+  <img src="docs/assets/playstore/feature-graphic.png" alt="eimir. – gemeinsam leben, privat verbunden" width="100%">
 </p>
 
 <p align="center">
@@ -79,7 +79,7 @@ localized product content.
 
 <p align="center">
   <a href="docs/ROADMAP.md">
-    <img src="docs/assets/roadmap/roadmap-overview.svg" alt="SideBySide Next Roadmap von Foundation bis Release" width="100%">
+    <img src="docs/assets/roadmap/roadmap-overview.svg" alt="eimir. Roadmap von Foundation bis Release" width="100%">
   </a>
 </p>
 
@@ -139,7 +139,7 @@ docker compose --profile dev-db up -d dev-postgres
 python -m pip install uv==0.12.5
 cd backend && uv sync --frozen
 uv run alembic upgrade head
-uv run uvicorn sidebyside.main:app --reload
+uv run uvicorn eimir.main:app --reload
 ```
 
 ### Web
@@ -151,31 +151,31 @@ npm run dev
 
 ### Tests
 
-Integration tests run against a dedicated `sidebyside_test` database created
+Integration tests run against a dedicated `eimir_test` database created
 by `deploy/postgres-init/10-testdatenbank.sql` when the `dev-db` profile starts
 with an empty volume. The test fixture creates its own schema there and removes
 it again at the end — running that lifecycle against the development database
 would be data loss, not a test run.
 
 ```bash
-export SBS_TEST_DATABASE_URL=postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+export EIMIR_TEST_DATABASE_URL=postgresql+psycopg://eimir:eimir@localhost:5432/eimir_test
 cd backend && uv run pytest                         # everything
 cd backend && uv run pytest -m "not integration"   # without database
 ```
 
-**Without `SBS_TEST_DATABASE_URL`, all Integration Tests are skipped** — even
+**Without `EIMIR_TEST_DATABASE_URL`, all Integration Tests are skipped** — even
 when the development database is running and reachable. `pytest` can still
 report the run as green, for example `353 passed, 1141 skipped`. That is not a
 complete run. Skipped means skipped and must not silently be treated as
 passed; without the variable, only the Unit level is being tested.
 
 If the database volume predates the initialization script,
-`sidebyside_test` is missing. The Postgres image runs `deploy/postgres-init/`
+`eimir_test` is missing. The Postgres image runs `deploy/postgres-init/`
 only for an empty data directory. Create it once manually:
 
 ```bash
 docker compose --profile dev-db exec dev-postgres \
-  createdb -U sidebyside sidebyside_test
+  createdb -U eimir eimir_test
 ```
 
 The Web client is tested with `cd web && npm test`.
@@ -187,7 +187,7 @@ schema of the actual application.
 
 ## Self-Hosted
 
-SideBySide supports exactly one Docker Compose manifest: root `compose.yaml`.
+eimir. supports exactly one Docker Compose manifest: root `compose.yaml`.
 `.env.example` selects the `self-hosted` profile for a normal complete checkout:
 
 ```bash
@@ -213,6 +213,10 @@ containers could attempt the migration concurrently.
 
 The complete secure startup procedure, reverse-proxy requirements, and a
 Smoke Test are documented in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
+Existing installations must also follow the
+[project-identity migration guide](docs/PROJECT-IDENTITY-MIGRATION.md) before
+changing a checkout path, Compose project name, image identity, or legacy
+configuration keys.
 
 ## Status
 
@@ -300,7 +304,7 @@ documented separately in [docs/SECURITY.md](docs/SECURITY.md).
 
 ## License
 
-SideBySide Next's own source code is provided under the **PolyForm
+eimir.'s own source code is provided under the **PolyForm
 Noncommercial License 1.0.0**. Noncommercial use, modification, and
 distribution are allowed under that license. Commercial use requires a
 separate commercial license from the rights holder.
@@ -309,9 +313,9 @@ separate commercial license from the rights holder.
 - [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) — commercial licensing
 - [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md) — contributions and contribution rights
 - [TRADEMARKS.md](TRADEMARKS.md) — name, logo, and branding
-- [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) — Self-Hosted, SideBySide Cloud, and product principles
+- [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) — Self-Hosted, eimir. Cloud, and product principles
 
-SideBySide Next is therefore **source-available**, not Open Source in the
+eimir. is therefore **source-available**, not Open Source in the
 narrower OSI sense, because commercial use is not granted generally.
 Third-party dependencies remain under their respective licenses; obligations
 are documented in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).

@@ -6,7 +6,7 @@
 - **S6 runtime follow-ups:** #345 Transfer Bundle backend/OpenAPI, #346 Web runtime
 - **Android offline/read-cache owner:** #328
 
-This package controls the staged productization of the SideBySide Next Web
+This package controls the staged productization of the eimir. Web
 client. M5 Web may progress in parallel with M4 only where the required Domain
 and OpenAPI contracts are already stable on `main`. It does not change or
 pre-commit open M4 contracts, and it does not declare M5 or G4 complete.
@@ -31,8 +31,8 @@ The two independently created clickable product references supplied for this
 work are visual comparison material, not a replacement for the binding product,
 Privacy, Accessibility, or API contracts:
 
-- `SideBySide-Next-clickable-demo-expanded.html`
-- `SideBySide-Next-clickable-mockup.html`
+- `eimir-clickable-demo-expanded.html`
+- `eimir-clickable-mockup.html`
 
 ## Current Web client assessment
 

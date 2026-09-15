@@ -9,14 +9,14 @@ from time import sleep
 import pytest
 from sqlalchemy import select
 
-from sidebyside.authorization import PrivacyClass
-from sidebyside.config import Environment, get_settings
-from sidebyside.core.errors import ConflictError, NotFoundError
-from sidebyside.identity.models import Account
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.private_notes.models import PrivateNote, PrivateNotePayload
-from sidebyside.relationship import invitations, offboarding, service
-from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
+from eimir.authorization import PrivacyClass
+from eimir.config import Environment, get_settings
+from eimir.core.errors import ConflictError, NotFoundError
+from eimir.identity.models import Account
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.private_notes.models import PrivateNote, PrivateNotePayload
+from eimir.relationship import invitations, offboarding, service
+from eimir.relationship.models import Invitation, Membership, MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -152,7 +152,7 @@ class TestSelfLeaveHttp:
         base = get_settings()
         demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
         # The Demo-deployment predicate is shared by every Demo guard and
-        # lives in sidebyside.demo.canonical, so patch it there.
+        # lives in eimir.demo.canonical, so patch it there.
         monkeypatch.setattr(offboarding.canonical, "get_settings", lambda: demo_settings)
 
         response = client.post(

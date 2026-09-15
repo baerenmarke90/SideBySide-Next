@@ -5,7 +5,10 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
+val eimirApiBaseUrl = providers.gradleProperty("eimirApiBaseUrl")
+    .orElse(providers.gradleProperty("sbsApiBaseUrl"))
+    .orElse("")
+    .get()
 
 // Release identity, per #194.
 //
@@ -14,15 +17,21 @@ val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
 // by; it carries no meaning beyond "later than the last one" and is supplied by
 // whatever publishes the build, so a rebuild of the same source can be
 // republished without inventing a new product version.
-val sbsVersionName = "0.1.0"
-val sbsVersionCode = providers.gradleProperty("sbsVersionCode").orElse("1").get().toInt()
+val eimirVersionName = "0.1.0"
+val eimirVersionCode = providers.gradleProperty("eimirVersionCode")
+    .orElse(providers.gradleProperty("sbsVersionCode"))
+    .orElse("1")
+    .get()
+    .toInt()
 
 // Release signing material never lives in this repository. It is supplied by
 // the publishing environment, and when it is absent the release build stays
 // unsigned rather than silently falling back to the debug key — an artifact
 // signed with the debug key looks releasable and can never be updated by a
 // properly signed one.
-val releaseKeystore = providers.gradleProperty("sbsReleaseKeystore")
+val releaseKeystore = providers.gradleProperty("eimirReleaseKeystore")
+    .orElse(providers.environmentVariable("EIMIR_RELEASE_KEYSTORE"))
+    .orElse(providers.gradleProperty("sbsReleaseKeystore"))
     .orElse(providers.environmentVariable("SBS_RELEASE_KEYSTORE"))
     .orNull
 // The Material 3 scheme and the semantic scale are derived from the shared
@@ -48,7 +57,7 @@ abstract class GenerateDesignTokens : DefaultTask() {
         val semantic = color.getValue("semantic").asMap()
 
         val text = buildString {
-            appendLine("package de.sidebyside.next.design")
+            appendLine("package de.eimir.app.design")
             appendLine()
             appendLine("// Generated from design/tokens.json by the generateDesignTokens task.")
             appendLine("// Do not edit; change the token file instead.")
@@ -63,7 +72,7 @@ abstract class GenerateDesignTokens : DefaultTask() {
             appendTypographyObject(tokens)
         }
 
-        val target = outputDirectory.get().asFile.resolve("de/sidebyside/next/design")
+        val target = outputDirectory.get().asFile.resolve("de/eimir/app/design")
         target.mkdirs()
         target.resolve("GeneratedDesignTokens.kt").writeText(text)
     }
@@ -173,9 +182,16 @@ fun quotedBuildConfig(value: String): String = "\"${value.replace("\\", "\\\\").
  * Missing material fails the configuration rather than producing a signing
  * config with an empty password, which fails much later and less clearly.
  */
-fun Project.secret(property: String, environmentVariable: String): String =
+fun Project.secret(
+    property: String,
+    environmentVariable: String,
+    legacyProperty: String,
+    legacyEnvironmentVariable: String,
+): String =
     providers.gradleProperty(property)
         .orElse(providers.environmentVariable(environmentVariable))
+        .orElse(providers.gradleProperty(legacyProperty))
+        .orElse(providers.environmentVariable(legacyEnvironmentVariable))
         .orNull
         ?: error(
             "Release signing needs $property or $environmentVariable. " +
@@ -183,34 +199,46 @@ fun Project.secret(property: String, environmentVariable: String): String =
         )
 
 android {
-    namespace = "de.sidebyside.next.reference"
+    namespace = "de.eimir.app.reference"
     compileSdk = 37
     compileSdkMinor = 1
 
     defaultConfig {
-        // Frozen by #194. Google Play binds an application ID to its listing
-        // permanently, so this cannot be corrected after a first release —
-        // which is why the M2 name `de.sidebyside.next.reference` had to go
-        // before distribution rather than after. `reference` named a technical
-        // flow and `next` is this repository's codename; neither is the
-        // product.
+        // Frozen by #194. Google Play binds an application ID and deep-link
+        // scheme to installed upgrades. The legacy value is therefore a
+        // deliberate compatibility identifier, not the current product name.
         applicationId = "de.sidebyside.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = sbsVersionCode
-        versionName = sbsVersionName
+        versionCode = eimirVersionCode
+        versionName = eimirVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SBS_API_BASE_URL", quotedBuildConfig(sbsApiBaseUrl))
+        buildConfigField("String", "EIMIR_API_BASE_URL", quotedBuildConfig(eimirApiBaseUrl))
     }
 
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = file(releaseKeystore)
-                storePassword = secret("sbsReleaseKeystorePassword", "SBS_RELEASE_KEYSTORE_PASSWORD")
-                keyAlias = secret("sbsReleaseKeyAlias", "SBS_RELEASE_KEY_ALIAS")
-                keyPassword = secret("sbsReleaseKeyPassword", "SBS_RELEASE_KEY_PASSWORD")
+                storePassword = secret(
+                    "eimirReleaseKeystorePassword",
+                    "EIMIR_RELEASE_KEYSTORE_PASSWORD",
+                    "sbsReleaseKeystorePassword",
+                    "SBS_RELEASE_KEYSTORE_PASSWORD",
+                )
+                keyAlias = secret(
+                    "eimirReleaseKeyAlias",
+                    "EIMIR_RELEASE_KEY_ALIAS",
+                    "sbsReleaseKeyAlias",
+                    "SBS_RELEASE_KEY_ALIAS",
+                )
+                keyPassword = secret(
+                    "eimirReleaseKeyPassword",
+                    "EIMIR_RELEASE_KEY_PASSWORD",
+                    "sbsReleaseKeyPassword",
+                    "SBS_RELEASE_KEY_PASSWORD",
+                )
             }
         }
     }

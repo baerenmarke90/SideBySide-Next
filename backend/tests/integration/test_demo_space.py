@@ -8,42 +8,42 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import binding as attachment_binding
-from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import Attachment, AttachmentStatus
-from sidebyside.authorization import AuthorizationContext
-from sidebyside.collections.models import Collection
-from sidebyside.config import Environment
-from sidebyside.core.errors import NotFoundError
-from sidebyside.dashboard import service as dashboard_service
-from sidebyside.demo.assets import import_demo_asset, load_and_validate_assets
-from sidebyside.demo.models import DemoCanonicalIdentity
-from sidebyside.demo.service import (
+from eimir.attachments import binding as attachment_binding
+from eimir.attachments import service as attachment_service
+from eimir.attachments.models import Attachment, AttachmentStatus
+from eimir.authorization import AuthorizationContext
+from eimir.collections.models import Collection
+from eimir.config import Environment
+from eimir.core.errors import NotFoundError
+from eimir.dashboard import service as dashboard_service
+from eimir.demo.assets import import_demo_asset, load_and_validate_assets
+from eimir.demo.models import DemoCanonicalIdentity
+from eimir.demo.service import (
     ALEX_NAME,
     LEA_NAME,
     PRIVATE_CANARY_LEA,
     create_demo_space,
     reset_demo_space,
 )
-from sidebyside.engagement.models import Activity, Notification
-from sidebyside.gift_ideas.models import GiftIdea
-from sidebyside.heart_moments import service as heart_moment_service
-from sidebyside.heart_moments.models import HeartMoment
-from sidebyside.identity.models import Account
-from sidebyside.media import get_media_store
-from sidebyside.memories import service as memory_service
-from sidebyside.memories.models import Memory
-from sidebyside.milestones.models import Milestone
-from sidebyside.people.models import ImportantDate, RelatedPerson
-from sidebyside.places.models import Place
-from sidebyside.plans.models import Plan, PlanStatus
-from sidebyside.private_collections.models import PrivateCollection
-from sidebyside.private_notes.models import PrivateNote
-from sidebyside.profiles.models import ProfilePreference
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus, Space
-from sidebyside.search import service as search_service
-from sidebyside.wishes.models import Wish, WishStatus
+from eimir.engagement.models import Activity, Notification
+from eimir.gift_ideas.models import GiftIdea
+from eimir.heart_moments import service as heart_moment_service
+from eimir.heart_moments.models import HeartMoment
+from eimir.identity.models import Account
+from eimir.media import get_media_store
+from eimir.memories import service as memory_service
+from eimir.memories.models import Memory
+from eimir.milestones.models import Milestone
+from eimir.people.models import ImportantDate, RelatedPerson
+from eimir.places.models import Place
+from eimir.plans.models import Plan, PlanStatus
+from eimir.private_collections.models import PrivateCollection
+from eimir.private_notes.models import PrivateNote
+from eimir.profiles.models import ProfilePreference
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus, Space
+from eimir.search import service as search_service
+from eimir.wishes.models import Wish, WishStatus
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -308,7 +308,7 @@ def test_asset_preflight_failure_leaves_create_and_reset_unmodified(
     def fail_assets():  # type: ignore[no-untyped-def]
         raise RuntimeError("curated asset preflight failed")
 
-    monkeypatch.setattr("sidebyside.demo.service.load_and_validate_assets", fail_assets)
+    monkeypatch.setattr("eimir.demo.service.load_and_validate_assets", fail_assets)
     with pytest.raises(RuntimeError, match="curated asset preflight failed"):
         create_demo_space(
             session,
@@ -327,7 +327,7 @@ def test_asset_preflight_failure_leaves_create_and_reset_unmodified(
     old_attachment_ids = set(
         session.execute(select(Attachment.id).where(Attachment.space_id == old_space_id)).scalars()
     )
-    monkeypatch.setattr("sidebyside.demo.service.load_and_validate_assets", fail_assets)
+    monkeypatch.setattr("eimir.demo.service.load_and_validate_assets", fail_assets)
     with pytest.raises(RuntimeError, match="curated asset preflight failed"):
         reset_demo_space(
             session,

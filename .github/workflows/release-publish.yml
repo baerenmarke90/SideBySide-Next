@@ -199,12 +199,21 @@ jobs:
             exit 1
           fi
           mkdir -p release-preflight/previous-known-good
-          gh release download "v${PREVIOUS_VERSION}" \
+          if ! gh release download "v${PREVIOUS_VERSION}" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern sidebyside-release-manifest.json \
-            --dir release-preflight/previous-known-good
-          test -s release-preflight/previous-known-good/sidebyside-release-manifest.json
-          echo "argument=--previous-manifest release-preflight/previous-known-good/sidebyside-release-manifest.json" >> "$GITHUB_OUTPUT"
+            --pattern eimir-release-manifest.json \
+            --dir release-preflight/previous-known-good; then
+            # Published assets are immutable. The first eimir release may
+            # therefore have to consume the former asset name once.
+            gh release download "v${PREVIOUS_VERSION}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern sidebyside-release-manifest.json \
+              --dir release-preflight/previous-known-good
+            mv release-preflight/previous-known-good/sidebyside-release-manifest.json \
+              release-preflight/previous-known-good/eimir-release-manifest.json
+          fi
+          test -s release-preflight/previous-known-good/eimir-release-manifest.json
+          echo "argument=--previous-manifest release-preflight/previous-known-good/eimir-release-manifest.json" >> "$GITHUB_OUTPUT"
 
       - name: Validate release identity before protected signing
         shell: bash
@@ -299,28 +308,28 @@ jobs:
         env:
           ANDROID_VERSION_CODE: ${{ inputs.android_version_code }}
           RELEASE_VERSION: ${{ inputs.release_version }}
-          KEYSTORE_BASE64: ${{ secrets.SBS_RELEASE_KEYSTORE_BASE64 }}
-          SBS_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.SBS_RELEASE_KEYSTORE_PASSWORD }}
-          SBS_RELEASE_KEY_ALIAS: ${{ secrets.SBS_RELEASE_KEY_ALIAS }}
-          SBS_RELEASE_KEY_PASSWORD: ${{ secrets.SBS_RELEASE_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.EIMIR_RELEASE_KEYSTORE_BASE64 || secrets.SBS_RELEASE_KEYSTORE_BASE64 }}
+          EIMIR_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.EIMIR_RELEASE_KEYSTORE_PASSWORD || secrets.SBS_RELEASE_KEYSTORE_PASSWORD }}
+          EIMIR_RELEASE_KEY_ALIAS: ${{ secrets.EIMIR_RELEASE_KEY_ALIAS || secrets.SBS_RELEASE_KEY_ALIAS }}
+          EIMIR_RELEASE_KEY_PASSWORD: ${{ secrets.EIMIR_RELEASE_KEY_PASSWORD || secrets.SBS_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_BASE64 SBS_RELEASE_KEYSTORE_PASSWORD SBS_RELEASE_KEY_ALIAS SBS_RELEASE_KEY_PASSWORD; do
+          for name in KEYSTORE_BASE64 EIMIR_RELEASE_KEYSTORE_PASSWORD EIMIR_RELEASE_KEY_ALIAS EIMIR_RELEASE_KEY_PASSWORD; do
             if [ -z "${!name:-}" ]; then
               echo "Required production-release signing secret ${name} is missing." >&2
               exit 1
             fi
           done
 
-          keystore="$RUNNER_TEMP/sidebyside-upload.jks"
+          keystore="$RUNNER_TEMP/eimir-upload.jks"
           trap 'rm -f "$keystore"' EXIT
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
           test -s "$keystore"
-          export SBS_RELEASE_KEYSTORE="$keystore"
+          export EIMIR_RELEASE_KEYSTORE="$keystore"
 
           ./gradlew --no-daemon --stacktrace --dependency-verification strict \
-            -PsbsVersionCode="$ANDROID_VERSION_CODE" \
+            -PeimirVersionCode="$ANDROID_VERSION_CODE" \
             :app:assembleRelease :app:bundleRelease
 
           apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
@@ -340,11 +349,11 @@ jobs:
           test "$("$analyzer" manifest version-code "$apk")" = "$ANDROID_VERSION_CODE"
 
           mkdir -p ../release-evidence/android
-          cp -- "$apk" ../release-evidence/android/sidebyside-release.apk
-          cp -- "$aab" ../release-evidence/android/sidebyside-release.aab
+          cp -- "$apk" ../release-evidence/android/eimir-release.apk
+          cp -- "$aab" ../release-evidence/android/eimir-release.aab
           rm -f \
-            ../release-evidence/android/sidebyside-release-unsigned.apk \
-            ../release-evidence/android/sidebyside-release-unsigned.aab
+            ../release-evidence/android/eimir-release-unsigned.apk \
+            ../release-evidence/android/eimir-release-unsigned.aab
 
       - name: Install verified Syft release
         shell: bash
@@ -367,9 +376,9 @@ jobs:
           SYFT_CHECK_FOR_APP_UPDATE: "false"
         run: |
           set -euo pipefail
-          syft scan "file:release-evidence/android/sidebyside-release.apk" \
+          syft scan "file:release-evidence/android/eimir-release.apk" \
             -o "spdx-json=release-evidence/sbom/android-apk.spdx.json"
-          syft scan "file:release-evidence/android/sidebyside-release.aab" \
+          syft scan "file:release-evidence/android/eimir-release.aab" \
             -o "spdx-json=release-evidence/sbom/android-aab.spdx.json"
 
       - name: Rebind evidence index to final signed Android bytes
@@ -407,11 +416,11 @@ jobs:
 
           replacements = {
               "android-apk": (
-                  "android/sidebyside-release.apk",
+                  "android/eimir-release.apk",
                   "sbom/android-apk.spdx.json",
               ),
               "android-aab": (
-                  "android/sidebyside-release.aab",
+                  "android/eimir-release.aab",
                   "sbom/android-aab.spdx.json",
               ),
           }
@@ -453,7 +462,7 @@ jobs:
       - name: Attest final signed Android APK
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/android/sidebyside-release.apk
+          subject-path: release-evidence/android/eimir-release.apk
           sbom-path: release-evidence/sbom/android-apk.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: android-apk-signed
@@ -461,7 +470,7 @@ jobs:
       - name: Attest final signed Android AAB
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/android/sidebyside-release.aab
+          subject-path: release-evidence/android/eimir-release.aab
           sbom-path: release-evidence/sbom/android-aab.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: android-aab-signed
@@ -495,8 +504,8 @@ jobs:
 
           verify_subject release-evidence/backend-runtime.image.tar backend-runtime "$evidence_signer"
           verify_subject release-evidence/web-runtime.image.tar web-runtime "$evidence_signer"
-          verify_subject release-evidence/android/sidebyside-release.apk android-apk-signed "$publish_signer"
-          verify_subject release-evidence/android/sidebyside-release.aab android-aab-signed "$publish_signer"
+          verify_subject release-evidence/android/eimir-release.apk android-apk-signed "$publish_signer"
+          verify_subject release-evidence/android/eimir-release.aab android-aab-signed "$publish_signer"
 
       - name: Build final signed release manifest
         shell: bash
@@ -508,7 +517,7 @@ jobs:
           if [ "$INITIAL_RELEASE" = "true" ]; then
             previous_argument="--initial-release"
           else
-            previous_manifest="release-preflight/previous-known-good/sidebyside-release-manifest.json"
+            previous_manifest="release-preflight/previous-known-good/eimir-release-manifest.json"
             test -s "$previous_manifest"
             previous_argument="--previous-manifest $previous_manifest"
           fi
@@ -519,9 +528,9 @@ jobs:
             --version "$RELEASE_VERSION" \
             $previous_argument \
             --require-signed-android \
-            --output release-evidence/sidebyside-release-manifest.json
+            --output release-evidence/eimir-release-manifest.json
           python3 scripts/release_manifest.py verify \
-            --manifest release-evidence/sidebyside-release-manifest.json \
+            --manifest release-evidence/eimir-release-manifest.json \
             --artifact-root release-evidence \
             --require-signed-android
 
@@ -741,12 +750,12 @@ jobs:
 
           publish_archive \
             release-evidence/backend-runtime.image.tar \
-            "sidebyside-backend:evidence-${SOURCE_REVISION}" \
+            "eimir-backend:evidence-${SOURCE_REVISION}" \
             "$backend_repo" \
             "$RUNNER_TEMP/backend-image-ref"
           publish_archive \
             release-evidence/web-runtime.image.tar \
-            "sidebyside-web:evidence-${SOURCE_REVISION}" \
+            "eimir-web:evidence-${SOURCE_REVISION}" \
             "$web_repo" \
             "$RUNNER_TEMP/web-image-ref"
 
@@ -759,7 +768,7 @@ jobs:
           from pathlib import Path
 
           manifest = json.loads(
-              Path("release-evidence/sidebyside-release-manifest.json").read_text(encoding="utf-8")
+              Path("release-evidence/eimir-release-manifest.json").read_text(encoding="utf-8")
           )
           artifacts = {item["id"]: item for item in manifest["artifacts"]}
 
@@ -775,10 +784,10 @@ jobs:
 
           identity = {
               "schemaVersion": 1,
-              "kind": "sidebyside-self-hosted-image-identity",
+              "kind": "eimir-self-hosted-image-identity",
               "product": manifest["product"],
               "sourceRevision": manifest["sourceRevision"],
-              "releaseManifest": "sidebyside-release-manifest.json",
+              "releaseManifest": "eimir-release-manifest.json",
               "images": {
                   "backend": image_record(
                       os.environ["BACKEND_IMAGE_REF"],
@@ -928,14 +937,14 @@ jobs:
             previous="v${PREVIOUS_VERSION}"
           fi
           cat > release-evidence/RELEASE-NOTES.md <<EOF
-          # SideBySide v${RELEASE_VERSION}
+          # eimir. v${RELEASE_VERSION}
 
           Source revision: \`${SOURCE_REVISION}\`
           Previous known-good application release: \`${previous}\`
 
           This is one immutable build-once release set. Backend API, worker and migrate
           share one runtime artifact; Web and final signed Android artifacts are bound
-          to the same source revision by \`sidebyside-release-manifest.json\`.
+          to the same source revision by \`eimir-release-manifest.json\`.
 
           The exact backend and Web archives were loaded without rebuild and published
           as versioned GHCR images. GHCR version/source tags are discovery aliases only;
@@ -998,7 +1007,7 @@ jobs:
           gh release create "$tag" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "SideBySide v${RELEASE_VERSION}" \
+            --title "eimir. v${RELEASE_VERSION}" \
             --notes-file release-evidence/RELEASE-NOTES.md \
             --draft \
             --verify-tag=false

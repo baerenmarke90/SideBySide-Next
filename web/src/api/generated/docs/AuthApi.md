@@ -175,7 +175,7 @@ No authorization required
 
 ## completeOidcApiV1AuthOidcConnectionIdCallbackPost
 
-> SessionView completeOidcApiV1AuthOidcConnectionIdCallbackPost(connectionId, sidebysideApiV1AuthOidcCallbackRequest)
+> SessionView completeOidcApiV1AuthOidcConnectionIdCallbackPost(connectionId, eimirApiV1AuthOidcCallbackRequest)
 
 Complete Oidc
 
@@ -197,8 +197,8 @@ async function example() {
   const body = {
     // string
     connectionId: connectionId_example,
-    // SidebysideApiV1AuthOidcCallbackRequest
-    sidebysideApiV1AuthOidcCallbackRequest: ...,
+    // EimirApiV1AuthOidcCallbackRequest
+    eimirApiV1AuthOidcCallbackRequest: ...,
   } satisfies CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest;
 
   try {
@@ -219,7 +219,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **connectionId** | `string` |  | [Defaults to `undefined`] |
-| **sidebysideApiV1AuthOidcCallbackRequest** | [SidebysideApiV1AuthOidcCallbackRequest](SidebysideApiV1AuthOidcCallbackRequest.md) |  | |
+| **eimirApiV1AuthOidcCallbackRequest** | [EimirApiV1AuthOidcCallbackRequest](EimirApiV1AuthOidcCallbackRequest.md) |  | |
 
 ### Return type
 
@@ -248,7 +248,7 @@ No authorization required
 
 ## completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost
 
-> RecentAuthenticationView completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(connectionId, sidebysideApiV1RecentAuthenticationOidcCallbackRequest)
+> RecentAuthenticationView completeOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPost(connectionId, eimirApiV1RecentAuthenticationOidcCallbackRequest)
 
 Complete Oidc
 
@@ -268,8 +268,8 @@ async function example() {
   const body = {
     // string
     connectionId: connectionId_example,
-    // SidebysideApiV1RecentAuthenticationOidcCallbackRequest
-    sidebysideApiV1RecentAuthenticationOidcCallbackRequest: ...,
+    // EimirApiV1RecentAuthenticationOidcCallbackRequest
+    eimirApiV1RecentAuthenticationOidcCallbackRequest: ...,
   } satisfies CompleteOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdCallbackPostRequest;
 
   try {
@@ -290,7 +290,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **connectionId** | `string` |  | [Defaults to `undefined`] |
-| **sidebysideApiV1RecentAuthenticationOidcCallbackRequest** | [SidebysideApiV1RecentAuthenticationOidcCallbackRequest](SidebysideApiV1RecentAuthenticationOidcCallbackRequest.md) |  | |
+| **eimirApiV1RecentAuthenticationOidcCallbackRequest** | [EimirApiV1RecentAuthenticationOidcCallbackRequest](EimirApiV1RecentAuthenticationOidcCallbackRequest.md) |  | |
 
 ### Return type
 

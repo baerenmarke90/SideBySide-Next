@@ -9,10 +9,7 @@ describe('identityFlow signup methods', () => {
       .mockResolvedValue();
 
     try {
-      await requestSignup(
-        'https://sidebyside.invalid',
-        'couple@example.invalid',
-      );
+      await requestSignup('https://eimir.invalid', 'couple@example.invalid');
       expect(spy).toHaveBeenCalledWith({
         emailRequest: { email: 'couple@example.invalid' },
       });
@@ -42,13 +39,13 @@ describe('identityFlow signup methods', () => {
 
     try {
       const result = await consumeSignup(
-        'https://sidebyside.invalid',
+        'https://eimir.invalid',
         'signup-proof-token',
       );
       expect(spy).toHaveBeenCalledWith({
         signupConsumeRequest: {
           token: 'signup-proof-token',
-          deviceName: 'SideBySide Web',
+          deviceName: 'eimir. Web',
           platform: 'web',
         },
       });

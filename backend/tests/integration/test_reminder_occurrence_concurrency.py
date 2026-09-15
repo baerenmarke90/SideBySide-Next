@@ -9,13 +9,13 @@ from threading import Event, Lock, current_thread
 import pytest
 from sqlalchemy import select
 
-from sidebyside.identity import preferences as account_preferences
-from sidebyside.identity.models import Account
-from sidebyside.jobs.models import Job
-from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
-from sidebyside.plans.models import shared_privacy as plan_shared_privacy
-from sidebyside.reminders import runtime
-from sidebyside.reminders.models import (
+from eimir.identity import preferences as account_preferences
+from eimir.identity.models import Account
+from eimir.jobs.models import Job
+from eimir.plans.models import Plan, PlanPayload, PlanStatus
+from eimir.plans.models import shared_privacy as plan_shared_privacy
+from eimir.reminders import runtime
+from eimir.reminders.models import (
     Reminder,
     ReminderOffset,
     ReminderPayload,
@@ -23,8 +23,8 @@ from sidebyside.reminders.models import (
     ReminderSource,
     shared_privacy,
 )
-from sidebyside.reminders.rules import PLAN_START_RULE
-from sidebyside.reminders.runtime_models import OccurrenceState, ReminderOccurrence
+from eimir.reminders.rules import PLAN_START_RULE
+from eimir.reminders.runtime_models import OccurrenceState, ReminderOccurrence
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

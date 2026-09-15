@@ -9,16 +9,16 @@ from typing import Any
 
 import pytest
 
-from sidebyside.config import Environment, LogFormat, MailTransport, get_settings
-from sidebyside.mail import LoggingMailSender, MailMessage, MailTransportError, SmtpMailSender
-from sidebyside.observability.formatting import configure_logging
+from eimir.config import Environment, LogFormat, MailTransport, get_settings
+from eimir.mail import LoggingMailSender, MailMessage, MailTransportError, SmtpMailSender
+from eimir.observability.formatting import configure_logging
 
 
 @pytest.fixture
 def configured_log_stream():  # type: ignore[no-untyped-def]
     """Capture the real configured logging pipeline without leaking global state."""
     root_logger = logging.getLogger()
-    mail_logger = logging.getLogger("sidebyside.mail.log")
+    mail_logger = logging.getLogger("eimir.mail.log")
     original_root_handlers = list(root_logger.handlers)
     original_root_level = root_logger.level
     original_mail_handlers = list(mail_logger.handlers)
@@ -86,7 +86,7 @@ class TestLogAdapter:
     def test_refuses_service_in_production(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """Otherwise a valid one-time token would appear in the log."""
         settings = get_settings().model_copy(update={"environment": Environment.PRODUCTION})
-        monkeypatch.setattr("sidebyside.mail.log.get_settings", lambda: settings)
+        monkeypatch.setattr("eimir.mail.log.get_settings", lambda: settings)
 
         with pytest.raises(RuntimeError):
             LoggingMailSender().send(MailMessage(to="a@b.de", subject="x", body="y"))
@@ -120,7 +120,7 @@ class TestLogAdapter:
                 "log_format": log_format,
             }
         )
-        monkeypatch.setattr("sidebyside.mail.log.get_settings", lambda: settings)
+        monkeypatch.setattr("eimir.mail.log.get_settings", lambda: settings)
         stream = configured_log_stream(settings)
         link = f"http://localhost:8080/{path}?token={token}"
 
@@ -147,7 +147,7 @@ class TestLogAdapter:
         token = "ordinary-log-token-123"
         link = f"http://localhost:8080/auth/magic-link?token={token}"
 
-        logging.getLogger("sidebyside.auth.test").info("received link %s", link)
+        logging.getLogger("eimir.auth.test").info("received link %s", link)
 
         output = stream.getvalue()
         assert token not in output
@@ -168,7 +168,7 @@ class TestLogAdapter:
         token = "smtp-context-token-456"
         link = f"http://localhost:8080/auth/verify-email?token={token}"
 
-        logging.getLogger("sidebyside.mail.log").info("mail body:\n%s", link)
+        logging.getLogger("eimir.mail.log").info("mail body:\n%s", link)
 
         output = stream.getvalue()
         assert token not in output

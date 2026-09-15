@@ -9,7 +9,7 @@ Wish that became reality without a Plan. No request body may write status.
 
 from __future__ import annotations
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 COLLECTION = "/api/v1/spaces/{spaceId}/wishes"
 DETAIL = "/api/v1/spaces/{spaceId}/wishes/{wishId}"

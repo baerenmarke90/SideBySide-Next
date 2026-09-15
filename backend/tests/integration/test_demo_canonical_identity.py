@@ -1,7 +1,7 @@
 """The public demo cannot be made unresettable by an ordinary visitor.
 
 create/ensure/reset resolve the two reserved personas by their reserved
-address and a durable technical marker (`sidebyside.demo.models`), never by
+address and a durable technical marker (`eimir.demo.models`), never by
 `display_name` (#633): that is presentation state in the domain model and
 must never serve as durable technical demo identity. Legacy data from before
 this marker existed, an operator edit, or a direct database change can leave
@@ -28,21 +28,21 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import passwords
-from sidebyside.config import Environment, Settings
-from sidebyside.demo import canonical
-from sidebyside.demo.canonical import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
-from sidebyside.demo.models import DemoCanonicalIdentity
-from sidebyside.demo.service import create_demo_space, reset_demo_space
-from sidebyside.identity import service as identity_service
-from sidebyside.identity.models import Account
-from sidebyside.profiles.models import (
+from eimir.auth import passwords
+from eimir.config import Environment, Settings
+from eimir.demo import canonical
+from eimir.demo.canonical import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
+from eimir.demo.models import DemoCanonicalIdentity
+from eimir.demo.service import create_demo_space, reset_demo_space
+from eimir.identity import service as identity_service
+from eimir.identity.models import Account
+from eimir.profiles.models import (
     PreferenceCategory,
     PreferenceSentiment,
     ProfileVisibility,
 )
-from sidebyside.relationship import offboarding
-from sidebyside.relationship.models import Membership, MembershipStatus, Space
+from eimir.relationship import offboarding
+from eimir.relationship.models import Membership, MembershipStatus, Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -276,7 +276,7 @@ class TestOrdinaryDeploymentsAreUnaffected:
 
 class TestExistingDemoGuardsRemainIntact:
     def test_space_offboarding_stays_blocked(self, session, monkeypatch, demo) -> None:  # type: ignore[no-untyped-def]
-        from sidebyside.core.errors import ForbiddenError
+        from eimir.core.errors import ForbiddenError
 
         with pytest.raises(ForbiddenError) as rejected:
             offboarding.leave_space(session, demo["lea"], demo["space_id"])
@@ -284,8 +284,8 @@ class TestExistingDemoGuardsRemainIntact:
         assert rejected.value.code == "SPACE_OFFBOARDING_DEMO_FORBIDDEN"
 
     def test_account_self_deletion_stays_blocked(self, session, monkeypatch, demo) -> None:  # type: ignore[no-untyped-def]
-        from sidebyside.core.errors import ForbiddenError
-        from sidebyside.identity import deletion_self_service
+        from eimir.core.errors import ForbiddenError
+        from eimir.identity import deletion_self_service
 
         monkeypatch.setattr(
             deletion_self_service.canonical,

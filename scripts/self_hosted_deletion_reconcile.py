@@ -67,7 +67,7 @@ def reconcile_restored_target(
             "api",
             "python",
             "-m",
-            "sidebyside.identity.deletion_reconcile",
+            "eimir.identity.deletion_reconcile",
             "--journal-stdin",
             "--confirm-instance-id",
             str(instance_id),

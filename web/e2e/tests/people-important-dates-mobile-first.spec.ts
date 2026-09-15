@@ -555,9 +555,7 @@ test('W50-W55 reflow at the accepted 1280 at 400 percent method without clipped 
 }, testInfo) => {
   test.setTimeout(120_000);
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
-  await page.addInitScript(() =>
-    localStorage.setItem('sidebyside.theme', 'system'),
-  );
+  await page.addInitScript(() => localStorage.setItem('eimir.theme', 'system'));
   await page.setViewportSize({ width: 1280, height: 1024 });
   const unexpectedRequests = await installPeopleApiMocks(page);
   await signInAndOpenPeople(page);

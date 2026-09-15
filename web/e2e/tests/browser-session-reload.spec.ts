@@ -519,7 +519,7 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
 
     // 1. Open app in demo mode
     await page.addInitScript(() => {
-      window.sessionStorage.setItem('sbs-demo-mode', 'true');
+      window.sessionStorage.setItem('eimir-demo-mode', 'true');
     });
     await page.goto('/');
 

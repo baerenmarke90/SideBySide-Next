@@ -25,7 +25,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
-ARCHIVE_FORMAT = "sidebyside-self-hosted-backup"
+ARCHIVE_FORMAT = "eimir-self-hosted-backup"
+LEGACY_ARCHIVE_FORMAT = "sidebyside-self-hosted-backup"
 ARCHIVE_VERSION = 1
 ARCHIVE_MEMBERS = frozenset({"manifest.json", "database.dump", "media.tar"})
 ALLOWED_COMPOSE_FILES = frozenset({"compose.yaml"})
@@ -35,7 +36,7 @@ TRANSIENT_WRITER_SERVICES = frozenset({"migrate", "demo-init"})
 VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 MEDIA_PATH_RE = re.compile(rf"^spaces/{UUID_RE}/attachments/{UUID_RE}/(?:original|thumbnail)$")
-MEDIA_MOUNT_PATH = "/sidebyside-recovery-media"
+MEDIA_MOUNT_PATH = "/eimir-recovery-media"
 
 
 class RecoveryError(RuntimeError):
@@ -150,9 +151,9 @@ class ComposeTarget:
         api = services["api"]
         if not isinstance(api, dict) or not isinstance(api.get("environment"), dict):
             raise RecoveryError("Compose API configuration lacks its environment.")
-        if api["environment"].get("SBS_MEDIA_STORE") != "local":
+        if api["environment"].get("EIMIR_MEDIA_STORE") != "local":
             raise RecoveryError(
-                "This command supports only SBS_MEDIA_STORE=local; use the provider's "
+                "This command supports only EIMIR_MEDIA_STORE=local; use the provider's "
                 "consistent S3/object-storage recovery process instead."
             )
 
@@ -367,7 +368,7 @@ def _assemble_archive(
     created_at: datetime,
 ) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=".sidebyside-backup-", dir=output.parent)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".eimir-backup-", dir=output.parent)
     os.close(descriptor)
     temporary = Path(temporary_name)
     try:
@@ -399,7 +400,7 @@ def create_backup(target: ComposeTarget, output: Path) -> None:
     if writers_to_restart:
         _run(target.compose_command("stop", *writers_to_restart))
     try:
-        with tempfile.TemporaryDirectory(prefix="sidebyside-backup-") as temp_name:
+        with tempfile.TemporaryDirectory(prefix="eimir-backup-") as temp_name:
             temp = Path(temp_name)
             database_dump = temp / "database.dump"
             media_archive = temp / "media.tar"
@@ -530,7 +531,10 @@ def validate_archive(archive_path: Path, temporary_directory: Path) -> Validated
         raise RecoveryError("The backup manifest is invalid.") from exc
     if not isinstance(manifest, dict):
         raise RecoveryError("The backup manifest is not an object.")
-    if manifest.get("format") != ARCHIVE_FORMAT or manifest.get("formatVersion") != 1:
+    if (
+        manifest.get("format") not in {ARCHIVE_FORMAT, LEGACY_ARCHIVE_FORMAT}
+        or manifest.get("formatVersion") != ARCHIVE_VERSION
+    ):
         raise RecoveryError("The backup format is not supported.")
     database = manifest.get("database")
     media = manifest.get("media")
@@ -681,7 +685,7 @@ def restore_backup(target: ComposeTarget, archive_path: Path, *, confirmed_empty
     if _media_entries(target):
         raise RecoveryError("Restore target LocalMediaStore is not fresh and empty.")
 
-    with tempfile.TemporaryDirectory(prefix="sidebyside-restore-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="eimir-restore-") as temp_name:
         validated = validate_archive(archive_path.resolve(), Path(temp_name))
         _restore_database(target, validated.database_dump)
         _restore_media(target, validated.media_archive)

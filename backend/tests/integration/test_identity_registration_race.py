@@ -20,9 +20,9 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.core.errors import ConflictError
-from sidebyside.identity import service as identity_service
-from sidebyside.identity.models import Account, AccountEmail
+from eimir.core.errors import ConflictError
+from eimir.identity import service as identity_service
+from eimir.identity.models import Account, AccountEmail
 
 RACE_EMAIL = "race@example.test"
 

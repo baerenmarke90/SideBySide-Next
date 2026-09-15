@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 from pydantic import SecretStr
 
-from sidebyside.auth.policy import AuthCapabilities, resolve_auth_capabilities
-from sidebyside.config import Deployment, MailTransport, OidcConnection, Settings
-from sidebyside.core.errors import AuthMethodDisabledError, ErrorCode
+from eimir.auth.policy import AuthCapabilities, resolve_auth_capabilities
+from eimir.config import Deployment, MailTransport, OidcConnection, Settings
+from eimir.core.errors import AuthMethodDisabledError, ErrorCode
 
 
 def _sample_oidc_connection() -> OidcConnection:
@@ -17,7 +17,7 @@ def _sample_oidc_connection() -> OidcConnection:
         issuer="https://oidc.example.com",
         client_id="client-123",
         client_secret=SecretStr("secret-456"),
-        redirect_uri="https://sidebyside.example.com/api/v1/auth/oidc/test-provider/callback",
+        redirect_uri="https://eimir.example.com/api/v1/auth/oidc/test-provider/callback",
     )
 
 

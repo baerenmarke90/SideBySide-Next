@@ -11,12 +11,12 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import PrivacyClass
-from sidebyside.dashboard.models import DashboardModulePreference
-from sidebyside.dashboard.preferences import CATALOG, DashboardModuleKey
-from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus
+from eimir.authorization import PrivacyClass
+from eimir.dashboard.models import DashboardModulePreference
+from eimir.dashboard.preferences import CATALOG, DashboardModuleKey
+from eimir.plans.models import Plan, PlanPayload, PlanStatus
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

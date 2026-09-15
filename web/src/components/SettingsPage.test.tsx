@@ -137,6 +137,6 @@ describe('SettingsPage', () => {
     expect(html).toContain(accountSettings.deleteAction);
     expect(html).toContain(spaceOffboarding.action);
     expect(html).toContain('eimir.');
-    expect(html).not.toContain('SideBySide');
+    expect(html).not.toContain('Eimir');
   });
 });

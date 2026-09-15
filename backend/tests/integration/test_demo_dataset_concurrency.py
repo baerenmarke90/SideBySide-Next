@@ -19,13 +19,13 @@ from threading import Event
 import pytest
 from sqlalchemy import select
 
-from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import Attachment
-from sidebyside.config import Environment
-from sidebyside.demo import service as demo_service
-from sidebyside.identity.models import Account
-from sidebyside.media import get_media_store
-from sidebyside.relationship.models import Membership, MembershipStatus, Space
+from eimir.attachments import service as attachment_service
+from eimir.attachments.models import Attachment
+from eimir.config import Environment
+from eimir.demo import service as demo_service
+from eimir.identity.models import Account
+from eimir.media import get_media_store
+from eimir.relationship.models import Membership, MembershipStatus, Space
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

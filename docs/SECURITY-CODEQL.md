@@ -2,7 +2,7 @@
 
 ## Scope
 
-SideBySide Next uses GitHub CodeQL as an additional static application security testing (SAST) gate for:
+eimir. uses GitHub CodeQL as an additional static application security testing (SAST) gate for:
 
 - Python backend
 - JavaScript/TypeScript web application

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 COLLECTION = "/api/v1/spaces/{spaceId}/attachments"
 DETAIL = "/api/v1/spaces/{spaceId}/attachments/{attachmentId}"

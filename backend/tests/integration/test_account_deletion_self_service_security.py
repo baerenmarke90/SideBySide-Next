@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
-from sidebyside.auth import sessions
-from sidebyside.core.clock import now
-from sidebyside.identity import deletion_jobs, deletion_self_service
-from sidebyside.identity.deletion_models import AccountDeletion
-from sidebyside.identity.models import Account, AccountEmail
-from sidebyside.jobs.models import Job
+from eimir.auth import sessions
+from eimir.core.clock import now
+from eimir.identity import deletion_jobs, deletion_self_service
+from eimir.identity.deletion_models import AccountDeletion
+from eimir.identity.models import Account, AccountEmail
+from eimir.jobs.models import Job
 from tests.conftest import auth, requires_database
 
 

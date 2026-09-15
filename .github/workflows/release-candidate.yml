@@ -101,12 +101,21 @@ jobs:
             exit 1
           fi
           mkdir -p previous-known-good
-          gh release download "v${PREVIOUS_VERSION}" \
+          if ! gh release download "v${PREVIOUS_VERSION}" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern sidebyside-release-manifest.json \
-            --dir previous-known-good
-          test -s previous-known-good/sidebyside-release-manifest.json
-          echo "argument=--previous-manifest previous-known-good/sidebyside-release-manifest.json" >> "$GITHUB_OUTPUT"
+            --pattern eimir-release-manifest.json \
+            --dir previous-known-good; then
+            # Published assets are immutable. The first eimir release may
+            # therefore have to consume the former asset name once.
+            gh release download "v${PREVIOUS_VERSION}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern sidebyside-release-manifest.json \
+              --dir previous-known-good
+            mv previous-known-good/sidebyside-release-manifest.json \
+              previous-known-good/eimir-release-manifest.json
+          fi
+          test -s previous-known-good/eimir-release-manifest.json
+          echo "argument=--previous-manifest previous-known-good/eimir-release-manifest.json" >> "$GITHUB_OUTPUT"
 
       - name: Build immutable release manifest
         shell: bash
@@ -121,12 +130,12 @@ jobs:
             --evidence-index release-evidence/evidence-index.json \
             --version "$RELEASE_VERSION" \
             $PREVIOUS_ARGUMENT \
-            --output release-evidence/sidebyside-release-manifest.json
+            --output release-evidence/eimir-release-manifest.json
 
       - name: Verify artifact and SBOM digests against manifest
         run: |
           python3 scripts/release_manifest.py verify \
-            --manifest release-evidence/sidebyside-release-manifest.json \
+            --manifest release-evidence/eimir-release-manifest.json \
             --artifact-root release-evidence
 
       - name: Write candidate release notes
@@ -136,12 +145,12 @@ jobs:
           SOURCE_REVISION: ${{ github.sha }}
         run: |
           cat > release-evidence/RELEASE-NOTES.md <<EOF
-          # SideBySide v${RELEASE_VERSION} release candidate
+          # eimir. v${RELEASE_VERSION} release candidate
 
           Source revision: \`${SOURCE_REVISION}\`
 
           This candidate is a build-once immutable artifact set. Its machine-readable
-          identity is \`sidebyside-release-manifest.json\`; \`SHA256SUMS\` and #193
+          identity is \`eimir-release-manifest.json\`; \`SHA256SUMS\` and #193
           attestations provide artifact/SBOM evidence.
 
           This workflow does not publish a store release. Final Android publication is
@@ -153,14 +162,14 @@ jobs:
         run: |
           (
             cd release-evidence
-            sha256sum sidebyside-release-manifest.json RELEASE-NOTES.md > RELEASE-SHA256SUMS
+            sha256sum eimir-release-manifest.json RELEASE-NOTES.md > RELEASE-SHA256SUMS
             sha256sum --check --strict RELEASE-SHA256SUMS
           )
 
       - name: Upload immutable candidate bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: sidebyside-release-candidate-v${{ inputs.release_version }}-${{ github.sha }}
+          name: eimir-release-candidate-v${{ inputs.release_version }}-${{ github.sha }}
           path: release-evidence/
           if-no-files-found: error
           retention-days: 30

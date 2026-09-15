@@ -16,7 +16,7 @@ on:
       - scripts/test_compose_checked.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
-      - backend/src/sidebyside/identity/deletion_bootstrap.py
+      - backend/src/eimir/identity/deletion_bootstrap.py
       - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
       - docs/SELF-HOSTING.md
@@ -39,7 +39,7 @@ on:
       - scripts/test_compose_checked.py
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
-      - backend/src/sidebyside/identity/deletion_bootstrap.py
+      - backend/src/eimir/identity/deletion_bootstrap.py
       - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
       - docs/SELF-HOSTING.md
@@ -72,7 +72,7 @@ jobs:
             scripts/test_compose_checked.py \
             scripts/check_runtime_environment.py \
             scripts/test_check_runtime_environment.py \
-            backend/src/sidebyside/identity/deletion_bootstrap.py
+            backend/src/eimir/identity/deletion_bootstrap.py
           python3 -m unittest \
             scripts.test_self_hosted_release \
             scripts.test_build_self_hosted_source \
@@ -107,7 +107,7 @@ jobs:
             docs/m6/CLOUD-MANAGED-ACCOUNT-DELETION-AUTHORITY.md
           )
           for path in "${direct_bootstrap_surfaces[@]}"; do
-            grep -Fq 'sidebyside.identity.deletion_bootstrap' "$path" || {
+            grep -Fq 'eimir.identity.deletion_bootstrap' "$path" || {
               echo "$path does not retain the explicit deletion-authority bootstrap contract."
               exit 1
             }
@@ -134,13 +134,13 @@ jobs:
           set -euo pipefail
           cp .env.example .env-runtime-guard
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=runtime-guard-only/' .env-runtime-guard
-          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-runtime-guard
+          sed -i 's/^EIMIR_ACCOUNT_DELETION_INSTANCE_ID=.*/EIMIR_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-runtime-guard
 
           python3 scripts/check_runtime_environment.py \
             --env-file .env-runtime-guard \
             --profile self-hosted
 
-          if SBS_ACCOUNT_DELETION_INSTANCE_ID= \
+          if EIMIR_ACCOUNT_DELETION_INSTANCE_ID= \
             python3 scripts/check_runtime_environment.py \
               --env-file .env-runtime-guard \
               --profile self-hosted; then
@@ -152,16 +152,16 @@ jobs:
             > /tmp/runtime-guard-compose.json
           jq -e '
             (.services | has("demo-init") | not) and
-            (.services.api.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
-            (.services.worker.environment.SBS_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
+            (.services.api.environment.EIMIR_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555") and
+            (.services.worker.environment.EIMIR_ACCOUNT_DELETION_INSTANCE_ID == "11111111-2222-4333-8444-555555555555")
           ' /tmp/runtime-guard-compose.json
 
       - name: Released Self-Hosted Production image identity is fail-closed
         run: |
           set -euo pipefail
           cp deploy/self-hosted-release.env.example .env-production-image-guard
-          sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-image-guard
-          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-image-guard
+          sed -i 's|^EIMIR_PUBLIC_BASE_URL=.*|EIMIR_PUBLIC_BASE_URL=https://production.example.invalid|' .env-production-image-guard
+          sed -i 's/^EIMIR_ACCOUNT_DELETION_INSTANCE_ID=.*/EIMIR_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-production-image-guard
 
           identity=.runtime-drift-image-identity.json
           python3 - <<'PY'
@@ -177,7 +177,7 @@ jobs:
               key, value = line.split("=", 1)
               values[key.strip()] = value.strip()
 
-          version = values["SBS_RELEASE_VERSION"]
+          version = values["EIMIR_RELEASE_VERSION"]
 
           def image_record(role: str, digit: str, roles: list[str]) -> dict[str, object]:
               digest = "sha256:" + digit * 64
@@ -189,7 +189,7 @@ jobs:
 
           identity = {
               "schemaVersion": 1,
-              "kind": "sidebyside-self-hosted-image-identity",
+              "kind": "eimir-self-hosted-image-identity",
               "product": {"version": version, "tag": f"v{version}"},
               "sourceRevision": os.environ["GITHUB_SHA"],
               "images": {
@@ -223,27 +223,27 @@ jobs:
           }
 
           expect_rejected latest \
-            SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:latest
+            EIMIR_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:latest
           expect_rejected branch \
-            SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:main
+            EIMIR_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:main
           expect_rejected local-source \
-            SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-local \
-            SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-local
+            EIMIR_SELF_HOSTED_BACKEND_IMAGE=eimir-backend:source-local \
+            EIMIR_SELF_HOSTED_WEB_IMAGE=eimir-web:source-local
           expect_rejected joint-version-mismatch \
-            SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.1 \
-            SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.1
+            EIMIR_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.1 \
+            EIMIR_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.1
           expect_rejected no-pull \
-            SBS_SELF_HOSTED_PULL_POLICY=never
+            EIMIR_SELF_HOSTED_PULL_POLICY=never
           expect_rejected environment-downgrade \
-            SBS_ENVIRONMENT=development
+            EIMIR_ENVIRONMENT=development
 
           cp .env-production-image-guard /tmp/no-release-version.env
-          sed -i 's/^SBS_RELEASE_VERSION=.*/SBS_RELEASE_VERSION=/' /tmp/no-release-version.env
+          sed -i 's/^EIMIR_RELEASE_VERSION=.*/EIMIR_RELEASE_VERSION=/' /tmp/no-release-version.env
           if python3 scripts/self_hosted_release.py \
             --env-file /tmp/no-release-version.env \
             --image-identity "$identity" \
             validate; then
-            echo 'Released launcher accepted Production without SBS_RELEASE_VERSION.'
+            echo 'Released launcher accepted Production without EIMIR_RELEASE_VERSION.'
             exit 1
           fi
 
@@ -260,7 +260,7 @@ jobs:
         run: |
           set -euo pipefail
           cp deploy/self-hosted-release.env.example .env-production-guard
-          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=/' .env-production-guard
+          sed -i 's/^EIMIR_ACCOUNT_DELETION_INSTANCE_ID=.*/EIMIR_ACCOUNT_DELETION_INSTANCE_ID=/' .env-production-guard
 
           if python3 scripts/check_runtime_environment.py \
             --env-file .env-production-guard \

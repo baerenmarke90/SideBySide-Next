@@ -3,7 +3,7 @@
 ## Purpose
 
 ServerAdmin is an instance-wide operational capability for administering a
-SideBySide installation. It is separate from partner-facing Space membership
+eimir. installation. It is separate from partner-facing Space membership
 and does not grant access to private product content.
 
 The Web administration surface uses the dedicated `/server-admin` route. The
@@ -15,7 +15,7 @@ presentation assistance and does not replace endpoint authorization.
 ServerAdmin identities are configured in the deployment environment:
 
 ```dotenv
-SBS_SERVER_ADMIN_EMAILS=["operator@example.com"]
+EIMIR_SERVER_ADMIN_EMAILS=["operator@example.com"]
 ```
 
 The value is a JSON array. Multiple operators may be configured. Addresses are
@@ -25,12 +25,12 @@ An authenticated account receives ServerAdmin only when at least one of its
 stored `AccountEmail` rows:
 
 1. is verified; and
-2. exactly matches an address in `SBS_SERVER_ADMIN_EMAILS`.
+2. exactly matches an address in `EIMIR_SERVER_ADMIN_EMAILS`.
 
 The safe default is:
 
 ```dotenv
-SBS_SERVER_ADMIN_EMAILS=[]
+EIMIR_SERVER_ADMIN_EMAILS=[]
 ```
 
 which grants ServerAdmin to nobody. Space roles, Space ownership, the first
@@ -151,7 +151,7 @@ audited. It does not create an email address, create an Account, or grant
 ServerAdmin by itself.
 
 This path exists primarily for Self-Hosted installations that intentionally run
-with `SBS_MAIL_TRANSPORT=none`. It must not be exposed to ordinary clients as a
+with `EIMIR_MAIL_TRANSPORT=none`. It must not be exposed to ordinary clients as a
 way to bypass normal verification.
 
 ### Password recovery
@@ -193,13 +193,13 @@ The command:
 - only matches an already existing `AccountEmail`;
 - only sets its `verified_at` assertion;
 - never creates an Account;
-- never changes `SBS_SERVER_ADMIN_EMAILS`;
+- never changes `EIMIR_SERVER_ADMIN_EMAILS`;
 - never grants ServerAdmin independently of the normal allowlist check;
 - does not print authentication secrets;
 - records a system-attributed privileged audit event when it changes state.
 
 After verification, the deployment still needs the exact address in
-`SBS_SERVER_ADMIN_EMAILS` and the normal API restart/recreate semantics apply to
+`EIMIR_SERVER_ADMIN_EMAILS` and the normal API restart/recreate semantics apply to
 allowlist changes.
 
 ## Account deletion boundary
@@ -268,7 +268,7 @@ made permanently inaccessible before its first operator account exists.
 
 ## Business model
 
-Core ServerAdmin operations required to run a Self-Hosted SideBySide
+Core ServerAdmin operations required to run a Self-Hosted eimir.
 installation are operational administration and are not Premium-paywalled.
 Hosted-service-specific capabilities must continue to use the authoritative
 deployment and entitlement model rather than hardcoded client branching.

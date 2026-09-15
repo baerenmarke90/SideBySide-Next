@@ -27,7 +27,7 @@ media storage, secrets, sessions, signing keys or provider credentials.
 #375 already provides:
 
 - persistent isolated Development;
-- `SBS_ENVIRONMENT=development|demo|production` separation;
+- `EIMIR_ENVIRONMENT=development|demo|production` separation;
 - exact Web/API revision reporting;
 - `scripts/compose_checked.py` for verified complete-checkout deployment;
 - Development-before-Production migration gates;

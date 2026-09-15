@@ -44,11 +44,12 @@ class RecoveryArchiveValidationTest(unittest.TestCase):
         media_archive: bytes | None = None,
         database_checksum: str | None = None,
         durable_object_count: int = 1,
+        archive_format: str = self_hosted_recovery.ARCHIVE_FORMAT,
     ) -> Path:
         if media_archive is None:
             media_archive = tar_bytes([regular_member(MEDIA_PATH, b"durable-media")])
         manifest = {
-            "format": self_hosted_recovery.ARCHIVE_FORMAT,
+            "format": archive_format,
             "formatVersion": self_hosted_recovery.ARCHIVE_VERSION,
             "createdAt": "2026-09-01T00:00:00Z",
             "sourceSchemaRevision": "0035_account_version",
@@ -91,6 +92,23 @@ class RecoveryArchiveValidationTest(unittest.TestCase):
 
             self.assertEqual(validated.media_paths, (MEDIA_PATH,))
             self.assertEqual(validated.manifest["sourceSchemaRevision"], "0035_account_version")
+
+    def test_legacy_archive_format_remains_restorable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            temp = Path(temp_name)
+            archive_path = self.write_backup(
+                temp,
+                archive_format=self_hosted_recovery.LEGACY_ARCHIVE_FORMAT,
+            )
+            extraction = temp / "validated"
+            extraction.mkdir()
+
+            validated = self_hosted_recovery.validate_archive(archive_path, extraction)
+
+            self.assertEqual(
+                validated.manifest["format"],
+                self_hosted_recovery.LEGACY_ARCHIVE_FORMAT,
+            )
 
     def test_modified_database_dump_is_rejected_by_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:

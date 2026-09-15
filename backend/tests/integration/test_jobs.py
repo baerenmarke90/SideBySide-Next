@@ -12,9 +12,9 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
-from sidebyside.core.clock import now
-from sidebyside.jobs import queue
-from sidebyside.jobs.models import Job, JobStatus
+from eimir.core.clock import now
+from eimir.jobs import queue
+from eimir.jobs.models import Job, JobStatus
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

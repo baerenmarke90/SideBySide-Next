@@ -7,20 +7,20 @@ from datetime import date
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments.binding import MemoryAttachment
-from sidebyside.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.entitlements import service as entitlement_service
-from sidebyside.entitlements.models import (
+from eimir.attachments.binding import MemoryAttachment
+from eimir.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.entitlements import service as entitlement_service
+from eimir.entitlements.models import (
     Capability,
     EntitlementSourceType,
     EntitlementStatus,
     EntitlementTier,
 )
-from sidebyside.games.service import MAX_MEMORY_CANDIDATES
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.relationship import service as relationship_service
+from eimir.games.service import MAX_MEMORY_CANDIDATES
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

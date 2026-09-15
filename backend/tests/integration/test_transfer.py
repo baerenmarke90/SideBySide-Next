@@ -13,17 +13,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import AuthorizationContext
-from sidebyside.core.clock import now
-from sidebyside.identity.models import AccountEmail
-from sidebyside.media import get_media_store
-from sidebyside.private_notes import service as private_note_service
-from sidebyside.profiles.models import PartnerProfile
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus
-from sidebyside.reminders.runtime_models import RulePreference
-from sidebyside.transfer import jobs, service
-from sidebyside.transfer.models import ExportStatus, ImportStatus, TransferScope
+from eimir.authorization import AuthorizationContext
+from eimir.core.clock import now
+from eimir.identity.models import AccountEmail
+from eimir.media import get_media_store
+from eimir.private_notes import service as private_note_service
+from eimir.profiles.models import PartnerProfile
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus
+from eimir.reminders.runtime_models import RulePreference
+from eimir.transfer import jobs, service
+from eimir.transfer.models import ExportStatus, ImportStatus, TransferScope
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

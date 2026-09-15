@@ -36,9 +36,9 @@ on:
       - "android/gradlew"
       - "android/gradlew.bat"
       - "android/api/generated/**"
-      - "android/app/src/main/java/de/sidebyside/next/reference/**"
-      - "android/app/src/main/java/de/sidebyside/next/connectivity/**"
-      - "android/app/src/test/java/de/sidebyside/next/reference/**"
+      - "android/app/src/main/java/de/eimir/app/reference/**"
+      - "android/app/src/main/java/de/eimir/app/connectivity/**"
+      - "android/app/src/test/java/de/eimir/app/reference/**"
   schedule:
     - cron: '41 4 * * 1'
   workflow_dispatch:
@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
           cp .env.example .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=g2-e2e-db-only/' .env
-          printf '\nSBS_BOOTSTRAP_TOKEN=%s\n' "$G2_E2E_BOOTSTRAP_TOKEN" >> .env
+          printf '\nEIMIR_BOOTSTRAP_TOKEN=%s\n' "$G2_E2E_BOOTSTRAP_TOKEN" >> .env
           docker compose config --quiet
           python3 scripts/build_self_hosted_source.py --env-file .env
 
@@ -93,7 +93,7 @@ jobs:
           test -n "$account_id" || { echo "Bootstrap returned no account.id."; exit 1; }
 
           space_id=$(docker compose exec -T postgres \
-            psql -U sidebyside -d sidebyside -Atc \
+            psql -U eimir -d eimir -Atc \
             "select space_id from memberships where account_id = '$account_id' and status = 'ACTIVE' limit 1;")
           test -n "$space_id" || { echo "No active Space found for the synthetic account."; exit 1; }
 
@@ -160,7 +160,7 @@ jobs:
         run: >-
           ./gradlew --no-daemon --stacktrace --dependency-verification strict
           :app:testDebugUnitTest
-          --tests de.sidebyside.next.reference.ReferenceFlowE2eTest
+          --tests de.eimir.app.reference.ReferenceFlowE2eTest
 
       - name: Android E2E really ran and was not skipped
         run: |

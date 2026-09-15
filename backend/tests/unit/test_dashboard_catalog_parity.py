@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sidebyside.dashboard.preferences import CATALOG
+from eimir.dashboard.preferences import CATALOG
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CONTRACT_PATH = _REPO_ROOT / "web" / "src" / "client" / "dashboardModuleCatalog.contract.json"

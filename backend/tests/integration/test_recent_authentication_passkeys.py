@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
-from sidebyside.identity.models import DeviceSession
+from eimir.auth.recent_auth_models import RecentAuthenticationGrant
+from eimir.identity.models import DeviceSession
 from tests.conftest import auth, make_account, requires_database, sign_in
 from tests.support.authenticator import VirtualAuthenticator
 

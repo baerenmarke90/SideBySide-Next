@@ -62,7 +62,7 @@ class VerifyReleaseAssetSetTest(unittest.TestCase):
                 {
                     "android/app.apk": b"apk",
                     "sbom/app.spdx.json": b"sbom",
-                    "sidebyside-release-manifest.json": b"manifest",
+                    "eimir-release-manifest.json": b"manifest",
                 },
             )
             self.assertEqual(verify_asset_set(expected, metadata), 3)

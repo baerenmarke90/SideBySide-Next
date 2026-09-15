@@ -30,11 +30,11 @@ def rendered(
     instance_id: str = INSTANCE_ID, environment: str = "production"
 ) -> dict[str, dict[str, str]]:
     common = {
-        "SBS_ACCOUNT_DELETION_INSTANCE_ID": instance_id,
-        "SBS_ENVIRONMENT": environment,
-        "SBS_DEPLOYMENT": "self_hosted",
-        "SBS_PUBLIC_BASE_URL": "https://example.invalid",
-        "SBS_CURSOR_SIGNING_KEY": "not-printed-secret",
+        "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": instance_id,
+        "EIMIR_ENVIRONMENT": environment,
+        "EIMIR_DEPLOYMENT": "self_hosted",
+        "EIMIR_PUBLIC_BASE_URL": "https://example.invalid",
+        "EIMIR_CURSOR_SIGNING_KEY": "not-printed-secret",
     }
     return {"api": dict(common), "worker": dict(common)}
 
@@ -72,10 +72,10 @@ def release_identity(
 ) -> dict[str, object]:
     return {
         "schemaVersion": 1,
-        "kind": "sidebyside-self-hosted-image-identity",
+        "kind": "eimir-self-hosted-image-identity",
         "product": {"version": version, "tag": f"v{version}"},
         "sourceRevision": SOURCE_REVISION,
-        "releaseManifest": "sidebyside-release-manifest.json",
+        "releaseManifest": "eimir-release-manifest.json",
         "images": {
             "backend": {
                 "reference": backend,
@@ -98,64 +98,102 @@ class DotenvParsingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / ".env"
             path.write_text(
-                "SBS_ENVIRONMENT=production # deployed\n"
-                'SBS_RELEASE_VERSION="0.1.0" # selected\n'
+                "EIMIR_ENVIRONMENT=production # deployed\n"
+                'EIMIR_RELEASE_VERSION="0.1.0" # selected\n'
                 "TOKEN=value#literal\n",
                 encoding="utf-8",
             )
             values = parse_dotenv(path)
-        self.assertEqual(values["SBS_ENVIRONMENT"], "production")
-        self.assertEqual(values["SBS_RELEASE_VERSION"], "0.1.0")
+        self.assertEqual(values["EIMIR_ENVIRONMENT"], "production")
+        self.assertEqual(values["EIMIR_RELEASE_VERSION"], "0.1.0")
         self.assertEqual(values["TOKEN"], "value#literal")
+
+    def test_deprecated_names_are_exposed_under_canonical_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / ".env"
+            path.write_text(
+                "SBS_ENVIRONMENT=production\n"
+                f"SBS_ACCOUNT_DELETION_INSTANCE_ID={INSTANCE_ID}\n",
+                encoding="utf-8",
+            )
+            values = parse_dotenv(path)
+        self.assertEqual(values["EIMIR_ENVIRONMENT"], "production")
+        self.assertEqual(values["EIMIR_ACCOUNT_DELETION_INSTANCE_ID"], INSTANCE_ID)
+
+    def test_canonical_name_wins_independent_of_assignment_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / ".env"
+            path.write_text(
+                "EIMIR_ENVIRONMENT=production\nSBS_ENVIRONMENT=development\n",
+                encoding="utf-8",
+            )
+            values = parse_dotenv(path)
+        self.assertEqual(values["EIMIR_ENVIRONMENT"], "production")
 
 
 class DotenvToRenderedTest(unittest.TestCase):
     def test_accepts_matching_deletion_authority(self) -> None:
         dotenv = {
-            "SBS_ENVIRONMENT": "production",
-            "SBS_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
+            "EIMIR_ENVIRONMENT": "production",
+            "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
         }
         self.assertEqual(check_dotenv_to_rendered(dotenv, rendered()), [])
 
     def test_rejects_blank_compose_override_of_nonempty_dotenv_value(self) -> None:
         dotenv = {
-            "SBS_ENVIRONMENT": "production",
-            "SBS_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
+            "EIMIR_ENVIRONMENT": "production",
+            "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
         }
         problems = check_dotenv_to_rendered(dotenv, rendered(instance_id=""))
         self.assertEqual(len(problems), 3)
-        self.assertTrue(all("SBS_ACCOUNT_DELETION_INSTANCE_ID" in p for p in problems))
+        self.assertTrue(
+            all("EIMIR_ACCOUNT_DELETION_INSTANCE_ID" in p for p in problems)
+        )
         self.assertTrue(all(INSTANCE_ID not in p for p in problems))
 
-    def test_production_requires_deletion_authority_in_env_file_and_render(self) -> None:
+    def test_production_requires_deletion_authority_in_env_file_and_render(
+        self,
+    ) -> None:
         problems = check_dotenv_to_rendered(
-            {"SBS_ENVIRONMENT": "production", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""},
+            {
+                "EIMIR_ENVIRONMENT": "production",
+                "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": "",
+            },
             rendered(instance_id=""),
         )
         self.assertEqual(
             problems,
             [
-                "production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
-                "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
+                "production env file must set non-empty EIMIR_ACCOUNT_DELETION_INSTANCE_ID",
+                "rendered Production runtime must set non-empty EIMIR_ACCOUNT_DELETION_INSTANCE_ID",
             ],
         )
 
     def test_development_may_omit_deletion_authority(self) -> None:
         problems = check_dotenv_to_rendered(
-            {"SBS_ENVIRONMENT": "development", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""},
+            {
+                "EIMIR_ENVIRONMENT": "development",
+                "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": "",
+            },
             rendered(instance_id="", environment="development"),
         )
         self.assertEqual(problems, [])
 
     def test_detects_process_override_of_environment_mode(self) -> None:
-        dotenv = {"SBS_ENVIRONMENT": "development", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""}
+        dotenv = {
+            "EIMIR_ENVIRONMENT": "development",
+            "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": "",
+        }
         problems = check_dotenv_to_rendered(dotenv, rendered(instance_id=""))
         self.assertIn(
-            "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
+            "rendered Production runtime must set non-empty EIMIR_ACCOUNT_DELETION_INSTANCE_ID",
             problems,
         )
         self.assertEqual(
-            sum("differs from env file for SBS_ENVIRONMENT" in problem for problem in problems),
+            sum(
+                "differs from env file for EIMIR_ENVIRONMENT" in problem
+                for problem in problems
+            ),
             2,
         )
 
@@ -164,7 +202,7 @@ class ProductionImageIdentityTest(unittest.TestCase):
     def test_accepts_one_versioned_release_for_production(self) -> None:
         self.assertEqual(
             check_production_image_identity(
-                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+                {"EIMIR_ENVIRONMENT": "production", "EIMIR_RELEASE_VERSION": "0.1.0"},
                 image_config(),
                 rendered(),
             ),
@@ -174,7 +212,7 @@ class ProductionImageIdentityTest(unittest.TestCase):
     def test_accepts_digest_qualified_release_refs(self) -> None:
         self.assertEqual(
             check_production_image_identity(
-                {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+                {"EIMIR_ENVIRONMENT": "production", "EIMIR_RELEASE_VERSION": "0.1.0"},
                 image_config(backend=BACKEND_PINNED, web=WEB_PINNED),
                 rendered(),
             ),
@@ -183,10 +221,10 @@ class ProductionImageIdentityTest(unittest.TestCase):
 
     def test_development_may_use_local_source_images(self) -> None:
         problems = check_production_image_identity(
-            {"SBS_ENVIRONMENT": "development"},
+            {"EIMIR_ENVIRONMENT": "development"},
             image_config(
-                backend="sidebyside-backend:source-local",
-                web="sidebyside-web:source-local",
+                backend="eimir-backend:source-local",
+                web="eimir-web:source-local",
                 pull_policy="never",
             ),
             rendered(environment="development"),
@@ -197,13 +235,13 @@ class ProductionImageIdentityTest(unittest.TestCase):
         for backend, web in (
             ("ghcr.io/baerenmarke90/eimir-backend:latest", WEB),
             ("ghcr.io/baerenmarke90/eimir-backend:main", WEB),
-            ("sidebyside-backend:source-local", "sidebyside-web:source-local"),
+            ("eimir-backend:source-local", "eimir-web:source-local"),
         ):
             with self.subTest(backend=backend):
                 self.assertGreater(
                     len(
                         check_production_image_identity(
-                            {"SBS_ENVIRONMENT": "production"},
+                            {"EIMIR_ENVIRONMENT": "production"},
                             image_config(backend=backend, web=web),
                             rendered(),
                         )
@@ -213,7 +251,7 @@ class ProductionImageIdentityTest(unittest.TestCase):
 
     def test_rejects_backend_role_divergence(self) -> None:
         problems = check_production_image_identity(
-            {"SBS_ENVIRONMENT": "production"},
+            {"EIMIR_ENVIRONMENT": "production"},
             image_config(worker="ghcr.io/baerenmarke90/eimir-backend:v0.1.1"),
             rendered(),
         )
@@ -224,37 +262,49 @@ class ProductionImageIdentityTest(unittest.TestCase):
 
     def test_rejects_backend_web_version_divergence(self) -> None:
         problems = check_production_image_identity(
-            {"SBS_ENVIRONMENT": "production"},
+            {"EIMIR_ENVIRONMENT": "production"},
             image_config(web="ghcr.io/baerenmarke90/eimir-web:v0.1.1"),
             rendered(),
         )
-        self.assertIn("Production backend and Web images must use one product release version", problems)
+        self.assertIn(
+            "Production backend and Web images must use one product release version",
+            problems,
+        )
 
-    def test_rejects_joint_image_override_that_disagrees_with_declared_release(self) -> None:
+    def test_rejects_joint_image_override_that_disagrees_with_declared_release(
+        self,
+    ) -> None:
         problems = check_production_image_identity(
-            {"SBS_ENVIRONMENT": "production", "SBS_RELEASE_VERSION": "0.1.0"},
+            {"EIMIR_ENVIRONMENT": "production", "EIMIR_RELEASE_VERSION": "0.1.0"},
             image_config(
                 backend="ghcr.io/baerenmarke90/eimir-backend:v0.1.1",
                 web="ghcr.io/baerenmarke90/eimir-web:v0.1.1",
             ),
             rendered(),
         )
-        self.assertIn("Production application images must match SBS_RELEASE_VERSION", problems)
+        self.assertIn(
+            "Production application images must match EIMIR_RELEASE_VERSION", problems
+        )
 
     def test_rejects_build_fallback_or_never_pull(self) -> None:
         problems = check_production_image_identity(
-            {"SBS_ENVIRONMENT": "production"},
+            {"EIMIR_ENVIRONMENT": "production"},
             image_config(build=True, pull_policy="never"),
             rendered(),
         )
-        self.assertTrue(any("must not contain build configuration" in problem for problem in problems))
+        self.assertTrue(
+            any(
+                "must not contain build configuration" in problem
+                for problem in problems
+            )
+        )
         self.assertTrue(any("pull_policy=always" in problem for problem in problems))
 
 
 class PublishedReleaseIdentityTest(unittest.TestCase):
     def test_accepts_exact_published_digest_identity(self) -> None:
         problems = check_published_release_image_identity(
-            {"SBS_RELEASE_VERSION": "0.1.0"},
+            {"EIMIR_RELEASE_VERSION": "0.1.0"},
             image_config(backend=BACKEND_PINNED, web=WEB_PINNED),
             release_identity(),
         )
@@ -263,7 +313,7 @@ class PublishedReleaseIdentityTest(unittest.TestCase):
     def test_rejects_same_version_with_unpublished_backend_digest(self) -> None:
         alternate = f"{BACKEND}@sha256:{'e' * 64}"
         problems = check_published_release_image_identity(
-            {"SBS_RELEASE_VERSION": "0.1.0"},
+            {"EIMIR_RELEASE_VERSION": "0.1.0"},
             image_config(backend=alternate, web=WEB_PINNED),
             release_identity(),
         )
@@ -281,15 +331,17 @@ class PublishedReleaseIdentityTest(unittest.TestCase):
         )
 
     def test_rejects_identity_from_another_release_version(self) -> None:
-        other_backend = f"ghcr.io/baerenmarke90/eimir-backend:v0.1.1@sha256:{BACKEND_DIGEST}"
+        other_backend = (
+            f"ghcr.io/baerenmarke90/eimir-backend:v0.1.1@sha256:{BACKEND_DIGEST}"
+        )
         other_web = f"ghcr.io/baerenmarke90/eimir-web:v0.1.1@sha256:{WEB_DIGEST}"
         problems = check_published_release_image_identity(
-            {"SBS_RELEASE_VERSION": "0.1.0"},
+            {"EIMIR_RELEASE_VERSION": "0.1.0"},
             image_config(backend=other_backend, web=other_web),
             release_identity(version="0.1.1", backend=other_backend, web=other_web),
         )
         self.assertIn(
-            "Self-Hosted release image identity does not match SBS_RELEASE_VERSION",
+            "Self-Hosted release image identity does not match EIMIR_RELEASE_VERSION",
             problems,
         )
 
@@ -303,11 +355,13 @@ class RenderedToRunningTest(unittest.TestCase):
     def test_detects_stale_or_empty_runtime_value(self) -> None:
         expected = rendered()
         running = {name: dict(environment) for name, environment in expected.items()}
-        running["api"]["SBS_ACCOUNT_DELETION_INSTANCE_ID"] = ""
+        running["api"]["EIMIR_ACCOUNT_DELETION_INSTANCE_ID"] = ""
         problems = check_rendered_to_running(expected, running)
         self.assertEqual(
             problems,
-            ["running service api differs from rendered Compose for SBS_ACCOUNT_DELETION_INSTANCE_ID"],
+            [
+                "running service api differs from rendered Compose for EIMIR_ACCOUNT_DELETION_INSTANCE_ID"
+            ],
         )
         self.assertNotIn(INSTANCE_ID, problems[0])
 

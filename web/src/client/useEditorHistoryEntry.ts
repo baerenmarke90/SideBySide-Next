@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-export const EDITOR_HISTORY_STATE_KEY = '__sideBySideEditorEntry';
+export const EDITOR_HISTORY_STATE_KEY = '__eimirEditorEntry';
 let editorHistorySequence = 0;
 let pendingEntryRemoval: Promise<void> | null = null;
 

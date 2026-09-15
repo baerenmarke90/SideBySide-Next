@@ -6,15 +6,15 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy import CheckConstraint
 
-from sidebyside.api.v1.heart_moments import (
+from eimir.api.v1.heart_moments import (
     HeartMomentCreate,
     HeartMomentUpdate,
     HeartMomentVisibilityChange,
 )
-from sidebyside.authorization import ContentVisibility, PrivacyClass, privacy_for
-from sidebyside.domain.events import PublicEventPayload
-from sidebyside.domain.payload import ProtectedPayload
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.authorization import ContentVisibility, PrivacyClass, privacy_for
+from eimir.domain.events import PublicEventPayload
+from eimir.domain.payload import ProtectedPayload
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
 
 
 def test_text_and_emotion_live_only_in_protected_payload() -> None:

@@ -8,7 +8,7 @@
 
 ## Context
 
-SideBySide has a native Android application and plans a native iOS application. The
+eimir. has a native Android application and plans a native iOS application. The
 product decision in #621 is **semantic parity, not pixel-identical platforms**:
 Android remains Jetpack Compose and iOS will use SwiftUI. The open architectural
 question is whether non-visual mobile logic should be shared with Kotlin
@@ -125,7 +125,7 @@ and native platform integrations remain authoritative on each platform:
 - shared mobile core -> Kotlin Multiplatform where behavior is genuinely
   platform-neutral.
 
-KMP is selected because SideBySide already has substantial Kotlin domain/client logic,
+KMP is selected because eimir. already has substantial Kotlin domain/client logic,
 a generated Kotlin contract and explicit repository/state seams. Sharing those pieces
 avoids re-implementing security-sensitive rules independently in Swift while still
 letting the iOS application behave like an iOS application.
@@ -416,7 +416,7 @@ shared repository contracts
       |
 platform transport + storage adapters
       |
-SideBySide REST/OpenAPI
+eimir. REST/OpenAPI
 ```
 
 Shared state must use semantic states/events, not Android resource IDs, `ViewModel`,
@@ -441,7 +441,7 @@ Do not move Photos/URI/file access into common code. Share only server-side medi
 contracts and portable upload/read orchestration:
 
 - request upload descriptor;
-- distinguish SideBySide authenticated STREAM from external signed upload;
+- distinguish eimir. authenticated STREAM from external signed upload;
 - never forward bearer tokens to signed storage URLs;
 - finalize and poll attachment state;
 - request/read server-authorized descriptor.

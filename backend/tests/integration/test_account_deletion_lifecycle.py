@@ -7,19 +7,19 @@ from uuid import UUID
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.core.clock import now
-from sidebyside.identity import deletion_lifecycle
-from sidebyside.identity.deletion import mark_deletion_failed
-from sidebyside.identity.deletion_lifecycle import (
+from eimir.core.clock import now
+from eimir.identity import deletion_lifecycle
+from eimir.identity.deletion import mark_deletion_failed
+from eimir.identity.deletion_lifecycle import (
     DeletionMediaCleanupError,
     converge_accepted_deletion,
 )
-from sidebyside.identity.deletion_media import (
+from eimir.identity.deletion_media import (
     MEDIA_CLEANUP_FAILURE_CODE,
     AccountMediaCleanupResult,
 )
-from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
-from sidebyside.identity.models import Account
+from eimir.identity.deletion_models import AccountDeletion, AccountDeletionStatus
+from eimir.identity.models import Account
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

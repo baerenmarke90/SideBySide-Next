@@ -46,14 +46,14 @@ CANONICAL_COMPOSE_FILE = "compose.yaml"
 # deletion/convergence boundary and must fail closed into Backup/Restore/Upgrade
 # evidence when changed.
 ACCOUNT_DELETION_RECOVERY_PREFIXES = (
-    "backend/src/sidebyside/identity/deletion_",
+    "backend/src/eimir/identity/deletion_",
 )
 ACCOUNT_DELETION_RECOVERY_EXACT = (
-    "backend/src/sidebyside/identity/deletion.py",
-    "backend/src/sidebyside/authorization/retention.py",
-    "backend/src/sidebyside/attachments/retention.py",
-    "backend/src/sidebyside/jobs/runner.py",
-    "backend/src/sidebyside/main.py",
+    "backend/src/eimir/identity/deletion.py",
+    "backend/src/eimir/authorization/retention.py",
+    "backend/src/eimir/attachments/retention.py",
+    "backend/src/eimir/jobs/runner.py",
+    "backend/src/eimir/main.py",
 )
 
 # Recovery scripts are grouped by their stable semantic stems so additions to
@@ -143,8 +143,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 "backend/Dockerfile",
                 "web/Dockerfile",
                 "web/nginx.conf",
-                "backend/src/sidebyside/config.py",
-                "backend/src/sidebyside/main.py",
+                "backend/src/eimir/config.py",
+                "backend/src/eimir/main.py",
                 "docs/SELF-HOSTING.md",
                 "docs/ARCANE.md",
             ),
@@ -199,8 +199,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 "web/Dockerfile",
                 "web/nginx.conf",
                 "web/scripts/check_csp_header.sh",
-                "backend/src/sidebyside/config.py",
-                "backend/src/sidebyside/main.py",
+                "backend/src/eimir/config.py",
+                "backend/src/eimir/main.py",
                 "docs/SELF-HOSTING.md",
                 "docs/ARCANE.md",
             ),

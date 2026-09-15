@@ -1,7 +1,7 @@
 # Arcane Deployment
 
 These notes supplement `SELF-HOSTING.md` for installations where Arcane manages the
-SideBySide stack and a separate TLS reverse proxy sits in front of it.
+eimir. stack and a separate TLS reverse proxy sits in front of it.
 
 For persistent Development, release-candidate verification, Production promotion and
 rollback, the authoritative workflow is
@@ -10,7 +10,7 @@ This document defines Arcane mechanics; it does not create a competing release p
 
 ## One Compose file
 
-SideBySide supports exactly one tracked Docker Compose manifest: repository-root
+eimir. supports exactly one tracked Docker Compose manifest: repository-root
 `compose.yaml`.
 
 Arcane uses that same manifest and the `self-hosted` profile. The distinction between
@@ -35,7 +35,7 @@ Self-Hosted startup.
 
 ## Persistent Development in Arcane
 
-Create a dedicated Arcane project, for example `sidebyside-development`, separate from
+Create a dedicated Arcane project, for example `eimir-development`, separate from
 any Production or Demo project. Start from:
 
 ```text
@@ -46,13 +46,13 @@ For ordinary integration on `main`:
 
 ```dotenv
 COMPOSE_PROFILES=self-hosted
-SBS_ENVIRONMENT=development
-SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-development
-SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-development
-SBS_SELF_HOSTED_PULL_POLICY=never
-SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
-SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
-SBS_BUILD_REVISION=main
+EIMIR_ENVIRONMENT=development
+EIMIR_SELF_HOSTED_BACKEND_IMAGE=eimir-backend:source-development
+EIMIR_SELF_HOSTED_WEB_IMAGE=eimir-web:source-development
+EIMIR_SELF_HOSTED_PULL_POLICY=never
+EIMIR_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:backend
+EIMIR_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:web
+EIMIR_BUILD_REVISION=main
 ```
 
 The build workspace/runner executes:
@@ -66,7 +66,7 @@ Then Arcane starts/recreates canonical `compose.yaml`. The helper builds backend
 images only; it does not create another Compose manifest and refuses Production.
 
 Before release acceptance, replace `main` in both source contexts and
-`SBS_BUILD_REVISION` with the exact candidate commit SHA, rebuild Development images and
+`EIMIR_BUILD_REVISION` with the exact candidate commit SHA, rebuild Development images and
 recreate the stack. API/Web source revision endpoints must both equal that SHA.
 
 Development remains a separate project with unique database credentials, volumes/media,
@@ -89,8 +89,8 @@ Copy the release env template to `.env` and select the published product version
 
 ```dotenv
 COMPOSE_PROFILES=self-hosted
-SBS_ENVIRONMENT=production
-SBS_RELEASE_VERSION=X.Y.Z
+EIMIR_ENVIRONMENT=production
+EIMIR_RELEASE_VERSION=X.Y.Z
 ```
 
 The canonical manifest resolves the matching versioned images. For exact transport
@@ -98,11 +98,11 @@ locking, use the digest-qualified references from the same release asset
 `self-hosted-image-identity.json`:
 
 ```dotenv
-SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
-SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
+EIMIR_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:vX.Y.Z@sha256:<digest>
+EIMIR_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:vX.Y.Z@sha256:<digest>
 ```
 
-Both overrides must still match `SBS_RELEASE_VERSION`. Production keeps pull enabled. A
+Both overrides must still match `EIMIR_RELEASE_VERSION`. Production keeps pull enabled. A
 missing registry image is a deployment failure, not permission to compile local source.
 
 ### Production entry point
@@ -129,7 +129,7 @@ exact source SHA from the published release manifest.
 ## Account-deletion authority bootstrap
 
 For an Arcane Production project that has **never had an Account-deletion authority**,
-leave `SBS_ACCOUNT_DELETION_INSTANCE_ID` unset and run:
+leave `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` unset and run:
 
 ```bash
 python3 scripts/self_hosted_release.py --env-file .env pull
@@ -140,7 +140,7 @@ python3 scripts/self_hosted_release.py \
 
 The launcher first validates the selected release-image identity and pulls the released
 API image. The bootstrap command then creates the forward journal and prints the stable
-`SBS_ACCOUNT_DELETION_INSTANCE_ID`.
+`EIMIR_ACCOUNT_DELETION_INSTANCE_ID`.
 
 Store exactly that emitted value in the Arcane project environment and protected
 operator configuration backup. Never generate the UUID independently. After updating
@@ -161,7 +161,7 @@ Compose interpolation precedence matters: an explicitly defined process variable
 including an empty value, overrides `.env`. Arcane project variables must therefore not
 contain stale/blank duplicates of non-empty runtime settings.
 
-The released launcher refuses a process `SBS_ENVIRONMENT` that drifts away from the
+The released launcher refuses a process `EIMIR_ENVIRONMENT` that drifts away from the
 Production dotenv and validates application image identity before pull/start.
 
 The shared runtime guard can additionally inspect rendered/running configuration from a
@@ -169,7 +169,7 @@ checkout or extracted release bundle:
 
 ```bash
 ARCANE_PROJECT_DIR=/path/to/arcane-project
-ARCANE_COMPOSE_PROJECT=sidebyside-production
+ARCANE_COMPOSE_PROJECT=eimir-production
 
 python3 scripts/check_runtime_environment.py \
   --env-file "$ARCANE_PROJECT_DIR/.env" \
@@ -179,7 +179,7 @@ python3 scripts/check_runtime_environment.py \
 ```
 
 For Production it rejects unsafe application image identity such as `latest`,
-branch/local source tags, missing/mismatched `SBS_RELEASE_VERSION`, backend-role
+branch/local source tags, missing/mismatched `EIMIR_RELEASE_VERSION`, backend-role
 divergence, application `build:` fallback or disabled pulling.
 
 After changing runtime settings, use the released launcher `deploy`; it force-recreates
@@ -219,8 +219,8 @@ The reverse proxy is the only public TLS endpoint. On one public origin it route
 
 | Path | Internal target |
 |---|---|
-| `/api/` | SideBySide API on `API_PORT` |
-| all other paths | SideBySide Web on `WEB_PORT` |
+| `/api/` | eimir. API on `API_PORT` |
+| all other paths | eimir. Web on `WEB_PORT` |
 
 The `/api/` route goes directly to the API. In Production it must not first pass through
 Web Nginx because that would lose the trusted TLS proxy hop for `X-Forwarded-Proto`.
@@ -228,7 +228,7 @@ Web Nginx because that would lose the trusted TLS proxy hop for `X-Forwarded-Pro
 Same-host secure default:
 
 ```dotenv
-SBS_BIND_IP=127.0.0.1
+EIMIR_BIND_IP=127.0.0.1
 API_PORT=8000
 WEB_PORT=8080
 ```
@@ -242,15 +242,15 @@ From the reverse-proxy host/private network:
 
 ```bash
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
-curl --fail http://<docker-host>:<WEB_PORT>/.well-known/sidebyside-revision
-curl --fail --include https://sidebyside.example/api/v1/health/ready
+curl --fail http://<docker-host>:<WEB_PORT>/.well-known/eimir-revision
+curl --fail --include https://eimir.example/api/v1/health/ready
 ```
 
 For release acceptance prefer:
 
 ```bash
 python3 scripts/deployment_smoke.py \
-  --base-url https://sidebyside.example \
+  --base-url https://eimir.example \
   --expected-revision <release-source-sha>
 ```
 

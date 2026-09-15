@@ -222,7 +222,7 @@ export function MilestoneProductPage({
           className="create-heading"
         />
         <section
-          className="immersive-create-card sbs-motion-reveal"
+          className="immersive-create-card eimir-motion-reveal"
           aria-labelledby="milestone-form-heading"
         >
           <h2 id="milestone-form-heading" className="sr-only">

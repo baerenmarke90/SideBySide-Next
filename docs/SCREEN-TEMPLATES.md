@@ -1,4 +1,4 @@
-# SideBySide Screen Templates
+# eimir. Screen Templates
 
 **Status:** Binding product foundation  
 **Version:** 1.3  

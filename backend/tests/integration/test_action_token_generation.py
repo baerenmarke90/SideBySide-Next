@@ -25,10 +25,10 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import action_tokens
-from sidebyside.auth.tokens import hash_token
-from sidebyside.core.clock import now
-from sidebyside.identity.models import (
+from eimir.auth import action_tokens
+from eimir.auth.tokens import hash_token
+from eimir.core.clock import now
+from eimir.identity.models import (
     Account,
     AccountEmail,
     AccountRecoveryToken,
@@ -38,7 +38,7 @@ from sidebyside.identity.models import (
     MagicLinkToken,
     OneTimeTokenMixin,
 )
-from sidebyside.mail import MailMessage, MailSender
+from eimir.mail import MailMessage, MailSender
 from tests.conftest import auth, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -78,7 +78,7 @@ class FailingMailbox(Mailbox):
     """A transport that cannot deliver."""
 
     def send(self, message: MailMessage) -> None:
-        from sidebyside.mail import MailTransportError
+        from eimir.mail import MailTransportError
 
         raise MailTransportError("the mail server refused the message")
 
@@ -90,7 +90,7 @@ def cloud_client(production_client):  # type: ignore[no-untyped-def]
     Delivery is the only part that must not reach outside the test; the
     session, transaction, and lock behavior are exactly the production ones.
     """
-    from sidebyside.mail import sender
+    from eimir.mail import sender
 
     client, maker = production_client
     mailbox = Mailbox()
@@ -431,7 +431,7 @@ class TestDeliveryFailure:
         The response also stays identical, because a caller who could tell a
         delivery failure apart could tell an existing address apart with it.
         """
-        from sidebyside.mail import sender
+        from eimir.mail import sender
 
         client, maker = production_client
         working = Mailbox()
@@ -497,7 +497,7 @@ class TestPrivacyAndLimitsAreUnchanged:
 class TestOperatorRecoveryProof:
     def test_operator_proof_supersedes_an_open_recovery_link(self, cloud_client) -> None:  # type: ignore[no-untyped-def]
         """One authoritative generation, whichever path issued it."""
-        from sidebyside.administration import account_operations
+        from eimir.administration import account_operations
 
         client, maker, mailbox = cloud_client
         register(client)

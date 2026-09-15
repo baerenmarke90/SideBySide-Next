@@ -110,8 +110,8 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn("docker load --input", publish_step)
         self.assertIn("release-evidence/backend-runtime.image.tar", publish_step)
         self.assertIn("release-evidence/web-runtime.image.tar", publish_step)
-        self.assertIn("sidebyside-backend:evidence-${SOURCE_REVISION}", publish_step)
-        self.assertIn("sidebyside-web:evidence-${SOURCE_REVISION}", publish_step)
+        self.assertIn("eimir-backend:evidence-${SOURCE_REVISION}", publish_step)
+        self.assertIn("eimir-web:evidence-${SOURCE_REVISION}", publish_step)
         self.assertIn("ghcr.io/${owner}/eimir-backend", publish_step)
         self.assertIn("ghcr.io/${owner}/eimir-web", publish_step)
         self.assertIn('source_tag="sha-${SOURCE_REVISION}"', publish_step)
@@ -245,15 +245,15 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
 
     def test_signing_material_is_environment_only_and_ephemeral(self) -> None:
         required = (
-            "${{ secrets.SBS_RELEASE_KEYSTORE_BASE64 }}",
-            "${{ secrets.SBS_RELEASE_KEYSTORE_PASSWORD }}",
-            "${{ secrets.SBS_RELEASE_KEY_ALIAS }}",
-            "${{ secrets.SBS_RELEASE_KEY_PASSWORD }}",
+            "secrets.EIMIR_RELEASE_KEYSTORE_BASE64 || secrets.SBS_RELEASE_KEYSTORE_BASE64",
+            "secrets.EIMIR_RELEASE_KEYSTORE_PASSWORD || secrets.SBS_RELEASE_KEYSTORE_PASSWORD",
+            "secrets.EIMIR_RELEASE_KEY_ALIAS || secrets.SBS_RELEASE_KEY_ALIAS",
+            "secrets.EIMIR_RELEASE_KEY_PASSWORD || secrets.SBS_RELEASE_KEY_PASSWORD",
         )
         for marker in required:
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.workflow)
-        self.assertIn('keystore="$RUNNER_TEMP/sidebyside-upload.jks"', self.workflow)
+        self.assertIn('keystore="$RUNNER_TEMP/eimir-upload.jks"', self.workflow)
         self.assertIn("trap 'rm -f \"$keystore\"' EXIT", self.workflow)
         signing_step = self.workflow.split(
             "Build and verify final signed Android artifacts", 1
@@ -266,18 +266,18 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
         self.assertIn('jarsigner -verify "$aab"', self.workflow)
         self.assertIn('manifest application-id "$apk"', self.workflow)
         self.assertIn('"de.sidebyside.app"', self.workflow)
-        self.assertIn("android/sidebyside-release.apk", self.workflow)
-        self.assertIn("android/sidebyside-release.aab", self.workflow)
+        self.assertIn("android/eimir-release.apk", self.workflow)
+        self.assertIn("android/eimir-release.aab", self.workflow)
         self.assertIn('android["signing"] = "signed-release"', self.workflow)
-        self.assertIn("sidebyside-release-unsigned.apk", self.workflow)
-        self.assertIn("sidebyside-release-unsigned.aab", self.workflow)
+        self.assertIn("eimir-release-unsigned.apk", self.workflow)
+        self.assertIn("eimir-release-unsigned.aab", self.workflow)
 
     def test_final_signed_bytes_get_fresh_sbom_and_attestations(self) -> None:
         self.assertIn(
-            'syft scan "file:release-evidence/android/sidebyside-release.apk"', self.workflow
+            'syft scan "file:release-evidence/android/eimir-release.apk"', self.workflow
         )
         self.assertIn(
-            'syft scan "file:release-evidence/android/sidebyside-release.aab"', self.workflow
+            'syft scan "file:release-evidence/android/eimir-release.aab"', self.workflow
         )
         self.assertIn("bundle-prefix: android-apk-signed", self.workflow)
         self.assertIn("bundle-prefix: android-aab-signed", self.workflow)
@@ -286,8 +286,9 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
 
     def test_final_manifest_requires_signed_android_and_preserves_rollback_boundary(self) -> None:
         self.assertGreaterEqual(self.workflow.count("--require-signed-android"), 2)
-        self.assertIn("previous-known-good/sidebyside-release-manifest.json", self.workflow)
+        self.assertIn("previous-known-good/eimir-release-manifest.json", self.workflow)
         self.assertIn("#190 and #375", self.workflow)
+        self.assertIn("sidebyside-release-manifest.json", self.workflow)
 
     def test_external_actions_are_immutable_sha_pins(self) -> None:
         seen: dict[str, set[str]] = {}

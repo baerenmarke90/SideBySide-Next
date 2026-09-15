@@ -242,7 +242,7 @@ export function AppShell({
         <main
           key={location.pathname}
           id="main-content"
-          className="product-main sbs-motion-reveal"
+          className="product-main eimir-motion-reveal"
           tabIndex={-1}
         >
           {isGamesHub ? (

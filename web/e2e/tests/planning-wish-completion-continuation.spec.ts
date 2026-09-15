@@ -289,7 +289,7 @@ async function prepareCompletedScenario(
 ): Promise<void> {
   await page.setViewportSize(scenario.viewport);
   await page.addInitScript((theme) => {
-    window.localStorage.setItem('sidebyside.theme', theme);
+    window.localStorage.setItem('eimir.theme', theme);
   }, scenario.theme);
   await installMocks(page);
   await signIn(page);

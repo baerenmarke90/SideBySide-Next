@@ -145,20 +145,23 @@ class CloudComposeTextContractTest(unittest.TestCase):
             self.assertNotIn("scripts.demo_space", block)
 
     def test_media_store_defaults_to_local(self) -> None:
-        self.assertIn('SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"', self.compose)
+        self.assertIn(
+            'EIMIR_MEDIA_STORE: "${EIMIR_MEDIA_STORE:-${SBS_MEDIA_STORE:-local}}"',
+            self.compose,
+        )
         for service in ("cloud-api", "cloud-worker"):
             self.assertIn(
-                "cloud_media_data:/var/lib/sidebyside/media",
+                "cloud_media_data:/var/lib/eimir/media",
                 _service_block(self.compose, service),
             )
         self.assertRegex(self.compose, r"(?m)^  cloud_media_data:\s*$")
 
     def test_s3_variables_remain_optional(self) -> None:
         for var in (
-            "SBS_S3_ENDPOINT",
-            "SBS_S3_BUCKET",
-            "SBS_S3_ACCESS_KEY_ID",
-            "SBS_S3_SECRET_ACCESS_KEY",
+            "EIMIR_S3_ENDPOINT",
+            "EIMIR_S3_BUCKET",
+            "EIMIR_S3_ACCESS_KEY_ID",
+            "EIMIR_S3_SECRET_ACCESS_KEY",
         ):
             self.assertIn(f"${{{var}:-", self.compose)
 
@@ -168,11 +171,12 @@ class CloudComposeTextContractTest(unittest.TestCase):
         # real image still fails closed at pull time even though `docker
         # compose config` itself must keep succeeding for every profile.
         for var, image in (
-            ("SBS_BACKEND_IMAGE", "sidebyside-backend"),
-            ("SBS_WEB_IMAGE", "sidebyside-web"),
+            ("EIMIR_BACKEND_IMAGE", "eimir-backend"),
+            ("EIMIR_WEB_IMAGE", "eimir-web"),
         ):
             sentinel = f"invalid.invalid/{image}:configuration-required"
-            self.assertIn(f"${{{var}:-{sentinel}}}", self.compose)
+            legacy_var = var.replace("EIMIR_", "SBS_", 1)
+            self.assertIn(f"${{{var}:-${{{legacy_var}:-{sentinel}}}}}", self.compose)
             self.assertTrue(sentinel.split("/", 1)[0].endswith(".invalid"))
             with self.assertRaises(release_manifest.ManifestError):
                 release_manifest.require_digest_image_reference(sentinel, label=var)
@@ -182,7 +186,7 @@ class CloudComposeTextContractTest(unittest.TestCase):
 
     def test_deletion_journal_uses_a_dedicated_named_volume(self) -> None:
         self.assertIn(
-            "cloud_deletion_journal_data:/var/lib/sidebyside/deletion-journal",
+            "cloud_deletion_journal_data:/var/lib/eimir/deletion-journal",
             _service_block(self.compose, "cloud-api"),
         )
         self.assertRegex(self.compose, r"(?m)^  cloud_deletion_journal_data:\s*$")
@@ -217,8 +221,10 @@ class CloudComposeTextContractTest(unittest.TestCase):
         cloud_anchor = self.compose.split("x-cloud-runtime-environment:", 1)[1].split(
             "x-self-hosted-backend-build:", 1
         )[0]
-        self.assertIn("SBS_MAIL_TRANSPORT:-none", cloud_anchor)
-        self.assertNotIn("SBS_MAIL_TRANSPORT:-log", cloud_anchor)
+        self.assertIn(
+            "EIMIR_MAIL_TRANSPORT:-${SBS_MAIL_TRANSPORT:-none}", cloud_anchor
+        )
+        self.assertNotIn("EIMIR_MAIL_TRANSPORT:-log", cloud_anchor)
 
 
 class CloudRuntimeImageIdentityContractTest(unittest.TestCase):
@@ -235,23 +241,23 @@ class CloudRuntimeImageIdentityContractTest(unittest.TestCase):
         }
 
     def test_tag_only_references_are_rejected(self) -> None:
-        valid_backend = _digest_ref("sidebyside-backend", "1")
-        valid_web = _digest_ref("sidebyside-web", "2")
+        valid_backend = _digest_ref("eimir-backend", "1")
+        valid_web = _digest_ref("eimir-web", "2")
         for tag in ("latest", "main", "v1.0.0", "some-tag"):
             with self.subTest(tag=tag, role="backend"):
                 with self.assertRaises(release_manifest.ManifestError):
                     release_manifest.cloud_images_from_compose(
-                        self._config(f"registry.example/sidebyside-backend:{tag}", valid_web)
+                        self._config(f"registry.example/eimir-backend:{tag}", valid_web)
                     )
             with self.subTest(tag=tag, role="web"):
                 with self.assertRaises(release_manifest.ManifestError):
                     release_manifest.cloud_images_from_compose(
-                        self._config(valid_backend, f"registry.example/sidebyside-web:{tag}")
+                        self._config(valid_backend, f"registry.example/eimir-web:{tag}")
                     )
 
     def test_digest_references_are_accepted(self) -> None:
-        backend = _digest_ref("sidebyside-backend", "1")
-        web = _digest_ref("sidebyside-web", "2")
+        backend = _digest_ref("eimir-backend", "1")
+        web = _digest_ref("eimir-web", "2")
         self.assertEqual(
             release_manifest.cloud_images_from_compose(self._config(backend, web)),
             (backend, web),
@@ -259,27 +265,27 @@ class CloudRuntimeImageIdentityContractTest(unittest.TestCase):
 
     def test_backend_services_must_resolve_to_the_same_digest_identity(self) -> None:
         config = self._config(
-            _digest_ref("sidebyside-backend", "1"),
-            _digest_ref("sidebyside-web", "2"),
+            _digest_ref("eimir-backend", "1"),
+            _digest_ref("eimir-web", "2"),
         )
         config["services"]["cloud-worker"]["image"] = _digest_ref(
-            "sidebyside-backend", "3"
+            "eimir-backend", "3"
         )
         with self.assertRaises(release_manifest.ManifestError):
             release_manifest.cloud_images_from_compose(config)
 
     def test_missing_identity_and_source_build_fail_closed(self) -> None:
         config = self._config(
-            _digest_ref("sidebyside-backend", "1"),
-            _digest_ref("sidebyside-web", "2"),
+            _digest_ref("eimir-backend", "1"),
+            _digest_ref("eimir-web", "2"),
         )
         config["services"]["cloud-web"].pop("image")
         with self.assertRaises(release_manifest.ManifestError):
             release_manifest.cloud_images_from_compose(config)
 
         config = self._config(
-            _digest_ref("sidebyside-backend", "1"),
-            _digest_ref("sidebyside-web", "2"),
+            _digest_ref("eimir-backend", "1"),
+            _digest_ref("eimir-web", "2"),
         )
         config["services"]["cloud-api"]["build"] = {"context": "backend"}
         with self.assertRaises(release_manifest.ManifestError):
@@ -321,10 +327,10 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
 
     def _valid_overrides(self) -> dict[str, str]:
         return {
-            "SBS_BACKEND_IMAGE": _digest_ref("sidebyside-backend", "1"),
-            "SBS_WEB_IMAGE": _digest_ref("sidebyside-web", "2"),
-            "SBS_DATABASE_URL": "postgresql+psycopg://user:pass@db.private:5432/sidebyside",
-            "SBS_ACCOUNT_DELETION_INSTANCE_ID": "00000000-0000-0000-0000-000000000000",
+            "EIMIR_BACKEND_IMAGE": _digest_ref("eimir-backend", "1"),
+            "EIMIR_WEB_IMAGE": _digest_ref("eimir-web", "2"),
+            "EIMIR_DATABASE_URL": "postgresql+psycopg://user:pass@db.private:5432/eimir",
+            "EIMIR_ACCOUNT_DELETION_INSTANCE_ID": "00000000-0000-0000-0000-000000000000",
         }
 
     def test_resolved_recipe_has_only_cloud_process_services(self) -> None:
@@ -336,8 +342,8 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
 
     def test_resolved_services_reference_images_not_builds(self) -> None:
         config = self._resolve(self._valid_overrides())
-        expected_backend = _digest_ref("sidebyside-backend", "1")
-        expected_web = _digest_ref("sidebyside-web", "2")
+        expected_backend = _digest_ref("eimir-backend", "1")
+        expected_web = _digest_ref("eimir-web", "2")
         for name in ("cloud-api", "cloud-migrate", "cloud-worker"):
             self.assertEqual(config["services"][name]["image"], expected_backend)
             self.assertNotIn("build", config["services"][name])
@@ -351,7 +357,7 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
     def test_resolved_media_store_defaults_to_local_without_s3(self) -> None:
         config = self._resolve(self._valid_overrides())
         self.assertEqual(
-            config["services"]["cloud-api"]["environment"]["SBS_MEDIA_STORE"], "local"
+            config["services"]["cloud-api"]["environment"]["EIMIR_MEDIA_STORE"], "local"
         )
         api_volume_sources = [
             volume["source"] for volume in config["services"]["cloud-api"]["volumes"]
@@ -362,32 +368,32 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
         overrides = self._valid_overrides()
         overrides.update(
             {
-                "SBS_MEDIA_STORE": "s3",
-                "SBS_S3_ENDPOINT": "https://s3.example.com",
-                "SBS_S3_BUCKET": "sidebyside-prod",
-                "SBS_S3_ACCESS_KEY_ID": "test-access-key",
-                "SBS_S3_SECRET_ACCESS_KEY": "test-secret-key",
+                "EIMIR_MEDIA_STORE": "s3",
+                "EIMIR_S3_ENDPOINT": "https://s3.example.com",
+                "EIMIR_S3_BUCKET": "eimir-prod",
+                "EIMIR_S3_ACCESS_KEY_ID": "test-access-key",
+                "EIMIR_S3_SECRET_ACCESS_KEY": "test-secret-key",
             }
         )
         config = self._resolve(overrides)
         self.assertEqual(
-            config["services"]["cloud-api"]["environment"]["SBS_MEDIA_STORE"], "s3"
+            config["services"]["cloud-api"]["environment"]["EIMIR_MEDIA_STORE"], "s3"
         )
-        endpoint = config["services"]["cloud-api"]["environment"]["SBS_S3_ENDPOINT"]
+        endpoint = config["services"]["cloud-api"]["environment"]["EIMIR_S3_ENDPOINT"]
         self.assertEqual(endpoint, "https://s3.example.com")
         self.assertEqual(
-            config["services"]["cloud-web"]["environment"]["SBS_WEB_CSP_CONNECT_ORIGINS"],
+            config["services"]["cloud-web"]["environment"]["EIMIR_WEB_CSP_CONNECT_ORIGINS"],
             endpoint,
         )
 
     def test_missing_backend_image_cannot_fall_back_to_source_build(self) -> None:
         overrides = self._valid_overrides()
-        del overrides["SBS_BACKEND_IMAGE"]
+        del overrides["EIMIR_BACKEND_IMAGE"]
         config = self._resolve(overrides)
         for name in ("cloud-api", "cloud-migrate", "cloud-worker"):
             self.assertEqual(
                 config["services"][name]["image"],
-                "invalid.invalid/sidebyside-backend:configuration-required",
+                "invalid.invalid/eimir-backend:configuration-required",
             )
             self.assertNotIn("build", config["services"][name])
         with self.assertRaises(release_manifest.ManifestError):
@@ -411,15 +417,15 @@ class CloudEnvironmentTemplateTest(unittest.TestCase):
 
     def test_selects_canonical_cloud_profile(self) -> None:
         self.assertEqual(self.values["COMPOSE_PROFILES"], "cloud")
-        self.assertEqual(self.values["SBS_ENVIRONMENT"], "production")
-        self.assertEqual(self.values["SBS_DEPLOYMENT"], "cloud")
+        self.assertEqual(self.values["EIMIR_ENVIRONMENT"], "production")
+        self.assertEqual(self.values["EIMIR_DEPLOYMENT"], "cloud")
 
     def test_declares_local_media_store_as_supported_default(self) -> None:
-        self.assertEqual(self.values["SBS_MEDIA_STORE"], "local")
-        self.assertIn("# SBS_MEDIA_STORE=s3", self.text)
+        self.assertEqual(self.values["EIMIR_MEDIA_STORE"], "local")
+        self.assertIn("# EIMIR_MEDIA_STORE=s3", self.text)
 
     def test_image_placeholders_require_digest_identity(self) -> None:
-        for var in ("SBS_BACKEND_IMAGE", "SBS_WEB_IMAGE"):
+        for var in ("EIMIR_BACKEND_IMAGE", "EIMIR_WEB_IMAGE"):
             self.assertEqual(self.values[var], "")
         self.assertIn("@sha256:<digest>", self.text)
         self.assertIn("tag-only", self.text)
@@ -433,10 +439,10 @@ class CloudEnvironmentTemplateTest(unittest.TestCase):
     def test_reused_development_signing_key_is_rejected(self) -> None:
         development = isolation.parse_dotenv(DEV_ENV_EXAMPLE)
         production = dict(isolation.parse_dotenv(CLOUD_ENV_EXAMPLE))
-        production["SBS_CURSOR_SIGNING_KEY"] = development["SBS_CURSOR_SIGNING_KEY"]
+        production["EIMIR_CURSOR_SIGNING_KEY"] = development["EIMIR_CURSOR_SIGNING_KEY"]
         problems = isolation.check_isolation(development, production)
         self.assertIn(
-            "Development and Production must not reuse SBS_CURSOR_SIGNING_KEY", problems
+            "Development and Production must not reuse EIMIR_CURSOR_SIGNING_KEY", problems
         )
 
 

@@ -2,7 +2,7 @@
 
 **Brand:** `eimir.`  
 **Claim:** „Euer gemeinsamer Ort.“  
-**Target Pull Request:** baerenmarke90/SideBySide-Next#773  
+**Target Pull Request:** baerenmarke90/eimir#773
 **Reference Issues:** #639, #501, #492, #430, #455, #771  
 **Date:** 2026-09-07  
 
@@ -12,7 +12,7 @@
 
 Before locking the first `eimir.` signature surfaces into `main` via PR #773, this visual design checkpoint validates the actual brand and user experience identity. 
 
-The objective is to ensure that the transition from SideBySide Next into `eimir.` is **not a cosmetic tweak or superficial reskin**, but a profound evolution from a sterile CRUD/dashboard tool into a **warm, personal, unmistakable digital sanctuary for two people**.
+The objective is to ensure that the transition from eimir. into `eimir.` is **not a cosmetic tweak or superficial reskin**, but a profound evolution from a sterile CRUD/dashboard tool into a **warm, personal, unmistakable digital sanctuary for two people**.
 
 This checkpoint explores two meaningfully different visual directions across three signature surfaces:
 1. `/today` / **Wir** (the shared couple home)
