@@ -152,6 +152,8 @@ The heading preserves the intentional de-DE product label; engineering prose rem
 
 ## Issue preparation and completion tracking
 
+Prepared implementation owners: [F1 #957](https://github.com/baerenmarke90/eimir/issues/957) and [F2 #958](https://github.com/baerenmarke90/eimir/issues/958). Both link the immutable adopted-reference commit and require a fresh baseline/reuse/preflight check before runtime implementation; F2 depends on F1. Creation of these issues does not mark either slice complete.
+
 F1/F2 issues must link the committed reference revision, identify the bounded proof consumers, record current-main and open-PR checks, and include the preflight, reuse, business/freemium and cross-cutting reviews. Their later implementation must refresh those checks; planning is not a permanent reuse approval.
 
 #955 owns completion across all eleven slices. A documentation PR establishes the reference and prepares execution; it does not close the master issue or claim any runtime slice complete. Merge and product acceptance remain separate decisions.
