@@ -1,4 +1,4 @@
-# Information Architecture for SideBySide Next
+# Information Architecture for eimir.
 
 **Status:** Binding foundation for Web and App  
 **Version:** 1.5  
@@ -73,7 +73,7 @@ see section 6. Only the navigation surface is platform-specific.
 ## 3. Structure tree
 
 ```text
-SideBySide Next
+eimir.
 ├── Wir
 │   ├── next shared moment
 │   ├── personal and shared recommendations

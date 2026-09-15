@@ -1,4 +1,4 @@
-# SideBySide Next — Product Specification
+# eimir. — Product Specification
 
 Binding product requirement. This file is the implementation source; a predecessor application is not consulted for it.
 

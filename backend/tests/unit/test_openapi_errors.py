@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 PROBLEM_DETAILS_REF = "#/components/schemas/ProblemDetails"
 READINESS_REF = "#/components/schemas/Readiness"
@@ -16,7 +16,7 @@ EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     ("/api/v1/auth/sign-out", "post"): {401},
     ("/api/v1/auth/password", "post"): {401, 403, 422},
     ("/api/v1/auth/me", "get"): {401},
-    # 503: instances without a mail transport (SBS_MAIL_TRANSPORT=none) cannot
+    # 503: instances without a mail transport (EIMIR_MAIL_TRANSPORT=none) cannot
     # offer this operation. The error occurs while resolving the mail dependency.
     ("/api/v1/auth/magic-link/request", "post"): {422, 429, 503},
     ("/api/v1/auth/magic-link/consume", "post"): {422},
@@ -73,7 +73,7 @@ def test_request_validation_no_longer_references_fastapi_default_model() -> None
             assert _response_schema(responses["422"]) == {"$ref": PROBLEM_DETAILS_REF}
         else:
             # FastAPI also invents a generic 422 for plain string path parameters.
-            # SideBySide intentionally maps such IDs to 404; the impossible
+            # eimir. intentionally maps such IDs to 404; the impossible
             # framework default must not appear in the contract.
             assert "422" not in responses
 

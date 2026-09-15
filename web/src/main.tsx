@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { isDemoModeConfigured } from './client/demoMode';
+import { identityBuildVariable } from './client/identityEnvironment';
 import { DemoBanner } from './components/DemoBanner';
 import { i18n } from './i18n';
 import { initializeTheme } from './theme';
@@ -42,11 +43,11 @@ const queryClient = new QueryClient({
 
 const demoMode = isDemoModeConfigured();
 const demoResetTimerEnabled =
-  import.meta.env.VITE_SBS_DEMO_RESET_TIMER === 'true';
+  identityBuildVariable('DEMO_RESET_TIMER') === 'true';
 const demoResetInterval = String(
-  import.meta.env.VITE_SBS_DEMO_RESET_INTERVAL || '6h',
+  identityBuildVariable('DEMO_RESET_INTERVAL') || '6h',
 ).trim();
-const demoUrl = String(import.meta.env.VITE_SBS_DEMO_URL || '')
+const demoUrl = String(identityBuildVariable('DEMO_URL'))
   .trim()
   .replace(/\/+$/, '');
 

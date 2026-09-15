@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from sidebyside.administration import service as administration
-from sidebyside.config import get_settings
-from sidebyside.core.clock import now
-from sidebyside.identity import service as accounts
-from sidebyside.identity.models import AccountEmail
+from eimir.administration import service as administration
+from eimir.config import get_settings
+from eimir.core.clock import now
+from eimir.identity import service as accounts
+from eimir.identity.models import AccountEmail
 from tests.conftest import (
     TEST_BOOTSTRAP_TOKEN,
     auth,
@@ -26,7 +26,7 @@ GOOD_PASSWORD = "ein-ausreichend-langes-passwort"
 
 @pytest.fixture
 def server_admin_allowlist(monkeypatch):  # type: ignore[no-untyped-def]
-    monkeypatch.setenv("SBS_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
+    monkeypatch.setenv("EIMIR_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

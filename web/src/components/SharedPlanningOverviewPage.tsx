@@ -189,7 +189,7 @@ function PlanenPanel({
       role="tabpanel"
       aria-labelledby={labelledBy}
       hidden={hidden}
-      className="planen-panel sbs-motion-reveal"
+      className="planen-panel eimir-motion-reveal"
     >
       {children}
     </div>

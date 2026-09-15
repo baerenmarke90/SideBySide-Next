@@ -72,7 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           cp deploy/self-hosted-release.env.example .env-release-contract
-          sed -i 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=.*/SBS_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-release-contract
+          sed -i 's/^EIMIR_ACCOUNT_DELETION_INSTANCE_ID=.*/EIMIR_ACCOUNT_DELETION_INSTANCE_ID=11111111-2222-4333-8444-555555555555/' .env-release-contract
           python3 - <<'PY'
           import json
           import os
@@ -86,7 +86,7 @@ jobs:
               key, value = line.split("=", 1)
               values[key.strip()] = value.strip()
 
-          version = values["SBS_RELEASE_VERSION"]
+          version = values["EIMIR_RELEASE_VERSION"]
 
           def image_record(role: str, digit: str, roles: list[str]) -> dict[str, object]:
               digest = "sha256:" + digit * 64
@@ -98,7 +98,7 @@ jobs:
 
           identity = {
               "schemaVersion": 1,
-              "kind": "sidebyside-self-hosted-image-identity",
+              "kind": "eimir-self-hosted-image-identity",
               "product": {"version": version, "tag": f"v{version}"},
               "sourceRevision": os.environ["GITHUB_SHA"],
               "images": {
@@ -125,8 +125,8 @@ jobs:
       - name: Release-version mismatch cannot reach Production startup
         run: |
           set -euo pipefail
-          if SBS_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.1 \
-             SBS_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.1 \
+          if EIMIR_SELF_HOSTED_BACKEND_IMAGE=ghcr.io/baerenmarke90/eimir-backend:v0.1.1 \
+             EIMIR_SELF_HOSTED_WEB_IMAGE=ghcr.io/baerenmarke90/eimir-web:v0.1.1 \
              python3 scripts/self_hosted_release.py \
                --env-file .env-release-contract \
                --image-identity .release-contract-image-identity.json \
@@ -138,7 +138,7 @@ jobs:
       - name: Process environment cannot downgrade the release boundary
         run: |
           set -euo pipefail
-          if SBS_ENVIRONMENT=development \
+          if EIMIR_ENVIRONMENT=development \
              python3 scripts/self_hosted_release.py \
                --env-file .env-release-contract \
                --image-identity .release-contract-image-identity.json \

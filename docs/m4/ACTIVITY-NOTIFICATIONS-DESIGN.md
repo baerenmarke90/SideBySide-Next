@@ -391,7 +391,7 @@ Default push payloads must not contain:
 The default lock-screen-safe presentation is generic, for example a client-localized equivalent of:
 
 ```text
-SideBySide
+eimir.
 There is something new for you.
 ```
 

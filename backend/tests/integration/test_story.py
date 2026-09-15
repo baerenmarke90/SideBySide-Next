@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from sidebyside.relationship import service as relationship_service
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

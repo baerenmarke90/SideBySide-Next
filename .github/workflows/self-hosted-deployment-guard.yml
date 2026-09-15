@@ -84,8 +84,8 @@ jobs:
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-for-the-test-run/' .env
           sed -i 's/^API_PORT=.*/API_PORT=18081/' .env
           sed -i 's/^WEB_PORT=.*/WEB_PORT=18082/' .env
-          sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=http://localhost:18082|' .env
-          printf '%s\n' 'COMPOSE_PROJECT_NAME=sidebyside-verified-ci' >> .env
+          sed -i 's|^EIMIR_PUBLIC_BASE_URL=.*|EIMIR_PUBLIC_BASE_URL=http://localhost:18082|' .env
+          printf '%s\n' 'COMPOSE_PROJECT_NAME=eimir-verified-ci' >> .env
 
           docker compose --profile self-hosted --env-file .env config --quiet
           docker compose --profile self-hosted \
@@ -116,8 +116,8 @@ jobs:
             (.services.worker.depends_on.migrate.condition == "service_completed_successfully")
           ' /tmp/compose-self-hosted-release.json
 
-          SBS_SELF_HOSTED_BACKEND_IMAGE='ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
-          SBS_SELF_HOSTED_WEB_IMAGE='ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
+          EIMIR_SELF_HOSTED_BACKEND_IMAGE='ghcr.io/baerenmarke90/eimir-backend:v0.1.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+          EIMIR_SELF_HOSTED_WEB_IMAGE='ghcr.io/baerenmarke90/eimir-web:v0.1.0@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
           docker compose --profile self-hosted \
             --env-file deploy/self-hosted-release.env.example config --format json \
             > /tmp/compose-self-hosted-digest.json
@@ -152,20 +152,20 @@ jobs:
           fi
 
           cat >/tmp/production.env <<'EOF'
-          COMPOSE_PROJECT_NAME=sidebyside-production-ci
+          COMPOSE_PROJECT_NAME=eimir-production-ci
           COMPOSE_PROFILES=self-hosted
-          SBS_ENVIRONMENT=production
-          SBS_PUBLIC_BASE_URL=https://production.example.invalid
+          EIMIR_ENVIRONMENT=production
+          EIMIR_PUBLIC_BASE_URL=https://production.example.invalid
           POSTGRES_PASSWORD=production-only-ci-secret
-          SBS_CURSOR_SIGNING_KEY=production-only-ci-cursor-signing-key-1234567890
-          SBS_MEDIA_STORE=local
+          EIMIR_CURSOR_SIGNING_KEY=production-only-ci-cursor-signing-key-1234567890
+          EIMIR_MEDIA_STORE=local
           EOF
 
           python3 scripts/check_environment_isolation.py \
             deploy/persistent-development.env.example /tmp/production.env
 
           cp /tmp/production.env /tmp/unsafe-production.env
-          printf '%s\n' 'SBS_CURSOR_SIGNING_KEY=replace-with-development-only-signing-key-at-least-32-chars' \
+          printf '%s\n' 'EIMIR_CURSOR_SIGNING_KEY=replace-with-development-only-signing-key-at-least-32-chars' \
             >> /tmp/unsafe-production.env
           if python3 scripts/check_environment_isolation.py \
             deploy/persistent-development.env.example /tmp/unsafe-production.env; then
@@ -187,8 +187,8 @@ jobs:
             --expected-revision "$revision" \
             config --format json > /tmp/compose-verified.json
 
-          jq -e --arg backend "sidebyside-backend:verified-${short_revision}" \
-                --arg web "sidebyside-web:verified-${short_revision}" '
+          jq -e --arg backend "eimir-backend:verified-${short_revision}" \
+                --arg web "eimir-web:verified-${short_revision}" '
             (.services | has("demo-init") | not) and
             (.services.api.image == $backend) and
             (.services.worker.image == $backend) and
@@ -218,13 +218,13 @@ jobs:
           cleanup_hidden_compose_change
           trap - EXIT
 
-          trap 'rm -f .sidebyside-dirty-check' EXIT
-          touch .sidebyside-dirty-check
+          trap 'rm -f .eimir-dirty-check' EXIT
+          touch .eimir-dirty-check
           if python3 scripts/compose_checked.py --print-revision; then
             echo "Verified Compose accepted a dirty checkout."
             exit 1
           fi
-          rm -f .sidebyside-dirty-check
+          rm -f .eimir-dirty-check
           trap - EXIT
 
           wrong_revision=0000000000000000000000000000000000000000
@@ -239,22 +239,22 @@ jobs:
           set -euo pipefail
           cp .env .env-arcane
           cat >>.env-arcane <<'EOF'
-          SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
-          SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
-          SBS_BUILD_REVISION=main
-          SBS_SELF_HOSTED_BACKEND_IMAGE=sidebyside-backend:source-arcane
-          SBS_SELF_HOSTED_WEB_IMAGE=sidebyside-web:source-arcane
-          SBS_SELF_HOSTED_PULL_POLICY=never
+          EIMIR_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:backend
+          EIMIR_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/eimir.git#main:web
+          EIMIR_BUILD_REVISION=main
+          EIMIR_SELF_HOSTED_BACKEND_IMAGE=eimir-backend:source-arcane
+          EIMIR_SELF_HOSTED_WEB_IMAGE=eimir-web:source-arcane
+          EIMIR_SELF_HOSTED_PULL_POLICY=never
           EOF
 
           python3 scripts/build_self_hosted_source.py --env-file .env-arcane --print-plan \
             > /tmp/source-build-plan.json
           jq -e '
             (.revision == "main") and
-            (.backendContext | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#main:backend")) and
-            (.webContext | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#main:web")) and
-            (.backendImage == "sidebyside-backend:source-arcane") and
-            (.webImage == "sidebyside-web:source-arcane")
+            (.backendContext | startswith("https://github.com/baerenmarke90/eimir.git#main:backend")) and
+            (.webContext | startswith("https://github.com/baerenmarke90/eimir.git#main:web")) and
+            (.backendImage == "eimir-backend:source-arcane") and
+            (.webImage == "eimir-web:source-arcane")
           ' /tmp/source-build-plan.json
 
       - name: Bind address is safe and explicitly configurable
@@ -268,7 +268,7 @@ jobs:
           ' /tmp/compose-default.json
 
           cp .env .env-bind
-          sed -i 's/^SBS_BIND_IP=.*/SBS_BIND_IP=127.0.0.2/' .env-bind
+          sed -i 's/^EIMIR_BIND_IP=.*/EIMIR_BIND_IP=127.0.0.2/' .env-bind
           docker compose --profile self-hosted --env-file .env-bind config --format json > /tmp/compose-bind.json
           jq -e '
             .services.api.ports[0].host_ip == "127.0.0.2" and
@@ -285,11 +285,11 @@ jobs:
 
           python3 -m http.server 18080 --bind 0.0.0.0 >/tmp/occupied-api-port.log 2>&1 &
           blocker_pid=$!
-          trap 'kill "$blocker_pid" 2>/dev/null || true; docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
+          trap 'kill "$blocker_pid" 2>/dev/null || true; docker compose -p eimir-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
           sleep 1
 
           set +e
-          output=$(timeout 300 docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict up -d api 2>&1)
+          output=$(timeout 300 docker compose -p eimir-port-conflict --profile self-hosted --env-file .env-conflict up -d api 2>&1)
           status=$?
           set -e
 
@@ -299,7 +299,7 @@ jobs:
             exit 1
           fi
 
-          api_id=$(docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict ps -aq api)
+          api_id=$(docker compose -p eimir-port-conflict --profile self-hosted --env-file .env-conflict ps -aq api)
           if [ -n "$api_id" ]; then
             state=$(docker inspect "$api_id" --format '{{.State.Status}}')
             networks=$(docker inspect "$api_id" --format '{{len .NetworkSettings.Networks}}')
@@ -311,7 +311,7 @@ jobs:
           fi
 
           kill "$blocker_pid" 2>/dev/null || true
-          docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans
+          docker compose -p eimir-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans
           trap - EXIT
 
       - name: Start source-built Self-Hosted test stack
@@ -361,12 +361,12 @@ jobs:
           response=$(curl --fail --silent --show-error -D "$headers" http://127.0.0.1:18081/api/v1/health/ready)
           printf '%s\n' "$response"
           printf '%s\n' "$response" | jq -e '.status == "ok" and .database == "ok"'
-          tr -d '\r' < "$headers" | grep -Fqi 'X-SideBySide-Revision: unverified-local-checkout'
+          tr -d '\r' < "$headers" | grep -Fqi 'X-Eimir-Revision: unverified-local-checkout'
 
       - name: Web proof of concept through published port
         run: |
           curl --fail --silent --show-error http://127.0.0.1:18082/healthz
-          test "$(curl --fail --silent --show-error http://127.0.0.1:18082/.well-known/sidebyside-revision)" = "unverified-local-checkout"
+          test "$(curl --fail --silent --show-error http://127.0.0.1:18082/.well-known/eimir-revision)" = "unverified-local-checkout"
           curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>eimir."
 
       - name: Deployment smoke helper against running stack

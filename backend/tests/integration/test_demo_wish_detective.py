@@ -8,12 +8,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.config import Environment
-from sidebyside.demo import create_demo_space, reset_demo_space
-from sidebyside.demo.wish_detective import MIN_OPEN_WISHES_PER_PARTNER
-from sidebyside.entitlements.models import Capability, EntitlementTier
-from sidebyside.entitlements.service import get_effective_space_entitlement
-from sidebyside.wishes.models import Wish, WishStatus
+from eimir.config import Environment
+from eimir.demo import create_demo_space, reset_demo_space
+from eimir.demo.wish_detective import MIN_OPEN_WISHES_PER_PARTNER
+from eimir.entitlements.models import Capability, EntitlementTier
+from eimir.entitlements.service import get_effective_space_entitlement
+from eimir.wishes.models import Wish, WishStatus
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

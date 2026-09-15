@@ -31,7 +31,7 @@ expect.extend({
 });
 
 describe('IdentityEntry', () => {
-  const apiBaseUrl = 'https://sidebyside.invalid';
+  const apiBaseUrl = 'https://eimir.invalid';
 
   beforeEach(() => {
     vi.restoreAllMocks();

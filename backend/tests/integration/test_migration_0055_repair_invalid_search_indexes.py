@@ -11,7 +11,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection, Engine
 
-from sidebyside.search.index_migration import SEARCH_INDEXES
+from eimir.search.index_migration import SEARCH_INDEXES
 from tests.conftest import requires_database
 
 INVALID_INDEX_NAME = "ix_memories_search_fts"
@@ -63,9 +63,9 @@ def _required_index_state(connection: Connection, index_name: str) -> IndexState
 def test_0055_repairs_an_existing_database_after_0028(
     engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    test_db_url = os.environ.get("SBS_TEST_DATABASE_URL")
+    test_db_url = os.environ.get("EIMIR_TEST_DATABASE_URL")
     if test_db_url:
-        monkeypatch.setenv("SBS_DATABASE_URL", test_db_url)
+        monkeypatch.setenv("EIMIR_DATABASE_URL", test_db_url)
     config = alembic.config.Config("alembic.ini")
 
     # Begin from the real current migration head, then step back only across

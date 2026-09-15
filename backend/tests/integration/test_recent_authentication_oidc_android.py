@@ -6,9 +6,9 @@ import httpx
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside import config
-from sidebyside.auth import oidc, recent_auth
-from sidebyside.config import MailTransport, OidcConnection, Settings
+from eimir import config
+from eimir.auth import oidc, recent_auth
+from eimir.config import MailTransport, OidcConnection, Settings
 from tests.conftest import requires_database
 from tests.integration import test_recent_authentication_oidc as base
 

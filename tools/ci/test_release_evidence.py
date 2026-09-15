@@ -24,8 +24,8 @@ EXTERNAL_ACTION_PINS = {
 REQUIRED_SUBJECTS = {
     "release-evidence/backend-runtime.image.tar",
     "release-evidence/web-runtime.image.tar",
-    "release-evidence/android/sidebyside-release-unsigned.apk",
-    "release-evidence/android/sidebyside-release-unsigned.aab",
+    "release-evidence/android/eimir-release-unsigned.apk",
+    "release-evidence/android/eimir-release-unsigned.aab",
 }
 
 REQUIRED_SBOMS = {
@@ -63,10 +63,10 @@ class ReleaseEvidenceContractTest(unittest.TestCase):
     def test_workflow_does_not_consume_signing_or_repository_secrets(self) -> None:
         forbidden = (
             "${{ secrets.",
-            "SBS_RELEASE_KEYSTORE",
-            "SBS_RELEASE_KEYSTORE_PASSWORD",
-            "SBS_RELEASE_KEY_ALIAS",
-            "SBS_RELEASE_KEY_PASSWORD",
+            "EIMIR_RELEASE_KEYSTORE",
+            "EIMIR_RELEASE_KEYSTORE_PASSWORD",
+            "EIMIR_RELEASE_KEY_ALIAS",
+            "EIMIR_RELEASE_KEY_PASSWORD",
         )
         for marker in forbidden:
             with self.subTest(marker=marker):

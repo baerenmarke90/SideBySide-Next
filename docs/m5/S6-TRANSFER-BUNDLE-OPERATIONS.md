@@ -6,7 +6,7 @@
 - **Decision source:** `docs/m5/S6-CACHE-PORTABILITY-DECISIONS.md`
 
 This document describes the operational behavior of the versioned Transfer
-Bundle runtime. It applies equally to SideBySide Cloud and Self-Hosted. The
+Bundle runtime. It applies equally to eimir. Cloud and Self-Hosted. The
 runtime has no hidden managed-service dependency: it reuses the configured
 PostgreSQL Job/Worker queue and the configured private `MediaStore`.
 
@@ -45,7 +45,7 @@ an email claim and local accounts without a verified address remain portable.
 
 New v1 exports also record `exportedBySourceId` in `manifest.json`. During
 import that source member must map to the currently authenticated target member.
-For a normal SideBySide couple Space, which is limited to at most two active
+For a normal eimir. couple Space, which is limited to at most two active
 members, one remaining unmapped source member can then be mapped uniquely to
 one remaining active target member. Verified-email matches are still used as
 additional deterministic evidence and conflicting hints fail closed with a

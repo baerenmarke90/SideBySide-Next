@@ -24,9 +24,9 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.core.ids import new_id
-from sidebyside.relationship import service
-from sidebyside.relationship.models import SpaceProfile
+from eimir.core.ids import new_id
+from eimir.relationship import service
+from eimir.relationship.models import SpaceProfile
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -487,7 +487,7 @@ def freeze(monkeypatch, instant: datetime) -> None:
     therefore leaves access-token validity untouched; otherwise these tests
     would fail with an unrelated 401.
     """
-    from sidebyside.core import clock
+    from eimir.core import clock
 
     monkeypatch.setattr(clock, "now", lambda: instant)
 

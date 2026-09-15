@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sidebyside.main import create_app
+from eimir.main import create_app
 
 TIMELINE = "/api/v1/spaces/{spaceId}/timeline"
 CONTRACT = Path(__file__).parents[3] / "docs" / "m2" / "API-CONTRACT.json"

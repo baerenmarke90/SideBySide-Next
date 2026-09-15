@@ -167,7 +167,7 @@ Media format/key changes require the same compatibility review as schema changes
 
 When S3-compatible storage is used:
 
-- SideBySide owns correct MediaStore keys, authorization and database/media
+- eimir. owns correct MediaStore keys, authorization and database/media
   consistency expectations;
 - the operator/provider owns bucket durability/versioning/backup/export according
   to the supported deployment contract;

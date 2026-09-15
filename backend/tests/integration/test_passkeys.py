@@ -14,8 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import passkeys
-from sidebyside.identity.models import DeviceSession, WebAuthnChallenge, WebAuthnCredential
+from eimir.auth import passkeys
+from eimir.identity.models import DeviceSession, WebAuthnChallenge, WebAuthnCredential
 from tests.conftest import auth, make_account, requires_database, sign_in
 from tests.support.authenticator import VirtualAuthenticator
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sidebyside.authorization.retention import owner_only_cleanup_table_names
+from eimir.authorization.retention import owner_only_cleanup_table_names
 
 
 def test_owner_only_cleanup_covers_private_domains_but_defers_attachments() -> None:

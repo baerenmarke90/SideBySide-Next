@@ -30,15 +30,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.administration import service as administration
-from sidebyside.auth import action_tokens, cloud
-from sidebyside.auth.tokens import hash_token
-from sidebyside.config import Deployment, MailTransport, get_settings
-from sidebyside.core.clock import now
-from sidebyside.identity.models import Account, AccountEmail, SignupProof
-from sidebyside.mail import MailMessage, MailSender
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus
+from eimir.administration import service as administration
+from eimir.auth import action_tokens, cloud
+from eimir.auth.tokens import hash_token
+from eimir.config import Deployment, MailTransport, get_settings
+from eimir.core.clock import now
+from eimir.identity.models import Account, AccountEmail, SignupProof
+from eimir.mail import MailMessage, MailSender
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus
 from tests.conftest import TEST_BOOTSTRAP_TOKEN, auth, make_account, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -83,15 +83,15 @@ def use_deployment(monkeypatch: pytest.MonkeyPatch, **update: Any) -> None:
         **update,
     }
     settings = get_settings().model_copy(update=values)
-    monkeypatch.setattr("sidebyside.config.get_settings", lambda: settings)
+    monkeypatch.setattr("eimir.config.get_settings", lambda: settings)
     link_settings = settings.model_copy(update={"public_base_url": PUBLIC_BASE_URL})
     monkeypatch.setattr(cloud, "get_settings", lambda: link_settings)
 
 
 def app_client(session: Session, mailbox: Mailbox) -> TestClient:
-    from sidebyside.db.session import get_session
-    from sidebyside.mail import sender
-    from sidebyside.main import create_app
+    from eimir.db.session import get_session
+    from eimir.mail import sender
+    from eimir.main import create_app
 
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
@@ -120,7 +120,7 @@ def self_hosted_client(
 
 @pytest.fixture
 def production_cloud(production_client, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
-    from sidebyside.mail import sender
+    from eimir.mail import sender
 
     client, maker = production_client
     use_deployment(monkeypatch)
@@ -728,7 +728,7 @@ class TestInvitedPartner:
     def test_revoked_expired_and_used_invitations_stay_invalid(
         self, cloud_client, session, mailbox
     ) -> None:  # type: ignore[no-untyped-def]
-        from sidebyside.relationship.models import Invitation
+        from eimir.relationship.models import Invitation
 
         founder = signed_up(cloud_client, mailbox, ANNA)
         founder_headers = auth(founder["tokens"]["accessToken"])
@@ -916,7 +916,7 @@ class TestLinkHostAndLogs:
     def test_proofs_and_addresses_do_not_reach_application_logs(
         self, cloud_client, mailbox, caplog
     ) -> None:  # type: ignore[no-untyped-def]
-        caplog.set_level(logging.DEBUG, logger="sidebyside")
+        caplog.set_level(logging.DEBUG, logger="eimir")
         request_signup(cloud_client, ANNA)
         token = mailbox.token_for(ANNA)
         assert consume(cloud_client, token).status_code == 201

@@ -83,8 +83,8 @@ The Pre-Exposure/repository hardening items that were previously listed as open 
 
 Two operational commitments resulting from this are binding and documented in [ADR 0002](decisions/0002-self-hosted-first-start-mode.md):
 
-- The provided Compose stack starts as a **clearly marked local test mode**. Real operation requires `SBS_ENVIRONMENT=production` in `.env`; the application reports its operating mode on every startup.
-- SMTP access is **not a startup prerequisite**. `SBS_MAIL_TRANSPORT=none` is allowed in production; mail-dependent sign-in paths then return `503 MAIL_TRANSPORT_UNAVAILABLE`, while sign-in remains available through password, Passkey, and OIDC. `log` remains forbidden in production.
+- The provided Compose stack starts as a **clearly marked local test mode**. Real operation requires `EIMIR_ENVIRONMENT=production` in `.env`; the application reports its operating mode on every startup.
+- SMTP access is **not a startup prerequisite**. `EIMIR_MAIL_TRANSPORT=none` is allowed in production; mail-dependent sign-in paths then return `503 MAIL_TRANSPORT_UNAVAILABLE`, while sign-in remains available through password, Passkey, and OIDC. `log` remains forbidden in production.
 
 ## M2-S0 — Readiness & contract decisions
 
@@ -113,7 +113,7 @@ M2-D22 (owner view) is no longer in that category: the question shapes the Story
 - [x] **#87 — S3-compatible MediaStore adapter** (PR #100): presigned Upload and Read URL with the TTLs from M2-D13, tested against the same contract test as the local adapter.
 - [x] **#113 — Story Read Model and `/timeline`** (PR #114): derived Timeline over Memory, Milestone, and shared HeartMoments only; sort key and Keyset Cursor per M2-D08, private HeartMoments never in the result — not even for their owner (M2-D22). No Story table.
 - [x] **S8 — thin Web/Android reference flows:** Web and Android deliver the critical Memory/Media/Story reference path.
-- [x] **#144 — real G2 client E2E evidence:** Web and Android run against the same real SideBySide stack of API, Worker, PostgreSQL, and LocalMediaStore.
+- [x] **#144 — real G2 client E2E evidence:** Web and Android run against the same real eimir. stack of API, Worker, PostgreSQL, and LocalMediaStore.
 - [x] **#147 / PR #170 — final G2 Gate Review:** **G2: PASSED**.
 
 ### Future backlog outside M2/G2
@@ -164,7 +164,7 @@ The S3 adapter (#87) ran in parallel and is delivered. Video (#88) is not part o
 
 **Status: PASSED.** The binding decision source is the [final G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
-Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack.
+Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same eimir. stack.
 
 Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Dedicated Performance evidence is deprioritized the same way, for the same date: the existing per-PR [Cross-Cutting Quality](CROSS-CUTTING-QUALITY.md) review already covers query count, payload size, and resource impact, and a separate evidence artifact would not meaningfully add to that. Full client parity remained part of M5/G4 and was produced on 2026-09-02 as the pragmatic Web/Android feature audit recorded on #295; its six findings (#603-#608) were closed rather than accepted, and the [G4 Gate Review](reviews/2026-09-03-g4-gate-review.md) records the result.
 

@@ -17,7 +17,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+
+try:
+    from scripts._identity_environment import canonicalize, process_value
+except ModuleNotFoundError:  # Direct ``python scripts/...`` execution.
+    from _identity_environment import canonicalize, process_value
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE_FILE = ROOT / "compose.yaml"
@@ -89,21 +93,21 @@ def read_dotenv(path: Path) -> dict[str, str]:
             raise ReleaseOperationError(
                 f"invalid dotenv value for {key} on line {lineno}"
             ) from exc
-    return values
+    return canonicalize(values)
 
 
 def require_release_environment(values: dict[str, str]) -> None:
     """Require one exact Production mode across dotenv and process environment."""
 
-    if values.get("SBS_ENVIRONMENT", "").strip() != "production":
+    if values.get("EIMIR_ENVIRONMENT", "").strip() != "production":
         raise ReleaseOperationError(
-            "released Self-Hosted requires exact SBS_ENVIRONMENT=production in the env file"
+            "released Self-Hosted requires exact EIMIR_ENVIRONMENT=production in the env file"
         )
 
-    process_environment = os.environ.get("SBS_ENVIRONMENT")
+    process_environment = process_value("EIMIR_ENVIRONMENT")
     if process_environment is not None and process_environment.strip() != "production":
         raise ReleaseOperationError(
-            "process SBS_ENVIRONMENT must be unset or exactly production for released Self-Hosted"
+            "process EIMIR_ENVIRONMENT must be unset or exactly production for released Self-Hosted"
         )
 
 
@@ -147,7 +151,7 @@ def load_release_identity(path: Path, values: dict[str, str]) -> tuple[str, str]
         raise ReleaseOperationError("release image identity must be a JSON object")
     if (
         identity.get("schemaVersion") != 1
-        or identity.get("kind") != "sidebyside-self-hosted-image-identity"
+        or identity.get("kind") != "eimir-self-hosted-image-identity"
     ):
         raise ReleaseOperationError("unsupported Self-Hosted release image identity schema")
 
@@ -157,12 +161,12 @@ def load_release_identity(path: Path, values: dict[str, str]) -> tuple[str, str]
     version = product.get("version")
     if not isinstance(version, str) or product.get("tag") != f"v{version}":
         raise ReleaseOperationError("release image identity product version/tag is invalid")
-    declared_version = values.get("SBS_RELEASE_VERSION", "").strip()
+    declared_version = values.get("EIMIR_RELEASE_VERSION", "").strip()
     if not declared_version:
-        raise ReleaseOperationError("released Self-Hosted requires SBS_RELEASE_VERSION")
+        raise ReleaseOperationError("released Self-Hosted requires EIMIR_RELEASE_VERSION")
     if version != declared_version:
         raise ReleaseOperationError(
-            "release image identity does not match SBS_RELEASE_VERSION"
+            "release image identity does not match EIMIR_RELEASE_VERSION"
         )
 
     source_revision = identity.get("sourceRevision")
@@ -189,8 +193,8 @@ def reject_conflicting_image_overrides(
     values: dict[str, str], *, backend: str, web: str
 ) -> None:
     expected = {
-        "SBS_SELF_HOSTED_BACKEND_IMAGE": backend,
-        "SBS_SELF_HOSTED_WEB_IMAGE": web,
+        "EIMIR_SELF_HOSTED_BACKEND_IMAGE": backend,
+        "EIMIR_SELF_HOSTED_WEB_IMAGE": web,
     }
     for key, published in expected.items():
         dotenv_value = values.get(key, "").strip()
@@ -198,21 +202,21 @@ def reject_conflicting_image_overrides(
             raise ReleaseOperationError(
                 f"{key} differs from the published release image identity"
             )
-        process_value = os.environ.get(key)
-        if process_value is not None and process_value.strip() != published:
+        process_setting = process_value(key)
+        if process_setting is not None and process_setting.strip() != published:
             raise ReleaseOperationError(
                 f"process {key} differs from the published release image identity"
             )
 
-    pull_policy = values.get("SBS_SELF_HOSTED_PULL_POLICY", "").strip()
+    pull_policy = values.get("EIMIR_SELF_HOSTED_PULL_POLICY", "").strip()
     if pull_policy and pull_policy != "always":
         raise ReleaseOperationError(
-            "SBS_SELF_HOSTED_PULL_POLICY must be always for released Self-Hosted"
+            "EIMIR_SELF_HOSTED_PULL_POLICY must be always for released Self-Hosted"
         )
-    process_pull_policy = os.environ.get("SBS_SELF_HOSTED_PULL_POLICY")
+    process_pull_policy = process_value("EIMIR_SELF_HOSTED_PULL_POLICY")
     if process_pull_policy is not None and process_pull_policy.strip() != "always":
         raise ReleaseOperationError(
-            "process SBS_SELF_HOSTED_PULL_POLICY must be always for released Self-Hosted"
+            "process EIMIR_SELF_HOSTED_PULL_POLICY must be always for released Self-Hosted"
         )
 
 
@@ -222,10 +226,10 @@ def compose_environment(*, backend: str, web: str) -> dict[str, str]:
     environment = dict(os.environ)
     environment.pop("COMPOSE_FILE", None)
     environment["COMPOSE_PROFILES"] = "self-hosted"
-    environment["SBS_ENVIRONMENT"] = "production"
-    environment["SBS_SELF_HOSTED_BACKEND_IMAGE"] = backend
-    environment["SBS_SELF_HOSTED_WEB_IMAGE"] = web
-    environment["SBS_SELF_HOSTED_PULL_POLICY"] = "always"
+    environment["EIMIR_ENVIRONMENT"] = "production"
+    environment["EIMIR_SELF_HOSTED_BACKEND_IMAGE"] = backend
+    environment["EIMIR_SELF_HOSTED_WEB_IMAGE"] = web
+    environment["EIMIR_SELF_HOSTED_PULL_POLICY"] = "always"
     return environment
 
 
@@ -322,7 +326,7 @@ def bootstrap_deletion_authority(
             "api",
             "python",
             "-m",
-            "sidebyside.identity.deletion_bootstrap",
+            "eimir.identity.deletion_bootstrap",
             "--confirm-new-installation",
         ],
         action="Self-Hosted deletion-authority bootstrap",

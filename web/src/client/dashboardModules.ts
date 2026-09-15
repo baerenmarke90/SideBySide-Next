@@ -16,7 +16,7 @@
  * `TodayPage.tsx` for how hiding it preserves an accessible heading.
  *
  * This list must stay in sync with the backend catalog in
- * `backend/src/sidebyside/dashboard/preferences.py`. Both are tested against
+ * `backend/src/eimir/dashboard/preferences.py`. Both are tested against
  * the single ordered key list in `dashboardModuleCatalog.contract.json`
  * (this directory) so the two can't silently drift - see
  * `dashboardModules.test.ts`.

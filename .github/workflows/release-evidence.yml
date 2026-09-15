@@ -54,11 +54,11 @@ jobs:
       - name: Build backend runtime image archive
         run: |
           set -euo pipefail
-          image="sidebyside-backend:evidence-$GITHUB_SHA"
+          image="eimir-backend:evidence-$GITHUB_SHA"
           docker build \
             --pull \
             --no-cache \
-            --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
+            --build-arg "EIMIR_BUILD_REVISION=$GITHUB_SHA" \
             --tag "$image" \
             ./backend
           docker image save --output release-evidence/backend-runtime.image.tar "$image"
@@ -66,11 +66,11 @@ jobs:
       - name: Build Web runtime image archive
         run: |
           set -euo pipefail
-          image="sidebyside-web:evidence-$GITHUB_SHA"
+          image="eimir-web:evidence-$GITHUB_SHA"
           docker build \
             --pull \
             --no-cache \
-            --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
+            --build-arg "EIMIR_BUILD_REVISION=$GITHUB_SHA" \
             --tag "$image" \
             ./web
           docker image save --output release-evidence/web-runtime.image.tar "$image"
@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew --no-daemon --stacktrace --dependency-verification strict \
-            -PsbsVersionCode="$ANDROID_VERSION_CODE" \
+            -PeimirVersionCode="$ANDROID_VERSION_CODE" \
             :app:assembleRelease :app:bundleRelease
 
           apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
@@ -112,8 +112,8 @@ jobs:
           test -n "$aab"
           test -s "$apk"
           test -s "$aab"
-          cp -- "$apk" ../release-evidence/android/sidebyside-release-unsigned.apk
-          cp -- "$aab" ../release-evidence/android/sidebyside-release-unsigned.aab
+          cp -- "$apk" ../release-evidence/android/eimir-release-unsigned.apk
+          cp -- "$aab" ../release-evidence/android/eimir-release-unsigned.aab
 
       - name: Install verified Syft release
         shell: bash
@@ -140,9 +140,9 @@ jobs:
             -o "spdx-json=release-evidence/sbom/backend-runtime.spdx.json"
           syft scan "docker-archive:release-evidence/web-runtime.image.tar" \
             -o "spdx-json=release-evidence/sbom/web-runtime.spdx.json"
-          syft scan "file:release-evidence/android/sidebyside-release-unsigned.apk" \
+          syft scan "file:release-evidence/android/eimir-release-unsigned.apk" \
             -o "spdx-json=release-evidence/sbom/android-apk.spdx.json"
-          syft scan "file:release-evidence/android/sidebyside-release-unsigned.aab" \
+          syft scan "file:release-evidence/android/eimir-release-unsigned.aab" \
             -o "spdx-json=release-evidence/sbom/android-aab.spdx.json"
 
       - name: Validate and index release evidence
@@ -160,8 +160,8 @@ jobs:
           subjects = [
               ("backend-runtime", root / "backend-runtime.image.tar", root / "sbom/backend-runtime.spdx.json", ["api", "worker", "migrate"]),
               ("web-runtime", root / "web-runtime.image.tar", root / "sbom/web-runtime.spdx.json", ["web"]),
-              ("android-apk", root / "android/sidebyside-release-unsigned.apk", root / "sbom/android-apk.spdx.json", ["android-apk"]),
-              ("android-aab", root / "android/sidebyside-release-unsigned.aab", root / "sbom/android-aab.spdx.json", ["android-aab"]),
+              ("android-apk", root / "android/eimir-release-unsigned.apk", root / "sbom/android-apk.spdx.json", ["android-apk"]),
+              ("android-aab", root / "android/eimir-release-unsigned.aab", root / "sbom/android-aab.spdx.json", ["android-aab"]),
           ]
 
           def sha256(path: Path) -> str:
@@ -196,7 +196,7 @@ jobs:
               )
 
           gradle = Path("android/app/build.gradle.kts").read_text(encoding="utf-8")
-          version_match = re.search(r'val sbsVersionName = "([^"]+)"', gradle)
+          version_match = re.search(r'val eimirVersionName = "([^"]+)"', gradle)
           app_id_match = re.search(r'applicationId = "([^"]+)"', gradle)
           if not version_match or not app_id_match:
               raise SystemExit("Could not resolve frozen Android release identity")
@@ -225,8 +225,8 @@ jobs:
             sha256sum \
               backend-runtime.image.tar \
               web-runtime.image.tar \
-              android/sidebyside-release-unsigned.apk \
-              android/sidebyside-release-unsigned.aab \
+              android/eimir-release-unsigned.apk \
+              android/eimir-release-unsigned.aab \
               sbom/backend-runtime.spdx.json \
               sbom/web-runtime.spdx.json \
               sbom/android-apk.spdx.json \
@@ -287,7 +287,7 @@ jobs:
       - name: Attest Android APK
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/android/sidebyside-release-unsigned.apk
+          subject-path: release-evidence/android/eimir-release-unsigned.apk
           sbom-path: release-evidence/sbom/android-apk.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: android-apk
@@ -295,7 +295,7 @@ jobs:
       - name: Attest Android AAB
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/android/sidebyside-release-unsigned.aab
+          subject-path: release-evidence/android/eimir-release-unsigned.aab
           sbom-path: release-evidence/sbom/android-aab.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: android-aab
@@ -327,8 +327,8 @@ jobs:
 
           verify_subject release-evidence/backend-runtime.image.tar backend-runtime
           verify_subject release-evidence/web-runtime.image.tar web-runtime
-          verify_subject release-evidence/android/sidebyside-release-unsigned.apk android-apk
-          verify_subject release-evidence/android/sidebyside-release-unsigned.aab android-aab
+          verify_subject release-evidence/android/eimir-release-unsigned.apk android-apk
+          verify_subject release-evidence/android/eimir-release-unsigned.aab android-aab
 
       - name: Upload offline-verification bundles
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

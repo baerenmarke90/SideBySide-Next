@@ -14,7 +14,7 @@ dependency.
 
 Repository-root `compose.yaml` with profile `cloud`, together with
 `deploy/cloud-managed.env.example`, is the versioned deployment representation
-this document points to. SideBySide does not maintain a second Cloud-specific
+this document points to. eimir. does not maintain a second Cloud-specific
 Compose manifest.
 
 ## 1. Reuse baseline
@@ -25,9 +25,9 @@ Cloud/Managed reuses, unchanged:
 - PostgreSQL as the authoritative database and the existing PostgreSQL Job
   Queue/Outbox (`FOR UPDATE SKIP LOCKED`) for worker concurrency;
 - the `MediaStore` abstraction as-is, including both existing backends
-  (`SBS_MEDIA_STORE=local` and the S3-compatible adapter) — the choice between
+  (`EIMIR_MEDIA_STORE=local` and the S3-compatible adapter) — the choice between
   them is an operator/topology decision (§3.3), not fixed by this document;
-- `/api/v1/health` and `/api/v1/health/ready`, and the `X-SideBySide-Revision`
+- `/api/v1/health` and `/api/v1/health/ready`, and the `X-Eimir-Revision`
   response header;
 - `#375`'s environment/promotion/revision contract and `scripts/deployment_smoke.py`
   (already base-URL/target-agnostic — no Cloud-specific smoke tool is added);
@@ -49,7 +49,7 @@ for readability.
 |---|---|---|---|
 | `migrate` | backend runtime image, `alembic upgrade head` | exactly one execution per release, run to completion before `api`/`worker` start | none (must not run concurrently against the same database) |
 | `api` | backend runtime image, ASGI server | N, horizontally replicated behind the ingress | stateless, except the deletion-journal file (§3.5) and, if `local` MediaStore is selected, the media directory (§3.3) |
-| `worker` | backend runtime image, `python -m sidebyside.jobs.runner` | N, horizontally replicated | stateless; job/outbox concurrency is already `SKIP LOCKED`-safe |
+| `worker` | backend runtime image, `python -m eimir.jobs.runner` | N, horizontally replicated | stateless; job/outbox concurrency is already `SKIP LOCKED`-safe |
 | `web` | Web runtime image (static assets + Nginx) | N, horizontally replicated | fully stateless |
 | PostgreSQL | managed provider service | provider-managed (primary + standby/read-replica per provider offering) | authoritative persistent state |
 | Media storage | `local` (persistent/shared volume) or a provider S3-compatible service — operator choice, see §3.3 | provider-managed (S3) or operator-provisioned durable volume (`local`) | durable media |
@@ -84,10 +84,10 @@ Self-Hosted `demo-init` service (§5).
 
 - Managed PostgreSQL (a provider's managed PostgreSQL offering) is the supported
   v1 database, not a self-operated PostgreSQL container. This mirrors the existing
-  `SBS_DATABASE_URL` connection contract; no application code change is required.
+  `EIMIR_DATABASE_URL` connection contract; no application code change is required.
 - Connection pooling is the deploying operator's responsibility (provider-side
   pooler, e.g. a managed pooling endpoint, or an application-tier pooler placed in
-  front of `SBS_DATABASE_URL`). Core does not bundle a pooler.
+  front of `EIMIR_DATABASE_URL`). Core does not bundle a pooler.
 - The database must live inside a private network boundary reachable only from
   `api`, `worker` and `migrate`; it must not be publicly reachable.
 - Backup/snapshot creation is the managed-provider's responsibility. Per §6, a
@@ -101,10 +101,10 @@ an **operator/topology choice**, not a fixed requirement. Nothing in the
 accepted product/architecture decisions (`#262`, `#521`, `docs/m6/
 OPERATIONS-RECOVERY.md`) mandates a specific object-storage provider, and this
 document does not invent that requirement. Both options remain fully
-Core-supported (`backend/src/sidebyside/config.py`'s `MediaStoreBackend`
+Core-supported (`backend/src/eimir/config.py`'s `MediaStoreBackend`
 already models exactly this):
 
-- **`SBS_MEDIA_STORE=s3`** against a provider S3-compatible bucket —
+- **`EIMIR_MEDIA_STORE=s3`** against a provider S3-compatible bucket —
   recommended once the deployment runs multiple `api`/`worker` replicas or the
   operator's platform already offers managed object storage as the simpler
   durable-storage primitive. One bucket (or one clearly separated prefix per
@@ -118,7 +118,7 @@ already models exactly this):
   the provider's responsibility, consistent with `docs/m6/
   OPERATIONS-RECOVERY.md` §6; Core does not implement a second
   application-level object backup engine.
-- **`SBS_MEDIA_STORE=local`** against a persistent volume — a fully supported
+- **`EIMIR_MEDIA_STORE=local`** against a persistent volume — a fully supported
   Cloud/Managed v1 option, for example a smaller single-`api`-replica launch,
   or a platform where the operator provisions a persistent (optionally
   shared/network) volume rather than adopting an object-storage service. This
@@ -149,20 +149,20 @@ by Self-Hosted recovery (§6 maps both backends' recovery unit explicitly).
   | `/api/` | `api` service, direct (not proxied through `web`) |
   | all other paths | `web` service |
 
-- `SBS_PUBLIC_BASE_URL`, `SBS_ALLOWED_HOSTS` and `TRUSTED_PROXY_IPS` (or the
+- `EIMIR_PUBLIC_BASE_URL`, `EIMIR_ALLOWED_HOSTS` and `TRUSTED_PROXY_IPS` (or the
   platform-native trusted-proxy-range equivalent) must be set to the exact managed
   ingress's public origin and source ranges; `*` is rejected in Production
   (existing `Settings` validation already fails closed here).
-- OIDC/WebAuthn callback origins (`SBS_OIDC_CONNECTIONS`, `SBS_WEBAUTHN_ORIGINS`,
-  `SBS_WEBAUTHN_RP_ID`) must be configured against the managed public origin, not
+- OIDC/WebAuthn callback origins (`EIMIR_OIDC_CONNECTIONS`, `EIMIR_WEBAUTHN_ORIGINS`,
+  `EIMIR_WEBAUTHN_RP_ID`) must be configured against the managed public origin, not
   a per-replica internal address.
 - PostgreSQL and object storage are never exposed on the public ingress.
 
 ### 3.5 Account-deletion journal durability (reuse of #520's contract)
 
 `docs/m6/ACCOUNT-DELETION-RETENTION.md` §7.2 requires the forward-only deletion
-reconciliation journal (`SBS_ACCOUNT_DELETION_JOURNAL_PATH`,
-`backend/src/sidebyside/identity/deletion_journal.py`) to durably record every
+reconciliation journal (`EIMIR_ACCOUNT_DELETION_JOURNAL_PATH`,
+`backend/src/eimir/identity/deletion_journal.py`) to durably record every
 accepted self-service deletion, independent of the point-in-time database backup,
 and explicitly assigns Cloud/Managed the obligation to provide an equivalent
 provider-neutral durability contract rather than inventing different Domain
@@ -176,7 +176,7 @@ recovery-sensitive authority state rather than ordinary non-personal operational
 metadata.
 
 The journal implementation is a single hash-chained append-only file per
-`SBS_ACCOUNT_DELETION_INSTANCE_ID`, guarded by `fcntl` advisory locking. A
+`EIMIR_ACCOUNT_DELETION_INSTANCE_ID`, guarded by `fcntl` advisory locking. A
 self-service deletion request can land on any `api` replica. Therefore:
 
 - **the journal path must resolve to one shared durable volume mounted by every
@@ -197,7 +197,7 @@ self-service deletion request can land on any `api` replica. Therefore:
   for reconciliation (`deletion_reconcile.py`) — it must see the same file `api`
   wrote;
 - the volume is a protected recovery unit exactly like the Self-Hosted
-  `/var/lib/sidebyside/deletion-journal` volume and must be included in the
+  `/var/lib/eimir/deletion-journal` volume and must be included in the
   Cloud/Managed backup/recovery scope in §6, independent of the PostgreSQL backup
   window, per `ACCOUNT-DELETION-RETENTION.md` §7.2's retention-horizon coupling.
 
@@ -211,15 +211,15 @@ horizontal scaling simpler.
 Cloud/Managed keeps the same three-environment separation `#375`/`#304` already
 require (Development, Demo, Production), with independent values for at least:
 
-- `SBS_DATABASE_URL` (managed PostgreSQL credentials/endpoint);
-- if `SBS_MEDIA_STORE=s3` is selected (§3.3): `SBS_S3_ACCESS_KEY_ID` /
-  `SBS_S3_SECRET_ACCESS_KEY` / `SBS_S3_SESSION_TOKEN` / `SBS_S3_BUCKET` /
-  `SBS_S3_ENDPOINT`;
-- `SBS_CURSOR_SIGNING_KEY`;
-- `SBS_BOOTSTRAP_TOKEN` (removed after first ServerAdmin bootstrap, as today);
-- `SBS_SMTP_*` mail credentials;
+- `EIMIR_DATABASE_URL` (managed PostgreSQL credentials/endpoint);
+- if `EIMIR_MEDIA_STORE=s3` is selected (§3.3): `EIMIR_S3_ACCESS_KEY_ID` /
+  `EIMIR_S3_SECRET_ACCESS_KEY` / `EIMIR_S3_SESSION_TOKEN` / `EIMIR_S3_BUCKET` /
+  `EIMIR_S3_ENDPOINT`;
+- `EIMIR_CURSOR_SIGNING_KEY`;
+- `EIMIR_BOOTSTRAP_TOKEN` (removed after first ServerAdmin bootstrap, as today);
+- `EIMIR_SMTP_*` mail credentials;
 - push credentials (existing engagement/push provider configuration);
-- `SBS_OIDC_CONNECTIONS` client secrets;
+- `EIMIR_OIDC_CONNECTIONS` client secrets;
 - entitlement/billing provider credentials (Phase 2 of this launch effort;
   none exist yet in Core beyond the `TEST_FIXTURE` source already rejected in
   Production by `entitlements/service.py::_ensure_source_allowed`);
@@ -234,7 +234,7 @@ documents the required keys with placeholder values only, exactly like
 `deploy/persistent-development.env.example`.
 
 `scripts/check_environment_isolation.py` already generalizes to any two `.env`
-files: it compares `SBS_DATABASE_URL` directly (not a `POSTGRES_*` triple) and
+files: it compares `EIMIR_DATABASE_URL` directly (not a `POSTGRES_*` triple) and
 only flags a sensitive key when both files actually set it to the same
 non-empty value. `deploy/cloud-managed.env.example` therefore needs no
 Self-Hosted `POSTGRES_*` fields at all, and the existing tool already accepts it
@@ -317,13 +317,13 @@ as Self-Hosted rather than introducing Terraform/Kubernetes/a custom orchestrato
 or a second Compose file. Its profile-specific services intentionally differ from
 the `self-hosted` profile only where this topology requires it:
 
-- no bundled `postgres` service — `SBS_DATABASE_URL` points at the managed
+- no bundled `postgres` service — `EIMIR_DATABASE_URL` points at the managed
   database;
-- `SBS_MEDIA_STORE` defaults to `local` with the same LocalMediaStore contract as
+- `EIMIR_MEDIA_STORE` defaults to `local` with the same LocalMediaStore contract as
   Self-Hosted, backed by its own `cloud_media_data` volume (kept separate from
   Self-Hosted's `media_data` so the two profiles can never write to the same
   local storage if both were accidentally activated in one project); setting
-  `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the
+  `EIMIR_MEDIA_STORE=s3` plus the `EIMIR_S3_*` variables switches to the
   S3-compatible backend instead (§3.3);
 - no `demo-init` service (§5);
 - `cloud-api`/`cloud-worker`/`cloud-web`/`cloud-migrate` use `image:` references
@@ -347,15 +347,15 @@ and `web-runtime.image.tar` (`docker save` archives) attached to an immutable
 GitHub Release, not a registry push. For Cloud/Managed:
 
 1. the operator downloads the exact release's image archives and the exact
-   `sidebyside-release-manifest.json` asset;
+   `eimir-release-manifest.json` asset;
 2. verifies the manifest/attestation/SBOM per `#519`/`#193`;
 3. `docker load`s the archives and pushes those loaded images, without rebuild,
    to the registry the managed platform pulls from. A `v<product-version>` tag may
    be added as a human locator, but it is not trusted as immutable identity;
 4. resolve the registry-reported digest for each promoted image and set
-   `SBS_BACKEND_IMAGE` and `SBS_WEB_IMAGE` to digest-qualified references such as
-   `registry.example/sidebyside-backend@sha256:<digest>` and
-   `registry.example/sidebyside-web@sha256:<digest>`;
+   `EIMIR_BACKEND_IMAGE` and `EIMIR_WEB_IMAGE` to digest-qualified references such as
+   `registry.example/eimir-backend@sha256:<digest>` and
+   `registry.example/eimir-web@sha256:<digest>`;
 5. render the canonical Cloud profile and run the existing #519 manifest tool's
    `cloud-deployment` binding before rollout. The binding validates the **resolved**
    Compose image values, requires `cloud-api`, `cloud-worker` and `cloud-migrate`
@@ -371,14 +371,14 @@ A representative preflight is:
 
 ```bash
 docker compose --profile cloud --env-file <production-env> config --format json \
-  > /tmp/sidebyside-cloud-compose.json
+  > /tmp/eimir-cloud-compose.json
 
 python3 scripts/release_manifest.py cloud-deployment \
-  --manifest sidebyside-release-manifest.json \
-  --compose-config /tmp/sidebyside-cloud-compose.json \
+  --manifest eimir-release-manifest.json \
+  --compose-config /tmp/eimir-cloud-compose.json \
   --output cloud-deployment-identity.json
 
-rm -f /tmp/sidebyside-cloud-compose.json
+rm -f /tmp/eimir-cloud-compose.json
 ```
 
 The full resolved Compose JSON is transient because it can contain environment
@@ -420,7 +420,7 @@ topology:
 1. **Managed PostgreSQL** — provider automated backup/point-in-time-recovery
    configured at the smallest interval the provider offers; restore path is the
    provider's own restore-to-new-instance mechanism, followed by repointing
-   `SBS_DATABASE_URL`.
+   `EIMIR_DATABASE_URL`.
 2. **Media storage** — depends on the §3.3 backend choice: provider bucket
    versioning (or equivalent backup/replication feature) enabled on the
    Production bucket for `s3`, or the operator's own volume-level
@@ -480,9 +480,9 @@ enforce the mechanical parts of this contract so they cannot silently regress:
   `local`-media and `s3`-media resolved configurations;
 - the media directory is mounted from a dedicated named volume when `local`
   MediaStore is selected (the default), while S3 variables apply when
-  `SBS_MEDIA_STORE=s3` is explicitly selected;
+  `EIMIR_MEDIA_STORE=s3` is explicitly selected;
 - `deploy/cloud-managed.env.example` requires `COMPOSE_PROFILES=cloud`,
-  `SBS_ENVIRONMENT=production`, and `SBS_DEPLOYMENT=cloud`;
+  `EIMIR_ENVIRONMENT=production`, and `EIMIR_DEPLOYMENT=cloud`;
 - `scripts/check_environment_isolation.py` accepts the Cloud template paired with
   the Development template and rejects reused sensitive values.
 
@@ -509,7 +509,7 @@ canonical single-Compose contract remains unchanged.
   observability export consumes (§9); no Cloud-specific logging path bypasses
   that redaction;
 - Tenant/Privacy semantics are identical to Self-Hosted — no code in
-  `backend/src/sidebyside` branches Domain authorization on `Deployment.CLOUD`
+  `backend/src/eimir` branches Domain authorization on `Deployment.CLOUD`
   vs. `Deployment.SELF_HOSTED` (the only existing `Deployment` branch,
   `entitlements/service.py::_grant_capabilities`, gates commercial *capability*
   availability, not privacy/authorization).
@@ -527,7 +527,7 @@ code:
 
 - `/api/v1/health` and `/api/v1/health/ready` (liveness/readiness, consumed by
   the platform's own health-gated rollout);
-- `X-SideBySide-Revision` header (deployed-revision verification, `#375`'s
+- `X-Eimir-Revision` header (deployed-revision verification, `#375`'s
   existing smoke check);
 - `#189` structured request logs (status, latency, redacted correlation) for
   error-rate/latency SLO-style indicators;

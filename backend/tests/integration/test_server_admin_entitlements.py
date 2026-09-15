@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from sidebyside.administration.models import InstanceAdministrationActionEvent
-from sidebyside.config import get_settings
-from sidebyside.core.clock import now
-from sidebyside.entitlements.models import EntitlementGrant, EntitlementSourceType
+from eimir.administration.models import InstanceAdministrationActionEvent
+from eimir.config import get_settings
+from eimir.core.clock import now
+from eimir.entitlements.models import EntitlementGrant, EntitlementSourceType
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -18,14 +18,14 @@ ADMIN_EMAIL = "operator@example.test"
 
 @pytest.fixture
 def server_admin_allowlist(monkeypatch):  # type: ignore[no-untyped-def]
-    monkeypatch.setenv("SBS_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
+    monkeypatch.setenv("EIMIR_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
 
 
 def _admin(session):  # type: ignore[no-untyped-def]
-    from sidebyside.identity.models import AccountEmail
+    from eimir.identity.models import AccountEmail
 
     account = make_account(session, "Operator")
     session.add(

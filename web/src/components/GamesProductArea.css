@@ -301,7 +301,7 @@
  * Decorative connector between the two perspectives: a converging dot for
  * agreement, a calm dividing line for difference. Transform-only (no
  * opacity) so it never risks the mid-animation text-contrast regression
- * documented for `.sbs-motion-reveal` (#790/#791) - not that this element
+ * documented for `.eimir-motion-reveal` (#790/#791) - not that this element
  * carries text, but it keeps the same house rule everywhere in this file.
  */
 .who-of-us-reveal-answers::before {

@@ -384,7 +384,7 @@ export function PlanStoryContinuation({
 
   return (
     <section
-      className="plan-completed-celebration plan-story-continuation sbs-motion-reveal"
+      className="plan-completed-celebration plan-story-continuation eimir-motion-reveal"
       aria-labelledby="plan-completed-heading"
     >
       <h2

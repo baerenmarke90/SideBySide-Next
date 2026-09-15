@@ -2,14 +2,14 @@
 
 ## Purpose
 
-This document records possible external providers and technical components for future SideBySide Next integrations.
+This document records possible external providers and technical components for future eimir. integrations.
 
 **Important:** An entry in this list is not approval for implementation.
 
 Before every production use, the following must be reviewed again:
 
 - current Terms of Service
-- commercial usability for SideBySide Cloud
+- commercial usability for eimir. Cloud
 - Self-Hosted support
 - license and attribution
 - storage, caching, and deletion obligations
@@ -21,13 +21,13 @@ The review becomes part of the corresponding feature PR.
 ## Architecture rule
 
 External providers are connected only through clear adapter or integration boundaries.
-The SideBySide Core must not know a concrete provider.
+The eimir. Core must not know a concrete provider.
 
 Changing a provider must not require changes to Domain models or business logic.
 
 ## Product rule: technology stays invisible
 
-SideBySide is explicitly intended for people without technical knowledge.
+eimir. is explicitly intended for people without technical knowledge.
 
 Normal users should never need to:
 
@@ -94,12 +94,12 @@ Not all candidates are external data providers. They are considered separately:
 
 Every component must be considered separately for:
 
-## SideBySide Cloud
+## eimir. Cloud
 
-- SideBySide operates the infrastructure.
+- eimir. operates the infrastructure.
 - API access and costs belong to the operator.
 - Users do not need technical provider accounts.
-- Privacy and consent are controlled by SideBySide.
+- Privacy and consent are controlled by eimir.
 
 ## Self-Hosted
 

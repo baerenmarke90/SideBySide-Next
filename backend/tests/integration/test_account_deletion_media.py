@@ -9,21 +9,21 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import binding, service
-from sidebyside.attachments.models import (
+from eimir.attachments import binding, service
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
-from sidebyside.identity.deletion_media import apply_account_media_cleanup
-from sidebyside.media.local import LocalMediaStore
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.relationship.service import add_member
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
+from eimir.identity.deletion_media import apply_account_media_cleanup
+from eimir.media.local import LocalMediaStore
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.relationship.service import add_member
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

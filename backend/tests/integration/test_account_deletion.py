@@ -10,14 +10,14 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.api.authors import resolve_author_summary
-from sidebyside.auth import sessions
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.core.errors import UnauthenticatedError
-from sidebyside.engagement.models import Notification, NotificationKind, PushEndpoint
-from sidebyside.engagement.push import register_endpoint
-from sidebyside.identity.deletion import (
+from eimir.api.authors import resolve_author_summary
+from eimir.auth import sessions
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.core.errors import UnauthenticatedError
+from eimir.engagement.models import Notification, NotificationKind, PushEndpoint
+from eimir.engagement.push import register_endpoint
+from eimir.identity.deletion import (
     DELETED_ACCOUNT_DISPLAY_NAME,
     DELETED_ACCOUNT_LOCALE,
     DELETED_ACCOUNT_TIMEZONE,
@@ -26,11 +26,11 @@ from sidebyside.identity.deletion import (
     apply_core_cleanup,
     mark_deletion_failed,
 )
-from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
-from sidebyside.identity.models import AccountEmail, AuthIdentity, AuthProvider, DeviceSession
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.private_notes.models import PrivateNote, PrivateNotePayload
-from sidebyside.profiles.models import (
+from eimir.identity.deletion_models import AccountDeletion, AccountDeletionStatus
+from eimir.identity.models import AccountEmail, AuthIdentity, AuthProvider, DeviceSession
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.private_notes.models import PrivateNote, PrivateNotePayload
+from eimir.profiles.models import (
     PartnerProfile,
     PreferenceCategory,
     PreferenceSentiment,
@@ -38,8 +38,8 @@ from sidebyside.profiles.models import (
     ProfilePreferencePayload,
     ProfileVisibility,
 )
-from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
-from sidebyside.relationship.service import add_member
+from eimir.relationship.models import Invitation, Membership, MembershipStatus
+from eimir.relationship.service import add_member
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

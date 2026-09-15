@@ -1,4 +1,4 @@
-# SideBySide Critical User Flows
+# eimir. Critical User Flows
 
 **Status:** Binding UX/product foundation  
 **Version:** 1.1  
@@ -78,7 +78,7 @@ Clients decide which entry points to offer from `GET /instance/status`, never fr
 
 ### Creating person
 
-1. After first login, SideBySide explains the private shared Space.
+1. After first login, eimir. explains the private shared Space.
 2. The person confirms profile name and optional basic information.
 3. The Space is created with `POST /spaces`. The request has no body: the founder is always the authenticated Account. The server allows it only while that Account has no active Membership and serializes it per Account, so a retry or a concurrent request answers `409 ACCOUNT_HAS_ACTIVE_SPACE` and the client selects the existing Space through `GET /auth/memberships`. Ended relationship history is never reactivated or merged; a new Space is always fresh.
 4. An Invitation is created through a deliberately selected channel with the existing one-time, expiring, revocable Invitation (`POST /spaces/{spaceId}/invitations`).

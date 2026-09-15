@@ -1,4 +1,4 @@
-# SideBySide Next - Freemium Feature Matrix
+# eimir. - Freemium Feature Matrix
 
 **Status:** authoritative product-tier and roadmap baseline  
 **Version:** 1.2  
@@ -10,9 +10,9 @@
 
 ## Purpose and authority
 
-This document records the authoritative repository-wide business/freemium classification for all current (M0–M3) and planned (M4–M8) capabilities of SideBySide Next following the resolution of issue #262 and the commercial packaging reconciliation in #876.
+This document records the authoritative repository-wide business/freemium classification for all current (M0–M3) and planned (M4–M8) capabilities of eimir. following the resolution of issue #262 and the commercial packaging reconciliation in #876.
 
-It defines the commercial boundaries, entitlement ownership semantics, downgrade guarantees, and licensing rules across both the **SideBySide Self-Hosted** and **SideBySide Cloud** operating models.
+It defines the commercial boundaries, entitlement ownership semantics, downgrade guarantees, and licensing rules across both the **eimir. Self-Hosted** and **eimir. Cloud** operating models.
 
 When sources appear to conflict:
 
@@ -29,13 +29,13 @@ Any future change to an existing classification requires an explicit, versioned 
 
 ## Executive summary & commercial pillars
 
-SideBySide Next adheres strictly to a genuine **freemium model**:
+eimir. adheres strictly to a genuine **freemium model**:
 
-> **Free lets a couple meaningfully use SideBySide as their complete relationship home. Premium enriches that foundation through advanced presentation, automation, longitudinal insights, relationship-native experiences, third-party integrations, and managed cloud resources — without ever holding existing shared history hostage.**
+> **Free lets a couple meaningfully use eimir. as their complete relationship home. Premium enriches that foundation through advanced presentation, automation, longitudinal insights, relationship-native experiences, third-party integrations, and managed cloud resources — without ever holding existing shared history hostage.**
 
 ### Core principles
 
-1. **Couple/Space-level entitlement ownership:** SideBySide is a shared couple product. A commercial purchase by either partner applies to the entire shared Space. Both partners immediately benefit from Premium capabilities within that Space.
+1. **Couple/Space-level entitlement ownership:** eimir. is a shared couple product. A commercial purchase by either partner applies to the entire shared Space. Both partners immediately benefit from Premium capabilities within that Space.
 2. **Strict non-destructive downgrade:** Downgrading or license expiry **never deletes or hides user data**. All existing memories, chapters, photos, and answers remain 100% readable and exportable. Only the creation of new Premium-tier items or regeneration of heavy artifacts is paused.
 3. **Self-Hosted independence:** The Self-Hosted build is a complete, first-class product under the [PolyForm Noncommercial License 1.0.0](../LICENSE). It functions fully offline without any forced phone-home connection. Optional commercial Self-Hosted licenses use cryptographically signed offline tokens.
 4. **No micro-limits on core data:** There are no artificial paywalls on the number of memories, wishes, plans, places, notes, or list items. Cloud storage limits apply transparently to durable media byte volume, not domain entity counts.
@@ -74,7 +74,7 @@ Capabilities essential for Security, Privacy, Accessibility, Tenant Isolation, a
 | **SpaceProfile & Relationship context** | M1 | **Free/Core** | Whole feature Free | Identical | Basic couple anniversary and relationship context are core baseline. |
 | **PartnerProfile & ProfilePreferences** | M1 | **Free/Core** | Whole feature Free | Identical | Managing personal and shared preferences is part of the basic product. |
 | **RelatedPerson & ImportantDate management** | M1, M5 | **Mixed** | **Free:** Basic CRUD & standard date tracking.<br>**Premium:** Multi-condition occasion automation & recurring reminders. | Identical | Storing friends/family is basic utility; automated complex workflows are Premium. |
-| **Memory CRUD & Timeline history** | M2, M5 | **Free/Core** | Whole feature Free (no count limit) | Identical | Memories are the emotional heart of SideBySide. |
+| **Memory CRUD & Timeline history** | M2, M5 | **Free/Core** | Whole feature Free (no count limit) | Identical | Memories are the emotional heart of eimir. |
 | **Image attachment upload & storage** | M2, M5 | **Free/Core** | Functional feature Free | **Self-Hosted:** Unmetered (operator storage).<br>**Cloud:** Subject to Space storage quota. | Image uploading is core to memories; Cloud storage has operational byte costs. |
 | **Cloud storage quota** | M2, M6 | **Mixed** | **Current planning hypothesis, not final launch commitment:** Free 5 GB per Space; Premium 50 GB per Space, potentially expandable via add-ons. | Cloud only (Self-Hosted is unmetered) | Managed storage and bandwidth create real recurring infrastructure cost; final quotas/add-ons require cost validation. |
 | **Media privacy & attachment validation** | M2 | **Non-paywallable** | Non-paywallable | Identical | Security checks and media validation must execute identically for all users. |
@@ -138,7 +138,7 @@ A separate Family consumer tier is not part of v1. Third-party commercial-use ri
 
 ## Entitlement ownership & couple semantics
 
-SideBySide is explicitly modeled around the couple unit. Commercial entitlements reflect this reality:
+eimir. is explicitly modeled around the couple unit. Commercial entitlements reflect this reality:
 
 ```text
 [ Purchaser Account (Anna) ] ----( purchases )----> [ Space Entitlement Grant ]
@@ -188,7 +188,7 @@ Commercial entitlement states follow a strict, deterministic state machine:
 
 ## Non-destructive downgrade & data retention contract
 
-The most critical commercial guarantee of SideBySide Next is **Zero Data Loss on Downgrade**:
+The most critical commercial guarantee of eimir. is **Zero Data Loss on Downgrade**:
 
 1. **Read & Export Invariant:** All content created during a Premium subscription remains **100% accessible, viewable, and exportable** forever under its normal authorization/privacy semantics.
    * Chapters with bespoke layouts remain viewable in their rich presentation.

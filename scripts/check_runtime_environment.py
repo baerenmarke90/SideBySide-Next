@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify critical SideBySide runtime environment before and after Compose recreation."""
+"""Verify critical eimir. runtime environment before and after Compose recreation."""
 
 from __future__ import annotations
 
@@ -11,18 +11,23 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts._identity_environment import canonicalize
+except ModuleNotFoundError:  # Direct ``python scripts/...`` execution.
+    from _identity_environment import canonicalize
+
 CRITICAL_RUNTIME_KEYS = (
-    "SBS_ACCOUNT_DELETION_INSTANCE_ID",
-    "SBS_ENVIRONMENT",
-    "SBS_DEPLOYMENT",
-    "SBS_PUBLIC_BASE_URL",
-    "SBS_CURSOR_SIGNING_KEY",
+    "EIMIR_ACCOUNT_DELETION_INSTANCE_ID",
+    "EIMIR_ENVIRONMENT",
+    "EIMIR_DEPLOYMENT",
+    "EIMIR_PUBLIC_BASE_URL",
+    "EIMIR_CURSOR_SIGNING_KEY",
 )
 DOTENV_AUTHORITATIVE_KEYS = (
-    "SBS_ACCOUNT_DELETION_INSTANCE_ID",
-    "SBS_ENVIRONMENT",
-    "SBS_PUBLIC_BASE_URL",
-    "SBS_CURSOR_SIGNING_KEY",
+    "EIMIR_ACCOUNT_DELETION_INSTANCE_ID",
+    "EIMIR_ENVIRONMENT",
+    "EIMIR_PUBLIC_BASE_URL",
+    "EIMIR_CURSOR_SIGNING_KEY",
 )
 PROFILE_RUNTIME_SERVICES = {
     "self-hosted": frozenset({"api", "worker"}),
@@ -96,7 +101,7 @@ def parse_dotenv(path: Path) -> dict[str, str]:
             raise RuntimeEnvironmentError(
                 f"{path}:{lineno}: invalid dotenv value for {key}"
             ) from exc
-    return values
+    return canonicalize(values)
 
 
 def service_environment(service: dict[str, Any]) -> dict[str, str]:
@@ -138,18 +143,18 @@ def check_dotenv_to_rendered(
 ) -> list[str]:
     problems: list[str] = []
 
-    dotenv_is_production = dotenv.get("SBS_ENVIRONMENT") == "production"
+    dotenv_is_production = dotenv.get("EIMIR_ENVIRONMENT") == "production"
     rendered_is_production = any(
-        environment.get("SBS_ENVIRONMENT") == "production" for environment in rendered.values()
+        environment.get("EIMIR_ENVIRONMENT") == "production" for environment in rendered.values()
     )
-    if dotenv_is_production and not dotenv.get("SBS_ACCOUNT_DELETION_INSTANCE_ID"):
-        problems.append("production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID")
+    if dotenv_is_production and not dotenv.get("EIMIR_ACCOUNT_DELETION_INSTANCE_ID"):
+        problems.append("production env file must set non-empty EIMIR_ACCOUNT_DELETION_INSTANCE_ID")
     if rendered_is_production and any(
-        not environment.get("SBS_ACCOUNT_DELETION_INSTANCE_ID")
+        not environment.get("EIMIR_ACCOUNT_DELETION_INSTANCE_ID")
         for environment in rendered.values()
-        if environment.get("SBS_ENVIRONMENT") == "production"
+        if environment.get("EIMIR_ENVIRONMENT") == "production"
     ):
-        problems.append("rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID")
+        problems.append("rendered Production runtime must set non-empty EIMIR_ACCOUNT_DELETION_INSTANCE_ID")
 
     for key in DOTENV_AUTHORITATIVE_KEYS:
         intended = dotenv.get(key)
@@ -182,9 +187,9 @@ def check_production_image_identity(
 ) -> list[str]:
     """Require released GHCR images and no source-build fallback in Production."""
 
-    dotenv_is_production = dotenv.get("SBS_ENVIRONMENT") == "production"
+    dotenv_is_production = dotenv.get("EIMIR_ENVIRONMENT") == "production"
     rendered_is_production = any(
-        environment.get("SBS_ENVIRONMENT") == "production" for environment in rendered.values()
+        environment.get("EIMIR_ENVIRONMENT") == "production" for environment in rendered.values()
     )
     if not dotenv_is_production and not rendered_is_production:
         return []
@@ -194,9 +199,9 @@ def check_production_image_identity(
         return ["Production image identity requires rendered Compose services"]
 
     problems: list[str] = []
-    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
+    declared_version = dotenv.get("EIMIR_RELEASE_VERSION", "").strip()
     if not declared_version:
-        problems.append("Production env file must set non-empty SBS_RELEASE_VERSION")
+        problems.append("Production env file must set non-empty EIMIR_RELEASE_VERSION")
 
     backend_images: list[str] = []
     versions: list[str] = []
@@ -238,7 +243,7 @@ def check_production_image_identity(
     if len(set(versions)) > 1:
         problems.append("Production backend and Web images must use one product release version")
     if declared_version and any(version != declared_version for version in versions):
-        problems.append("Production application images must match SBS_RELEASE_VERSION")
+        problems.append("Production application images must match EIMIR_RELEASE_VERSION")
     return problems
 
 
@@ -260,7 +265,7 @@ def check_published_release_image_identity(
     """Bind rendered Production images to the exact published release identity."""
 
     problems: list[str] = []
-    if identity.get("schemaVersion") != 1 or identity.get("kind") != "sidebyside-self-hosted-image-identity":
+    if identity.get("schemaVersion") != 1 or identity.get("kind") != "eimir-self-hosted-image-identity":
         return ["Unsupported Self-Hosted release image identity schema"]
 
     product = identity.get("product")
@@ -269,9 +274,9 @@ def check_published_release_image_identity(
     version = product.get("version")
     if not isinstance(version, str) or product.get("tag") != f"v{version}":
         problems.append("Self-Hosted release image identity has invalid product version/tag")
-    declared_version = dotenv.get("SBS_RELEASE_VERSION", "").strip()
+    declared_version = dotenv.get("EIMIR_RELEASE_VERSION", "").strip()
     if isinstance(version, str) and declared_version != version:
-        problems.append("Self-Hosted release image identity does not match SBS_RELEASE_VERSION")
+        problems.append("Self-Hosted release image identity does not match EIMIR_RELEASE_VERSION")
 
     source = identity.get("sourceRevision")
     if not isinstance(source, str) or not SHA40_RE.fullmatch(source):

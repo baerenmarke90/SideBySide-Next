@@ -4,7 +4,7 @@
 
 The M1 Domain `people` contains two objects from section 12 of the Master Specification:
 
-- `RelatedPerson`: a person in the couple's environment — child, parent, sibling, friend. It has **no SideBySide Account**, no login, and no invitation.
+- `RelatedPerson`: a person in the couple's environment — child, parent, sibling, friend. It has **no eimir. Account**, no login, and no invitation.
 - `ImportantDate`: a date important to the couple. It may belong to a `RelatedPerson`, but does not have to — the couple's own anniversary belongs to nobody else.
 
 Not included: Memories, Notifications, and Rules. Dates are modeled so a later Rule such as `"Lisa has a birthday in 7 days"` can work from metadata.

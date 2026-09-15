@@ -8,7 +8,7 @@ serialization the caller asked for.
 
 from __future__ import annotations
 
-from sidebyside.db.locks import advisory_key
+from eimir.db.locks import advisory_key
 
 
 def test_key_is_stable_for_the_same_subject() -> None:

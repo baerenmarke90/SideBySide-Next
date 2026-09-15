@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "sidebyside-next-android-reference"
+rootProject.name = "eimir-android"
 include(":app")

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted implementation contract for SideBySide Next / eimir. Planning.
+Accepted implementation contract for eimir. / eimir. Planning.
 
 ## Product states
 

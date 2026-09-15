@@ -1095,7 +1095,7 @@ code {
    blend can drop already-borderline token pairs below WCAG AA contrast, as
    real rendered pixels, not just a test artifact (#790/#791 axe follow-up).
    Slide-only keeps the reveal motion without ever touching opacity. */
-@keyframes sbs-reveal {
+@keyframes eimir-reveal {
   from {
     transform: translateY(8px);
   }
@@ -1104,12 +1104,12 @@ code {
   }
 }
 
-.sbs-motion-reveal {
-  animation: sbs-reveal var(--motion-duration-medium)
+.eimir-motion-reveal {
+  animation: eimir-reveal var(--motion-duration-medium)
     var(--motion-easing-reveal) forwards;
 }
 
-@keyframes sbs-lift {
+@keyframes eimir-lift {
   from {
     transform: translateY(0);
     box-shadow: 0 2px 4px var(--color-shadow-card);
@@ -1120,12 +1120,12 @@ code {
   }
 }
 
-.sbs-motion-lift:hover {
-  animation: sbs-lift var(--motion-duration-short) var(--motion-easing-lift)
+.eimir-motion-lift:hover {
+  animation: eimir-lift var(--motion-duration-short) var(--motion-easing-lift)
     forwards;
 }
 
-@keyframes sbs-success {
+@keyframes eimir-success {
   0% {
     transform: scale(1);
   }
@@ -1137,12 +1137,12 @@ code {
   }
 }
 
-.sbs-motion-success {
-  animation: sbs-success var(--motion-duration-medium)
+.eimir-motion-success {
+  animation: eimir-success var(--motion-duration-medium)
     var(--motion-easing-reveal) forwards;
 }
 
-@keyframes sbs-affectionate-pulse {
+@keyframes eimir-affectionate-pulse {
   0% {
     transform: scale(1);
     opacity: 1;
@@ -1157,12 +1157,12 @@ code {
   }
 }
 
-.sbs-motion-pulse {
-  animation: sbs-affectionate-pulse var(--motion-duration-long)
+.eimir-motion-pulse {
+  animation: eimir-affectionate-pulse var(--motion-duration-long)
     var(--motion-easing-pulse);
 }
 
-@keyframes sbs-context-change {
+@keyframes eimir-context-change {
   from {
     opacity: 0;
     filter: blur(4px);
@@ -1173,8 +1173,8 @@ code {
   }
 }
 
-.sbs-motion-context-change {
-  animation: sbs-context-change var(--motion-duration-medium)
+.eimir-motion-context-change {
+  animation: eimir-context-change var(--motion-duration-medium)
     var(--motion-easing-settle) forwards;
 }
 
@@ -1287,12 +1287,12 @@ code {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sbs-motion-reveal,
-  .sbs-motion-lift,
-  .sbs-motion-lift:hover,
-  .sbs-motion-success,
-  .sbs-motion-pulse,
-  .sbs-motion-context-change {
+  .eimir-motion-reveal,
+  .eimir-motion-lift,
+  .eimir-motion-lift:hover,
+  .eimir-motion-success,
+  .eimir-motion-pulse,
+  .eimir-motion-context-change {
     animation: none;
     transition: none;
     transform: none;

@@ -8,24 +8,24 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import binding
-from sidebyside.attachments import cleanup as attachment_cleanup
-from sidebyside.attachments.models import (
+from eimir.attachments import binding
+from eimir.attachments import cleanup as attachment_cleanup
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.jobs.models import Job, JobStatus
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.relationship import offboarding
-from sidebyside.relationship.models import MembershipStatus
-from sidebyside.relationship.service import add_member
-from sidebyside.transfer import service as transfer_service
-from sidebyside.transfer.models import (
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.jobs.models import Job, JobStatus
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.relationship import offboarding
+from eimir.relationship.models import MembershipStatus
+from eimir.relationship.service import add_member
+from eimir.transfer import service as transfer_service
+from eimir.transfer.models import (
     ExportStatus,
     ImportStatus,
     TransferExport,

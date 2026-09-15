@@ -314,7 +314,7 @@ export function ProfileIdentityPanel({
       {editingName && profile ? (
         <form
           key={`name-${profile.displayName}`}
-          className="profile-name-inline-form form-grid sbs-motion-reveal"
+          className="profile-name-inline-form form-grid eimir-motion-reveal"
           onSubmit={submitDisplayName}
         >
           <div className="field-group">

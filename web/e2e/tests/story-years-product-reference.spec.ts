@@ -376,7 +376,7 @@ test.describe('Our Years Product Reference (#868)', () => {
   }, testInfo) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await page.addInitScript(() =>
-      window.localStorage.setItem('sidebyside.theme', 'system'),
+      window.localStorage.setItem('eimir.theme', 'system'),
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await installMocks(page);
@@ -427,7 +427,7 @@ test.describe('Our Years Product Reference (#868)', () => {
     }) => {
       await page.emulateMedia({ colorScheme });
       await page.addInitScript(() =>
-        window.localStorage.setItem('sidebyside.theme', 'system'),
+        window.localStorage.setItem('eimir.theme', 'system'),
       );
       await page.setViewportSize({ width: 390, height: 844 });
       await installMocks(page);

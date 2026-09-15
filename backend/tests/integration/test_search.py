@@ -8,29 +8,29 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import PrivacyClass
-from sidebyside.chapters.models import Chapter, ChapterPayload
-from sidebyside.collections.models import (
+from eimir.authorization import PrivacyClass
+from eimir.chapters.models import Chapter, ChapterPayload
+from eimir.collections.models import (
     Collection,
     CollectionItem,
     CollectionItemPayload,
     CollectionPayload,
 )
-from sidebyside.gift_ideas.models import GiftIdea, GiftIdeaPayload
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.milestones.models import Milestone, MilestonePayload
-from sidebyside.places.models import Place, PlacePayload
-from sidebyside.plans.models import Plan, PlanPayload
-from sidebyside.private_collections.models import (
+from eimir.gift_ideas.models import GiftIdea, GiftIdeaPayload
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.milestones.models import Milestone, MilestonePayload
+from eimir.places.models import Place, PlacePayload
+from eimir.plans.models import Plan, PlanPayload
+from eimir.private_collections.models import (
     PrivateCollection,
     PrivateCollectionItem,
     PrivateCollectionItemPayload,
     PrivateCollectionPayload,
 )
-from sidebyside.private_notes.models import PrivateNote, PrivateNotePayload
-from sidebyside.relationship import service as relationship_service
-from sidebyside.wishes.models import Wish, WishPayload
+from eimir.private_notes.models import PrivateNote, PrivateNotePayload
+from eimir.relationship import service as relationship_service
+from eimir.wishes.models import Wish, WishPayload
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -431,7 +431,7 @@ class TestSearchRequestContract:
         _seed_all_targets(session, couple)
         canary = "private-heart-moment-canary-" + "y" * 40
 
-        with caplog.at_level(logging.INFO, logger="sidebyside.access"):
+        with caplog.at_level(logging.INFO, logger="eimir.access"):
             response = _search(client, couple, q=canary)
 
         assert response.status_code == 200

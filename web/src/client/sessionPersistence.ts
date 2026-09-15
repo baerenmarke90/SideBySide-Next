@@ -3,7 +3,8 @@ import type { TokenView } from '../api/generated/models/TokenView';
 import { normalizeClientError } from './problemDetails';
 import { createReferenceApis } from './referenceFlow';
 
-export const SESSION_STORAGE_KEY = 'sidebyside-session-v1';
+export const SESSION_STORAGE_KEY = 'eimir-session-v1';
+export const LEGACY_SESSION_STORAGE_KEY = 'sidebyside-session-v1';
 
 let inFlightRefresh: Promise<TokenView> | null = null;
 
@@ -77,7 +78,9 @@ export function storeSession(session: StoredSession): void {
 export function loadStoredSession(): StoredSession | null {
   if (typeof window === 'undefined' || !window.sessionStorage) return null;
   try {
-    const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const canonical = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const raw =
+      canonical ?? window.sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as {
       account?: unknown;
@@ -94,6 +97,10 @@ export function loadStoredSession(): StoredSession | null {
       typeof parsed.spaceId === 'string' && parsed.spaceId.trim()
         ? parsed.spaceId.trim()
         : null;
+    if (canonical === null) {
+      window.sessionStorage.setItem(SESSION_STORAGE_KEY, raw);
+      window.sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
+    }
     return { account, tokens, spaceId };
   } catch {
     clearStoredSession();
@@ -105,6 +112,7 @@ export function clearStoredSession(): void {
   if (typeof window === 'undefined' || !window.sessionStorage) return;
   try {
     window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
   } catch {
     // Storage might be disabled in restrictive environments.
   }

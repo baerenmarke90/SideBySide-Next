@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and verify the immutable SideBySide release manifest.
+"""Build and verify the immutable eimir. release manifest.
 
 The manifest consumes #193 release evidence. It does not build artifacts, sign
 Android packages or infer database rollback safety. Cloud/Managed deployment
@@ -25,7 +25,10 @@ BACKEND_ROLES = {"api", "worker", "migrate"}
 CLOUD_BACKEND_SERVICES = ("cloud-api", "cloud-worker", "cloud-migrate")
 CLOUD_WEB_SERVICE = "cloud-web"
 CLOUD_SERVICES = {*CLOUD_BACKEND_SERVICES, CLOUD_WEB_SERVICE}
-CLOUD_DEPLOYMENT_KIND = "sidebyside-cloud-deployment-identity"
+PRODUCT_NAME = "eimir."
+LEGACY_PRODUCT_NAME = "SideBySide"
+CLOUD_DEPLOYMENT_KIND = "eimir-cloud-deployment-identity"
+LEGACY_CLOUD_DEPLOYMENT_KIND = "sidebyside-cloud-deployment-identity"
 
 
 class ManifestError(ValueError):
@@ -176,7 +179,7 @@ def validate_evidence(evidence: dict[str, Any], version: str) -> tuple[str, list
     if not isinstance(android, dict):
         raise ManifestError("Evidence lacks Android release identity")
     if android.get("applicationId") != "de.sidebyside.app":
-        raise ManifestError("Android release applicationId must be de.sidebyside.app")
+        raise ManifestError("Android release applicationId must remain de.sidebyside.app")
     if android.get("versionName") != version:
         raise ManifestError(
             f"Android versionName {android.get('versionName')!r} does not match product version {version!r}"
@@ -196,7 +199,11 @@ def previous_identity(path: Path | None, initial_release: bool) -> dict[str, Any
     if path is None:
         raise ManifestError("Non-initial release requires the previous-known-good release manifest")
     previous = load_json(path)
-    validate_manifest_shape(previous, require_signed_android=True)
+    validate_manifest_shape(
+        previous,
+        require_signed_android=True,
+        allow_legacy_product_name=True,
+    )
     product = previous["product"]
     return {
         "version": product["version"],
@@ -206,12 +213,22 @@ def previous_identity(path: Path | None, initial_release: bool) -> dict[str, Any
     }
 
 
-def validate_manifest_shape(manifest: dict[str, Any], *, require_signed_android: bool) -> None:
+def validate_manifest_shape(
+    manifest: dict[str, Any],
+    *,
+    require_signed_android: bool,
+    allow_legacy_product_name: bool = False,
+) -> None:
     if manifest.get("schemaVersion") != 1:
         raise ManifestError("Unsupported release-manifest schema")
     product = manifest.get("product")
     if not isinstance(product, dict):
         raise ManifestError("Release manifest has no product identity")
+    allowed_names = {PRODUCT_NAME}
+    if allow_legacy_product_name:
+        allowed_names.add(LEGACY_PRODUCT_NAME)
+    if product.get("name") not in allowed_names:
+        raise ManifestError("Release manifest has the wrong product name")
     version = product.get("version")
     if not isinstance(version, str):
         raise ManifestError("Release version is missing")
@@ -323,8 +340,15 @@ def _validate_previous_cloud_identity(value: object) -> dict[str, Any]:
     }
 
 
-def validate_cloud_deployment_identity(identity: dict[str, Any]) -> None:
-    if identity.get("schemaVersion") != 1 or identity.get("kind") != CLOUD_DEPLOYMENT_KIND:
+def validate_cloud_deployment_identity(
+    identity: dict[str, Any], *, allow_legacy_identity: bool = False
+) -> None:
+    allowed_kinds = {CLOUD_DEPLOYMENT_KIND}
+    allowed_names = {PRODUCT_NAME}
+    if allow_legacy_identity:
+        allowed_kinds.add(LEGACY_CLOUD_DEPLOYMENT_KIND)
+        allowed_names.add(LEGACY_PRODUCT_NAME)
+    if identity.get("schemaVersion") != 1 or identity.get("kind") not in allowed_kinds:
         raise ManifestError("Unsupported Cloud deployment identity schema")
     release = identity.get("release")
     if not isinstance(release, dict):
@@ -332,6 +356,8 @@ def validate_cloud_deployment_identity(identity: dict[str, Any]) -> None:
     product = release.get("product")
     if not isinstance(product, dict):
         raise ManifestError("Cloud deployment identity has no product identity")
+    if product.get("name") not in allowed_names:
+        raise ManifestError("Cloud deployment identity has the wrong product name")
     version = product.get("version")
     if not isinstance(version, str):
         raise ManifestError("Cloud deployment product version is missing")
@@ -389,7 +415,7 @@ def previous_cloud_deployment_identity(
         )
 
     identity = load_json(path)
-    validate_cloud_deployment_identity(identity)
+    validate_cloud_deployment_identity(identity, allow_legacy_identity=True)
     release = identity["release"]
     product = release["product"]
     checks = {
@@ -420,7 +446,7 @@ def build_manifest(args: argparse.Namespace) -> int:
     manifest = {
         "schemaVersion": 1,
         "product": {
-            "name": "SideBySide",
+            "name": PRODUCT_NAME,
             "version": args.version,
             "tag": f"v{args.version}",
         },
@@ -465,7 +491,11 @@ def verify_manifest(args: argparse.Namespace) -> int:
 
 def build_cloud_deployment_identity(args: argparse.Namespace) -> int:
     manifest = load_json(args.manifest)
-    validate_manifest_shape(manifest, require_signed_android=True)
+    validate_manifest_shape(
+        manifest,
+        require_signed_android=True,
+        allow_legacy_product_name=True,
+    )
     compose = load_json(args.compose_config)
     backend_reference, web_reference = cloud_images_from_compose(compose)
     backend_reference, backend_digest = require_digest_image_reference(
@@ -483,7 +513,7 @@ def build_cloud_deployment_identity(args: argparse.Namespace) -> int:
         "kind": CLOUD_DEPLOYMENT_KIND,
         "release": {
             "product": {
-                "name": manifest["product"].get("name", "SideBySide"),
+                "name": PRODUCT_NAME,
                 "version": manifest["product"]["version"],
                 "tag": manifest["product"]["tag"],
             },

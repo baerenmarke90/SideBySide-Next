@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
-  <title id="title">SideBySide Next Roadmap – release the Core before optional expansion</title>
+  <title id="title">eimir. Roadmap – release the Core before optional expansion</title>
   <desc id="desc">M0 through M4 are complete. M5 Client Completion and Parity is active and leads to G4 Core Release Candidate. M6 Operate and Launch then leads to G5 Launch-ready. M7 Relationship Depth, M8 Discover and Integrations, and M9 Context and Presence follow after launch. E2EE remains a separate strategic track.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6B6472"/></marker>
@@ -7,7 +7,7 @@
   </defs>
   <rect width="1600" height="900" fill="#FAF8FC"/>
   <circle cx="1510" cy="30" r="220" fill="#EEE7FF" opacity="0.8"/><circle cx="90" cy="890" r="210" fill="#E3F6F1" opacity="0.8"/>
-  <text x="72" y="68" fill="#6638DC" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2">SIDE BY SIDE · PRODUCT ROADMAP · 01 SEP 2026</text>
+  <text x="72" y="68" fill="#6638DC" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2">EIMIR. · PRODUCT ROADMAP · 01 SEP 2026</text>
   <text x="72" y="118" fill="#211A2B" font-family="Georgia, serif" font-size="42" font-weight="700">Release the Core before optional expansion</text>
   <text x="72" y="151" fill="#51485C" font-family="Arial, sans-serif" font-size="19">M5 completes the product clients. M6 makes them safe to operate and launch. M7–M9 expand after G5.</text>
   <g font-family="Arial, sans-serif">

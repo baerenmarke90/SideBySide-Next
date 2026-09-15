@@ -9,12 +9,12 @@
   }
 }
 
-.planen-panel.sbs-motion-reveal {
+.planen-panel.eimir-motion-reveal {
   animation-name: eimir-planning-reveal;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planen-panel.sbs-motion-reveal {
+  .planen-panel.eimir-motion-reveal {
     animation: none;
     opacity: 1;
     transform: none;

@@ -4,7 +4,7 @@
 
 **Related:** #520, #644, #190, #666
 
-SideBySide Account deletion uses a forward-only deletion journal containing
+eimir. Account deletion uses a forward-only deletion journal containing
 minimal pseudonymous recovery metadata outside the point-in-time PostgreSQL
 backup. That separation is intentional: restoring a database backup created
 before an accepted deletion must never resurrect the Account, its credentials,
@@ -20,11 +20,11 @@ from a release that did not yet require explicit deletion-authority provisioning
 Production normal traffic must remain stopped until that provisioning step is
 complete.
 
-Do not pre-generate `SBS_ACCOUNT_DELETION_INSTANCE_ID`. Leave it unset and run:
+Do not pre-generate `EIMIR_ACCOUNT_DELETION_INSTANCE_ID`. Leave it unset and run:
 
 ```bash
 docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
-  python -m sidebyside.identity.deletion_bootstrap \
+  python -m eimir.identity.deletion_bootstrap \
   --confirm-new-installation
 ```
 
@@ -44,7 +44,7 @@ The command creates the empty journal in the mounted `deletion_journal_data`
 volume and prints exactly one new value:
 
 ```dotenv
-SBS_ACCOUNT_DELETION_INSTANCE_ID=<stable-instance-uuid>
+EIMIR_ACCOUNT_DELETION_INSTANCE_ID=<stable-instance-uuid>
 ```
 
 Store that value in `.env` and in the protected operator configuration backup
@@ -69,13 +69,13 @@ must not be accepted merely because its format is valid.
 Canonical Compose mounts the private named volume:
 
 ```text
-deletion_journal_data -> /var/lib/sidebyside/deletion-journal
+deletion_journal_data -> /var/lib/eimir/deletion-journal
 ```
 
 The journal file is:
 
 ```text
-/var/lib/sidebyside/deletion-journal/account-deletions.journal
+/var/lib/eimir/deletion-journal/account-deletions.journal
 ```
 
 Privacy classification is explicit: the journal is **minimal pseudonymous
@@ -124,7 +124,7 @@ journal or its parent directory.
 
 Fail-closed cases include:
 
-- `SBS_ACCOUNT_DELETION_INSTANCE_ID` is configured but the expected journal is
+- `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` is configured but the expected journal is
   missing;
 - the journal is corrupt, truncated, unreadable, or belongs to another instance;
 - a journal exists but the matching instance UUID is unavailable;
@@ -143,12 +143,12 @@ accepted deletions backwards.
 
 Protect these recovery units independently:
 
-1. PostgreSQL + durable local media through the coordinated SideBySide recovery
+1. PostgreSQL + durable local media through the coordinated eimir. recovery
    archive;
 2. the newest forward deletion journal through an operator-controlled protected
    copy/versioned store;
 3. configuration/secrets, including the stable
-   `SBS_ACCOUNT_DELETION_INSTANCE_ID`, through the operator secret/config backup.
+   `EIMIR_ACCOUNT_DELETION_INSTANCE_ID`, through the operator secret/config backup.
 
 For S3 media, follow the provider-specific consistency boundary in
 `SELF-HOSTED-RECOVERY.md`; the forward deletion journal remains independent of the
@@ -161,7 +161,7 @@ After PostgreSQL/media restoration, replay the newest protected journal before
 starting writers:
 
 ```bash
-SBS_RECOVERY_PROJECT=$(
+EIMIR_RECOVERY_PROJECT=$(
   docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
@@ -169,9 +169,9 @@ SBS_RECOVERY_PROJECT=$(
 python3 scripts/self_hosted_deletion_reconcile.py \
   --compose-file compose.yaml \
   --env-file .env \
-  --confirm-project "$SBS_RECOVERY_PROJECT" \
+  --confirm-project "$EIMIR_RECOVERY_PROJECT" \
   --journal /secure/path/account-deletions.journal \
-  --confirm-instance-id "$SBS_ACCOUNT_DELETION_INSTANCE_ID"
+  --confirm-instance-id "$EIMIR_ACCOUNT_DELETION_INSTANCE_ID"
 ```
 
 Arcane uses the same root `compose.yaml` and `self-hosted` profile; only its

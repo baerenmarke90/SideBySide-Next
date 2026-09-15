@@ -7,15 +7,15 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from sqlalchemy import select
 
-from sidebyside.administration.models import InstanceAdministrationActionEvent
-from sidebyside.auth import passwords
-from sidebyside.config import get_settings
-from sidebyside.core.clock import now
-from sidebyside.identity import service as accounts
-from sidebyside.identity.models import AccountEmail, DeviceSession
-from sidebyside.jobs.models import Job, JobStatus
-from sidebyside.relationship import service as relationship
-from sidebyside.relationship.models import Space
+from eimir.administration.models import InstanceAdministrationActionEvent
+from eimir.auth import passwords
+from eimir.config import get_settings
+from eimir.core.clock import now
+from eimir.identity import service as accounts
+from eimir.identity.models import AccountEmail, DeviceSession
+from eimir.jobs.models import Job, JobStatus
+from eimir.relationship import service as relationship
+from eimir.relationship.models import Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -25,7 +25,7 @@ ADMIN_EMAIL = "operator@example.test"
 
 @pytest.fixture
 def server_admin_allowlist(monkeypatch):  # type: ignore[no-untyped-def]
-    monkeypatch.setenv("SBS_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
+    monkeypatch.setenv("EIMIR_SERVER_ADMIN_EMAILS", f'["{ADMIN_EMAIL}"]')
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -530,7 +530,7 @@ def test_account_recovery_email_reports_mail_unavailable_without_issuing_operato
         email="target@example.test",
         password_hash=passwords.hash_password("old-password-value"),
     )
-    monkeypatch.setenv("SBS_MAIL_TRANSPORT", "none")
+    monkeypatch.setenv("EIMIR_MAIL_TRANSPORT", "none")
     get_settings.cache_clear()
 
     response = client.post(

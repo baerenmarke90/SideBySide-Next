@@ -7,20 +7,20 @@ from datetime import date, timedelta
 import pytest
 from sqlalchemy import select
 
-from sidebyside.auth import action_tokens, sessions
-from sidebyside.config import Environment, Settings
-from sidebyside.core.clock import now
-from sidebyside.core.errors import UnauthenticatedError, ValidationError
-from sidebyside.demo import reset as demo_reset
-from sidebyside.demo.service import LEA_EMAIL, create_demo_space
-from sidebyside.identity import service as identity_service
-from sidebyside.identity.models import (
+from eimir.auth import action_tokens, sessions
+from eimir.config import Environment, Settings
+from eimir.core.clock import now
+from eimir.core.errors import UnauthenticatedError, ValidationError
+from eimir.demo import reset as demo_reset
+from eimir.demo.service import LEA_EMAIL, create_demo_space
+from eimir.identity import service as identity_service
+from eimir.identity.models import (
     AccountEmail,
     DeviceSession,
     MagicLinkToken,
     OidcAuthRequest,
 )
-from sidebyside.jobs.models import JobStatus
+from eimir.jobs.models import JobStatus
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

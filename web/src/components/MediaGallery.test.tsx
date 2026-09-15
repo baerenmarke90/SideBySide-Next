@@ -3,7 +3,7 @@ import { MediaType } from '../api/generated/models/MediaType';
 import { i18n } from '../i18n';
 import { MediaGallery } from './MediaGallery';
 
-describe('SBS-M5-Web-S2-SCOPE media gallery accessibility smoke', () => {
+describe('EIMIR-M5-Web-S2-SCOPE media gallery accessibility smoke', () => {
   it('renders keyboard-focusable gallery controls with accessible labels', () => {
     const html = renderToStaticMarkup(
       <MediaGallery

@@ -377,7 +377,7 @@ export function HeartMomentProductPage({
         </header>
 
         <section
-          className="immersive-create-card heart-moment-create-card sbs-motion-reveal"
+          className="immersive-create-card heart-moment-create-card eimir-motion-reveal"
           aria-labelledby="heart-moment-create-heading"
         >
           <form

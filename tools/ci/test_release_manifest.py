@@ -24,8 +24,8 @@ class ReleaseManifestTest(unittest.TestCase):
         self.artifacts = [
             ("backend-runtime", "backend-runtime.image.tar", ["api", "worker", "migrate"]),
             ("web-runtime", "web-runtime.image.tar", ["web"]),
-            ("android-apk", "android/sidebyside-release-unsigned.apk", ["android-apk"]),
-            ("android-aab", "android/sidebyside-release-unsigned.aab", ["android-aab"]),
+            ("android-apk", "android/eimir-release-unsigned.apk", ["android-apk"]),
+            ("android-aab", "android/eimir-release-unsigned.aab", ["android-aab"]),
         ]
         evidence_artifacts = []
         for artifact_id, relative, roles in self.artifacts:
@@ -57,8 +57,8 @@ class ReleaseManifestTest(unittest.TestCase):
                 "signing": "unsigned-evidence-only",
             },
         }
-        self.backend_image = "registry.example/sidebyside-backend@sha256:" + "1" * 64
-        self.web_image = "registry.example/sidebyside-web@sha256:" + "2" * 64
+        self.backend_image = "registry.example/eimir-backend@sha256:" + "1" * 64
+        self.web_image = "registry.example/eimir-web@sha256:" + "2" * 64
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -91,7 +91,7 @@ class ReleaseManifestTest(unittest.TestCase):
     ) -> dict[str, object]:
         return {
             "schemaVersion": 1,
-            "product": {"name": "SideBySide", "version": "0.1.0", "tag": "v0.1.0"},
+            "product": {"name": "eimir.", "version": "0.1.0", "tag": "v0.1.0"},
             "sourceRevision": "a" * 40,
             "artifacts": self.evidence["artifacts"],
             "android": {**self.evidence["android"], "signing": signing},
@@ -189,7 +189,7 @@ class ReleaseManifestTest(unittest.TestCase):
         source, artifacts, android = release_manifest.validate_evidence(self.evidence, "0.1.0")
         manifest = {
             "schemaVersion": 1,
-            "product": {"name": "SideBySide", "version": "0.1.0", "tag": "v0.1.0"},
+            "product": {"name": "eimir.", "version": "0.1.0", "tag": "v0.1.0"},
             "sourceRevision": source,
             "artifacts": artifacts,
             "android": android,
@@ -243,7 +243,7 @@ class ReleaseManifestTest(unittest.TestCase):
         self.assertEqual(web, self.web_image)
         mismatched = self._cloud_config()
         mismatched["services"]["cloud-worker"]["image"] = (
-            "registry.example/sidebyside-backend@sha256:" + "3" * 64
+            "registry.example/eimir-backend@sha256:" + "3" * 64
         )
         with self.assertRaises(release_manifest.ManifestError):
             release_manifest.cloud_images_from_compose(mismatched)
@@ -307,7 +307,7 @@ class ReleaseManifestTest(unittest.TestCase):
 
         tampered = json.loads(previous_cloud_path.read_text(encoding="utf-8"))
         tampered["images"]["backend"]["reference"] = (
-            "registry.example/sidebyside-backend@sha256:" + "4" * 64
+            "registry.example/eimir-backend@sha256:" + "4" * 64
         )
         tampered["images"]["backend"]["digest"] = "sha256:" + "4" * 64
         tampered_path = self.root / "tampered-previous-cloud.json"

@@ -245,7 +245,7 @@
  * Rendered in a document-body portal (see PlacePicker in
  * SharedPlanningOverviewPage.tsx) so it is never confined to the create
  * form's own stacking context — the section it lives in gets one from its
- * `sbs-motion-reveal` transform animation, which would otherwise force the
+ * `eimir-motion-reveal` transform animation, which would otherwise force the
  * menu to paint underneath a later sibling section regardless of z-index.
  * `position`, `top`, `left`, and `width` are set inline from the trigger's
  * viewport rect; this rule only styles the panel itself.

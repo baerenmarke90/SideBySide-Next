@@ -30,13 +30,13 @@ storage, mail, auth, push — rather than in domain logic.
 
 ## Layers
 
-**API** (`sidebyside.api`) — HTTP, serialization, error mapping. Contains no
+**API** (`eimir.api`) — HTTP, serialization, error mapping. Contains no
 domain rules.
 
-**Domain** (`sidebyside.domain`) — domain objects, rules, and events. Knows
+**Domain** (`eimir.domain`) — domain objects, rules, and events. Knows
 neither HTTP nor a concrete provider.
 
-**Infrastructure** (`sidebyside.db`, `.media`, `.providers`) — persistence and
+**Infrastructure** (`eimir.db`, `.media`, `.providers`) — persistence and
 external systems behind interfaces.
 
 Dependencies point inward: API knows Domain; Domain knows Infrastructure only
@@ -232,12 +232,12 @@ places, discovery, recipes, entertainment, external media, and location
 history.
 
 Domain code knows no concrete provider. External data is transformed into
-SideBySide-owned normalized forms before entering the Domain.
+eimir.-owned normalized forms before entering the Domain.
 
 The contracts are named `MapProvider`, `GeocodingProvider`, `PlacesProvider`,
 `DiscoveryProvider`, `RecipeProvider`, `EntertainmentProvider`,
 `ExternalMediaProvider`, and `LocationHistoryProvider`. They return only
-SideBySide-owned immutable models such as `GeoPoint`, `MapRoute`,
+eimir.-owned immutable models such as `GeoPoint`, `MapRoute`,
 `PlaceCandidate`, `RecipeItem`, or `EntertainmentItem`; provider-specific DTOs
 end at the adapter boundary.
 

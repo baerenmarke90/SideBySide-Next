@@ -3,6 +3,7 @@ import type { SessionView } from '../api/generated/models/SessionView';
 import type { TokenView } from '../api/generated/models/TokenView';
 import * as referenceFlow from './referenceFlow';
 import {
+  LEGACY_SESSION_STORAGE_KEY,
   SESSION_STORAGE_KEY,
   clearStoredSession,
   hasStoredSession,
@@ -78,6 +79,23 @@ describe('sessionPersistence', () => {
     );
   });
 
+  it('migrates an existing legacy session without signing the user out', () => {
+    storeSession(mockSession);
+    const serialized = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    expect(serialized).not.toBeNull();
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.setItem(
+      LEGACY_SESSION_STORAGE_KEY,
+      serialized as string,
+    );
+
+    expect(loadStoredSession()?.account.id).toBe(mockAccount.id);
+    expect(window.sessionStorage.getItem(SESSION_STORAGE_KEY)).toBe(serialized);
+    expect(
+      window.sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY),
+    ).toBeNull();
+  });
+
   it('clears stored session properly', () => {
     storeSession(mockSession);
     expect(hasStoredSession()).toBe(true);
@@ -86,6 +104,9 @@ describe('sessionPersistence', () => {
     expect(hasStoredSession()).toBe(false);
     expect(loadStoredSession()).toBeNull();
     expect(window.sessionStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(
+      window.sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY),
+    ).toBeNull();
   });
 
   it('correctly assesses access token validity', () => {

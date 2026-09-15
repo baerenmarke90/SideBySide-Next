@@ -1,6 +1,6 @@
 /**
  * Mirrors `MAX_MEMORY_ATTACHMENTS` in
- * `backend/src/sidebyside/attachments/binding.py` (M2-D04 cardinality limit).
+ * `backend/src/eimir/attachments/binding.py` (M2-D04 cardinality limit).
  *
  * No shared/generated contract exposes this value today (it is a service-side
  * validation constant, not part of any OpenAPI schema), so it is duplicated

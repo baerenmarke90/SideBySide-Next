@@ -1,4 +1,4 @@
-# SideBySide Next - Premium Billing Strategy
+# eimir. - Premium Billing Strategy
 
 **Status:** authoritative commercial packaging baseline  
 **Version:** 1.0  
@@ -10,7 +10,7 @@
 
 ## Purpose and authority
 
-This document defines the commercial packaging and billing strategy for SideBySide Next / eimir. It translates the existing business/freemium model into a concrete consumer price and provider-integration direction without creating a second entitlement architecture.
+This document defines the commercial packaging and billing strategy for eimir. / eimir. It translates the existing business/freemium model into a concrete consumer price and provider-integration direction without creating a second entitlement architecture.
 
 Authority is intentionally split by concern:
 
@@ -95,13 +95,13 @@ The initial consumer product direction uses the same EUR Pro reference price for
 
 This does not make the operating models technically identical.
 
-### SideBySide Cloud / Managed
+### eimir. Cloud / Managed
 
 Cloud provides managed operational value, including infrastructure, deployment, updates, backups, security maintenance, monitoring, managed email/push where applicable, and managed storage.
 
 Cloud may impose transparent managed-resource limits because those resources create recurring operator cost. Storage quota values are governed by the current business/freemium documentation and remain working hypotheses until separately validated/frozen if that documentation says so.
 
-### SideBySide Self-Hosted
+### eimir. Self-Hosted
 
 Self-Hosted users operate their own infrastructure and storage. Personal/noncommercial Free/Core remains fully usable under the repository's licensing model.
 
@@ -294,7 +294,7 @@ The precise signed payload/schema belongs to the implementation/ADR boundary and
 
 A Self-Hosted Premium consumer license unlocks Premium product capabilities for the licensed relationship/Space under the applicable terms.
 
-It does not automatically grant the right to resell SideBySide/eimir. as SaaS, OEM, white-label, or another commercial third-party service. Those rights remain controlled by the separate commercial-license policy.
+It does not automatically grant the right to resell eimir. as SaaS, OEM, white-label, or another commercial third-party service. Those rights remain controlled by the separate commercial-license policy.
 
 ---
 
@@ -401,7 +401,7 @@ Required principles:
 - explicitly reassure users that downgrade does not delete their memories/history;
 - Free users may see contextual Premium previews where useful, but Core functionality must not be repeatedly interrupted;
 - cancellation/renewal state must be understandable without provider terminology leaking into ordinary relationship UI;
-- subscription management must use provider-supported secure flows where appropriate instead of collecting payment credentials directly in SideBySide.
+- subscription management must use provider-supported secure flows where appropriate instead of collecting payment credentials directly in eimir.
 
 User-facing copy remains localization-driven.
 

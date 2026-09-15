@@ -29,7 +29,7 @@ from self_hosted_recovery_acceptance import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RECONCILE_SCRIPT = ROOT / "scripts" / "self_hosted_deletion_reconcile.py"
-JOURNAL_MODULE = ROOT / "backend" / "src" / "sidebyside" / "identity" / "deletion_journal.py"
+JOURNAL_MODULE = ROOT / "backend" / "src" / "eimir" / "identity" / "deletion_journal.py"
 
 INSTANCE_ID = "01990000-0000-7000-8000-000000000901"
 OWNER_ID = "01990000-0000-7000-8000-000000000001"
@@ -37,7 +37,7 @@ OWNER_ID = "01990000-0000-7000-8000-000000000001"
 
 def _load_journal_module() -> ModuleType:
     """Load the stdlib-only journal module without importing backend package dependencies."""
-    name = "sidebyside_deletion_journal_acceptance"
+    name = "eimir_deletion_journal_acceptance"
     spec = importlib.util.spec_from_file_location(name, JOURNAL_MODULE)
     if spec is None or spec.loader is None:
         raise AcceptanceError("Deletion journal implementation could not be loaded.")
@@ -103,9 +103,9 @@ def _psql_scalar(scenario: Scenario, query: str) -> str:
             "--set",
             "ON_ERROR_STOP=1",
             "--username",
-            "sidebyside",
+            "eimir",
             "--dbname",
-            "sidebyside",
+            "eimir",
             "--command",
             query,
         ),
@@ -209,13 +209,13 @@ def _verify_reconciled_state(scenario: Scenario, stale_owner_token: str) -> None
 
 
 def run_acceptance() -> None:
-    project_name = f"sbs-deletion-recovery-{uuid4().hex[:12]}"
+    project_name = f"eimir-deletion-recovery-{uuid4().hex[:12]}"
     api_port = available_port()
     web_port = available_port()
     if api_port == web_port:
         web_port = available_port()
 
-    with tempfile.TemporaryDirectory(prefix="sidebyside-deletion-recovery-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="eimir-deletion-recovery-") as temp_name:
         temp = Path(temp_name)
         env_file = temp / "synthetic.env"
         archive = temp / "pre-deletion-backup.tar"

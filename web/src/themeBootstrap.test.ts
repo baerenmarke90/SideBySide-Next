@@ -17,7 +17,11 @@ type ThemeDocument = {
 };
 
 type ThemeWindow = {
-  localStorage: { getItem(key: string): string | null };
+  localStorage: {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+    removeItem(key: string): void;
+  };
   matchMedia(query: string): { matches: boolean };
 };
 
@@ -39,15 +43,28 @@ function runBootstrap(
   storedPreference: string | null,
   systemPrefersDark: boolean,
   storageThrows = false,
+  legacyStoredPreference: string | null = null,
 ) {
   const dataset: Record<string, string> = {};
   const style: Record<string, string> = {};
   const themeColor = { content: '#f6efea' };
+  const storage = new Map<string, string>();
+  if (storedPreference !== null) storage.set('eimir.theme', storedPreference);
+  if (legacyStoredPreference !== null)
+    storage.set('sidebyside.theme', legacyStoredPreference);
   const windowMock: ThemeWindow = {
     localStorage: {
-      getItem: () => {
+      getItem: (key) => {
         if (storageThrows) throw new Error('storage blocked');
-        return storedPreference;
+        return storage.get(key) ?? null;
+      },
+      setItem: (key, value) => {
+        if (storageThrows) throw new Error('storage blocked');
+        storage.set(key, value);
+      },
+      removeItem: (key) => {
+        if (storageThrows) throw new Error('storage blocked');
+        storage.delete(key);
       },
     },
     matchMedia: (query) => {
@@ -66,7 +83,7 @@ function runBootstrap(
   const execute = new Function('window', 'document', readBootstrap());
   execute(windowMock, documentMock);
 
-  return { dataset, style, themeColor };
+  return { dataset, style, themeColor, storage };
 }
 
 describe('theme bootstrap', () => {
@@ -114,5 +131,12 @@ describe('theme bootstrap', () => {
       themePreference: 'system',
     });
     expect(result.style.colorScheme).toBe('dark');
+  });
+
+  it('migrates the deprecated preference before app startup', () => {
+    const result = runBootstrap(null, false, false, 'dark');
+    expect(result.dataset.theme).toBe('dark');
+    expect(result.storage.get('eimir.theme')).toBe('dark');
+    expect(result.storage.has('sidebyside.theme')).toBe(false);
   });
 });

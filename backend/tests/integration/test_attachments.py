@@ -16,11 +16,11 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import cleanup, service
-from sidebyside.attachments.models import Attachment, AttachmentStatus
-from sidebyside.core.clock import now
-from sidebyside.media import build_storage_key, get_media_store
-from sidebyside.relationship import service as relationship_service
+from eimir.attachments import cleanup, service
+from eimir.attachments.models import Attachment, AttachmentStatus
+from eimir.core.clock import now
+from eimir.media import build_storage_key, get_media_store
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -169,7 +169,7 @@ class TestLifecycle:
         )
         assert second_time.status_code == 202
 
-        from sidebyside.jobs.models import Job
+        from eimir.jobs.models import Job
 
         jobs = (
             session.execute(select(Job).where(Job.kind == service.ATTACHMENT_VALIDATION))

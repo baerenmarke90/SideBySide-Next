@@ -79,7 +79,7 @@ function SearchResultCard({ item }: { item: SearchResult }) {
 
   const inner = (
     <div
-      className={`search-result-card search-result-${item.type.toLowerCase()} sbs-motion-lift`}
+      className={`search-result-card search-result-${item.type.toLowerCase()} eimir-motion-lift`}
     >
       <div className="search-result-content">
         <span className="search-result-kind">
@@ -98,7 +98,7 @@ function SearchResultCard({ item }: { item: SearchResult }) {
   );
 
   return (
-    <li className="search-result-wrapper sbs-motion-reveal">
+    <li className="search-result-wrapper eimir-motion-reveal">
       {path ? (
         <Link className="search-result-link" to={path}>
           {inner}
@@ -285,7 +285,7 @@ function ActivityCard({
 
   const inner = (
     <div
-      className={`activity-card ${path ? 'activity-card-interactive sbs-motion-lift' : 'activity-card-static'} activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
+      className={`activity-card ${path ? 'activity-card-interactive eimir-motion-lift' : 'activity-card-static'} activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
     >
       <div className="activity-card-header">
         {item.actor ? (
@@ -334,7 +334,7 @@ function ActivityCard({
   );
 
   return (
-    <li className="activity-result-wrapper sbs-motion-reveal">
+    <li className="activity-result-wrapper eimir-motion-reveal">
       {path ? (
         <Link className="activity-result-link" to={path}>
           {inner}
@@ -464,7 +464,7 @@ function NotificationCard({
 
   const inner = (
     <div
-      className={`m4-item sbs-motion-lift ${path ? 'm4-item-interactive' : 'm4-item-static'}${item.readAt ? '' : ' m4-item-unread'}`}
+      className={`m4-item eimir-motion-lift ${path ? 'm4-item-interactive' : 'm4-item-static'}${item.readAt ? '' : ' m4-item-unread'}`}
     >
       <div className="m4-notification-header">
         {item.actor ? (
@@ -521,7 +521,7 @@ function NotificationCard({
   );
 
   return (
-    <li className="m4-notification-wrapper sbs-motion-reveal">
+    <li className="m4-notification-wrapper eimir-motion-reveal">
       {path ? (
         <Link
           className="m4-notification-link"

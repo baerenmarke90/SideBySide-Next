@@ -7,12 +7,12 @@ from datetime import date
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import PrivacyClass
-from sidebyside.dashboard import service as dashboard_service
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.milestones.models import Milestone, MilestonePayload
-from sidebyside.relationship import service as relationship_service
+from eimir.authorization import PrivacyClass
+from eimir.dashboard import service as dashboard_service
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.milestones.models import Milestone, MilestonePayload
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

@@ -11,7 +11,7 @@ This document records the **runtime boundary** and technical architecture define
 
 The repository has frozen these commercial and architectural principles:
 
-- SideBySide uses a genuine freemium model;
+- eimir. uses a genuine freemium model;
 - Commercial entitlements are Space/couple-scoped (one partner purchases, both benefit);
 - Self-Hosted vs. Cloud/Managed is an operating-model axis separate from Free vs. Premium;
 - Essential Security, Privacy, Accessibility, Account/data deletion and portability are non-paywallable;
@@ -167,7 +167,7 @@ payment/store provider is part of the initial launch target.
   was added.
 - **`SELF_HOSTED_KEY`** — `NOT_APPLICABLE` for this launch, despite the Ed25519
   offline-license verifier already existing
-  (`backend/src/sidebyside/entitlements/offline_license.py`, unit-tested in
+  (`backend/src/eimir/entitlements/offline_license.py`, unit-tested in
   isolation). That verifier is intentionally not wired into `record_grant`,
   configuration, or any endpoint: #523 explicitly scoped "Self-Hosted license
   issuer/adapter implementation" out, and no accepted decision requires it for

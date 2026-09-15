@@ -17,9 +17,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.core.errors import NotFoundError
-from sidebyside.relationship import service
-from sidebyside.relationship.models import MembershipStatus
+from eimir.core.errors import NotFoundError
+from eimir.relationship import service
+from eimir.relationship.models import MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -89,7 +89,7 @@ class TestOutsiderAccess:
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
         """Any difference could otherwise become an existence oracle."""
-        from sidebyside.core.ids import new_id
+        from eimir.core.ids import new_id
 
         real = client.get(
             f"/api/v1/spaces/{couple['space'].id}",
@@ -243,7 +243,7 @@ class TestUpperBound:
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
         """A couple Space has at most two active partners."""
-        from sidebyside.core.errors import ConflictError
+        from eimir.core.errors import ConflictError
 
         third = make_account(session, "Dritte Person")
         with pytest.raises(ConflictError) as error:
@@ -255,7 +255,7 @@ class TestUpperBound:
         session: Session,
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
-        from sidebyside.core.errors import ConflictError
+        from eimir.core.errors import ConflictError
 
         with pytest.raises(ConflictError) as error:
             service.add_member(session, couple["space"].id, couple["b"])
@@ -266,7 +266,7 @@ class TestUpperBound:
         session: Session,
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
-        from sidebyside.core.errors import ConflictError
+        from eimir.core.errors import ConflictError
 
         membership = service.require_membership(session, couple["b"], couple["space"].id)
         service.end_membership(membership)

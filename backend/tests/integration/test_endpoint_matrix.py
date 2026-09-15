@@ -18,9 +18,9 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.engagement.models import Notification, NotificationKind
-from sidebyside.main import create_app
-from sidebyside.relationship import service as relationship_service
+from eimir.engagement.models import Notification, NotificationKind
+from eimir.main import create_app
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

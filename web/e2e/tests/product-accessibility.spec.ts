@@ -520,7 +520,7 @@ test('planning sanctuary is compact, dark, reduced-motion, keyboard operable, an
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'system');
+    window.localStorage.setItem('eimir.theme', 'system');
   });
   await page.setViewportSize({ width: 320, height: 800 });
   const unexpectedRequests = await installAuthorizedApiMocks(page);
@@ -591,7 +591,7 @@ test('planning sanctuary stays accessible in expanded light mode at 200 percent 
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'system');
+    window.localStorage.setItem('eimir.theme', 'system');
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   const unexpectedRequests = await installAuthorizedApiMocks(page);
@@ -710,7 +710,7 @@ test('Place coordinate guidance meets AA contrast in compact light and dark edit
   page,
 }, testInfo) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'system');
+    window.localStorage.setItem('eimir.theme', 'system');
   });
   const unexpectedRequests = await installAuthorizedApiMocks(page);
   await page.goto('/');
@@ -771,7 +771,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   }, testInfo) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await page.addInitScript(() =>
-      localStorage.setItem('sidebyside.theme', 'system'),
+      localStorage.setItem('eimir.theme', 'system'),
     );
     const unexpectedRequests = await installAuthorizedApiMocks(page);
     await page.goto('/today');

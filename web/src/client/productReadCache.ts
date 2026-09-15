@@ -53,15 +53,20 @@ export interface ProductReadCacheStorage {
   destroy?(): Promise<void>;
 }
 
-export const PRODUCT_CACHE_FALLBACK_EVENT = 'sidebyside:read-cache-fallback';
-export const PRODUCT_CACHE_NETWORK_EVENT = 'sidebyside:read-cache-network';
+export const PRODUCT_CACHE_FALLBACK_EVENT = 'eimir:read-cache-fallback';
+export const PRODUCT_CACHE_NETWORK_EVENT = 'eimir:read-cache-network';
 export const PRODUCT_READ_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+// IndexedDB names are persistent browser identity. Keep the established
+// database so an upgrade does not strand cached rows in an unreachable store.
 const DATABASE_NAME = 'sidebyside-web-read-cache';
 const DATABASE_VERSION = 3;
 const STORE_NAME = 'product-details';
-const CONTEXT_STORAGE_KEY = 'sidebyside-web-read-cache-context-v3';
-const LEGACY_CONTEXT_STORAGE_KEY = 'sidebyside-web-read-cache-context-v2';
+const CONTEXT_STORAGE_KEY = 'eimir-web-read-cache-context-v3';
+const LEGACY_CONTEXT_STORAGE_KEYS = [
+  'sidebyside-web-read-cache-context-v3',
+  'sidebyside-web-read-cache-context-v2',
+] as const;
 const SHARED_SCOPE: ProductCachePrivacyScope = 'SPACE_SHARED';
 
 /** A marker value that parses but can never be adopted as a context.
@@ -234,18 +239,28 @@ function readCacheContextMarker(): {
   }
 
   try {
-    const raw = localStorage.getItem(CONTEXT_STORAGE_KEY);
-    const legacy = localStorage.getItem(LEGACY_CONTEXT_STORAGE_KEY);
+    const canonical = localStorage.getItem(CONTEXT_STORAGE_KEY);
+    const legacy = LEGACY_CONTEXT_STORAGE_KEYS.map((key) =>
+      localStorage.getItem(key),
+    ).find((value) => value !== null);
+    const raw = canonical ?? legacy ?? null;
     if (raw === null) {
-      return { available: true, hadMarker: legacy !== null, context: null };
+      return { available: true, hadMarker: false, context: null };
     }
 
     try {
       const parsed: unknown = JSON.parse(raw);
+      const context = isCacheContext(parsed) ? parsed : null;
+      if (canonical === null && context !== null) {
+        localStorage.setItem(CONTEXT_STORAGE_KEY, raw);
+        for (const key of LEGACY_CONTEXT_STORAGE_KEYS) {
+          localStorage.removeItem(key);
+        }
+      }
       return {
         available: true,
         hadMarker: true,
-        context: isCacheContext(parsed) ? parsed : null,
+        context,
       };
     } catch {
       return { available: true, hadMarker: true, context: null };
@@ -279,7 +294,7 @@ function writeCacheContextMarker(context: ProductCacheContext): boolean {
   if (typeof localStorage === 'undefined') return true;
   try {
     localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(context));
-    localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
+    for (const key of LEGACY_CONTEXT_STORAGE_KEYS) localStorage.removeItem(key);
   } catch {
     // Verified below rather than assumed, in either direction.
   }
@@ -305,7 +320,7 @@ function neutralizeCacheContextMarker(): boolean {
 
   try {
     localStorage.removeItem(CONTEXT_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_CONTEXT_STORAGE_KEY);
+    for (const key of LEGACY_CONTEXT_STORAGE_KEYS) localStorage.removeItem(key);
   } catch {
     // Removal is not the only way to make the pointer unusable.
   }

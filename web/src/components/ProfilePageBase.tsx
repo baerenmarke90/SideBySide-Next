@@ -532,7 +532,7 @@ export function PreferenceDialog({
     >
       <div
         ref={dialogRef}
-        className="preference-modal-dialog sbs-motion-reveal"
+        className="preference-modal-dialog eimir-motion-reveal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="pref-dialog-heading"
@@ -853,7 +853,7 @@ export function PreferenceManager({
                     <button
                       key={pref.id}
                       type="button"
-                      className="profile-preference-chip sbs-motion-lift"
+                      className="profile-preference-chip eimir-motion-lift"
                       onClick={(e) => {
                         triggerElementRef.current = e.currentTarget;
                         setEditing(pref);

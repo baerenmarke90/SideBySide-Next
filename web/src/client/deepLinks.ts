@@ -47,7 +47,8 @@ export type CanonicalDeepLinkKind =
   | 'giftIdea'
   | 'privateCollection';
 
-const AUTH_RETURN_STORAGE_KEY = 'sidebyside-auth-return-v1';
+const AUTH_RETURN_STORAGE_KEY = 'eimir-auth-return-v1';
+const LEGACY_AUTH_RETURN_STORAGE_KEY = 'sidebyside-auth-return-v1';
 const AUTH_RETURN_MAX_AGE_MS = 30 * 60 * 1000;
 
 export const SETTINGS_AUTH_RETURN_HASHES = [
@@ -144,12 +145,12 @@ export function validateAppRelativeReturnTarget(target: string): string | null {
 
   let parsed: URL;
   try {
-    parsed = new URL(target, 'https://sidebyside.invalid');
+    parsed = new URL(target, 'https://eimir.invalid');
   } catch {
     return null;
   }
 
-  if (parsed.origin !== 'https://sidebyside.invalid') return null;
+  if (parsed.origin !== 'https://eimir.invalid') return null;
   if (parsed.search) return null;
 
   const canonicalTarget = `${parsed.pathname}${parsed.hash}`;
@@ -210,6 +211,7 @@ export function rememberCurrentAuthReturnTarget(
   const target = validateAppRelativeReturnTarget(`${pathname}${search}${hash}`);
   if (!target) {
     window.localStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_AUTH_RETURN_STORAGE_KEY);
     return null;
   }
 
@@ -242,8 +244,11 @@ export function consumeAuthReturnTarget(
   now = Date.now(),
 ): string | null {
   if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(AUTH_RETURN_STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(AUTH_RETURN_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_AUTH_RETURN_STORAGE_KEY);
   window.localStorage.removeItem(AUTH_RETURN_STORAGE_KEY);
+  window.localStorage.removeItem(LEGACY_AUTH_RETURN_STORAGE_KEY);
   if (!raw) return null;
 
   try {

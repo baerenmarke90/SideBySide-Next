@@ -8,15 +8,15 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments.binding import MemoryAttachment
-from sidebyside.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.ids import new_id
-from sidebyside.dashboard import service as dashboard_service
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.milestones.models import Milestone, MilestonePayload
-from sidebyside.people.models import (
+from eimir.attachments.binding import MemoryAttachment
+from eimir.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
+from eimir.authorization import PrivacyClass
+from eimir.core.ids import new_id
+from eimir.dashboard import service as dashboard_service
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.milestones.models import Milestone, MilestonePayload
+from eimir.people.models import (
     DateRepeat,
     ImportantDate,
     ImportantDatePayload,
@@ -25,10 +25,10 @@ from sidebyside.people.models import (
     RelatedPerson,
     RelatedPersonPayload,
 )
-from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import SpaceProfile
-from sidebyside.wishes.models import Wish, WishPayload
+from eimir.plans.models import Plan, PlanPayload, PlanStatus
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import SpaceProfile
+from eimir.wishes.models import Wish, WishPayload
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

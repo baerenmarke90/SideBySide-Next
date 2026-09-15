@@ -8,9 +8,9 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import passwords, recent_auth
-from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
-from sidebyside.identity import service as accounts
+from eimir.auth import passwords, recent_auth
+from eimir.auth.recent_auth_models import RecentAuthenticationGrant
+from eimir.identity import service as accounts
 from tests.conftest import auth, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

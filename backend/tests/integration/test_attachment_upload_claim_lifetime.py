@@ -6,10 +6,10 @@ from datetime import timedelta
 
 import pytest
 
-from sidebyside.attachments import service, upload_ownership
-from sidebyside.attachments.models import Attachment, MediaType
-from sidebyside.authorization import AuthorizationContext
-from sidebyside.core.errors import DomainError
+from eimir.attachments import service, upload_ownership
+from eimir.attachments.models import Attachment, MediaType
+from eimir.authorization import AuthorizationContext
+from eimir.core.errors import DomainError
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

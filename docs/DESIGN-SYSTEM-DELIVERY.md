@@ -1,4 +1,4 @@
-# SideBySide Design System Delivery
+# eimir. Design System Delivery
 
 **Status:** Mandatory implementation framework  
 **Version:** 1.1  
@@ -90,8 +90,8 @@ For colors, the following also applies:
 ### Android output
 
 - Compose `Color`, `Dp`, Shapes, Typography, and motion values.
-- Material 3 theme as an adapter without losing SideBySide semantics in generic Material names.
-- `SideBySideTheme` has separate Light/Dark `ColorScheme`s and follows `isSystemInDarkTheme()` by default.
+- Material 3 theme as an adapter without losing eimir. semantics in generic Material names.
+- `eimir.Theme` has separate Light/Dark `ColorScheme`s and follows `isSystemInDarkTheme()` by default.
 - The theme entry point must allow an explicit override so that a later **System / Hell / Dunkel** setting (de-DE product labels) can be added without restructuring screens.
 - Status and navigation bars follow the theme background and appropriate icon brightness.
 - Window Size Classes are mapped to Compact/Medium/Expanded.

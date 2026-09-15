@@ -9,7 +9,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 from sqlalchemy import select
 
-from sidebyside.identity.models import WebAuthnChallenge, WebAuthnCredential
+from eimir.identity.models import WebAuthnChallenge, WebAuthnCredential
 from tests.conftest import auth, make_account, requires_database, sign_in
 from tests.support.authenticator import VirtualAuthenticator, from_b64url
 

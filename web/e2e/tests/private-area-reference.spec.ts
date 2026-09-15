@@ -264,7 +264,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
   }, testInfo) => {
     await page.emulateMedia({ colorScheme });
     await page.addInitScript(() => {
-      window.localStorage.setItem('sidebyside.theme', 'system');
+      window.localStorage.setItem('eimir.theme', 'system');
     });
     await page.setViewportSize({ width: 390, height: 844 });
 
@@ -288,7 +288,7 @@ test('private area reflows at 320 CSS px and removes decorative motion', async (
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'system');
+    window.localStorage.setItem('eimir.theme', 'system');
   });
   await page.setViewportSize({ width: 320, height: 844 });
 
@@ -317,7 +317,7 @@ test('private area keeps the accepted hierarchy in expanded Web', async ({
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'system');
+    window.localStorage.setItem('eimir.theme', 'system');
   });
   await page.setViewportSize({ width: 1440, height: 900 });
 

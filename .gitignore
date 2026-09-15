@@ -45,7 +45,7 @@ keystore.properties
 #
 # Mit Anker. Ohne fuehrenden Schraegstrich trifft ein Muster JEDES
 # Verzeichnis dieses Namens - "media/" hat das Quellpaket
-# backend/src/sidebyside/media/ verschluckt, und zwar lautlos: lokal lag
+# backend/src/eimir/media/ verschluckt, und zwar lautlos: lokal lag
 # es auf der Platte, nur in der CI fehlte es.
 /backend/data/
 /backend/media/

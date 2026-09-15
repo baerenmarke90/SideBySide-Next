@@ -7,18 +7,18 @@ import io
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import binding as attachment_binding
-from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import (
+from eimir.attachments import binding as attachment_binding
+from eimir.attachments import service as attachment_service
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.media import get_media_store
-from sidebyside.relationship import service as relationship_service
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.media import get_media_store
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

@@ -19,7 +19,7 @@ time.
 
 During #524, the registration/maintenance and existing-operator recovery mechanics
 were exercised successfully. G5-07 failed for one concrete reason: with the
-documented local/Self-Hosted `SBS_MAIL_TRANSPORT=log` path, the global log redaction
+documented local/Self-Hosted `EIMIR_MAIL_TRANSPORT=log` path, the global log redaction
 removed the one-time token from the email-verification link. A fresh operator could
 therefore create an Account but could not verify the allowlisted email required for
 ServerAdmin authorization.
@@ -42,7 +42,7 @@ not application/runtime source changes.
 The run configures only synthetic CI identity and credential material:
 
 - a synthetic `example.invalid` ServerAdmin allowlist address;
-- `SBS_MAIL_TRANSPORT=log`;
+- `EIMIR_MAIL_TRANSPORT=log`;
 - a per-run random PostgreSQL password;
 - a per-run random first-account password;
 - a per-run random bootstrap proof satisfying the production validation length.

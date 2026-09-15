@@ -9,21 +9,21 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import AuthorizationContext, ContentVisibility, PrivacyClass
-from sidebyside.collections.models import Collection, CollectionPayload
-from sidebyside.comments import service as comment_service
-from sidebyside.comments.models import CommentTarget
-from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
-from sidebyside.engagement import service
-from sidebyside.engagement.models import Activity, ActivityKind, Notification, NotificationKind
-from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.outbox import service as outbox_service
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.places.models import Place, PlacePayload
-from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
-from sidebyside.relationship import service as relationship_service
-from sidebyside.wishes.models import Wish, WishPayload
+from eimir.authorization import AuthorizationContext, ContentVisibility, PrivacyClass
+from eimir.collections.models import Collection, CollectionPayload
+from eimir.comments import service as comment_service
+from eimir.comments.models import CommentTarget
+from eimir.domain.events import DomainEvent, EventType, PublicEventPayload
+from eimir.engagement import service
+from eimir.engagement.models import Activity, ActivityKind, Notification, NotificationKind
+from eimir.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.outbox import service as outbox_service
+from eimir.outbox.models import OutboxEvent
+from eimir.places.models import Place, PlacePayload
+from eimir.plans.models import Plan, PlanPayload, PlanStatus
+from eimir.relationship import service as relationship_service
+from eimir.wishes.models import Wish, WishPayload
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

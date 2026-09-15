@@ -16,12 +16,12 @@ The reserved demo identities are:
 
 | Person | Reserved address |
 |---|---|
-| Lea Sommer | `demo-lea@sidebyside.invalid` |
-| Alex Winter | `demo-alex@sidebyside.invalid` |
+| Lea Sommer | `demo-lea@eimir.invalid` |
+| Alex Winter | `demo-alex@eimir.invalid` |
 
 `.invalid` is deliberately non-deliverable. For manual development/QA creation, initial local
 passwords are supplied only while the canonical accounts are first created through
-`SBS_DEMO_LEA_PASSWORD` and `SBS_DEMO_ALEX_PASSWORD`; they are never committed or printed.
+`EIMIR_DEMO_LEA_PASSWORD` and `EIMIR_DEMO_ALEX_PASSWORD`; they are never committed or printed.
 
 The dedicated public demo does not require an operator to provide or persist these seed passwords.
 Its Compose bootstrap creates high-entropy ephemeral initial values in process memory when the
@@ -41,7 +41,7 @@ not treat public-demo entry as a normal authentication capability.
 
 ## Environments
 
-`SBS_ENVIRONMENT` has three operational meanings relevant here:
+`EIMIR_ENVIRONMENT` has three operational meanings relevant here:
 
 - `development`: local development and QA;
 - `demo`: isolated public demo deployment;
@@ -50,13 +50,13 @@ not treat public-demo entry as a normal authentication capability.
 `demo` receives the same public-runtime hardening as `production`: HTTPS public URL, explicit
 allowed hosts, a real cursor signing key, and no logging mail transport are required.
 
-`SBS_ENVIRONMENT=demo` requires:
+`EIMIR_ENVIRONMENT=demo` requires:
 
 ```env
-SBS_DEMO_MODE=true
+EIMIR_DEMO_MODE=true
 ```
 
-Conversely, the ordinary `production` environment rejects `SBS_DEMO_MODE=true`. This prevents the
+Conversely, the ordinary `production` environment rejects `EIMIR_DEMO_MODE=true`. This prevents the
 main production instance from accidentally becoming the public demo.
 
 ## Manual create for development / QA
@@ -64,8 +64,8 @@ main production instance from accidentally becoming the public demo.
 Run migrations first. For local development/QA, execute from `backend/`:
 
 ```bash
-export SBS_DEMO_LEA_PASSWORD='choose-a-local-demo-password'
-export SBS_DEMO_ALEX_PASSWORD='choose-a-different-local-demo-password'
+export EIMIR_DEMO_LEA_PASSWORD='choose-a-local-demo-password'
+export EIMIR_DEMO_ALEX_PASSWORD='choose-a-different-local-demo-password'
 uv run python -m scripts.demo_space create
 ```
 
@@ -87,20 +87,20 @@ Compose deployments use the automatic `ensure` path described below instead.
 ## Permanent public demo deployment
 
 Run the demo as a **separate stack/database/media store/domain**, for example
-`https://demo.sbs.example`. Never reuse the production database or media volume.
+`https://demo.eimir.example`. Never reuse the production database or media volume.
 
 A representative demo environment is:
 
 ```env
-SBS_ENVIRONMENT=demo
-SBS_DEMO_MODE=true
-SBS_DEMO_MODE_RESET_TIMER=true
-SBS_DEMO_MODE_RESET_INTERVAL=6h
+EIMIR_ENVIRONMENT=demo
+EIMIR_DEMO_MODE=true
+EIMIR_DEMO_MODE_RESET_TIMER=true
+EIMIR_DEMO_MODE_RESET_INTERVAL=6h
 
-SBS_PUBLIC_BASE_URL=https://demo.sbs.example
-SBS_ALLOWED_HOSTS=["demo.sbs.example","localhost","127.0.0.1"]
-SBS_CURSOR_SIGNING_KEY=<independent-random-secret-at-least-32-characters>
-SBS_MAIL_TRANSPORT=none
+EIMIR_PUBLIC_BASE_URL=https://demo.eimir.example
+EIMIR_ALLOWED_HOSTS=["demo.eimir.example","localhost","127.0.0.1"]
+EIMIR_CURSOR_SIGNING_KEY=<independent-random-secret-at-least-32-characters>
+EIMIR_MAIL_TRANSPORT=none
 ```
 
 Normal production hardening remains mandatory. The demo should additionally be protected by the
@@ -117,7 +117,7 @@ postgres -> migrate -> demo-init -> api / worker -> web
 
 `demo-init` runs `python -m scripts.demo_space ensure` after successful migrations.
 
-- on `SBS_ENVIRONMENT=demo` with `SBS_DEMO_MODE=true`, it creates the canonical Lea/Alex Space if it
+- on `EIMIR_ENVIRONMENT=demo` with `EIMIR_DEMO_MODE=true`, it creates the canonical Lea/Alex Space if it
   is missing;
 - creation is idempotent, so ordinary redeploys do not duplicate or replace an existing demo Space;
 - initial Account passwords are generated ephemerally inside the process and are never printed or
@@ -132,14 +132,14 @@ Manual `create` remains available for local development/QA and explicit troubles
 
 ## Demo-instance banner
 
-When `SBS_DEMO_MODE=true`, the Web build renders a visible notice above the entire demo UI. It states
+When `EIMIR_DEMO_MODE=true`, the Web build renders a visible notice above the entire demo UI. It states
 that the deployment is a demo and that visitor changes are temporary.
 
 The banner uses the same deployment values as the reset worker:
 
 ```env
-SBS_DEMO_MODE_RESET_TIMER=true
-SBS_DEMO_MODE_RESET_INTERVAL=6h
+EIMIR_DEMO_MODE_RESET_TIMER=true
+EIMIR_DEMO_MODE_RESET_INTERVAL=6h
 ```
 
 With the example above, the UI states that the demo is reset automatically every **6 hours**. The
@@ -156,16 +156,16 @@ sync with the worker configuration.
 The normal/main Web build can advertise the isolated demo without enabling demo mode itself:
 
 ```env
-SBS_ENVIRONMENT=production
-SBS_DEMO_MODE=false
-SBS_DEMO_PUBLIC_URL=https://demo.sbs.example
+EIMIR_ENVIRONMENT=production
+EIMIR_DEMO_MODE=false
+EIMIR_DEMO_PUBLIC_URL=https://demo.eimir.example
 ```
 
-`SBS_DEMO_PUBLIC_URL` is a Web build input. When present, the login screen shows the configured demo
+`EIMIR_DEMO_PUBLIC_URL` is a Web build input. When present, the login screen shows the configured demo
 launch action (`demo.launch`) and links to the separate demo deployment. Changing the value therefore
 requires rebuilding the Web image.
 
-On the demo deployment, `SBS_DEMO_MODE=true` replaces the normal unauthenticated entry screen with
+On the demo deployment, `EIMIR_DEMO_MODE=true` replaces the normal unauthenticated entry screen with
 the Lea/Alex selection page.
 
 ## Manual reset
@@ -197,7 +197,7 @@ causing that drift themselves through the normal profile API -- see "What a visi
 drift the guard cannot see, such as data from before this marker existed.
 
 Each reserved persona is instead recognized by a durable technical marker, `DemoCanonicalIdentity`
-(`sidebyside.demo.models`, table `demo_canonical_identities`): a small registry stating which
+(`eimir.demo.models`, table `demo_canonical_identities`): a small registry stating which
 Account currently plays the `LEA` or `ALEX` persona, independent of any presentation field. Resolving
 a persona for create/ensure/reset checks, in order:
 
@@ -225,7 +225,7 @@ profile avatar, whose attachment lives in that Space and is purged with it.
 
 Public Demo visitors are prevented from changing an Account-global reserved-persona name at all
 through the normal profile API (#697), independently of anything create/ensure/reset does. In a demo
-deployment (`SBS_ENVIRONMENT=demo` or `SBS_DEMO_MODE=true`), a request that would change the
+deployment (`EIMIR_ENVIRONMENT=demo` or `EIMIR_DEMO_MODE=true`), a request that would change the
 Account-global display name of a reserved persona is refused with `403
 DEMO_CANONICAL_IDENTITY_IMMUTABLE`. Recognition follows the reserved address rather than the current
 name, so the guard still applies to an identity that has already drifted through some other path.
@@ -275,14 +275,14 @@ same as they always refused a partial or ambiguous reserved-account state before
 The public demo can reset itself through the existing durable PostgreSQL job queue:
 
 ```env
-SBS_DEMO_MODE_RESET_TIMER=true
-SBS_DEMO_MODE_RESET_INTERVAL=6h
+EIMIR_DEMO_MODE_RESET_TIMER=true
+EIMIR_DEMO_MODE_RESET_INTERVAL=6h
 ```
 
 Supported interval syntax is `m`, `h`, or `d`, for example `30m`, `6h`, or `1d`. Values below `5m`
 or above `7d` are rejected.
 
-The timer is independent from `SBS_DEMO_MODE`: demo mode may be enabled while automatic reset is
+The timer is independent from `EIMIR_DEMO_MODE`: demo mode may be enabled while automatic reset is
 disabled. The timer itself requires demo mode.
 
 After a successful automatic reset, public-demo authentication artifacts for Lea and Alex are
@@ -345,7 +345,7 @@ The runtime image copies `demo_assets` explicitly and validates it during image 
 
 Reset first validates the local catalog, then detaches all demo bindings and purges every attachment provider object before replacing the verified demo Space. The same local asset ids are re-imported in the same deterministic order, so repeated resets do not accumulate duplicate or orphaned media.
 
-The five album-like demo themes declared by `sidebyside.demo.story.CHAPTERS` use the existing Chapter model. SideBySide currently has no separate Album product model, and this demo change intentionally does not add a DB column, API, or Web feature solely to simulate one.
+The five album-like demo themes declared by `eimir.demo.story.CHAPTERS` use the existing Chapter model. eimir. currently has no separate Album product model, and this demo change intentionally does not add a DB column, API, or Web feature solely to simulate one.
 
 ### Maintainer flow for a new image
 

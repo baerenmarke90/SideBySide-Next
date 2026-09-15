@@ -11,31 +11,31 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import (
+from eimir.attachments import service as attachment_service
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.domain.events import PublicEventPayload
-from sidebyside.entitlements.models import (
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.domain.events import PublicEventPayload
+from eimir.entitlements.models import (
     EntitlementGrant,
     EntitlementSourceType,
     EntitlementStatus,
     EntitlementTier,
 )
-from sidebyside.identity.models import Account
-from sidebyside.media.local import LocalMediaStore
-from sidebyside.memories.models import Memory, MemoryPayload
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship import policy, retention, service
-from sidebyside.relationship.models import Membership, MembershipStatus, Space
-from sidebyside.relationship.service import add_member
-from sidebyside.transfer import service as transfer_service
-from sidebyside.transfer.models import (
+from eimir.identity.models import Account
+from eimir.media.local import LocalMediaStore
+from eimir.memories.models import Memory, MemoryPayload
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship import policy, retention, service
+from eimir.relationship.models import Membership, MembershipStatus, Space
+from eimir.relationship.service import add_member
+from eimir.transfer import service as transfer_service
+from eimir.transfer.models import (
     ExportStatus,
     ImportStatus,
     TransferExport,

@@ -8,13 +8,13 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateIndex
 
-from sidebyside.chapters.models import Chapter
-from sidebyside.gift_ideas.models import GiftIdea
-from sidebyside.memories.models import Memory
-from sidebyside.milestones.models import Milestone
-from sidebyside.places.models import Place
-from sidebyside.plans.models import Plan
-from sidebyside.private_notes.models import PrivateNote
+from eimir.chapters.models import Chapter
+from eimir.gift_ideas.models import GiftIdea
+from eimir.memories.models import Memory
+from eimir.milestones.models import Milestone
+from eimir.places.models import Place
+from eimir.plans.models import Plan
+from eimir.private_notes.models import PrivateNote
 
 
 @pytest.mark.parametrize(

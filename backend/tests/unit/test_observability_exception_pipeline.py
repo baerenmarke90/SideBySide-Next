@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import logging
 
-from sidebyside.config import Environment, Settings
-from sidebyside.observability import (
+from eimir.config import Environment, Settings
+from eimir.observability import (
     ConsoleLogFormatter,
     JsonLogFormatter,
     RedactingFilter,
@@ -31,7 +31,7 @@ class _ListHandler(logging.Handler):
 
 def _format_exception(formatter: logging.Formatter, marker: str = _MARKER_A) -> str:
     """Exercise the production filter + formatter path with an arbitrary marker."""
-    logger = logging.getLogger("sidebyside.test.exception_pipeline")
+    logger = logging.getLogger("eimir.test.exception_pipeline")
     logger.setLevel(logging.ERROR)
     logger.propagate = False
     handler = _ListHandler()
@@ -70,7 +70,7 @@ def test_console_exception_pipeline_omits_runtime_message() -> None:
 
 
 def test_chained_exception_omits_both_runtime_messages() -> None:
-    logger = logging.getLogger("sidebyside.test.chained_exception_pipeline")
+    logger = logging.getLogger("eimir.test.chained_exception_pipeline")
     logger.setLevel(logging.ERROR)
     logger.propagate = False
     handler = _ListHandler()

@@ -1,4 +1,4 @@
-# SideBySide Partner-App Experience Standard
+# eimir. Partner-App Experience Standard
 
 **Status:** Mandatory product UI standard  
 **Version:** 2.1  
@@ -6,7 +6,7 @@
 
 This document is binding for every user-facing Web and Android change. It complements `DESIGN-PRINCIPLES.md`, `UX-PATTERNS.md`, `SCREEN-TEMPLATES.md`, `COMPONENT-CONTRACTS.md`, and `DESIGN-SYSTEM-DELIVERY.md`. Where any of those documents can be read as permitting a desktop-first, table-first, or "design desktop then shrink" interpretation, section 0 of this document governs and the conflicting wording must be corrected or explicitly documented as a conflict rather than followed literally.
 
-SideBySide is not a generic productivity tool, admin console, CRM, spreadsheet, or CRUD frontend. It is a private digital place for two people. Functional correctness is necessary but not sufficient: a client feature is incomplete when it feels like database administration with nicer colors.
+eimir. is not a generic productivity tool, admin console, CRM, spreadsheet, or CRUD frontend. It is a private digital place for two people. Functional correctness is necessary but not sufficient: a client feature is incomplete when it feels like database administration with nicer colors.
 
 ## 0. Smartphone is the normative product reference
 
@@ -143,7 +143,7 @@ These rules do not prohibit forms, lists, buttons, or explicit controls. They pr
 - shared content;
 - retrospective/discovery content;
 
-from **existing** SideBySide domains. A feature does NOT receive a permanent Today card merely because the feature exists.
+from **existing** eimir. domains. A feature does NOT receive a permanent Today card merely because the feature exists.
 
 ### Orchestration rules:
 - **Irrelevant modules disappear:** Presence is strictly event- or state-driven.
@@ -183,7 +183,7 @@ The first viewport SHOULD communicate the human value of the screen before secon
 
 ## 5. Warmth, beauty, and gentle playfulness
 
-SideBySide SHOULD feel noticeably warmer and more alive than a neutral productivity application while remaining mature and usable.
+eimir. SHOULD feel noticeably warmer and more alive than a neutral productivity application while remaining mature and usable.
 
 ### Required characteristics
 
@@ -229,7 +229,7 @@ Cards are reserved for meaningful content units. A section does not need a card 
 
 ## 8. Love messages and relationship microcopy
 
-Small relationship-oriented messages are a first-class product device. They help SideBySide feel like a shared place instead of a record-management tool.
+Small relationship-oriented messages are a first-class product device. They help eimir. feel like a shared place instead of a record-management tool.
 
 Suitable surfaces include:
 

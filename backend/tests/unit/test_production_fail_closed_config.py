@@ -1,7 +1,7 @@
 """Boot-time fail-closed coverage for production/Cloud configuration.
 
-compose.yaml (#746) deliberately defaults SBS_DATABASE_URL, SBS_ALLOWED_HOSTS,
-SBS_PUBLIC_BASE_URL, and SBS_CURSOR_SIGNING_KEY to blank/empty for every
+compose.yaml (#746) deliberately defaults EIMIR_DATABASE_URL, EIMIR_ALLOWED_HOSTS,
+EIMIR_PUBLIC_BASE_URL, and EIMIR_CURSOR_SIGNING_KEY to blank/empty for every
 profile, including ``cloud``, rather than a Compose-level ``${VAR:?...}``: a
 hard interpolation failure there would break every profile's ability to
 render independently, since Compose interpolates the whole file regardless of
@@ -15,14 +15,14 @@ string, or an empty list) still cannot boot the application.
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from sidebyside.config import DatabaseSettings, Deployment, Environment, MailTransport, Settings
+from eimir.config import DatabaseSettings, Deployment, Environment, MailTransport, Settings
 
 
 def _cloud_settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "environment": Environment.PRODUCTION,
         "deployment": Deployment.CLOUD,
-        "database_url": "postgresql+psycopg://user:pass@db.private:5432/sidebyside",
+        "database_url": "postgresql+psycopg://user:pass@db.private:5432/eimir",
         "cursor_signing_key": SecretStr("x" * 48),
         "allowed_hosts": ["cloud.example.test"],
         "public_base_url": "https://cloud.example.test",
@@ -38,38 +38,38 @@ def test_cloud_settings_are_otherwise_valid() -> None:
 
 
 def test_empty_database_url_is_rejected() -> None:
-    # What compose.yaml's `${SBS_DATABASE_URL:-}` actually sets when unset.
-    with pytest.raises(ValidationError, match="SBS_DATABASE_URL is empty"):
+    # What compose.yaml's `${EIMIR_DATABASE_URL:-}` actually sets when unset.
+    with pytest.raises(ValidationError, match="EIMIR_DATABASE_URL is empty"):
         _cloud_settings(database_url="")
 
 
 def test_database_settings_also_rejects_an_empty_url() -> None:
-    with pytest.raises(ValidationError, match="SBS_DATABASE_URL is empty"):
+    with pytest.raises(ValidationError, match="EIMIR_DATABASE_URL is empty"):
         DatabaseSettings.model_validate({"database_url": ""})
 
 
 def test_production_rejects_an_empty_allowed_hosts_list() -> None:
-    # What compose.yaml's cloud profile sets by default: `${SBS_ALLOWED_HOSTS:-[]}`.
-    with pytest.raises(ValidationError, match="explicit SBS_ALLOWED_HOSTS"):
+    # What compose.yaml's cloud profile sets by default: `${EIMIR_ALLOWED_HOSTS:-[]}`.
+    with pytest.raises(ValidationError, match="explicit EIMIR_ALLOWED_HOSTS"):
         _cloud_settings(allowed_hosts=[])
 
 
 def test_production_rejects_a_wildcard_allowed_host() -> None:
-    with pytest.raises(ValidationError, match="explicit SBS_ALLOWED_HOSTS"):
+    with pytest.raises(ValidationError, match="explicit EIMIR_ALLOWED_HOSTS"):
         _cloud_settings(allowed_hosts=["*"])
 
 
 def test_production_requires_a_cursor_signing_key() -> None:
-    with pytest.raises(ValidationError, match="requires SBS_CURSOR_SIGNING_KEY"):
+    with pytest.raises(ValidationError, match="requires EIMIR_CURSOR_SIGNING_KEY"):
         _cloud_settings(cursor_signing_key=None)
 
 
 def test_production_rejects_a_blank_public_base_url() -> None:
-    # What compose.yaml's cloud profile sets by default: `${SBS_PUBLIC_BASE_URL:-}`.
-    with pytest.raises(ValidationError, match="https SBS_PUBLIC_BASE_URL"):
+    # What compose.yaml's cloud profile sets by default: `${EIMIR_PUBLIC_BASE_URL:-}`.
+    with pytest.raises(ValidationError, match="https EIMIR_PUBLIC_BASE_URL"):
         _cloud_settings(public_base_url="")
 
 
 def test_production_rejects_a_non_https_public_base_url() -> None:
-    with pytest.raises(ValidationError, match="https SBS_PUBLIC_BASE_URL"):
+    with pytest.raises(ValidationError, match="https EIMIR_PUBLIC_BASE_URL"):
         _cloud_settings(public_base_url="http://cloud.example.test")

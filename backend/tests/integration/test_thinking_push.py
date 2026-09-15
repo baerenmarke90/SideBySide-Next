@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.engagement import push, service, thinking
-from sidebyside.engagement.models import (
+from eimir.engagement import push, service, thinking
+from eimir.engagement.models import (
     Activity,
     Notification,
     NotificationKind,
@@ -18,10 +18,10 @@ from sidebyside.engagement.models import (
     PushDeliveryStatus,
     ThinkingOfYouRequest,
 )
-from sidebyside.jobs.errors import RetryableJobError
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus
+from eimir.jobs.errors import RetryableJobError
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

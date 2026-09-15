@@ -13,11 +13,11 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.api.v1 import attachments as attachment_api
-from sidebyside.attachments import service
-from sidebyside.attachments.models import Attachment, AttachmentStatus
-from sidebyside.media.s3 import S3MediaStore
-from sidebyside.relationship import service as relationship_service
+from eimir.api.v1 import attachments as attachment_api
+from eimir.attachments import service
+from eimir.attachments.models import Attachment, AttachmentStatus
+from eimir.media.s3 import S3MediaStore
+from eimir.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -95,7 +95,7 @@ def s3_store(monkeypatch):  # type: ignore[no-untyped-def]
     store = S3MediaStore(
         endpoint="https://s3.example.test",
         region="eu-central-1",
-        bucket="sidebyside-private",
+        bucket="eimir-private",
         access_key_id="AKIATEST",
         secret_access_key="very-secret-value",
         client=provider_client,

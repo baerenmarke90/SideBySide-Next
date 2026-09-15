@@ -21,7 +21,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
-from sidebyside.search.index_migration import SEARCH_INDEXES
+from eimir.search.index_migration import SEARCH_INDEXES
 from tests.conftest import requires_database
 
 INDEX_NAME = "ix_memories_search_fts"
@@ -45,9 +45,9 @@ def _is_valid(conn: sa.Connection, index_name: str) -> bool | None:
 def test_real_alembic_migration_0028_repairs_an_interrupted_concurrent_index(
     engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    test_db_url = os.environ.get("SBS_TEST_DATABASE_URL")
+    test_db_url = os.environ.get("EIMIR_TEST_DATABASE_URL")
     if test_db_url:
-        monkeypatch.setenv("SBS_DATABASE_URL", test_db_url)
+        monkeypatch.setenv("EIMIR_DATABASE_URL", test_db_url)
     config = alembic.config.Config("alembic.ini")
 
     alembic.command.downgrade(config, "0027")

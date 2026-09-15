@@ -89,7 +89,7 @@ When relevant, explicitly assess:
 
 - [ ] Free / Premium / Mixed / non-paywallable classification
 - [ ] entitlement/capability and couple/relationship ownership semantics
-- [ ] Self-Hosted vs. SideBySide Cloud/Managed behavior
+- [ ] Self-Hosted vs. eimir. Cloud/Managed behavior
 - [ ] managed storage / compute / provider / rendering / inference / email-push / support cost
 - [ ] quotas / fair-use / retention / resource limits
 - [ ] downgrade / trial / grandfathering / restore / export / existing-data behavior

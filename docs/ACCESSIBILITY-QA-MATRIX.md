@@ -1,10 +1,10 @@
-# SideBySide Accessibility and QA Matrix
+# eimir. Accessibility and QA Matrix
 
 **Status:** Release gate for Web and Android  
 **Version:** 1.0  
 **As of:** August 24, 2026
 
-SideBySide treats accessibility, privacy, and adaptive presentation as product quality. The target standard is WCAG 2.2 AA for the WebApp; the same principles are applied to Android in a platform-appropriate way.
+eimir. treats accessibility, privacy, and adaptive presentation as product quality. The target standard is WCAG 2.2 AA for the WebApp; the same principles are applied to Android in a platform-appropriate way.
 
 ## 1. Testing principles
 

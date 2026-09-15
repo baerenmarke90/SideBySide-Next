@@ -18,26 +18,26 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import account_media
-from sidebyside.attachments import binding as attachment_binding
-from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import (
+from eimir.attachments import account_media
+from eimir.attachments import binding as attachment_binding
+from eimir.attachments import service as attachment_service
+from eimir.attachments.models import (
     Attachment,
     AttachmentPayload,
     AttachmentStatus,
     MediaType,
 )
-from sidebyside.authorization import AuthorizationContext, PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
-from sidebyside.identity.deletion_media import apply_account_media_cleanup
-from sidebyside.jobs.models import Job
-from sidebyside.media import build_account_storage_key, build_storage_key
-from sidebyside.media.local import LocalMediaStore
-from sidebyside.profiles import service as profile_service
-from sidebyside.relationship import offboarding, policy, retention
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import Membership, MembershipStatus, Space
+from eimir.authorization import AuthorizationContext, PrivacyClass
+from eimir.core.clock import now
+from eimir.identity.deletion import apply_accepted_tombstone, apply_core_cleanup
+from eimir.identity.deletion_media import apply_account_media_cleanup
+from eimir.jobs.models import Job
+from eimir.media import build_account_storage_key, build_storage_key
+from eimir.media.local import LocalMediaStore
+from eimir.profiles import service as profile_service
+from eimir.relationship import offboarding, policy, retention
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import Membership, MembershipStatus, Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

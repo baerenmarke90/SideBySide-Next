@@ -389,7 +389,7 @@ async function prepareScenario(
 ): Promise<void> {
   await page.setViewportSize(scenario.viewport);
   await page.addInitScript((theme) => {
-    window.localStorage.setItem('sidebyside.theme', theme);
+    window.localStorage.setItem('eimir.theme', theme);
   }, scenario.theme);
   await installPlanningMocks(page);
   await signIn(page);
@@ -453,7 +453,7 @@ test('closed Planning context stays quiet next to the focused open state', async
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
-    window.localStorage.setItem('sidebyside.theme', 'light');
+    window.localStorage.setItem('eimir.theme', 'light');
   });
   await installPlanningMocks(page);
   await signIn(page);
@@ -520,7 +520,7 @@ for (const scenario of visualScenarios.filter(
   }) => {
     await page.setViewportSize(scenario.viewport);
     await page.addInitScript((theme) => {
-      window.localStorage.setItem('sidebyside.theme', theme);
+      window.localStorage.setItem('eimir.theme', theme);
     }, scenario.theme);
     await installPlanningMocks(page);
     await signIn(page);

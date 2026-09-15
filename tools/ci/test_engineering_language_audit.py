@@ -228,7 +228,7 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
             path.write_text(
-                'subject = "Dein Anmeldelink fuer SideBySide"\nbody = "Nur fuer mich"\n',
+                'subject = "Dein Anmeldelink fuer Eimir"\nbody = "Nur fuer mich"\n',
                 encoding="utf-8",
             )
             self.assertEqual(check_file(path), [])

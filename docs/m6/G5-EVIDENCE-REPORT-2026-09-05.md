@@ -20,10 +20,10 @@ created and destroyed within this rehearsal.
 |---|---|
 | Candidate commit SHA | `d0a4f2030a22f775a22679f7f225117bf51e91df` (`main`, exact HEAD after #521/#664/#665 and the #262 launch-channel PR) |
 | Product release version/tag | none published yet — no Git tag / GitHub Release exists (`gh release list` returns empty) |
-| Backend/Web artifact identity | verified-checkout revision via `scripts/compose_checked.py --print-revision`, confirmed served by both API and Web (`X-SideBySide-Revision` header, `/.well-known/sidebyside-revision`) |
+| Backend/Web artifact identity | verified-checkout revision via `scripts/compose_checked.py --print-revision`, confirmed served by both API and Web (`X-Eimir-Revision` header, `/.well-known/eimir-revision`) |
 | Android artifact identity | not built/signed in this rehearsal (no release-publish run) |
 | Schema/Alembic revision | `0043` (head at candidate commit) |
-| Deployment mode/topology | Self-Hosted, `compose.yaml`, single Docker host, `SBS_ENVIRONMENT=development` (this session has no persistent Development/Production host to promote across) |
+| Deployment mode/topology | Self-Hosted, `compose.yaml`, single Docker host, `EIMIR_ENVIRONMENT=development` (this session has no persistent Development/Production host to promote across) |
 | Selected entitlement-source adapters | `ADMIN_GRANT` only (per `docs/m6/ENTITLEMENT-BOUNDARY.md` §7.1); `GOOGLE_PLAY`/`CLOUD_STRIPE`/`SELF_HOSTED_KEY` `NOT_APPLICABLE` |
 | Configuration class | local rehearsal `.env` derived from `.env.example`, synthetic secrets generated for this run only, discarded afterward |
 | Test date/time | 2026-09-05, 16:42–17:00 UTC (see per-section timestamps) |
@@ -69,7 +69,7 @@ Executed for real against the running candidate (timestamps UTC):
 ```
 $ python3 scripts/self_hosted_recovery.py backup \
     --compose-file compose.yaml --env-file .env \
-    --confirm-project sidebyside-g5-rehearsal --output /tmp/g5-backup/pre-upgrade.tar
+    --confirm-project eimir-g5-rehearsal --output /tmp/g5-backup/pre-upgrade.tar
 Backup created successfully: /private/tmp/g5-backup/pre-upgrade.tar
 $ tar -tf /tmp/g5-backup/pre-upgrade.tar
 manifest.json
@@ -84,7 +84,7 @@ $ python3 scripts/compose_checked.py --expected-revision <candidate> down -v   #
 $ docker compose up -d postgres                                                # empty target running
 $ python3 scripts/self_hosted_recovery.py restore \
     --compose-file compose.yaml --env-file .env \
-    --confirm-project sidebyside-g5-rehearsal --archive /tmp/g5-backup/pre-upgrade.tar \
+    --confirm-project eimir-g5-rehearsal --archive /tmp/g5-backup/pre-upgrade.tar \
     --confirm-empty-target
 Restore completed into the confirmed fresh target. Run the current Alembic migration, then start and verify the application.
 $ python3 scripts/compose_checked.py --expected-revision <candidate> up -d --build --wait --wait-timeout 300
@@ -122,7 +122,7 @@ Both refusals are exactly the documented safety contract, not incidental errors.
 Executed live against the candidate:
 
 - **Registration/maintenance:** `PUT /server-admin/settings/maintenance {"enabled":true}` → `effectiveRegistrationEnabled:false`. New registration then returns `403`. An **existing** account can still sign in (by design — maintenance blocks ordinary product traffic, not authentication). An ordinary product route (`GET /auth/memberships`) then returns `503 MAINTENANCE_MODE`. `GET /server-admin/overview` remains `200` throughout. Maintenance disabled again afterward; `GET /server-admin/settings` confirms no secret ever appears in the safe config view. **This part passes exactly as specified.**
-- **Bootstrap/recovery path — genuine failure found:** following the officially documented local/Self-Hosted flow (`.env.example`, `docs/SELF-HOSTING.md`: `SBS_MAIL_TRANSPORT=log`), registering the first account and requesting email verification produces a log line with the verification link's `token` query parameter **redacted** (`?token=[REDACTED]`) by the `#189` `RedactingFilter`. `require_server_admin()` requires a *verified* `AccountEmail` row matching `SBS_SERVER_ADMIN_EMAILS`, and there is no way to complete that verification through the documented flow — the only channel that carries the plaintext token is the one the redaction filter scrubs. The same `LoggingMailSender` path also backs magic-link sign-in and password recovery, so those are equally affected. Filed as **#676** with full reproduction; not fixed inline per the "no mega-fix inside #524" rule.
+- **Bootstrap/recovery path — genuine failure found:** following the officially documented local/Self-Hosted flow (`.env.example`, `docs/SELF-HOSTING.md`: `EIMIR_MAIL_TRANSPORT=log`), registering the first account and requesting email verification produces a log line with the verification link's `token` query parameter **redacted** (`?token=[REDACTED]`) by the `#189` `RedactingFilter`. `require_server_admin()` requires a *verified* `AccountEmail` row matching `EIMIR_SERVER_ADMIN_EMAILS`, and there is no way to complete that verification through the documented flow — the only channel that carries the plaintext token is the one the redaction filter scrubs. The same `LoggingMailSender` path also backs magic-link sign-in and password recovery, so those are equally affected. Filed as **#676** with full reproduction; not fixed inline per the "no mega-fix inside #524" rule.
 
 **Verdict:** `FAIL`, not `BLOCKED` — this was fully exercised, not merely untested, and it fails a G5-required property ("bootstrap/recovery path cannot be accidentally locked out") for the exact documented onboarding path. The maintenance/lockout *mechanics* once an operator is verified are correct and were positively confirmed above; the *path to becoming verified* is broken. Follow-up: #676.
 
@@ -190,17 +190,17 @@ This is a minimal, single-machine, sequential synthetic check on a laptop-class 
 
 ## 11. Demo / public exposure — `BLOCKED` (positive partial evidence)
 
-Attempted to bring up an isolated `SBS_ENVIRONMENT=demo` stack under a separate `COMPOSE_PROJECT_NAME` (separate DB/media/network by construction). Two real, genuine **fail-closed confirmations** were produced along the way, both positive findings:
+Attempted to bring up an isolated `EIMIR_ENVIRONMENT=demo` stack under a separate `COMPOSE_PROJECT_NAME` (separate DB/media/network by construction). Two real, genuine **fail-closed confirmations** were produced along the way, both positive findings:
 
 ```
-demo-init: pydantic ValidationError: "Production requires SBS_CURSOR_SIGNING_KEY."
+demo-init: pydantic ValidationError: "Production requires EIMIR_CURSOR_SIGNING_KEY."
   (Environment.DEMO is hardened exactly like Environment.PRODUCTION)
-demo-init: pydantic ValidationError: "Production requires an https SBS_PUBLIC_BASE_URL."
+demo-init: pydantic ValidationError: "Production requires an https EIMIR_PUBLIC_BASE_URL."
 ```
 
 This confirms `#304`'s hardening intent is enforced at the configuration layer, not just documented. Completing a full live Demo rehearsal (persona login without a reusable password, reset boundary, Entitlement-model consistency) requires a real HTTPS-terminated public origin, which this local session does not have.
 
-**Operator action required:** a TLS-terminating reverse proxy or a domain with a valid certificate to actually start `SBS_ENVIRONMENT=demo`.
+**Operator action required:** a TLS-terminating reverse proxy or a domain with a valid certificate to actually start `EIMIR_ENVIRONMENT=demo`.
 
 The existing `test_demo_*.py` suite (6 files) already covers DB/media/secret isolation, reset scope, and auth boundaries at the automated level and is green in CI.
 
@@ -225,7 +225,7 @@ See `docs/m6/G5-EVIDENCE.md` §4 for the full 19-row criterion table updated wit
 
 ## 13. Follow-ups opened from this rehearsal
 
-- **#676** — `SBS_MAIL_TRANSPORT=log` redacts the magic-link/verification token, breaking local bootstrap (blocks G5-07 for the documented Self-Hosted onboarding path).
+- **#676** — `EIMIR_MAIL_TRANSPORT=log` redacts the magic-link/verification token, breaking local bootstrap (blocks G5-07 for the documented Self-Hosted onboarding path).
 
 ## 14. Explicitly not done here
 

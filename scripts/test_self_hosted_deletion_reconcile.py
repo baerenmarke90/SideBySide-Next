@@ -74,7 +74,7 @@ class DeletionReconcileGuardTest(unittest.TestCase):
         second = second_call.args[0]
         self.assertIn("migrate", first)
         self.assertIn("-T", first)
-        self.assertIn("sidebyside.identity.deletion_reconcile", second)
+        self.assertIn("eimir.identity.deletion_reconcile", second)
         self.assertIn("--journal-stdin", second)
         self.assertIn(str(INSTANCE_ID), second)
         self.assertNotIn("--volume", second)

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from alembic import op
 
-from sidebyside.search.index_migration import ensure_search_indexes
+from eimir.search.index_migration import ensure_search_indexes
 
 revision = "0055"
 down_revision = "0054"

@@ -6,9 +6,9 @@ import pytest
 from fastapi.testclient import TestClient
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from sidebyside.api.transport import _peer_is_loopback
-from sidebyside.config import Environment, MailTransport, Settings
-from sidebyside.main import create_app
+from eimir.api.transport import _peer_is_loopback
+from eimir.config import Environment, MailTransport, Settings
+from eimir.main import create_app
 
 CURSOR_SIGNING_KEY = "cursor-test-" + ("x" * 40)
 
@@ -40,7 +40,7 @@ def production_client(
     trusted_proxy_hosts: list[str] | None = None,
 ) -> TestClient:
     monkeypatch.setattr(
-        "sidebyside.main.get_settings",
+        "eimir.main.get_settings",
         lambda: production_settings(allowed_hosts=allowed_hosts),
     )
     app = create_app()
@@ -60,13 +60,13 @@ class TestAllowedHosts:
         assert client.get("/api/v1/health").status_code == 400
 
     def test_open_wildcard_is_forbidden_in_production(self) -> None:
-        with pytest.raises(ValueError, match="SBS_ALLOWED_HOSTS"):
+        with pytest.raises(ValueError, match="EIMIR_ALLOWED_HOSTS"):
             production_settings(allowed_hosts=["*"])
 
 
 class TestBootstrapConfiguration:
     def test_short_secret_is_rejected(self) -> None:
-        with pytest.raises(ValueError, match="SBS_BOOTSTRAP_TOKEN"):
+        with pytest.raises(ValueError, match="EIMIR_BOOTSTRAP_TOKEN"):
             Settings(bootstrap_token="too-short")
 
     def test_secret_does_not_appear_in_settings_output(self) -> None:
@@ -77,11 +77,11 @@ class TestBootstrapConfiguration:
 
 class TestCursorConfiguration:
     def test_production_requires_cursor_signing_key(self) -> None:
-        with pytest.raises(ValueError, match="SBS_CURSOR_SIGNING_KEY"):
+        with pytest.raises(ValueError, match="EIMIR_CURSOR_SIGNING_KEY"):
             production_settings(cursor_signing_key=None)
 
     def test_short_cursor_signing_key_is_rejected(self) -> None:
-        with pytest.raises(ValueError, match="SBS_CURSOR_SIGNING_KEY"):
+        with pytest.raises(ValueError, match="EIMIR_CURSOR_SIGNING_KEY"):
             Settings(cursor_signing_key="too-short")
 
     def test_cursor_signing_key_does_not_appear_in_settings_output(self) -> None:

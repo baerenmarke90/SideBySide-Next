@@ -1,5 +1,6 @@
 (function bootstrapTheme() {
-  var storageKey = 'sidebyside.theme';
+  var storageKey = 'eimir.theme';
+  var legacyStorageKey = 'sidebyside.theme';
   var darkModeQuery = '(prefers-color-scheme: dark)';
   var themeColors = {
     light: '#f6efea',
@@ -9,13 +10,17 @@
   var preference = 'system';
   var storedPreference;
   try {
-    storedPreference = window.localStorage.getItem(storageKey);
+    storedPreference =
+      window.localStorage.getItem(storageKey) ||
+      window.localStorage.getItem(legacyStorageKey);
     if (
       storedPreference === 'system' ||
       storedPreference === 'light' ||
       storedPreference === 'dark'
     ) {
       preference = storedPreference;
+      window.localStorage.setItem(storageKey, preference);
+      window.localStorage.removeItem(legacyStorageKey);
     }
   } catch {
     // Storage can be blocked in hardened/private browser contexts. Falling

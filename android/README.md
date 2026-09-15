@@ -20,14 +20,14 @@ The `generateDesignTokens` Gradle task reads it and writes
 `GeneratedDesignTokens.kt` into `app/build/generated/designTokens`; that file is
 generated, not committed, and must not be edited.
 
-`de.sidebyside.next.design` turns those values into the semantic layer the app
+`de.eimir.app.design` turns those values into the semantic layer the app
 consumes:
 
-- `SideBySideColors` carries the product roles Material 3 has no slot for —
-  shared, private, discovery, header surface — and `SideBySideTheme` derives the
+- `EimirColors` carries the product roles Material 3 has no slot for —
+  shared, private, discovery, header surface — and `EimirTheme` derives the
   Material 3 scheme from them in one mapping;
-- `SideBySideSpacing` and `SideBySideRadii` expose the 4-unit grid by step name;
-- `SideBySideTypography` maps the token scale onto Material roles, resolving the
+- `EimirSpacing` and `EimirRadii` expose the 4-unit grid by step name;
+- `EimirTypography` maps the token scale onto Material roles, resolving the
   token line-height ratios and `em` letter spacing against the token font size.
 
 `DesignTokenTest` parses `design/tokens.json` directly and asserts that the
@@ -45,7 +45,7 @@ made.
 
 ## Application shell
 
-`de.sidebyside.next.shell` owns the two things a screen cannot get right on its
+`de.eimir.app.shell` owns the two things a screen cannot get right on its
 own.
 
 **Window insets.** `targetSdk` 36 means the system draws the app edge to edge
@@ -136,7 +136,7 @@ The slice executes exactly one critical flow:
 8. load the shared `/timeline` and process the generated `StoryItem`;
 9. execute an authorized `ReadDescriptor` and display the image minimally.
 
-For `STREAM`, the bearer token is sent to the SideBySide API. For
+For `STREAM`, the bearer token is sent to the Eimir API. For
 `SIGNED_UPLOAD`/`SIGNED_URL`, it is deliberately **not** forwarded to the
 storage endpoint. The app manifest does not permit cleartext connections, so
 real remote operation uses HTTPS.
@@ -147,7 +147,7 @@ Normal users do not enter technical URLs or IDs. The only operator value is the
 address of the server:
 
 ```bash
-./gradlew -PsbsApiBaseUrl=https://sidebyside.example :app:assembleDebug
+./gradlew -PeimirApiBaseUrl=https://eimir.example :app:assembleDebug
 ```
 
 Without it, the UI shows a clear operator notice and sends no API request.
@@ -197,13 +197,12 @@ frozen as the product's.
 | Application ID | `de.sidebyside.app` |
 | Debug application ID | `de.sidebyside.app.debug` |
 | `versionName` | the product's version, edited by hand when the product moves |
-| `versionCode` | supplied by the publisher as `-PsbsVersionCode=<n>` |
+| `versionCode` | supplied by the publisher as `-PeimirVersionCode=<n>` |
 
-`reference` named a technical flow and `next` is this repository's codename;
-neither is the product, so neither is in the released identity. The Kotlin
-package root is still `de.sidebyside.next.*`. That is internal — it decides
-where the `R` and `BuildConfig` classes live and nothing a store or a device
-sees — and renaming it is a separate mechanical change.
+The Kotlin source namespace is `de.eimir.app.*`. The released application ID
+and OIDC callback scheme deliberately remain `de.sidebyside.app` so installed
+copies continue to receive updates and registered native callbacks keep
+working.
 
 A debug build carries its own suffix so it is a different application to
 Android. Without that, a build from this checkout would replace an installed
@@ -221,17 +220,21 @@ publishes the build, as Gradle properties or environment variables:
 
 | Property | Environment variable |
 | --- | --- |
-| `sbsReleaseKeystore` | `SBS_RELEASE_KEYSTORE` |
-| `sbsReleaseKeystorePassword` | `SBS_RELEASE_KEYSTORE_PASSWORD` |
-| `sbsReleaseKeyAlias` | `SBS_RELEASE_KEY_ALIAS` |
-| `sbsReleaseKeyPassword` | `SBS_RELEASE_KEY_PASSWORD` |
+| `eimirReleaseKeystore` | `EIMIR_RELEASE_KEYSTORE` |
+| `eimirReleaseKeystorePassword` | `EIMIR_RELEASE_KEYSTORE_PASSWORD` |
+| `eimirReleaseKeyAlias` | `EIMIR_RELEASE_KEY_ALIAS` |
+| `eimirReleaseKeyPassword` | `EIMIR_RELEASE_KEY_PASSWORD` |
 
 ```bash
-./gradlew -PsbsApiBaseUrl=https://sidebyside.example \
-  -PsbsVersionCode=42 \
-  -PsbsReleaseKeystore=/secure/path/release.jks \
+./gradlew -PeimirApiBaseUrl=https://eimir.example \
+  -PeimirVersionCode=42 \
+  -PeimirReleaseKeystore=/secure/path/release.jks \
   :app:assembleRelease
 ```
+
+The former `sbs*` Gradle properties and `SBS_RELEASE_*` environment variables
+remain deprecated read aliases for one migration window; canonical values win
+when both are present.
 
 Two failure modes are deliberate. With no keystore at all, the release build
 produces `app-release-unsigned.apk` rather than falling back to the debug key —

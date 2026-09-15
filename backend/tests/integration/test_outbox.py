@@ -15,11 +15,11 @@ from sqlalchemy import Engine, select
 from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import Session, sessionmaker
 
-from sidebyside.core.clock import now
-from sidebyside.core.ids import new_id
-from sidebyside.domain.events import DomainEvent, EventType
-from sidebyside.outbox import service
-from sidebyside.outbox.models import OutboxEvent
+from eimir.core.clock import now
+from eimir.core.ids import new_id
+from eimir.domain.events import DomainEvent, EventType
+from eimir.outbox import service
+from eimir.outbox.models import OutboxEvent
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

@@ -6,8 +6,8 @@ from datetime import timedelta
 
 import pytest
 
-from sidebyside.core.clock import now
-from sidebyside.identity.deletion import (
+from eimir.core.clock import now
+from eimir.identity.deletion import (
     DeletionAcceptanceConflictError,
     apply_accepted_tombstone,
 )

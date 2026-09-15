@@ -1,4 +1,4 @@
-# SideBySide Component Contracts
+# eimir. Component Contracts
 
 **Status:** Binding product foundation  
 **Version:** 1.1  
@@ -284,7 +284,7 @@ These signature building blocks represent the core relationship-first identity o
 - **Variants:** `connected`, `waiting` (partner pending/invitation slot), `offline`.
 - **States:** Default, hover/press on invitation slot, disabled.
 - **Accessibility:** Group container provides a composite accessible description combining user and partner names or announcing pending invitation status. Interactive invitation triggers use `role="button"` and clear accessible labels.
-- **Tokens:** Overlap offset derived from size (`-28%`), border uses `--color-surface` / `SideBySideTheme.colors.surface` for crisp visual separation.
+- **Tokens:** Overlap offset derived from size (`-28%`), border uses `--color-surface` / `eimir.Theme.colors.surface` for crisp visual separation.
 
 ### 11.2 CouplePresence
 
@@ -294,7 +294,7 @@ These signature building blocks represent the core relationship-first identity o
 - **Variants:** `connected` (shared status), `waiting` (brand invitation prompt), `offline` (subtle muted indicator).
 - **Behavior:** Clicking the relationship duration navigates to the relationship milestone details.
 - **Accessibility:** Headings use appropriate levels (`titleLarge`), interactive duration triggers announce their action explicitly.
-- **Tokens:** Container uses `radius-large` / `SideBySideTheme.radii.large`, subtle borders (`borderSubtle`), and elevated surface tokens.
+- **Tokens:** Container uses `radius-large` / `eimir.Theme.radii.large`, subtle borders (`borderSubtle`), and elevated surface tokens.
 
 ### 11.3 ThinkingOfYouButton
 

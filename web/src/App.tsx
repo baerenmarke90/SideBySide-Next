@@ -329,7 +329,7 @@ function MemoryCreatePage({
       />
 
       <section
-        className="immersive-create-card sbs-motion-reveal"
+        className="immersive-create-card eimir-motion-reveal"
         aria-labelledby="memory-form-heading"
       >
         <h2 id="memory-form-heading" className="sr-only">

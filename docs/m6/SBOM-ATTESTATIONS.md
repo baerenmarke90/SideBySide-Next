@@ -4,7 +4,7 @@
 **Consumes:** #194, #375  
 **Consumed by:** #519 and the G5 release rehearsal
 
-This document defines how SideBySide produces machine-readable software bills of
+This document defines how eimir. produces machine-readable software bills of
 materials and cryptographically signed provenance for release artifacts. It is
 release-evidence infrastructure only: it does not choose the final publication
 model, publish a product release, introduce a second deployment platform or change
@@ -12,7 +12,7 @@ product behavior.
 
 ## 1. Reuse-before-build decision
 
-SideBySide uses existing standards and platform primitives rather than a custom
+eimir. uses existing standards and platform primitives rather than a custom
 provenance format:
 
 - **SPDX 2.3 JSON** is the machine-readable SBOM format;
@@ -42,8 +42,8 @@ purposes and both remain required.
 |---|---|---|
 | `backend-runtime.image.tar` | one Docker-compatible backend image archive used by API, worker and migrate | `sbom/backend-runtime.spdx.json` |
 | `web-runtime.image.tar` | Docker-compatible Web image archive | `sbom/web-runtime.spdx.json` |
-| `android/sidebyside-release-unsigned.apk` | release-mode APK evidence candidate | `sbom/android-apk.spdx.json` |
-| `android/sidebyside-release-unsigned.aab` | release-mode AAB evidence candidate | `sbom/android-aab.spdx.json` |
+| `android/eimir-release-unsigned.apk` | release-mode APK evidence candidate | `sbom/android-apk.spdx.json` |
+| `android/eimir-release-unsigned.aab` | release-mode AAB evidence candidate | `sbom/android-aab.spdx.json` |
 
 API, worker and migrate are deliberately **not** represented as three invented
 container artifacts. `compose.yaml` already builds all three roles from the same
@@ -113,12 +113,12 @@ The invariant is strict:
 > attestation subject and receives a freshly generated SBOM and fresh provenance
 > after signing.
 
-An attestation of `sidebyside-release-unsigned.*` must never be presented as evidence
+An attestation of `eimir-release-unsigned.*` must never be presented as evidence
 for a different signed store artifact.
 
 ## 5. Build identity and coherence
 
-Both container builds receive exactly `SBS_BUILD_REVISION=$GITHUB_SHA`.
+Both container builds receive exactly `EIMIR_BUILD_REVISION=$GITHUB_SHA`.
 `evidence-index.json` records the same source revision. Android's existing product
 identity is extracted from `android/app/build.gradle.kts`; its monotonic
 `versionCode` is supplied as a workflow input.
@@ -188,16 +188,16 @@ repository attestation store:
 
 ```bash
 gh attestation verify backend-runtime.image.tar \
-  -R baerenmarke90/SideBySide-Next \
-  --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml
+  -R baerenmarke90/eimir \
+  --signer-workflow baerenmarke90/eimir/.github/workflows/release-evidence.yml
 ```
 
 Verify the SPDX attestation by selecting the SPDX predicate:
 
 ```bash
 gh attestation verify backend-runtime.image.tar \
-  -R baerenmarke90/SideBySide-Next \
-  --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml \
+  -R baerenmarke90/eimir \
+  --signer-workflow baerenmarke90/eimir/.github/workflows/release-evidence.yml \
   --predicate-type https://spdx.dev/Document/v2.3
 ```
 
@@ -216,20 +216,20 @@ verification requires no attestation lookup from the GitHub API:
 
 ```bash
 gh attestation verify backend-runtime.image.tar \
-  -R baerenmarke90/SideBySide-Next \
+  -R baerenmarke90/eimir \
   --bundle attestations/backend-runtime-provenance.json \
   --custom-trusted-root attestations/trusted_root.jsonl \
-  --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml
+  --signer-workflow baerenmarke90/eimir/.github/workflows/release-evidence.yml
 ```
 
 For the SBOM claim:
 
 ```bash
 gh attestation verify backend-runtime.image.tar \
-  -R baerenmarke90/SideBySide-Next \
+  -R baerenmarke90/eimir \
   --bundle attestations/backend-runtime-sbom.json \
   --custom-trusted-root attestations/trusted_root.jsonl \
-  --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml \
+  --signer-workflow baerenmarke90/eimir/.github/workflows/release-evidence.yml \
   --predicate-type https://spdx.dev/Document/v2.3
 ```
 

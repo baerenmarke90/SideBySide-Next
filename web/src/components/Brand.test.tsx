@@ -19,7 +19,7 @@ describe('Brand', () => {
     expect(html).toContain('eimir');
     expect(html).toContain('brand-dot');
     expect(html).not.toContain('SidebySide');
-    expect(html).not.toContain('SideBySide');
+    expect(html).not.toContain('Eimir');
   });
 
   it('does not render the retired product suffix on entry surfaces', () => {

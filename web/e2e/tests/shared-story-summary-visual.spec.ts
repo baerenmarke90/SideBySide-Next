@@ -289,9 +289,7 @@ test('three-metric state renders on 390x844 dark mode', async ({
     milestones: 3,
   });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.addInitScript(() =>
-    localStorage.setItem('sidebyside.theme', 'dark'),
-  );
+  await page.addInitScript(() => localStorage.setItem('eimir.theme', 'dark'));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/today');
   await signIn(page);

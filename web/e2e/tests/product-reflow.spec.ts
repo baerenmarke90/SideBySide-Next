@@ -492,7 +492,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test.setTimeout(120_000);
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await page.addInitScript(() =>
-      localStorage.setItem('sidebyside.theme', 'system'),
+      localStorage.setItem('eimir.theme', 'system'),
     );
     await page.setViewportSize({ width: 1280, height: 1024 });
     const unexpectedRequests = await installApiMocks(page);

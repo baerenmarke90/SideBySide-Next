@@ -10,9 +10,9 @@ from time import sleep
 import pytest
 from sqlalchemy import func, select
 
-from sidebyside.auth import passkeys
-from sidebyside.core.clock import now
-from sidebyside.identity.models import Account, DeviceSession, WebAuthnCredential
+from eimir.auth import passkeys
+from eimir.core.clock import now
+from eimir.identity.models import Account, DeviceSession, WebAuthnCredential
 from tests.conftest import auth, make_account, requires_database, sign_in
 from tests.support.authenticator import VirtualAuthenticator, from_b64url
 

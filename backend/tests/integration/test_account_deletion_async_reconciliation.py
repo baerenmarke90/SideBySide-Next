@@ -8,18 +8,18 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from sidebyside.authorization import AuthorizationContext
-from sidebyside.core.clock import now
-from sidebyside.engagement import service as engagement_service
-from sidebyside.engagement import thinking
-from sidebyside.engagement.models import Notification
-from sidebyside.identity.deletion_journal import DeletionTombstone
-from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
-from sidebyside.identity.deletion_reconcile import reconcile_tombstones
-from sidebyside.identity.models import Account
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship.service import add_member
-from sidebyside.transfer.models import ExportStatus, TransferExport, TransferScope
+from eimir.authorization import AuthorizationContext
+from eimir.core.clock import now
+from eimir.engagement import service as engagement_service
+from eimir.engagement import thinking
+from eimir.engagement.models import Notification
+from eimir.identity.deletion_journal import DeletionTombstone
+from eimir.identity.deletion_models import AccountDeletion, AccountDeletionStatus
+from eimir.identity.deletion_reconcile import reconcile_tombstones
+from eimir.identity.models import Account
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship.service import add_member
+from eimir.transfer.models import ExportStatus, TransferExport, TransferScope
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

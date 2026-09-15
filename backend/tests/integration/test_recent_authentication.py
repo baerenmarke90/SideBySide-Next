@@ -10,12 +10,12 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from sidebyside.auth import passwords, recent_auth, sessions
-from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
-from sidebyside.core.clock import now
-from sidebyside.core.errors import ForbiddenError, UnauthenticatedError
-from sidebyside.identity import service as accounts
-from sidebyside.identity.models import Account, DeviceSession
+from eimir.auth import passwords, recent_auth, sessions
+from eimir.auth.recent_auth_models import RecentAuthenticationGrant
+from eimir.core.clock import now
+from eimir.core.errors import ForbiddenError, UnauthenticatedError
+from eimir.identity import service as accounts
+from eimir.identity.models import Account, DeviceSession
 from tests.conftest import requires_database
 
 PASSWORD = uuid4().hex

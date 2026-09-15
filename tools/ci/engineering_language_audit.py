@@ -34,7 +34,7 @@ SCOPED_FILES = (
 )
 
 BACKEND_ROOTS = (
-    Path("backend/src/sidebyside"),
+    Path("backend/src/eimir"),
     Path("backend/scripts"),
     Path("backend/alembic"),
     Path("backend/tests"),

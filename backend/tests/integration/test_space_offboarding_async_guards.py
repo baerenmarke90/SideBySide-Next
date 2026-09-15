@@ -12,32 +12,32 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import AuthorizationContext, PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.engagement import push, thinking
-from sidebyside.engagement import service as engagement_service
-from sidebyside.engagement.models import (
+from eimir.authorization import AuthorizationContext, PrivacyClass
+from eimir.core.clock import now
+from eimir.engagement import push, thinking
+from eimir.engagement import service as engagement_service
+from eimir.engagement.models import (
     Notification,
     NotificationKind,
     PushDelivery,
     PushDeliveryStatus,
 )
-from sidebyside.identity import effects as account_effects
-from sidebyside.identity.models import Account
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship import offboarding
-from sidebyside.relationship.models import Membership, MembershipStatus
-from sidebyside.relationship.service import add_member
-from sidebyside.reminders import runtime as reminder_runtime
-from sidebyside.reminders.models import (
+from eimir.identity import effects as account_effects
+from eimir.identity.models import Account
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship import offboarding
+from eimir.relationship.models import Membership, MembershipStatus
+from eimir.relationship.service import add_member
+from eimir.reminders import runtime as reminder_runtime
+from eimir.reminders.models import (
     Reminder,
     ReminderPayload,
     ReminderScheduleType,
     ReminderSource,
 )
-from sidebyside.reminders.runtime_models import OccurrenceState, ReminderOccurrence
-from sidebyside.transfer import jobs as transfer_jobs
-from sidebyside.transfer.models import ExportStatus, TransferExport, TransferScope
+from eimir.reminders.runtime_models import OccurrenceState, ReminderOccurrence
+from eimir.transfer import jobs as transfer_jobs
+from eimir.transfer.models import ExportStatus, TransferExport, TransferScope
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

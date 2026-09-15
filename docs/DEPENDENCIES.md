@@ -170,7 +170,7 @@ Playwright is selected instead of a custom browser harness because it provides
 established Chromium automation, browser-isolated tests, keyboard/focus and
 history assertions, and deterministic browser-revision management. The axe
 integration provides an established WCAG rule engine instead of project-owned
-accessibility heuristics. Both are test-only; no SideBySide user data is sent
+accessibility heuristics. Both are test-only; no eimir. user data is sent
 to either project or to a testing SaaS. Details and manual-gate boundaries are
 in `docs/m5/WEB-BROWSER-QA.md`.
 
@@ -182,7 +182,7 @@ in `docs/m5/WEB-BROWSER-QA.md`.
 | nginx-unprivileged | 1.31.4, `sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d` | GHCR / nginx/docker-nginx-unprivileged | BSD-2-Clause (NGINX), Apache-2.0 (image definition) |
 
 Both images are used only during the build or as a local static Web server.
-No SideBySide user data is sent to Node.js, NGINX, or their registries;
+No eimir. user data is sent to Node.js, NGINX, or their registries;
 registries see only the hoster's normal image pull. There are no recurring
 Provider costs, Accounts, or Rate Limits. If a registry is unavailable, an
 already built local image can continue running; a new build waits for the
@@ -276,7 +276,7 @@ This assessment is not legal advice.
 ## Assets
 
 The repository now contains project-specific image and SVG assets. They were
-created for SideBySide Next or its Roadmap and M2 handoff; assets of unclear
+created for eimir. or its Roadmap and M2 handoff; assets of unclear
 third-party or predecessor origin continue to be excluded. The product images
 are explicitly mockups, not screenshots of an already finished application.
 
@@ -286,20 +286,20 @@ decision for the project's own source code.
 
 | Asset | Origin | Creator | License |
 |---|---|---|---|
-| `docs/assets/playstore/app-icon.png` | SideBySide Next product preview | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/feature-graphic.png` | SideBySide Next product preview | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-01-onboarding.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-02-heute.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-03-story.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-04-wuensche.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-05-plan.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-06-discovery.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-07-einkauf.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/playstore/screen-08-privacy.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/roadmap/roadmap-overview.svg` | SideBySide Next Roadmap | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/assets/roadmap/roadmap-tracks.svg` | SideBySide Next Roadmap | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `design/m2/m2-screenflow.svg` | M2 Client handoff | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
-| `docs/m2/m2-privacy-flow.svg` | M2 Privacy/Acceptance handoff | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/app-icon.png` | eimir. product preview | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/feature-graphic.png` | eimir. product preview | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-01-onboarding.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-02-heute.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-03-story.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-04-wuensche.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-05-plan.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-06-discovery.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-07-einkauf.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-08-privacy.png` | eimir. product mockup | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/roadmap/roadmap-overview.svg` | eimir. Roadmap | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/roadmap/roadmap-tracks.svg` | eimir. Roadmap | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `design/m2/m2-screenflow.svg` | M2 Client handoff | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/m2/m2-privacy-flow.svg` | M2 Privacy/Acceptance handoff | eimir. project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
 
 No font or audio assets are currently documented in the repository.
 

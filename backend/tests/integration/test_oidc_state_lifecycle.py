@@ -20,16 +20,16 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import oidc
-from sidebyside.auth.tokens import hash_token
-from sidebyside.config import MailTransport, OidcConnection, Settings
-from sidebyside.identity.models import Account, AuthIdentity, AuthProvider, OidcAuthRequest
+from eimir.auth import oidc
+from eimir.auth.tokens import hash_token
+from eimir.config import MailTransport, OidcConnection, Settings
+from eimir.identity.models import Account, AuthIdentity, AuthProvider, OidcAuthRequest
 from tests.conftest import make_account, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
 
 ISSUER = "https://state-id.example"
-CLIENT_ID = "sidebyside-state"
+CLIENT_ID = "eimir-state"
 CONNECTION = "state-connection"
 SUBJECT = "state-subject"
 

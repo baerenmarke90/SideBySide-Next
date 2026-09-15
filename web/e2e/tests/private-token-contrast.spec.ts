@@ -157,7 +157,7 @@ test('private visibility text remains WCAG AA on its semantic tinted surface', a
 }) => {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
-    localStorage.setItem('sidebyside.theme', 'system');
+    localStorage.setItem('eimir.theme', 'system');
   });
   await page.setViewportSize({ width: 390, height: 844 });
   const unexpectedRequests = await installMocks(page);

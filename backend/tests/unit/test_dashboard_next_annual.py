@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sidebyside.dashboard.service import _next_annual
+from eimir.dashboard.service import _next_annual
 
 
 class TestNextAnnual:

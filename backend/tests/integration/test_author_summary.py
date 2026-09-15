@@ -7,12 +7,12 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
-from sidebyside.attachments.binding import AccountProfileAttachment
-from sidebyside.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
-from sidebyside.authorization import PrivacyClass
-from sidebyside.core.clock import now
-from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
+from eimir.api.authors import resolve_author_summaries, resolve_author_summary
+from eimir.attachments.binding import AccountProfileAttachment
+from eimir.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
+from eimir.authorization import PrivacyClass
+from eimir.core.clock import now
+from eimir.identity.deletion_models import AccountDeletion, AccountDeletionStatus
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

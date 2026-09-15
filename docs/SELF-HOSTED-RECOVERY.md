@@ -4,7 +4,7 @@
 **Scope:** PostgreSQL 17 plus `LocalMediaStore`; S3 boundary documented separately  
 **Related:** #190, #375, #520, `SELF-HOSTING.md`, `ACCOUNT-DELETION-SELF-HOSTED.md`, `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`
 
-This runbook covers operational recovery of a complete SideBySide Self-Hosted instance.
+This runbook covers operational recovery of a complete eimir. Self-Hosted instance.
 It is separate from the user-facing Transfer Bundle: an operational backup contains the
 whole instance and preserves authentication, tenant, ownership, privacy and internal
 state.
@@ -27,7 +27,7 @@ Temporary or unbound upload objects are deliberately excluded.
 The forward Account-deletion journal is deliberately **not** part of the point-in-time
 archive. It prevents an older database/media restore from resurrecting an Account whose
 deletion was accepted later. Protect the newest validated journal independently and keep
-its `SBS_ACCOUNT_DELETION_INSTANCE_ID` with operator configuration.
+its `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` with operator configuration.
 
 The journal is content-free and data-minimized but still recovery-sensitive pseudonymous
 metadata: Account UUID and acceptance time remain linkable in system/recovery context.
@@ -55,7 +55,7 @@ Protect separately from the data archive:
 
 - untracked `.env` / secret-manager entries;
 - PostgreSQL credentials and stable cursor signing key;
-- stable `SBS_ACCOUNT_DELETION_INSTANCE_ID` and newest deletion journal;
+- stable `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` and newest deletion journal;
 - mail, OIDC, WebAuthn, S3 and other provider credentials/configuration;
 - Compose project name and public origin;
 - reverse-proxy, TLS, DNS, firewall and scheduler configuration;
@@ -75,19 +75,19 @@ and the recovery helper. The environment must identify the actual project throug
 `COMPOSE_PROJECT_NAME`.
 
 ```bash
-install -d -m 0700 /srv/sidebyside-backups
+install -d -m 0700 /srv/eimir-backups
 
-SBS_RECOVERY_PROJECT=$(
+EIMIR_RECOVERY_PROJECT=$(
   docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
-SBS_RECOVERY_ARCHIVE="/srv/sidebyside-backups/sidebyside-$(date -u +%Y%m%dT%H%M%SZ).tar"
+EIMIR_RECOVERY_ARCHIVE="/srv/eimir-backups/eimir-$(date -u +%Y%m%dT%H%M%SZ).tar"
 
 python3 scripts/self_hosted_recovery.py backup \
   --compose-file compose.yaml \
   --env-file .env \
-  --confirm-project "$SBS_RECOVERY_PROJECT" \
-  --output "$SBS_RECOVERY_ARCHIVE"
+  --confirm-project "$EIMIR_RECOVERY_PROJECT" \
+  --output "$EIMIR_RECOVERY_ARCHIVE"
 ```
 
 Keep the maintenance interval free of direct/operator database writers. API and worker
@@ -128,11 +128,11 @@ Start only PostgreSQL for the fresh restore target:
 docker compose --profile self-hosted --env-file .env \
   up -d --wait --wait-timeout 120 postgres
 
-SBS_RECOVERY_PROJECT=$(
+EIMIR_RECOVERY_PROJECT=$(
   docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
-SBS_RECOVERY_ARCHIVE=/srv/sidebyside-backups/sidebyside-YYYYmmddTHHMMSSZ.tar
+EIMIR_RECOVERY_ARCHIVE=/srv/eimir-backups/eimir-YYYYmmddTHHMMSSZ.tar
 ```
 
 Then restore:
@@ -141,8 +141,8 @@ Then restore:
 python3 scripts/self_hosted_recovery.py restore \
   --compose-file compose.yaml \
   --env-file .env \
-  --confirm-project "$SBS_RECOVERY_PROJECT" \
-  --archive "$SBS_RECOVERY_ARCHIVE" \
+  --confirm-project "$EIMIR_RECOVERY_PROJECT" \
+  --archive "$EIMIR_RECOVERY_ARCHIVE" \
   --confirm-empty-target
 ```
 
@@ -159,9 +159,9 @@ database. The helper migrates the restored schema and keeps normal writers stopp
 python3 scripts/self_hosted_deletion_reconcile.py \
   --compose-file compose.yaml \
   --env-file .env \
-  --confirm-project "$SBS_RECOVERY_PROJECT" \
+  --confirm-project "$EIMIR_RECOVERY_PROJECT" \
   --journal /secure/path/account-deletions.journal \
-  --confirm-instance-id "$SBS_ACCOUNT_DELETION_INSTANCE_ID"
+  --confirm-instance-id "$EIMIR_ACCOUNT_DELETION_INSTANCE_ID"
 ```
 
 A missing, corrupt, foreign-instance or older substituted journal is not a condition to
@@ -177,12 +177,12 @@ python3 scripts/self_hosted_release.py --env-file .env validate
 python3 scripts/self_hosted_release.py --env-file .env deploy
 
 python3 scripts/deployment_smoke.py \
-  --base-url https://sidebyside.example \
+  --base-url https://eimir.example \
   --expected-revision <published-release-source-sha>
 ```
 
 The launcher validates that the selected backend/Web image identities match
-`SBS_RELEASE_VERSION` before pull/start. It never rebuilds local source.
+`EIMIR_RELEASE_VERSION` before pull/start. It never rebuilds local source.
 
 Also verify an authenticated shared-content read and owner-only path with fictional
 operator accounts. A restore is accepted only when database readiness, deletion
@@ -239,7 +239,7 @@ one reviewed path:
 
 ## 6. S3/object-storage boundary
 
-`scripts/self_hosted_recovery.py` intentionally rejects `SBS_MEDIA_STORE=s3`. No
+`scripts/self_hosted_recovery.py` intentionally rejects `EIMIR_MEDIA_STORE=s3`. No
 provider-neutral mechanism can promise an atomic snapshot across PostgreSQL and every
 S3-compatible provider.
 

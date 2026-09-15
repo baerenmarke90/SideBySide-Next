@@ -41,7 +41,7 @@ class TestClassifyProductDesignPaths(unittest.TestCase):
         self.assertTrue(is_user_facing_path("web/src/TodayPage.css"))
 
     def test_android_main_code_and_resources_classified_as_user_facing(self) -> None:
-        self.assertTrue(is_user_facing_path("android/app/src/main/java/de/sidebyside/next/today/TodayScreen.kt"))
+        self.assertTrue(is_user_facing_path("android/app/src/main/java/de/eimir/app/today/TodayScreen.kt"))
         self.assertTrue(is_user_facing_path("android/app/src/main/res/drawable/ic_launcher_foreground.xml"))
         self.assertTrue(is_user_facing_path("android/app/src/main/res/values/strings.xml"))
         self.assertTrue(is_user_facing_path("android/app/src/main/res/values/colors.xml"))
@@ -52,7 +52,7 @@ class TestClassifyProductDesignPaths(unittest.TestCase):
         self.assertFalse(is_user_facing_path("web/src/api/generated/runtime.ts"))
 
     def test_backend_paths_excluded(self) -> None:
-        self.assertFalse(is_user_facing_path("backend/src/sidebyside/api/v1/auth.py"))
+        self.assertFalse(is_user_facing_path("backend/src/eimir/api/v1/auth.py"))
         self.assertFalse(is_user_facing_path("backend/alembic/versions/0001_initial.py"))
         self.assertFalse(is_user_facing_path("backend/pyproject.toml"))
 
@@ -68,7 +68,7 @@ class TestClassifyProductDesignPaths(unittest.TestCase):
 
     def test_classify_paths_filters_correctly(self) -> None:
         input_paths = [
-            "backend/src/sidebyside/service.py",
+            "backend/src/eimir/service.py",
             "design/tokens.json",
             "docs/README.md",
             "web/src/api/generated/models/User.ts",

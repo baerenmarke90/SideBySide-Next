@@ -14,21 +14,21 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside import config
-from sidebyside.auth import oidc
-from sidebyside.auth.recent_auth_models import (
+from eimir import config
+from eimir.auth import oidc
+from eimir.auth.recent_auth_models import (
     RecentAuthenticationGrant,
     RecentAuthenticationOidcRequest,
 )
-from sidebyside.auth.tokens import hash_token
-from sidebyside.config import MailTransport, OidcConnection, Settings
-from sidebyside.identity.models import AuthIdentity, AuthProvider, DeviceSession
+from eimir.auth.tokens import hash_token
+from eimir.config import MailTransport, OidcConnection, Settings
+from eimir.identity.models import AuthIdentity, AuthProvider, DeviceSession
 from tests.conftest import auth, make_account, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
 
 ISSUER = "https://recent-id.example"
-CLIENT_ID = "sidebyside-recent"
+CLIENT_ID = "eimir-recent"
 CONNECTION = "recent-provider"
 SUBJECT = "recent-anna"
 CLIENT_SECRET = secrets.token_urlsafe(32)

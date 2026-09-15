@@ -1,4 +1,4 @@
-# SideBySide Next Roadmap
+# eimir. Roadmap
 
 **Status:** Human-readable orientation and prioritization view  
 **Version:** 2.3  

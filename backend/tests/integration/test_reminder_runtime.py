@@ -9,18 +9,18 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.domain.events import EventType
-from sidebyside.engagement import push
-from sidebyside.engagement import service as engagement_service
-from sidebyside.engagement.models import Notification, NotificationKind, PushDelivery
-from sidebyside.identity import preferences as account_preferences
-from sidebyside.outbox.models import OutboxEvent
-from sidebyside.relationship import profile as relationship_profile
-from sidebyside.relationship import service as relationship_service
-from sidebyside.relationship.models import DurationDisplayMode
-from sidebyside.reminders import rules, runtime
-from sidebyside.reminders.models import Reminder, ReminderSource
-from sidebyside.reminders.runtime_models import OccurrenceState, ReminderOccurrence
+from eimir.domain.events import EventType
+from eimir.engagement import push
+from eimir.engagement import service as engagement_service
+from eimir.engagement.models import Notification, NotificationKind, PushDelivery
+from eimir.identity import preferences as account_preferences
+from eimir.outbox.models import OutboxEvent
+from eimir.relationship import profile as relationship_profile
+from eimir.relationship import service as relationship_service
+from eimir.relationship.models import DurationDisplayMode
+from eimir.reminders import rules, runtime
+from eimir.reminders.models import Reminder, ReminderSource
+from eimir.reminders.runtime_models import OccurrenceState, ReminderOccurrence
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]

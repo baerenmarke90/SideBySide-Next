@@ -181,7 +181,7 @@ export function TodayModuleSection({
   return (
     <section
       id={id}
-      className={`today-section ${className ?? ''} sbs-motion-reveal`}
+      className={`today-section ${className ?? ''} eimir-motion-reveal`}
       style={animationDelay ? { animationDelay } : undefined}
     >
       <div className="today-section-header">
@@ -415,7 +415,7 @@ function TodayMomentFeature({
   const previewAttachmentId = item.previewAttachmentId;
 
   const figure = (
-    <figure className="today-moment-figure sbs-motion-lift">
+    <figure className="today-moment-figure eimir-motion-lift">
       <div className="today-moment-media">
         {previewAttachmentId ? (
           <MemoryPreview
@@ -505,7 +505,7 @@ function TodayLivingModuleCard({
           });
 
     return (
-      <div className="today-living today-living-partner_signal sbs-motion-lift">
+      <div className="today-living today-living-partner_signal eimir-motion-lift">
         <div className="today-living-body">
           {/* The partner's own name, not a category label: the section
               heading already says `Gerade bei euch`, and repeating a second
@@ -556,7 +556,7 @@ function TodayLivingModuleCard({
     <div
       className={`today-living today-living-${kind}${
         hasMedia ? ' today-living-has-media' : ''
-      } sbs-motion-lift`}
+      } eimir-motion-lift`}
     >
       {hasMedia && previewAttachmentId && loadMemoryImage ? (
         <div className="today-living-media">
@@ -983,7 +983,7 @@ export function TodayPage({
               sr-only h1 takes its place - never an empty visual hero shell. */}
           {relationshipPresenceVisible ? (
             <CouplePresence
-              className="today-hero sbs-motion-reveal"
+              className="today-hero eimir-motion-reveal"
               headingLevel="h1"
               spaceTitle={
                 partner
@@ -1039,7 +1039,7 @@ export function TodayPage({
           )}
 
           {isSparse ? (
-            <div className="new-space-experience sbs-motion-reveal">
+            <div className="new-space-experience eimir-motion-reveal">
               <div className="new-space-mark" aria-hidden="true">
                 <svg
                   viewBox="0 0 24 24"

@@ -25,11 +25,11 @@ from threading import Barrier
 import pytest
 from sqlalchemy import select
 
-from sidebyside.api.v1 import demo as demo_api
-from sidebyside.config import Environment, Settings
-from sidebyside.core.clock import now
-from sidebyside.demo.service import ALEX_NAME, LEA_NAME, create_demo_space
-from sidebyside.identity.models import MagicLinkToken
+from eimir.api.v1 import demo as demo_api
+from eimir.config import Environment, Settings
+from eimir.core.clock import now
+from eimir.demo.service import ALEX_NAME, LEA_NAME, create_demo_space
+from eimir.identity.models import MagicLinkToken
 from tests.conftest import requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]

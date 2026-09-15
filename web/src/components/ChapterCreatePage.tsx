@@ -90,7 +90,7 @@ export function ChapterCreatePage({
       />
 
       <section
-        className="immersive-create-card sbs-motion-reveal"
+        className="immersive-create-card eimir-motion-reveal"
         aria-labelledby="chapter-form-heading"
       >
         <h2 id="chapter-form-heading" className="sr-only">

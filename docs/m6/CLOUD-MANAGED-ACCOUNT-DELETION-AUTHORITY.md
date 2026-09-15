@@ -20,18 +20,18 @@ existing environment crossing the explicit authority-provisioning boundary for
 the first time. Run the immutable backend release image as a one-shot job with:
 
 - the final shared deletion-journal volume mounted at
-  `/var/lib/sidebyside/deletion-journal`;
-- `SBS_ACCOUNT_DELETION_JOURNAL_PATH` set to
-  `/var/lib/sidebyside/deletion-journal/account-deletions.journal`;
-- no `SBS_ACCOUNT_DELETION_INSTANCE_ID` configured;
+  `/var/lib/eimir/deletion-journal`;
+- `EIMIR_ACCOUNT_DELETION_JOURNAL_PATH` set to
+  `/var/lib/eimir/deletion-journal/account-deletions.journal`;
+- no `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` configured;
 - command:
 
 ```text
-python -m sidebyside.identity.deletion_bootstrap --confirm-new-installation
+python -m eimir.identity.deletion_bootstrap --confirm-new-installation
 ```
 
 The job creates the empty journal exactly once and prints the generated
-`SBS_ACCOUNT_DELETION_INSTANCE_ID`. Store that UUID in the managed platform's
+`EIMIR_ACCOUNT_DELETION_INSTANCE_ID`. Store that UUID in the managed platform's
 protected configuration and backup it independently with the rest of the
 operator configuration before deploying normal `api`/`worker` replicas.
 
@@ -59,7 +59,7 @@ closed until that replica has completed startup reconciliation successfully.
 
 ## 3. Missing journal on an established environment is recovery, not bootstrap
 
-If `SBS_ACCOUNT_DELETION_INSTANCE_ID` is already part of the environment but the
+If `EIMIR_ACCOUNT_DELETION_INSTANCE_ID` is already part of the environment but the
 journal file or shared volume is missing, the environment is established and its
 authority artifact has disappeared. Do **not** run the bootstrap command, rotate
 the UUID, create an empty volume as a replacement history, or infer safety from

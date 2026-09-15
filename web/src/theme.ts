@@ -1,8 +1,9 @@
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
-export const THEME_STORAGE_KEY = 'sidebyside.theme';
-export const THEME_PREFERENCE_EVENT = 'sidebyside:theme-preference';
+export const THEME_STORAGE_KEY = 'eimir.theme';
+export const LEGACY_THEME_STORAGE_KEY = 'sidebyside.theme';
+export const THEME_PREFERENCE_EVENT = 'eimir:theme-preference';
 export const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
 
 let activeThemePreference: ThemePreference | null = null;
@@ -25,9 +26,13 @@ export function resolveTheme(
 
 export function readThemePreference(): ThemePreference {
   try {
-    const preference = parseThemePreference(
-      window.localStorage.getItem(THEME_STORAGE_KEY),
-    );
+    const canonical = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const legacy = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    const preference = parseThemePreference(canonical ?? legacy);
+    if (canonical === null && legacy !== null) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+      window.localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+    }
     activeThemePreference = preference;
     return preference;
   } catch {
@@ -39,6 +44,7 @@ export function storeThemePreference(preference: ThemePreference): void {
   activeThemePreference = preference;
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, preference);
+    window.localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
   } catch {
     // Storage can be unavailable in hardened/private browser contexts. The
     // active document still changes theme; only persistence is skipped.

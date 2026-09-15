@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-M4-A introduces one global Search surface over authorized SideBySide content without creating a second domain truth or a new infrastructure service.
+M4-A introduces one global Search surface over authorized eimir. content without creating a second domain truth or a new infrastructure service.
 
 Public route:
 
@@ -145,7 +145,7 @@ simple
 Rationale:
 
 - user-generated couple content may mix languages;
-- SideBySide must not infer the content language merely from UI locale;
+- eimir. must not infer the content language merely from UI locale;
 - language-specific stop words can make meaningful short relationship terms disappear;
 - `simple` keeps the first contract deterministic across Self-Hosted and Cloud.
 

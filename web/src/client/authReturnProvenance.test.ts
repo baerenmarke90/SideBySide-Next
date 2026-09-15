@@ -5,7 +5,8 @@ import {
   restoreAuthReturnTarget,
 } from './deepLinks';
 
-const AUTH_RETURN_STORAGE_KEY = 'sidebyside-auth-return-v1';
+const AUTH_RETURN_STORAGE_KEY = 'eimir-auth-return-v1';
+const LEGACY_AUTH_RETURN_STORAGE_KEY = 'sidebyside-auth-return-v1';
 
 const storageMap = new Map<string, string>();
 const mockLocalStorage = {
@@ -45,6 +46,21 @@ describe('Auth-return Account/Space provenance (#689)', () => {
     expect(consumeAuthReturnTarget('account-a', 'space-shared')).toBe(
       '/story/memories/memory-a',
     );
+  });
+
+  it('consumes an auth return target stored by the legacy client', () => {
+    mockLocalStorage.setItem(
+      LEGACY_AUTH_RETURN_STORAGE_KEY,
+      JSON.stringify({
+        path: '/today',
+        createdAt: Date.now(),
+        accountId: 'account-a',
+        spaceId: null,
+      }),
+    );
+
+    expect(consumeAuthReturnTarget('account-a', 'space-shared')).toBe('/today');
+    expect(mockLocalStorage.getItem(LEGACY_AUTH_RETURN_STORAGE_KEY)).toBeNull();
   });
 
   it('2. Session expiry -> different Account login discards the target instead of navigating', () => {
