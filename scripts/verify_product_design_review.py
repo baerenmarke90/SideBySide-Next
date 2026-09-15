@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Verify the mandatory Product Design / UX declarations on a pull request body.
 
-Enforces Issue #824: a smartphone-first partner-app invariant declaration is
-mandatory for every PR that changes user-facing client paths (as classified by
+Enforces Issue #824 plus the interaction-level consolidation from Issue #947:
+a smartphone-first partner-app invariant declaration is mandatory for every PR
+that changes user-facing client paths (as classified by
 ``scripts/classify_product_design_paths.py``). This module owns the machine-
 checkable part of that gate only: are the required declarations present and
 checked. It cannot and does not judge whether the resulting UI is actually
-warm, beautiful, or genuinely smartphone-first — that remains human/product
-visual acceptance (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 12/13).
+warm, beautiful, intuitive, or genuinely smartphone-first — that remains
+human/product visual acceptance
+(`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 12/13).
 """
 
 from __future__ import annotations
@@ -24,8 +26,9 @@ REQUIRED_EVIDENCE_HEADING = "**Visual evidence**"
 # Mirrors the "If user-facing UI / UX is affected" checklist in
 # .github/pull_request_template.md. Keep both in sync: this list is the
 # mandatory declaration surface for the smartphone-first partner-app
-# invariant (Issue #824). CI verifies presence of the checked declaration,
-# not the aesthetic truth of its content.
+# invariant (Issue #824) and intuitive mobile interaction rules (Issue #947).
+# CI verifies presence of the checked declaration, not the aesthetic/usability
+# truth of its content.
 REQUIRED_DESIGN_REVIEW_ITEMS: tuple[str, ...] = (
     "Partner-app experience standard applied",
     "Designed from Compact/smartphone outward",
@@ -35,6 +38,8 @@ REQUIRED_DESIGN_REVIEW_ITEMS: tuple[str, ...] = (
     "Primary human/content focal point and dominant action are clear",
     "Primary actions smartphone-reachable and touch-target behavior reviewed",
     "Progressive disclosure applied where appropriate",
+    "Established platform/mobile interaction pattern reused or deviation justified",
+    "Typing and keyboard burden minimized for Compact where applicable",
     "Couple-facing composition is not spreadsheet/table/admin/CRM by default, or this is an explicit documented administrative/diagnostic exception",
     "If table/list/master-detail is used, its necessity is explicitly justified",
     "Result feels warm, modern, lively, beautiful, and not visually cold or sterile",
