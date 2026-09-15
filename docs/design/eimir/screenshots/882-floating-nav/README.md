@@ -1,3 +1,5 @@
+**Reference status: HISTORICAL.** Captured implementation evidence for the stated issue/baseline. Terms such as "normative" or "authoritative" below apply only to that historical review; they do not lock current composition. [Product Reference v1](../../../../product/design/product-reference-v1.md) governs current design and interaction.
+
 # Floating Bottom Navigation visual evidence — #882
 
 Rendered visual evidence for the #882 integration of Quick Create into a floating bottom navigation on Compact/Mobile Web. Every image is a real browser render of the Web client at the stated viewport and theme state via Playwright (`web/e2e/tests/floating-bottom-nav.spec.ts`).

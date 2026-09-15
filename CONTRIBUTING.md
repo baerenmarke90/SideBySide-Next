@@ -13,6 +13,10 @@ Contributions are welcome through GitHub Pull Requests.
 
 A Pull Request submission does not guarantee inclusion in the project.
 
+## Product design work
+
+Read the [design authority index](docs/product/design/README.md) and [Product Reference v1](docs/product/design/product-reference-v1.md) before planning client work. v1 governs conflicting older design references unless a later explicit Product Owner decision supersedes it. Follow the [Partner-App Experience Standard](docs/PARTNER-APP-EXPERIENCE-STANDARD.md), complete the Mobile Interaction Contract before UI implementation, and review the full open/interact/save/result/return journey. Technical, privacy, security, accessibility, business-model, and reuse gates remain cumulative.
+
 ## Security issues
 
 Do not report security vulnerabilities through public issues or pull requests.

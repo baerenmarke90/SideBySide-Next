@@ -1,20 +1,22 @@
 # eimir. Screen Templates
 
 **Status:** Binding product foundation  
-**Version:** 1.3  
+**Version:** 1.4<br/>
 **As of:** September 15, 2026
 
 Screen Templates translate Information Architecture, UX Patterns, and Components into repeatable page structures. They are not finished screens, but binding layout and behavior frameworks.
 
 Screen Templates are a starting hypothesis, not a mandate that overrides the product model. `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 0 defines Compact/smartphone as the normative reference and is authoritative whenever a Compact description below is thin or an Expanded description could be read as license to add tables, columns, boxes, widgets, or metadata merely because room exists. Where a template's wording conflicts with that standard, the standard governs.
 
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md).
+
 ## 1. Window classes
 
 | Class | Width | Navigation | Content |
 |---|---:|---|---|
 | Compact | 0–599 px | Bottom Navigation | one primary pane |
-| Medium | 600–839 px | Web: Sidebar · App: Bottom Navigation | one to two panes |
-| Expanded | from 840 px | Web: Sidebar · App: Bottom Navigation | two to three panes |
+| Medium | 600–839 px | Bottom Navigation | one primary pane; optional supporting context |
+| Expanded | from 840 px | Web: horizontal header · App: Bottom Navigation | primary content with optional supporting context |
 
 The App keeps Bottom Navigation at every size; see
 `decisions/0004-android-uses-bottom-navigation-at-every-size.md`. The class
@@ -23,7 +25,7 @@ still selects the content composition on both platforms.
 - Switching is based on available window width, not device category.
 - Content is preserved across resize; selection and input are not lost.
 - Primary content is at most 1200 px wide; reading text is at most 720 px wide.
-- Outer spacing: 20 px on Compact, at least 24 px on Medium, up to 64 px on Expanded.
+- Compact gutters follow v1 D7: approximately 16 px below ~390 px and 20 px at/above ~390 px unless a deliberate edge-to-edge composition applies; native clients use equivalent logical units. Medium/Expanded spacing follows the same hierarchy, typically 24–64 px. Values must be delivered through semantic tokens in F1.
 
 ## 2. Shared screen anatomy
 
@@ -46,13 +48,13 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 
 ## 3. Template: Today
 
-**Purpose:** Shared daily overview and fast entry point.
+**Purpose:** Emotional entry point to the relationship now. [R4](./product/design/reference-screens.md) owns the current composition; these template mechanics remain subordinate to it.
 
 ### Compact
 
-- Greeting and shared context.
-- One highlighted next action or Memory.
-- Vertical modules: planned today, open items, new moment.
+- Personal/relationship focal point with meaningful imagery or text.
+- What matters now, what is next, and what is worth rediscovering receive distinct priority and shapes.
+- Irrelevant sections disappear; no fixed module count or repeated widget stack.
 - Contextual primary action, for example the intentional de-DE label **„Moment festhalten“**.
 
 ### Expanded
@@ -66,33 +68,33 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 
 ## 4. Template: Story Timeline
 
-**Purpose:** Explore shared Memories chronologically.
+**Purpose:** Browse and rediscover shared history. [R2](./product/design/reference-screens.md) owns current content composition, scope, and return behavior.
 
 ### Compact
 
-- Filter/search in a Sheet.
+- Current scope and active filters remain visible; a Sheet discloses filter controls. Text-only, photo, and mixed memories use natural composition instead of one generic card shape.
 - Timeline as a chronological feed. A vertically scrolling arrangement is valid here because reliving Memories in chronological order is genuinely the task, not because a list is the default rendering for multiple objects (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 16).
 - Detail opens as a new page.
 - Intentional de-DE primary action **„Erinnerung hinzufügen“**.
 
 ### Expanded
 
-- Left pane: filters and time ranges.
-- Middle pane: Timeline.
-- Right pane: selected Memory or preview.
-- Direct URL for every detail.
+- Preserve Compact content dominance and chronological rhythm with richer media where useful.
+- Optional filter or preview context must earn its width; a permanent three-pane layout is not required.
+- Every detail retains a direct URL; Back restores scope/filter/scroll context.
 
 **Required states:** no Memories, empty filtered result, media loading, private content, upload failure.
 
 ## 5. Template: Plan Hub
 
-**Purpose:** Entry point for Wishes and Plans; Shopping is added later as its own domain.
+**Purpose:** Anticipation of shared experiences. [R3](./product/design/reference-screens.md) governs current hierarchy; Wishes and Plans keep their domain homes, and Shopping remains a later domain.
 
 ### Compact
 
-- Two clearly named entry points with current state; a later Shopping entry appears only when the domain is implemented and enabled.
-- Recent or urgent content below the entry points.
-- No nested card landscape.
+- The next meaningful shared experience leads with its human value.
+- Secondary plans and wishes are compact support; their destinations stay discoverable without becoming equal dashboard tiles.
+- Operational controls and rich planning details open contextually.
+- No nested card landscape; a Shopping entry appears only when that domain is implemented and enabled.
 
 ### Expanded
 
@@ -153,7 +155,7 @@ creating a parallel data world or overshadowing the private core experience.
 
 ## 8. Template: Settings and Privacy
 
-**Purpose:** Manage relationship, Account, data, permissions, and notifications understandably.
+**Purpose:** Manage relationship, Account, data, permissions, and notifications understandably. [R5](./product/design/reference-screens.md) preserves predictable Profile/Settings discovery and calm utility grouping without forced emotional decoration.
 
 ### Compact
 
@@ -171,7 +173,7 @@ creating a parallel data world or overshadowing the private core experience.
 ## 9. Template: Create/Edit
 
 **Purpose:** Create or modify content safely, transparently, and with the least
-interaction burden consistent with the domain.
+interaction burden consistent with the domain. [R1](./product/design/reference-screens.md) governs Memory capture: capture → optionally enrich → done. Reading, creating, and editing remain distinct states.
 
 ### Compact
 

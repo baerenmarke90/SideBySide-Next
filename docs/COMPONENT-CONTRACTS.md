@@ -1,12 +1,14 @@
 # eimir. Component Contracts
 
 **Status:** Binding product foundation  
-**Version:** 1.1  
-**As of:** August 24, 2026
+**Version:** 1.2<br/>
+**As of:** September 15, 2026
 
 Component Contracts describe the behavior and meaning of shared UI building
 blocks independently of the technical framework. WebApp and smartphone app may
 use different implementations, but they must satisfy the same contracts.
+
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current product-design direction approved in [#955](https://github.com/baerenmarke90/eimir/issues/955). It governs conflicting older design guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. This document remains binding for its compatible lower-level rules; privacy, security, accessibility, business/entitlement, and technical contracts are not weakened. See the [authority and legacy-reference register](./product/design/README.md).
 
 ## 1. Contract structure
 
@@ -51,7 +53,7 @@ ActionState     = idle | submitting | success | error
 
 **Variants:**
 
-- `primary` – most important action in the view, generally once per section.
+- `primary` – the single visually dominant action for the current view/state; sections do not each gain an equally dominant action.
 - `secondary` – important alternative.
 - `tertiary` – lightweight contextual action.
 - `destructive` – potentially irreversible action.
@@ -154,7 +156,7 @@ action.
 
 ### 6.2 Content Card
 
-- A card summarizes one object or action, not decoration alone.
+- A card summarizes one meaningful bounded object or action, not decoration alone. It is not the default abstraction for photos, thoughts, plans, statistics, or every section; choose the content-type composition and surface role from Product Reference v1 first.
 - Nested cards are not allowed.
 - Clickable cards have visible focus and exactly one primary destination.
 - Secondary actions live in a clearly separated area.
@@ -162,7 +164,7 @@ action.
 
 ### 6.3 Timeline Item
 
-- Shows timestamp/date, author, content type, visibility, and sync state.
+- Leads with photo, text, or mixed content according to its meaning. Date, author, content type, visibility, and sync state remain available at the appropriate hierarchy; critical privacy or save state is never hidden. Metadata is not a required leading row on every item.
 - The visual line is decorative; semantic order remains in document flow.
 - Multiple events on the same day may be grouped without losing individual
   targets.
@@ -294,7 +296,7 @@ These signature building blocks represent the core relationship-first identity o
 - **Variants:** `connected` (shared status), `waiting` (brand invitation prompt), `offline` (subtle muted indicator).
 - **Behavior:** Clicking the relationship duration navigates to the relationship milestone details.
 - **Accessibility:** Headings use appropriate levels (`titleLarge`), interactive duration triggers announce their action explicitly.
-- **Tokens:** Container uses `radius-large` / `eimir.Theme.radii.large`, subtle borders (`borderSubtle`), and elevated surface tokens.
+- **Tokens:** Use existing semantic typography, spacing, and identity tokens. The relationship masthead does not require a bounded elevated card; a radius, border, or elevation is used only when its selected v1 surface role needs that boundary.
 
 ### 11.3 ThinkingOfYouButton
 

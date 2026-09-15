@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        User-facing features are product-design work from the start. Read `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` before describing a client feature. Smartphone/Compact is the normative product reference (see its section 0); Web/Expanded adapts that same experience rather than the other way around. eimir. should feel warm, modern, lively, beautiful, and lightly playful rather than cold or administrative.
+        User-facing features are product-design work from the start. Read `docs/product/design/README.md`, the normative `docs/product/design/product-reference-v1.md`, the relevant reference experience, and `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` before describing a client feature. Product Reference v1 wins over conflicting older design references unless a later explicit Product Owner decision supersedes it; privacy, security, accessibility, and technical gates remain binding. Smartphone/Compact is the normative product reference (see its section 0); Web/Expanded adapts that same experience rather than the other way around. eimir. should feel warm, modern, lively, beautiful, and lightly playful rather than cold or administrative.
 
         For `User-facing UI / UX impact = Yes`, the Product design / UX plan below must document the Mobile Interaction Contract before implementation starts. This is not optional bureaucracy: an issue without it must go through a Product Design Preflight before UI code is written.
 
@@ -47,6 +47,7 @@ body:
       description: |
         For UI work, document the Mobile Interaction Contract (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 10) before implementation starts. Compact/smartphone is the reference composition; Web/Expanded adapts it, it does not replace it with a denser desktop composition. For non-UI work, explain why this is not applicable.
       placeholder: |
+        Product Reference v1 sections / reference experience:
         User goal / human outcome:
         Relationship / emotional value (if relevant):
         Compact reference composition (screen/state, dominant action, thumb-zone/one-handed reachability):
@@ -63,7 +64,8 @@ body:
         Large text / narrow-viewport behavior:
         Motion / feedback / reduced motion:
         Privacy / relationship state:
-        Visual acceptance / evidence plan:
+        Open → interact → save/complete → result → return, including draft and scope/filter continuity:
+        Visual acceptance / evidence plan (~360/~390/~430 px, sparse/dense, Light/Dark, reduced motion, native runtime where relevant):
     validations:
       required: true
 

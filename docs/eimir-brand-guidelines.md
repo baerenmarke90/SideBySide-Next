@@ -1,11 +1,13 @@
 # eimir. Brand Guidelines
 
-**Status:** Authoritative Brand & Design Foundation  
-**Version:** 2.0  
-**Effective Date:** September 7, 2026  
+**Status:** Binding brand identity guidance under Product Reference v1<br/>
+**Version:** 2.1<br/>
+**Effective Date:** September 15, 2026<br/>
 **Claim:** „Euer gemeinsamer Ort.“
 
 ---
+
+[Product Reference v1](./product/design/product-reference-v1.md), approved by [#955](https://github.com/baerenmarke90/eimir/issues/955), is the normative current product-design direction. It supersedes conflicting older visual guidance, screenshots, issue wording, and implementation details unless a later explicit Product Owner decision supersedes it. D1 retains the name, mark, palette direction, and self-hosted font families below; composition and interaction follow the [v1 system direction](./product/design/design-system-direction.md). Privacy, security, accessibility, business-model, and technical contracts remain binding.
 
 ## 1. Brand Identity & Philosophy
 
@@ -32,7 +34,7 @@
 
 ### Wordmark Usage
 - In headers and navigation, the wordmark uses `Instrument Sans` with bold weight and tight letter spacing (`-0.035em`).
-- In inverse presentation (e.g., dark hero cards), the dot adopts the high-contrast accent token (`--color-on-accent`).
+- In inverse presentation, the dot uses the appropriate on-accent token only when the actual background pairing is legible. The wordmark accent is decorative brand identity; it does not replace the semantic keyboard-focus role or convey essential action state.
 
 ---
 
@@ -54,34 +56,33 @@ The `eimir.` mark evolves the signature two-ring motif:
 
 `design/tokens.json` is the sole source of truth for all color, typography, spacing, radius, and motion tokens across Web and Android.
 
-### Primary Palette
-| Role | Hex (Light) | Hex (Dark) | Meaning & Emotional Intent |
-|---|---|---|---|
-| **Brand Strong** | `#BE2340` | `#BE2340` | Primary interactive elements, buttons, high emphasis |
-| **Brand Coral** | `#D93D59` | `#FF6B85` | Signature brand accent, wordmark dot, interactive focus |
-| **Brand Glow / Aura** | `#D93D5926` | `#FF6B8524` | Ambient warm aura behind hero surfaces |
-| **Brand Surface** | `#FFF0F2` | `#401925` | Soft tinted brand container |
+The runtime palettes are `color.scheme.light` and `color.scheme.dark`.
+`color.semantic` retains compatibility fallbacks; its earlier printed values are
+not a second current palette. Consume the active scheme through the platform
+adapter instead of copying hex values from this document or an old screenshot.
 
-### Relationship & Space Palette
-| Role | Hex (Light) | Hex (Dark) | Meaning & Emotional Intent |
-|---|---|---|---|
-| **Shared Mint** | `#207266` | `#72D8C4` | Togetherness, shared tasks, synchronized state, memories |
-| **Shared Surface** | `#EDF7F5` | `#143630` | Shared badge container, collaborative list highlight |
-| **Private Rose** | `#C8305B` | `#FF658E` | Private personal notes, gifts, solo wishlists |
-| **Peach / Sunset** | `#F5A882` | `#FFD68A` | Warmth, discovery, milestones, optimism |
-| **Soft Lavender** | `#8A7DB8` | `#D6CBE0` | Dusk, contemplation, quiet moments |
+| Role family | Meaning and use |
+| --- | --- |
+| `brandStrong`, `onAccent` | established filled primary-action pairing in both schemes; validate foreground/background contrast |
+| `brand` | signature accent, wordmark dot, and appropriate selected/link emphasis; bright Dark coral is not a substitute behind white normal text |
+| `brandSurface`, `brandGlow` | restrained contextual highlight; neither is a mandatory tint/aura for every surface |
+| `shared`, `sharedSurface`, `success` | shared relationship context or confirmed outcomes with explicit text/icon meaning |
+| `private`, `privateSurface` | owner-only context with understandable text/icon; privacy is not an error |
+| `discovery` and supporting brand hues | purposeful inspiration or emotional emphasis where it supports the content |
+| `background` | warm page ground from the current scheme; personal imagery and readable content remain dominant |
+| `surface`, `surfaceSubtle` | reading or meaningful content grouping where a surface is needed; no automatic card wall |
+| `surfaceRaised`, overlay roles | actual elevated interaction layers, sheets, and menus |
+| `textPrimary`, `textSecondary` | authored content and readable supporting dates, help, labels, and status |
+| `textMuted` | only when the rendered pair meets its applicable contrast requirement; not a default for essential small copy |
+| `border`, `borderSubtle` | purposeful separation rather than outlines around every section |
+| `focus`, `error`, `warning` | distinct keyboard-focus and consequence states; never substituted by the decorative wordmark accent |
 
-### Neutral & Foundation Palette
-| Role | Hex (Light) | Hex (Dark) | Meaning & Emotional Intent |
-|---|---|---|---|
-| **Background (Cream / Night)** | `#FAF7F5` | `#18131D` | Calm, warm, tactile ground (never clinical `#FFFFFF` or cold `#000000`) |
-| **Surface** | `#FFFFFF` | `#231C29` | Cards, sheets, dialog surfaces |
-| **Surface Subtle** | `#F5EFE9` | `#2C2333` | Receding panels, segmented controls, table headers |
-| **Surface Raised** | `#FFFFFF` | `#32283A` | Modals, elevated cards, floating menus |
-| **Ink (Text Primary)** | `#231E28` | `#FCF8FA` | High-contrast typography (Deep Aubergine) |
-| **Text Secondary** | `#5E5466` | `#D6CBE0` | Subtitles, supporting copy |
-| **Text Muted** | `#8C8094` | `#9D90A8` | Helper text, disabled states, timestamps |
-| **Border / Divider** | `#E4DDD6` | `#473B54` | Warm card outlines and dividers |
+The current Light muted/page pair fails normal-text contrast. Use a compliant
+secondary-text pairing for essential timestamps, help, and status. Disabled
+controls use their own semantic state roles. Check actual pairs in Light and
+Dark; a token name does not prove accessibility. Normal text requires at least
+4.5:1, qualifying large text and essential UI graphics at least 3:1, with visible
+keyboard focus and no color-only state meaning.
 
 ---
 
@@ -111,7 +112,7 @@ Typography is self-hosted with zero runtime CDN dependencies.
 
 ### Do:
 - Always write `eimir.` with lowercase "e" and the terminal dot in consumer copy.
-- Use warm cream (`#FAF7F5`) as the light page background.
+- Use the active scheme's `background` role for the warm page ground; D1 retains the palette direction without freezing older fallback hex values.
 - Highlight the terminal dot in the brand lockup with `Brand Strong` / `Brand Coral`.
 - Maintain WCAG 2.2 AA contrast ratios (at least 4.5:1 for body text, 3:1 for UI controls).
 - Keep design tokens in sync between `design/tokens.json`, Web CSS, and Android Compose.

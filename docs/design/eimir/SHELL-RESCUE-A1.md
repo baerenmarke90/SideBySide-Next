@@ -1,3 +1,5 @@
+**Reference status: SUPPORTING.** This dated implementation decision/evidence retains its compatible accepted shell behavior, but is not current product-design authority. The historical body below is preserved. [Product Reference v1](../../product/design/product-reference-v1.md) governs conflicts unless a later explicit Product Owner decision supersedes it. See the [reference register](../../product/design/README.md).
+
 # Phase A1 — Shell/navigation rescue from #784
 
 ## Audit and scope decision (2026-09-07)

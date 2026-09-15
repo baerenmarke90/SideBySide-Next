@@ -11,6 +11,8 @@ client. M5 Web may progress in parallel with M4 only where the required Domain
 and OpenAPI contracts are already stable on `main`. It does not change or
 pre-commit open M4 contracts, and it does not declare M5 or G4 complete.
 
+**Reference status:** This staged M5 delivery package and its clickable comparisons describe their historical scope. [Product Reference v1](../product/design/product-reference-v1.md) now governs product-design direction; the lower-level domain, privacy, accessibility, and API contracts remain binding. See [Implementation Status](../IMPLEMENTATION-STATUS.md) for current delivery status.
+
 ## Binding sources
 
 - `specification/CLEAN-ROOM-MASTER-SPEC.md`
