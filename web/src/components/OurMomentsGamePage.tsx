@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { GamesApi } from '../api/generated/apis/GamesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
@@ -126,22 +126,12 @@ function OurMomentsCardButton({
   );
 }
 
-function OurMomentsSessionView({
-  setup,
+function ActiveOurMomentsSessionView({
+  session,
 }: {
-  setup: OurMomentsGameSetup & {
-    participants: readonly [OurMomentsParticipant, OurMomentsParticipant];
-  };
+  session: OurMomentsSession;
 }) {
   const { t } = useTranslation();
-  const session = useMemo(() => {
-    const next = createLocalOurMomentsSession();
-    next.start(setup.moments, setup.participants);
-    return next;
-  }, [setup]);
-
-  useEffect(() => () => session.dispose(), [session]);
-
   const snapshot = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -247,6 +237,27 @@ function OurMomentsSessionView({
       </section>
     </div>
   );
+}
+
+function OurMomentsSessionView({
+  setup,
+}: {
+  setup: OurMomentsGameSetup & {
+    participants: readonly [OurMomentsParticipant, OurMomentsParticipant];
+  };
+}) {
+  const [session, setSession] = useState<OurMomentsSession | null>(null);
+
+  useEffect(() => {
+    const next = createLocalOurMomentsSession();
+    next.start(setup.moments, setup.participants);
+    setSession(next);
+    return () => next.dispose();
+  }, [setup]);
+
+  if (!session) return null;
+
+  return <ActiveOurMomentsSessionView session={session} />;
 }
 
 async function loadDefaultSetup({

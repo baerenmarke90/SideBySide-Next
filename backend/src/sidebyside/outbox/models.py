@@ -50,6 +50,10 @@ class OutboxEvent(IdMixin, Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
+    # NULL means immediately eligible. Set on failure so a persistently
+    # broken event backs off instead of being reclaimed on the very next
+    # poll; see outbox/service.py's mark_failed().
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint(
