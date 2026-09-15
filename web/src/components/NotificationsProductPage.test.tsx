@@ -242,4 +242,118 @@ describe('Notifications Product Experience', () => {
       spaceId: SPACE_ID,
     });
   });
+
+  it('does not let one failed mark-read roll back a different notification marked read concurrently', async () => {
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    const pendingA = deferred<void>();
+    const pendingB = deferred<void>();
+    const markNotificationRead = vi.fn(
+      ({ notificationId }: { notificationId: string; spaceId: string }) =>
+        notificationId === 'notif-a' ? pendingA.promise : pendingB.promise,
+    );
+    // Never resolves: keeps the onSettled-triggered refetch from masking the
+    // intermediate cache state this test asserts on.
+    const getNotifications = vi.fn(() => new Promise(() => undefined));
+    const getNotificationUnreadCount = vi.fn(
+      () => new Promise(() => undefined),
+    );
+
+    function notification(id: string) {
+      return {
+        id,
+        sourceEventId: `evt-${id}`,
+        kind: 'THINKING_OF_YOU',
+        actorId: 'user-partner',
+        actor: null,
+        targetType: null,
+        targetId: null,
+        target: null,
+        createdAt: new Date('2026-09-03T18:03:00Z'),
+        readAt: null,
+      };
+    }
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const listKey = ['m5-s5', 'notifications', SPACE_ID];
+    const unreadKey = ['m5-s5', 'notification-unread-count', SPACE_ID];
+    queryClient.setQueryData(listKey, {
+      pages: [
+        {
+          items: [notification('notif-a'), notification('notif-b')],
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+    queryClient.setQueryData(unreadKey, { unreadCount: 2 });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <NotificationsProductPage
+            apis={
+              {
+                notifications: {
+                  markNotificationRead,
+                  getNotifications,
+                  getNotificationUnreadCount,
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId={SPACE_ID}
+            currentAccountId="user-self"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const markReadButtons = screen.getAllByRole('button', {
+      name: 'Als gelesen markieren',
+    });
+    expect(markReadButtons).toHaveLength(2);
+
+    fireEvent.click(markReadButtons[0]);
+    fireEvent.click(markReadButtons[1]);
+
+    await waitFor(() => {
+      const unreadData = queryClient.getQueryData<{ unreadCount: number }>(
+        unreadKey,
+      );
+      expect(unreadData?.unreadCount).toBe(0);
+    });
+
+    pendingA.reject(new Error('network error marking notif-a as read'));
+
+    await waitFor(() => {
+      const unreadData = queryClient.getQueryData<{ unreadCount: number }>(
+        unreadKey,
+      );
+      // notif-a's failure must only undo notif-a's own optimistic delta
+      // (unreadCount 0 -> 1), not restore a stale whole-cache snapshot that
+      // would also un-read notif-b.
+      expect(unreadData?.unreadCount).toBe(1);
+    });
+
+    const listData = queryClient.getQueryData<{
+      pages: Array<{ items: Array<{ id: string; readAt: Date | null }> }>;
+    }>(listKey);
+    const itemsById = new Map(
+      listData?.pages[0].items.map((item) => [item.id, item]) ?? [],
+    );
+    expect(itemsById.get('notif-a')?.readAt).toBeNull();
+    expect(itemsById.get('notif-b')?.readAt).not.toBeNull();
+
+    pendingB.resolve();
+  });
 });

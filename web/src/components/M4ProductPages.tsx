@@ -595,14 +595,43 @@ export function NotificationsProductPage({
         queryClient.cancelQueries({ queryKey: listKey }),
         queryClient.cancelQueries({ queryKey: unreadKey }),
       ]);
-      const previousList = queryClient.getQueryData(listKey);
-      const previousUnread = queryClient.getQueryData(unreadKey);
 
-      queryClient.setQueryData<{ unreadCount: number }>(unreadKey, (old) => {
+      // Track only whether *this* notification actually transitioned to read,
+      // not a snapshot of the whole cache: two notifications can be marked
+      // read in quick succession while both requests are still in flight, and
+      // restoring a stale whole-cache snapshot on one's failure would also
+      // wipe out the other's already-applied (and possibly already
+      // successful) optimistic update.
+      let markedReadNow = false;
+      queryClient.setQueryData<{
+        pages: Array<{ items: NotificationItem[]; nextCursor: string | null }>;
+        pageParams: unknown[];
+      }>(listKey, (old) => {
         if (!old) return old;
-        return { unreadCount: Math.max(0, old.unreadCount - 1) };
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((it) => {
+              if (it.id !== notificationId || it.readAt) return it;
+              markedReadNow = true;
+              return { ...it, readAt: new Date() };
+            }),
+          })),
+        };
       });
 
+      if (markedReadNow) {
+        queryClient.setQueryData<{ unreadCount: number }>(unreadKey, (old) => {
+          if (!old) return old;
+          return { unreadCount: Math.max(0, old.unreadCount - 1) };
+        });
+      }
+
+      return { markedReadNow };
+    },
+    onError: (_err, notificationId, context) => {
+      if (!context?.markedReadNow) return;
       queryClient.setQueryData<{
         pages: Array<{ items: NotificationItem[]; nextCursor: string | null }>;
         pageParams: unknown[];
@@ -613,19 +642,15 @@ export function NotificationsProductPage({
           pages: old.pages.map((page) => ({
             ...page,
             items: page.items.map((it) =>
-              it.id === notificationId ? { ...it, readAt: new Date() } : it,
+              it.id === notificationId ? { ...it, readAt: null } : it,
             ),
           })),
         };
       });
-
-      return { previousList, previousUnread };
-    },
-    onError: (_err, _id, context) => {
-      if (context?.previousList)
-        queryClient.setQueryData(listKey, context.previousList);
-      if (context?.previousUnread)
-        queryClient.setQueryData(unreadKey, context.previousUnread);
+      queryClient.setQueryData<{ unreadCount: number }>(unreadKey, (old) => {
+        if (!old) return old;
+        return { unreadCount: old.unreadCount + 1 };
+      });
     },
     onSettled: refreshNotifications,
   });
