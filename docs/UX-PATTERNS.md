@@ -1,8 +1,8 @@
 # SideBySide UX Patterns
 
 **Status:** Binding product foundation  
-**Version:** 1.2  
-**As of:** September 9, 2026
+**Version:** 1.3  
+**As of:** September 15, 2026
 
 This document defines recurring interaction patterns for the WebApp and
 smartphone app. Both surfaces share the same information architecture,
@@ -25,6 +25,24 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 6. **No dead ends.** Every empty or error state provides a meaningful next step.
 7. **Progressive disclosure.** Frequent tasks remain directly accessible;
    uncommon options appear contextually.
+8. **Established interaction patterns first.** Common smartphone tasks use
+   platform/mobile conventions such as Back, Bottom Navigation, native/system
+   pickers, contextual Bottom Sheets, overflow actions, and system sharing unless
+   the documented human task requires a different pattern. eimir. differentiates
+   through relationship meaning, content, composition, language, imagery, and
+   brand treatment rather than by reinventing standard mechanics.
+9. **Recognition over recall.** Normal tasks do not depend on memorized gestures,
+   hidden modes, unexplained icons, or internal/domain terminology. Important
+   state and available actions remain discoverable in context.
+10. **Minimize typing and keyboard burden.** Free text is required only when the
+    user's actual content is textual or no lower-friction equivalent exists.
+    Prefer direct selection, appropriate native pickers, media, sensible defaults,
+    and progressively disclosed optional details where the domain permits it.
+11. **Direct interaction before redundant controls.** Where safe and
+    understandable, the content itself is the primary interaction target. Avoid
+    redundant `Open`, `Details`, or `Edit` controls when selecting the content
+    naturally performs the expected action; secondary actions remain explicit and
+    accessible.
 
 ## 2. App Shell and navigation
 
@@ -35,11 +53,14 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 | Expanded, from 840 px | persistent Sidebar/Rail | local navigation in content area | second or third pane |
 
 - Primary destinations are the intentional de-DE product labels **Wir, Momente,
-  Planen, Entdecken, Mehr**. `Entdecken` depends on the M7 Discover domain: its
-  position is reserved and it is not rendered before that domain exists, so the
-  primary navigation carries four destinations until then. See
-  `decisions/0003-primary-navigation-and-route-model.md` and
-  `decisions/0008-product-ia-harmonization-and-domain-alignment.md`.
+  Planen, Mehr**. Discovery experiences remain product behavior inside `Momente`
+  and do not consume a persistent primary-navigation slot. `Spielen` is a
+  first-class product area entered under `Mehr`; while inside Games, `Mehr`
+  remains the active primary destination. See
+  `docs/INFORMATION-ARCHITECTURE.md`,
+  `decisions/0008-product-ia-harmonization-and-domain-alignment.md`,
+  `decisions/0009-discovery-inside-momente.md`, and
+  `decisions/0010-games-secondary-navigation-under-more.md`.
 - Search and Activity are not primary destinations. Search is a global utility
   in the header/app bar; Activity lives underneath the personal account
   navigation (`/today/activity`).
@@ -64,9 +85,16 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 | Confirmation | Dialog for high-risk actions | Dialog for high-risk actions |
 | Feedback | inline plus Snackbar when useful | inline plus Snackbar when useful |
 
+These are defaults, not permission to force every domain into list/form UI. The
+human outcome and the partner-app standard decide whether a list, feed, media
+composition, focused capture flow, picker, sheet, or another established
+pattern is appropriate.
+
 ### 3.1 List–Detail
 
 - One row or card opens exactly one detail object.
+- The row/card itself is the primary open target when that is the natural mobile
+  interaction; an additional `Open` button is normally unnecessary.
 - Selection state remains visible on wide layouts.
 - Filters, sorting, and scroll position are preserved when navigating back.
 - On Compact, detail replaces the list; on Expanded, the list remains visible.
@@ -75,15 +103,25 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 
 ### 3.2 Create and edit
 
+- Start from the human capture task rather than the persistence model. A Memory
+  may begin with media, a HeartMoment with a thought, and a plan with the shared
+  intention; a generic title-first field stack is not the default.
 - Short forms: at most five simple fields in a Sheet, Dialog, or Side Pane.
 - Long, branching, or media-heavy forms: dedicated page.
+- Request only information required for the current step. Optional metadata is
+  progressively disclosed and must not delay the primary capture unnecessarily.
+- Prefer appropriate native/system pickers and direct selections to free-text
+  entry for dates, times, media, bounded choices, and permissions.
+- Do not focus a text field or summon the software keyboard merely because a
+  screen contains optional text input. Keyboard appearance follows user intent,
+  and the completion action remains reachable while the keyboard is visible.
 - Required fields are marked textually; errors appear next to the affected
   field.
 - Changes are autosaved only when the state is unambiguous, visible, and
   recoverable.
 - If unsaved changes exist, the app asks before leaving.
 - After successful creation, the app navigates to the new content or back to
-  the refreshed list.
+  the refreshed product context.
 
 ### 3.3 Dialog, Bottom Sheet, Side Pane, or page
 
@@ -93,6 +131,10 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
 | Bottom Sheet | mobile selection, short contextual action | critical long-form text |
 | Side Pane | Web detail, preview, short edit | central full-screen task on Compact |
 | dedicated page | focused, complex, or shareable task | single yes/no question |
+
+Use the platform's established implementation of these patterns where available.
+A custom interaction requires a documented reason when an equivalent conventional
+pattern already solves the task.
 
 ### 3.4 Search, filters, and sorting
 
@@ -225,6 +267,8 @@ Media passes through `selected → preparing → uploading → processing → re
 - Cards nested inside cards without real hierarchy.
 - Multiple equally strong primary actions.
 - Icon-only treatment for uncommon or critical actions.
+- Essential actions available only through swipe, long-press, or another hidden
+  gesture.
 - Delete available only through swipe.
 - Critical errors shown only as transient Snackbars.
 - Disabled buttons without explanation of missing prerequisites.
@@ -232,6 +276,12 @@ Media passes through `selected → preparing → uploading → processing → re
 - Different terminology for the same feature on Web and Mobile.
 - Privacy claims not backed by technology and operations.
 - Desktop layout merely compressed onto a smartphone.
+- Requiring free-text entry for a value that has an established picker or
+  bounded selection without a documented reason.
+- Automatically opening the keyboard before the user has chosen a text-entry
+  task.
+- Redundant `Open` / `Details` buttons on content that already has one obvious
+  primary destination.
 - A list, table, or card grid chosen because multiple records exist, rather than because it is the correct task pattern.
 - An existing row/card/table/form component reused for a couple-facing task it was never designed for, merely because it already exists (`docs/PARTNER-APP-EXPERIENCE-STANDARD.md` section 17).
 - Expanded/Web adding more columns, boxes, or permanent actions than Compact merely because width is available.
@@ -244,6 +294,9 @@ A new flow is ready for implementation only when:
 - Loading, Empty, Error, Offline, and Success are covered,
 - privacy and permission consequences are resolved,
 - keyboard, focus, screen reader, and large-text behavior are considered,
+- an established platform/mobile interaction pattern is reused or the deviation is documented,
+- typing and keyboard burden are minimized for Compact where applicable,
+- important actions and states can be recognized without relying on hidden gestures or memorized UI knowledge,
 - one primary action and a clear way back exist,
 - destructive actions are reversible or consciously confirmed,
 - analytics events contain no sensitive content data.
