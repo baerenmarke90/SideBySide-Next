@@ -34,6 +34,8 @@ Smartphone/Compact is the normative product reference (`docs/PARTNER-APP-EXPERIE
 - [ ] Primary human/content focal point and dominant action are clear
 - [ ] Primary actions smartphone-reachable and touch-target behavior reviewed
 - [ ] Progressive disclosure applied where appropriate
+- [ ] Established platform/mobile interaction pattern reused or deviation justified
+- [ ] Typing and keyboard burden minimized for Compact where applicable
 - [ ] Couple-facing composition is not spreadsheet/table/admin/CRM by default, or this is an explicit documented administrative/diagnostic exception
 - [ ] If table/list/master-detail is used, its necessity is explicitly justified
 - [ ] Result feels warm, modern, lively, beautiful, and not visually cold or sterile
@@ -50,7 +52,7 @@ Smartphone/Compact is the normative product reference (`docs/PARTNER-APP-EXPERIE
 
 **Design result / rationale**
 
-<!-- Name the selected template/pattern, focal point, key hierarchy decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception (including administrative/diagnostic or table/list/master-detail justifications). -->
+<!-- Name the selected template/pattern, focal point, key hierarchy decision, platform/mobile interaction pattern, typing/keyboard decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception (including administrative/diagnostic or table/list/master-detail justifications). -->
 
 -
 
