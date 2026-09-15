@@ -174,7 +174,9 @@
   color: var(--color-text-secondary);
   font-size: 0.82rem;
   font-weight: 650;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .planen-pill-scheduled {

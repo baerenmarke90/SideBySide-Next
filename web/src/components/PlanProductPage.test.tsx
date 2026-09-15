@@ -79,6 +79,18 @@ describe('PlanProductPage', () => {
     expect(html).toContain(i18n.t('m5s3.overview.createdBy', { name: 'Ben' }));
   });
 
+  it('presents a timed end as one range instead of a separate technical subfact', () => {
+    const html = renderPlan(
+      basePlan({
+        plannedStart: new Date(2026, 8, 14, 14, 0),
+        plannedEnd: new Date(2026, 8, 14, 16, 30),
+      }),
+    );
+
+    expect(html).toContain('14:00–16:30');
+    expect(html).not.toContain('planen-detail-subfacts');
+  });
+
   it('shows only the status pill (no date pill) for an unscheduled IDEA Plan', () => {
     const html = renderPlan(basePlan({ status: 'IDEA', plannedStart: null }));
 

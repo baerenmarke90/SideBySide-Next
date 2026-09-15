@@ -68,6 +68,17 @@ describe('shared planning client helpers', () => {
     ).toBe('10:00');
   });
 
+  it('keeps a progressively composed end as the authoritative end instant', () => {
+    const schedule = planScheduleFromInputs(
+      '2026-09-05',
+      '10:00',
+      '2026-09-05T11:30',
+    );
+
+    expect(localDateTimeInput(schedule?.plannedStart)).toBe('2026-09-05T10:00');
+    expect(localDateTimeInput(schedule?.plannedEnd)).toBe('2026-09-05T11:30');
+  });
+
   it('loads every page of selectable places', async () => {
     const listPlaces = vi
       .fn()
