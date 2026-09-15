@@ -58,8 +58,7 @@ The patterns below are platform-appropriate defaults, not a mandatory formula: t
   first-class product area entered under `Mehr`; while inside Games, `Mehr`
   remains the active primary destination. See
   `docs/INFORMATION-ARCHITECTURE.md`,
-  `decisions/0008-product-ia-harmonization-and-domain-alignment.md`,
-  `decisions/0009-discovery-inside-momente.md`, and
+  `decisions/0009-games-primary-navigation-and-premium-capability.md`, and
   `decisions/0010-games-secondary-navigation-under-more.md`.
 - Search and Activity are not primary destinations. Search is a global utility
   in the header/app bar; Activity lives underneath the personal account
