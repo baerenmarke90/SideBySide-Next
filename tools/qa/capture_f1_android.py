@@ -30,7 +30,7 @@ def main() -> None:
     command = [args.adb, "-s", args.serial]
 
     def adb(*parts: str, binary: bool = False) -> str | bytes:
-        return subprocess.check_output(command + list(parts), text=not binary)
+        return subprocess.check_output(command + list(parts), text=not binary, timeout=120)
 
     def setting(namespace: str, key: str, value: str | None = None) -> str:
         if value is None:
@@ -80,7 +80,7 @@ def main() -> None:
     def launch(state: str = "ready", theme: str = "light") -> None:
         adb("shell", "am", "force-stop", package)
         result = str(adb("shell", "am", "start", "-W", "-n", component, "--es", "state", state, "--es", "theme", theme))
-        if "Error" in result:
+        if "Error" in result or "Status: timeout" in result:
             raise AssertionError(result)
         time.sleep(0.6)
 
@@ -159,6 +159,11 @@ def main() -> None:
         tap("proof-photo-open")
         assert find("proof-photo") is None
         behavior.append("A text-only memory remains without an image in detail")
+
+        launch(theme="dark")
+        tap("proof-select")
+        reveal("proof-status")
+        capture("utility-selected-dark")
 
         setting("system", "font_scale", "2.0")
         for _, key in keys[1:]:

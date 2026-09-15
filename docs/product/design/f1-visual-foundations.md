@@ -2,7 +2,7 @@
 
 **Owner:** [#957](https://github.com/baerenmarke90/eimir/issues/957), child of #955.  
 **Authority:** [Product Reference v1](product-reference-v1.md), D1/D2/D7; [system direction](design-system-direction.md).  
-**Status:** preflight recorded before UI implementation on 2026-09-15; evidence and delivered API are completed below with implementation.
+**Status:** implementation delivered for review; native device evidence and final CI are being completed. The preflight was committed before UI implementation on 2026-09-15.
 
 ## Live baseline and overlap
 
@@ -15,7 +15,7 @@ The live open-PR inventory has 18 entries: #763, #762, #339, #317, #234, #233, #
 **User-facing UI / UX impact reviewed.** The full bounded Mobile Interaction Contract is recorded in #957. This implementation binds it to concrete consumers before UI code:
 
 - Web: `web/e2e/fixtures/product-reference-foundations.html`, `.tsx` and `.css`, exercised by `web/e2e/tests/product-reference-foundations.spec.ts`. Vite serves the internal fixture in development; the production entry/router does not import it. Check the production build excludes it.
-- Android: `android/app/src/debug/java/de/eimir/app/design/VisualRolesProofActivity.kt`, debug-only manifest/resources and `VisualRolesProofTest.kt`. Explicit developer launch only; no production navigation or release Activity. Copy the approved photo into generated debug assets, never release assets.
+- Android: `android/app/src/debug/java/de/eimir/app/design/VisualRolesProofActivity.kt`, debug-only manifest/resources and `android/app/src/testDebug/java/de/eimir/app/design/VisualRolesProofTest.kt`. Explicit developer launch only; no production navigation or release Activity. Copy the approved photo into generated debug assets, never release assets.
 - Production consumers: Web `shell.css` and `product-reflow.css` consume the responsive gutter; existing Android `EimirTheme.spacing.pageMargin` consumers inherit the responsive adapter. The approximately 28 native consumers include some all-direction padding, so review their vertical spacing consequence as well.
 - Templates: Story Timeline/Detail View for photo and text, Settings and Privacy for compact utility selection. This fixture creates no new Screen Template.
 - Composition: a large photo and meaningful short title; a separate authored text memory with no photo hole; a small utility group. Photo/words → supporting audience/context → utility. One selected sample opens its own reading detail; Close/Back returns to the sample. Utility has real fixture selection/status behavior, not dead controls.
@@ -41,7 +41,7 @@ The live open-PR inventory has 18 entries: #763, #762, #339, #317, #234, #233, #
 | Radius and motion | Existing JSON scale via additive purpose roles | Legacy Web aliases have different values; no blanket consumer rewrite |
 | Page gutter | Existing 16/20 spacing; one new narrow-gutter alias and 390 threshold | JSON owns values; both viewport/container and native adapters agree |
 
-The Web adapter is currently manual and drift-tested; native generation omits layout/motion. A bounded deterministic adapter extension may emit the F1 values from JSON using existing Node/Gradle APIs. This is a mapping of the current token source, not a replacement token framework. Existing aliases remain compatible until their consumers migrate. Do not add duplicate palette/supporting-text values or one token per fixture margin.
+**Preflight baseline:** the Web adapter was manual and drift-tested; native generation omitted layout/motion. F1 now extends those boundaries using existing Node/Gradle APIs. This maps the current token source without replacing the token framework. Existing aliases remain compatible until their consumers migrate. Do not add duplicate palette/supporting-text values or one token per fixture margin.
 
 ## Current reuse review
 
@@ -72,4 +72,54 @@ Photo provenance: `backend/demo_assets/manifest.json`, `memory-cabin`, creator D
 
 ## Delivery and evidence
 
-Pending implementation and validation. F1 does not complete a reference-screen redesign, #955 or final product audit #946. Merge requires Product Owner approval.
+### Delivered API and migration boundary
+
+`design/tokens.json` is version **2.1.0**. The only new reusable values are `layout.mobileGutterNarrow` (the existing spacing.4 reference) and `layout.breakpoint.compactComfortableMin` (390). Existing colors, font files, spacing scale, radii and motion values remain the source.
+
+| Consumer | Delivered boundary | Usage |
+| --- | --- | --- |
+| Web | Generated `web/src/design/product-roles.css`, imported after `theme.css` | Personal/content headings, utility/section headings, reading/supporting/navigation/action type roles; media/content/sheet radii; group/section gaps; gutter, motion and overlay elevation roles; readable `--color-link-text` |
+| Android | Existing Gradle generator plus `EimirTheme.contentTypography`, responsive `EimirTheme.spacing.pageMargin`, `EimirReadingWidth`, `EimirMotion`, `EimirColors.linkText` | Selective Literata for personal/content headings; Instrument Sans for utility and reading; generated layout/motion values and the same contrast-safe accent-text choice |
+| Existing product shell | Web `shell.css` and `product-reflow.css`; native page-margin consumers | Web widths 390–839 change from 16 to 20 px. Native widths below 390 change from 20 to 16 dp; consumers using all-direction padding also reduce their vertical margin by 4 dp. Web Expanded 32 px spacing remains unchanged. |
+| Internal proofs | Development-only Web entry and debug-only Android Activity | Photo, authored text, utility selection, reading detail, visible privacy, stable loading/error/retry, absent image, explicitly simulated offline/status, and platform overlay |
+
+For Web token changes run `npm --prefix web run tokens:generate`; `tokens:check` is part of build and unit-test commands. Never edit the generated CSS directly. Android generation runs through the existing Gradle token task. Existing legacy Web radius/motion aliases are deliberately compatible; migrate consumers by their meaning in the owning R1–R5 slice. There is no universal Card/Surface wrapper. Raised surfaces belong to transient overlays, meaningful tints require textual meaning, and essential supporting text uses the readable secondary role.
+
+The proof is an internal composition, not a standalone populated catalog: Playwright supplies the approved local photo at `/__foundation-proof/cabin-lake.jpg`. Opening the Vite fixture directly can use `?media=none` for the intentional text-only composition. No remote photo request or new CDN is introduced. Android copies the same source asset only into generated debug assets. The production Web bundle and merged Android release manifest/assets exclude the proof and its photo.
+
+### Reproduce the bounded proof
+
+From `web/e2e`, run the existing Playwright setup, then:
+
+```sh
+npm test -- tests/product-reference-foundations.spec.ts tests/product-gutters.spec.ts
+```
+
+The fixture is typechecked separately with `web/node_modules/.bin/tsc -p web/e2e/fixtures/tsconfig.json`. The browser CI runs this check and the proof tests, and uploads `f1-*.png` / `f1-*.json` with the existing visual-evidence artifact. Local alternate-port runs must start Vite with this checkout as an explicit root; never reuse a server from another checkout.
+
+For Android, build `:app:assembleDebug`, then use a **dedicated disposable emulator**:
+
+```sh
+python3 tools/qa/capture_f1_android.py \
+  --serial emulator-5562 \
+  --apk android/app/build/outputs/apk/debug/app-debug.apk \
+  --output /tmp/eimir-f1-android-evidence
+python3 tools/qa/measure_f1_android_contrast.py \
+  --captures /tmp/eimir-f1-android-evidence \
+  --output /tmp/eimir-f1-android-evidence/f1-android-contrast.json
+```
+
+Pass `--adb` when platform-tools is not on PATH. The capture helper installs only the debug APK, exercises controls through UIAutomator, captures screenshot/semantics pairs, and restores display/font/motion overrides. Its report includes source commit, APK hash, screenshot hashes, observed bounds, interaction results and limitations; unsuccessful runs explicitly report `completed: false`. The contrast sampler requires Pillow in the QA environment, reads images without modifying them, and fails when expected rendered role colors are missing. No production runtime dependency is added.
+
+### Evidence and validation
+
+The [evidence index](evidence/f1/README.md) links representative Compact/Expanded and Light/Dark results. Web captures exercise source revision `115136f1` (the same runtime files were present during the preceding capture); final test-only/documentation commits do not alter that rendering. The full 320/360/390/430/1280 matrix and state images are also produced by browser CI.
+
+Web proof: **19 passing tests** plus **20 passing gutter-boundary checks**, including image/detail recovery, stale completion protection, reading return, native-dialog modality, theme completion, 200% text, long labels, reduced motion, axe and minimum targets. Essential rendered CSS contrast ratios are recorded in the JSON files: Light/Dark body **15.44/15.71**, supporting copy **6.29/11.72**, shared label **5.25/7.71**, link text **5.27/6.69**, focus **5.88/8.58**; filled actions **5.99** in both themes.
+
+Native unit/lint/build and device results are completed in the final review update. The first device attempt was rejected by the capture helper after the resource-constrained host caused an Android process-start timeout; its launcher image is not accepted as proof.
+
+### Remaining scope and limitations
+
+This proves reusable visual roles and a bounded internal interaction. It does not accept any R1–R5 screen, complete #955, or replace the final product audit #946. F2 owns reusable overlay, editor lifecycle and interruption/return mechanics. UIAutomator/Compose semantic checks and visible Back/scroll return do not constitute a human TalkBack session or a full release-device matrix; no such claim is made. Merge requires Product Owner approval.
+
