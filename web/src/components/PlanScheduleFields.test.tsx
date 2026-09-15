@@ -1,4 +1,4 @@
-import '../i18n';
+import { i18n } from '../i18n';
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -93,7 +93,7 @@ describe('PlanScheduleFields', () => {
     expect(plannedEnd.value).toBe('2026-09-05T09:30');
     expect(endTime.getAttribute('aria-invalid')).toBe('true');
     expect(container.textContent).toContain(
-      'Die Endzeit muss nach der Startzeit liegen.',
+      i18n.t('m5s3.plan.endMustFollowStart'),
     );
 
     const crossDay = container.querySelector(
