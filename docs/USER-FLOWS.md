@@ -6,6 +6,8 @@
 
 This document describes the critical end-to-end flows for the WebApp and Android app. It complements the Screen Templates with transitions, decisions, system responses, and acceptance criteria. The product specification and OpenAPI contract remain the authoritative domain sources.
 
+[Product Reference v1](./product/design/product-reference-v1.md) is the normative current design and interaction source. These flows retain their compatible domain outcomes, authorization, privacy, and API constraints. Their screen composition follows the [five reference experiences](./product/design/reference-screens.md), not an implied field order or fixed desktop layout; v1 supersedes conflicting older design guidance unless a later explicit Product Owner decision supersedes it.
+
 ## 1. Binding flow rules
 
 - Web and Android produce the same domain outcome; presentation and platform mechanics may differ.
@@ -16,6 +18,7 @@ This document describes the critical end-to-end flows for the WebApp and Android
 - Mutable objects carry a `version`; conflicts surface as HTTP 409 and are never silently overwritten.
 - Sensitive content appears neither in Analytics nor in logs.
 - Every flow has Loading, Empty, Error, Offline, and cancellation behavior where applicable.
+- Validate open → interact → save/complete → observe result → return. A created item must remain easy to find; draft safety and restored scope/filter/scroll context are part of the same outcome, not optional polish.
 - User-facing flow steps describe the **human outcome and domain invariants**, not a mandatory database-field order. Compact implementations use established mobile/platform patterns and minimize avoidable typing/keyboard activation as required by `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and `docs/UX-PATTERNS.md`.
 
 ## 2. Shared states
