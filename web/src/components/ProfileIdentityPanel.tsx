@@ -44,6 +44,7 @@ export function ProfileIdentityPanel({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<DraftUploadPhase | null>(null);
@@ -113,7 +114,11 @@ export function ProfileIdentityPanel({
 
   const displayNameMutation = useMutation({
     mutationFn: async (displayName: string) => updateIdentity({ displayName }),
-    onSuccess: acceptUpdatedProfile,
+    onSuccess: async (profile) => {
+      await acceptUpdatedProfile(profile);
+      setEditingName(false);
+    },
+    onError: () => displayNameInputRef.current?.focus(),
   });
 
   const avatarMutation = useMutation({
@@ -170,6 +175,7 @@ export function ProfileIdentityPanel({
 
   function submitDisplayName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (displayNameMutation.isPending) return;
     resetActionState();
     const form = new FormData(event.currentTarget);
     displayNameMutation.mutate(String(form.get('displayName') ?? ''));
@@ -233,7 +239,11 @@ export function ProfileIdentityPanel({
               <button
                 type="button"
                 className="secondary compact-action"
-                onClick={() => setEditingName((prev) => !prev)}
+                onClick={() => {
+                  displayNameMutation.reset();
+                  setSaved(false);
+                  setEditingName((previous) => !previous);
+                }}
                 disabled={pending}
               >
                 {editingName
@@ -305,10 +315,7 @@ export function ProfileIdentityPanel({
         <form
           key={`name-${profile.displayName}`}
           className="profile-name-inline-form form-grid sbs-motion-reveal"
-          onSubmit={(e) => {
-            submitDisplayName(e);
-            setEditingName(false);
-          }}
+          onSubmit={submitDisplayName}
         >
           <div className="field-group">
             <label htmlFor="profile-display-name">
@@ -316,6 +323,7 @@ export function ProfileIdentityPanel({
             </label>
             <div className="profile-name-input-group">
               <input
+                ref={displayNameInputRef}
                 id="profile-display-name"
                 name="displayName"
                 type="text"
@@ -323,6 +331,16 @@ export function ProfileIdentityPanel({
                 maxLength={120}
                 autoComplete="name"
                 disabled={pending}
+                aria-invalid={displayNameMutation.error ? true : undefined}
+                aria-describedby={
+                  displayNameMutation.error
+                    ? 'profile-display-name-error'
+                    : undefined
+                }
+                onChange={() => {
+                  if (displayNameMutation.error) displayNameMutation.reset();
+                  setSaved(false);
+                }}
               />
               <button type="submit" disabled={pending}>
                 {displayNameMutation.isPending
@@ -331,6 +349,11 @@ export function ProfileIdentityPanel({
               </button>
             </div>
             <small>{t('profileIdentity.displayNameHelp')}</small>
+            {displayNameMutation.error ? (
+              <div id="profile-display-name-error">
+                <ProblemState error={displayNameMutation.error} />
+              </div>
+            ) : null}
           </div>
         </form>
       ) : null}
@@ -339,9 +362,6 @@ export function ProfileIdentityPanel({
         <div className="inline-message inline-message-success" role="status">
           <span>{t('profileIdentity.saved')}</span>
         </div>
-      ) : null}
-      {displayNameMutation.error ? (
-        <ProblemState error={displayNameMutation.error} />
       ) : null}
       {avatarMutation.error ? (
         <ProblemState error={avatarMutation.error} />

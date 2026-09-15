@@ -22,6 +22,7 @@ import { ProblemState } from './ProblemState';
 import './SharedPlanningPages.css';
 import { LoadMoreButton, PrivateAreaBackToMore } from './PrivateAreaLayout';
 import { UiState } from './UiState';
+import { useRequiredTitleValidation } from './useRequiredTitleValidation';
 
 const PAGE_SIZE = 20;
 
@@ -58,8 +59,10 @@ function usePrivateCollection(
 
 function CollectionFields({
   collection,
+  titleValidation,
 }: {
   collection?: PrivateCollectionDetail;
+  titleValidation: ReturnType<typeof useRequiredTitleValidation>;
 }) {
   const { t } = useTranslation();
   return (
@@ -68,12 +71,29 @@ function CollectionFields({
         {t('privateArea.collections.titleLabel')}
       </label>
       <input
+        ref={titleValidation.inputRef}
         id="private-collection-title"
         name="title"
         required
         maxLength={200}
         defaultValue={collection?.title ?? ''}
+        aria-invalid={titleValidation.invalid || undefined}
+        aria-describedby={
+          titleValidation.invalid ? 'private-collection-title-error' : undefined
+        }
+        onChange={(event) =>
+          titleValidation.handleChange(event.currentTarget.value)
+        }
       />
+      {titleValidation.invalid ? (
+        <p
+          id="private-collection-title-error"
+          className="status status-error"
+          role="alert"
+        >
+          {t('privateArea.titleRequired')}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -178,11 +198,19 @@ export function PrivateCollectionCreatePage({
       navigate(privateCollectionPath(collection.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'PRIVATE_COLLECTION_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     const data = new FormData(event.currentTarget);
-    mutation.mutate(String(data.get('title') || '').trim());
+    const title = titleValidation.validate(String(data.get('title') || ''));
+    if (title === null) return;
+    mutation.mutate(title);
   }
 
   return (
@@ -198,7 +226,7 @@ export function PrivateCollectionCreatePage({
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <CollectionFields />
+          <CollectionFields titleValidation={titleValidation} />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -213,7 +241,9 @@ export function PrivateCollectionCreatePage({
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
     </>
   );
@@ -770,6 +800,11 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
       navigate(privateCollectionPath(collection.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'PRIVATE_COLLECTION_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   if (query.isLoading) {
     return (
@@ -796,10 +831,13 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     const data = new FormData(event.currentTarget);
+    const title = titleValidation.validate(String(data.get('title') || ''));
+    if (title === null) return;
     mutation.mutate({
       collection: editableCollection,
-      title: String(data.get('title') || '').trim(),
+      title,
     });
   }
 
@@ -816,7 +854,10 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <CollectionFields collection={collection} />
+          <CollectionFields
+            collection={collection}
+            titleValidation={titleValidation}
+          />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -831,7 +872,9 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
     </>
   );

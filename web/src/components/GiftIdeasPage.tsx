@@ -25,6 +25,7 @@ import {
   PrivateAreaBackToMore,
 } from './PrivateAreaLayout';
 import { UiState } from './UiState';
+import { useRequiredTitleValidation } from './useRequiredTitleValidation';
 
 const PAGE_SIZE = 20;
 const GIFT_STATUSES = Object.values(GiftIdeaStatus);
@@ -73,9 +74,11 @@ function useGiftIdea(api: PrivateAreaApi, accountId: string, spaceId: string) {
 function GiftIdeaFields({
   giftIdea,
   includeStatus = false,
+  titleValidation,
 }: {
   giftIdea?: GiftIdeaDetail;
   includeStatus?: boolean;
+  titleValidation: ReturnType<typeof useRequiredTitleValidation>;
 }) {
   const { t } = useTranslation();
   return (
@@ -83,12 +86,25 @@ function GiftIdeaFields({
       <div className="field-group">
         <label htmlFor="gift-title">{t('privateArea.gifts.titleLabel')}</label>
         <input
+          ref={titleValidation.inputRef}
           id="gift-title"
           name="title"
           required
           maxLength={200}
           defaultValue={giftIdea?.title ?? ''}
+          aria-invalid={titleValidation.invalid || undefined}
+          aria-describedby={
+            titleValidation.invalid ? 'gift-title-error' : undefined
+          }
+          onChange={(event) =>
+            titleValidation.handleChange(event.currentTarget.value)
+          }
         />
+        {titleValidation.invalid ? (
+          <p id="gift-title-error" className="status status-error" role="alert">
+            {t('privateArea.titleRequired')}
+          </p>
+        ) : null}
       </div>
       <div className="field-group">
         <label htmlFor="gift-description">
@@ -302,10 +318,19 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
       navigate(privateGiftIdeaPath(gift.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'GIFT_IDEA_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    mutation.mutate(giftValues(new FormData(event.currentTarget)));
+    if (mutation.isPending) return;
+    const values = giftValues(new FormData(event.currentTarget));
+    const title = titleValidation.validate(values.title);
+    if (title === null) return;
+    mutation.mutate({ ...values, title });
   }
 
   return (
@@ -321,7 +346,7 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <GiftIdeaFields />
+          <GiftIdeaFields titleValidation={titleValidation} />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -336,7 +361,9 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
     </>
   );
@@ -478,6 +505,11 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
       navigate(privateGiftIdeaPath(gift.id), { replace: true });
     },
   });
+  const titleValidation = useRequiredTitleValidation(
+    mutation.error,
+    'GIFT_IDEA_TITLE_REQUIRED',
+    mutation.reset,
+  );
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
@@ -500,9 +532,14 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
+    const data = new FormData(event.currentTarget);
+    const title = titleValidation.validate(String(data.get('title') || ''));
+    if (title === null) return;
+    data.set('title', title);
     mutation.mutate({
       gift: editableGift,
-      data: new FormData(event.currentTarget),
+      data,
     });
   }
 
@@ -519,7 +556,11 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
       />
       <section className="form-card private-area-editor">
         <form className="form-grid" onSubmit={submit}>
-          <GiftIdeaFields giftIdea={gift} includeStatus />
+          <GiftIdeaFields
+            giftIdea={gift}
+            includeStatus
+            titleValidation={titleValidation}
+          />
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -534,7 +575,9 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
             </button>
           </div>
         </form>
-        {mutation.error ? <ProblemState error={mutation.error} /> : null}
+        {mutation.error && !titleValidation.serverInvalid ? (
+          <ProblemState error={mutation.error} />
+        ) : null}
       </section>
 
       {gift.capabilities.canDelete ? (
