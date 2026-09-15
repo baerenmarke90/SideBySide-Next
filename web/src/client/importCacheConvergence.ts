@@ -35,7 +35,15 @@ export function useImportCacheConvergence(
   const queryClient = useQueryClient();
   const attemptedImportIds = useRef(new Set<string>());
   const previousImportId = useRef<string | null>(null);
+  const mounted = useRef(false);
   const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (detail?.id !== previousImportId.current) {
@@ -50,15 +58,13 @@ export function useImportCacheConvergence(
     }
 
     attemptedImportIds.current.add(detail.id);
-    let active = true;
     void convergeImportedProductReads(queryClient, spaceId).catch(
       (convergenceError: unknown) => {
-        if (active) setError(convergenceError);
+        if (mounted.current && previousImportId.current === detail.id) {
+          setError(convergenceError);
+        }
       },
     );
-    return () => {
-      active = false;
-    };
   }, [detail?.id, detail?.status, queryClient, spaceId]);
 
   return error;

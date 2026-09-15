@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react';
 import { fireEvent, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ImportStatus } from '../api/generated/models/ImportStatus';
 import type { TransferImportDetail } from '../api/generated/models/TransferImportDetail';
@@ -47,8 +48,8 @@ function detail(status: TransferImportDetail['status']): TransferImportDetail {
 }
 
 function Harness({ value }: { value: TransferImportDetail }) {
-  useImportCacheConvergence(value, SPACE_ID);
-  return null;
+  const error = useImportCacheConvergence(value, SPACE_ID);
+  return error ? <div role="alert">{String(error)}</div> : null;
 }
 
 function renderHarness(value: TransferImportDetail) {
@@ -168,6 +169,34 @@ describe('import cache convergence', () => {
     rerender(detail(ImportStatus.COMPLETED));
     await Promise.resolve();
     expect(clearProductReadCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces convergence failures under React StrictMode', async () => {
+    let rejectClear: ((error: Error) => void) | undefined;
+    vi.mocked(clearProductReadCache).mockImplementation(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectClear = reject;
+        }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <StrictMode>
+        <QueryClientProvider client={client}>
+          <Harness value={detail(ImportStatus.COMPLETED)} />
+        </QueryClientProvider>
+      </StrictMode>,
+    );
+    await waitFor(() => expect(clearProductReadCache).toHaveBeenCalledTimes(1));
+
+    rejectClear?.(new Error('cache wipe failed'));
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'cache wipe failed',
+    );
   });
 
   it.each([ImportStatus.FAILED, ImportStatus.EXPIRED])(
