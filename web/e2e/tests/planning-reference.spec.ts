@@ -294,7 +294,7 @@ async function capture(
   name: string,
 ): Promise<void> {
   await page.screenshot({
-    path: testInfo.outputPath(`plan-range-${name}.png`),
+    path: testInfo.outputPath(`planning-951-range-${name}.png`),
     fullPage: true,
   });
 }
