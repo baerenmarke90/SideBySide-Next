@@ -15,7 +15,6 @@
     <string name="proof_close">Schließen</string>
     <string name="proof_back">Zurück zu den Momenten</string>
     <string name="proof_loading">Das Foto wird geladen.</string>
-    <string name="proof_load">Foto laden</string>
     <string name="proof_error">Das Foto konnte nicht geladen werden.</string>
     <string name="proof_retry">Foto erneut laden</string>
     <string name="proof_offline">Offline-Vorschau: Diese Beispielmomente sind lesbar. Änderungen werden nicht gespeichert.</string>

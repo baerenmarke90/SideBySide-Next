@@ -122,4 +122,3 @@ Native unit/lint/build and device results are completed in the final review upda
 ### Remaining scope and limitations
 
 This proves reusable visual roles and a bounded internal interaction. It does not accept any R1–R5 screen, complete #955, or replace the final product audit #946. F2 owns reusable overlay, editor lifecycle and interruption/return mechanics. UIAutomator/Compose semantic checks and visible Back/scroll return do not constitute a human TalkBack session or a full release-device matrix; no such claim is made. Merge requires Product Owner approval.
-
